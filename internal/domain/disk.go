@@ -1,6 +1,9 @@
 package domain
 
-const SizePending int64 = -1
+const (
+	SizePending int64 = -1
+	SizeMissing int64 = -2
+)
 
 type DiskRow struct {
 	WorktreeID string
@@ -18,6 +21,9 @@ func Reclaimable(rows []DiskRow) (total int64, pending int) {
 			pending++
 			continue
 		}
+		if r.Size == SizeMissing {
+			continue
+		}
 		total += r.Size
 	}
 	return total, pending
@@ -27,6 +33,9 @@ func TotalSize(rows []DiskRow) (total int64, pending int) {
 	for _, r := range rows {
 		if r.Size == SizePending {
 			pending++
+			continue
+		}
+		if r.Size == SizeMissing {
 			continue
 		}
 		total += r.Size
