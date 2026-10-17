@@ -275,7 +275,7 @@ func evVerify(e *env, dir string, r *result) {
 		r.fail("no passing head test run", "evidence add <dir> --ref head --kind test --run 'go test ./...'")
 	}
 	if !has("base", "test", func(p proof) bool { return p.Exit != nil && *p.Exit != 0 }) && !note("no-failing-test:") {
-		r.fail("no failing test first: the regression test does not fail on base", "check out base with the test commit and run it: evidence add <dir> --ref base --kind test --run '<test>', or note 'no-failing-test: <why>'")
+		r.fail("no failing test first: the regression test does not fail on base", "check out base, bring in the test files without a commit (git checkout <head> -- <test files>) and run it: evidence add <dir> --ref base --kind test --run '<test>', or note 'no-failing-test: <why>'")
 	}
 	if ui && !has("head", "design", func(p proof) bool { return p.Exit == nil || *p.Exit == 0 }) {
 		r.fail("a UI change has no clean design-check", "evidence add <dir> --ref head --kind design --run 'go run ./scripts/verify design-check'")
