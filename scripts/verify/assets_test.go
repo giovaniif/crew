@@ -111,3 +111,33 @@ func TestAnnotateRejectsACropOutsideTheImage(t *testing.T) {
 		t.Errorf("exit %d", code)
 	}
 }
+
+func TestAnnotateRejectsAnEmptyCrop(t *testing.T) {
+	e, _ := testEnv(t)
+	dir := t.TempDir()
+	writePNG(t, filepath.Join(dir, "a.png"), 50, 50)
+	_, code := runJSON(t, e, "annotate", "--before", filepath.Join(dir, "a.png"), "--after", filepath.Join(dir, "a.png"), "--crop", "500,500,500,500", "--out", filepath.Join(dir, "o.png"))
+	if code != 1 {
+		t.Errorf("exit %d", code)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "o.png")); err == nil {
+		t.Error("an empty crop wrote a pair")
+	}
+}
+
+func TestAnnotateNeverOverwritesAnInput(t *testing.T) {
+	e, _ := testEnv(t)
+	dir := t.TempDir()
+	a, b := filepath.Join(dir, "a.png"), filepath.Join(dir, "b.png")
+	writePNG(t, a, 50, 50)
+	writePNG(t, b, 50, 50)
+	for _, out := range []string{a, filepath.Join(dir, "x", "..", "b.png")} {
+		_, code := runJSON(t, e, "annotate", "--before", a, "--after", b, "--out", out)
+		if code == 0 {
+			t.Errorf("--out %s: exit 0", out)
+		}
+		if im, err := readPNG(filepath.Clean(out)); err != nil || im.Bounds().Dx() != 50 {
+			t.Errorf("--out %s replaced the input", out)
+		}
+	}
+}
