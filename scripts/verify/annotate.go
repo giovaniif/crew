@@ -113,6 +113,14 @@ func annotate(e *env, args []string, r *result) {
 		r.bad("annotate needs --before, --after and --out", "go run ./scripts/verify annotate --before b.png --after a.png --crop 0,0,780,400 --box 10,10,200,60 --out pair.png")
 		return
 	}
+	if oi, err := os.Stat(out); err == nil {
+		for _, p := range []string{before, after} {
+			if pi, err := os.Stat(p); err == nil && os.SameFile(oi, pi) {
+				r.bad("--out "+out+" is the input "+p, "give a new file for --out")
+				return
+			}
+		}
+	}
 	imgs := make([]image.Image, 2)
 	for i, p := range []string{before, after} {
 		im, err := readPNG(p)
@@ -127,6 +135,10 @@ func annotate(e *env, args []string, r *result) {
 		rc, err := parseRect(c)
 		if err != nil {
 			r.bad(err.Error(), "--crop x0,y0,x1,y1")
+			return
+		}
+		if rc.Empty() {
+			r.fail(fmt.Sprintf("the crop %v is empty", rc), "use a crop with a width and a height")
 			return
 		}
 		if !rc.In(imgs[0].Bounds()) || !rc.In(imgs[1].Bounds()) {

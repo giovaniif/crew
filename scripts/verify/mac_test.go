@@ -71,3 +71,27 @@ func TestMacEvidenceFromAPRUsesItsNewestCIRun(t *testing.T) {
 		t.Errorf("run %v", got["run"])
 	}
 }
+
+func TestMacEvidenceNeverReportsOldFilesInTheOutDir(t *testing.T) {
+	e, fs := testEnv(t)
+	fs.paths["gh"] = true
+	fs.handlers["gh run"] = func(c cmd) (string, string, int) {
+		if strings.HasPrefix(strings.Join(c.args, " "), "run view 123 --json") {
+			return `{"headSha":"abc","conclusion":"success","jobs":[{"name":"build (macos-latest)","conclusion":"success"}]}`, "", 0
+		}
+		return "", "no artifacts", 1
+	}
+	out := t.TempDir()
+	write(t, filepath.Join(out, "old.png"), "old")
+	got, code := runJSON(t, e, "mac", "evidence", "--run", "123", "--out-dir", out)
+	if code == 0 {
+		t.Fatal("exit 0 with old files in --out-dir")
+	}
+	arts, _ := got["artifacts"].([]any)
+	if len(arts) != 0 {
+		t.Errorf("artifacts %v are from an earlier run", arts)
+	}
+	if !strings.Contains(problemText(got), "not empty") {
+		t.Errorf("problems %s", problemText(got))
+	}
+}
