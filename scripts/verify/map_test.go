@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -82,6 +83,38 @@ func TestMapRunUnknownAreaOrRecipe(t *testing.T) {
 	}
 	if _, code := runJSON(t, e, "map", "run", "sessions", "--recipe", "nope"); code != 2 {
 		t.Errorf("unknown recipe exit %d", code)
+	}
+}
+
+func TestMapRunNeverOverwritesACorruptResultsFile(t *testing.T) {
+	e, fs, _ := mapEnv(t)
+	fs.vars["TEST_TOKEN"] = "x"
+	p := filepath.Join(e.state, "map-results.json")
+	write(t, p, "{not json")
+	if _, code := runJSON(t, e, "map", "run", "sessions", "--recipe", "needs a token"); code == 0 {
+		t.Error("exit 0 with a corrupt results file")
+	}
+	if b, _ := os.ReadFile(p); string(b) != "{not json" {
+		t.Errorf("the results file changed: %q", b)
+	}
+	if _, code := runJSON(t, e, "map", "status"); code == 0 {
+		t.Error("map status: exit 0 with a corrupt results file")
+	}
+}
+
+func TestMapRunFailsWhenItCannotSaveTheResults(t *testing.T) {
+	e, fs, _ := mapEnv(t)
+	fs.vars["TEST_TOKEN"] = "x"
+	if err := os.Mkdir(filepath.Join(e.state, "map-results.json"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	e2 := *e
+	e2.state = filepath.Join(t.TempDir(), "file")
+	write(t, e2.state, "")
+	for _, env := range []*env{e, &e2} {
+		if _, code := runJSON(t, env, "map", "run", "sessions", "--recipe", "needs a token"); code == 0 {
+			t.Errorf("state %s: exit 0 and no results saved", env.state)
+		}
 	}
 }
 
