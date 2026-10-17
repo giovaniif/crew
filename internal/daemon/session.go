@@ -250,7 +250,7 @@ func (d *Daemon) resumeSession(req rpc.Request) (*rpc.Response, bool) {
 	case err != nil:
 		return errorResponse(req.ID, rpc.CodeLaunchFailed, err.Error()), true
 	}
-	if !d.commit(SessionChanged{Session: resumed}) {
+	if !d.commitStartedSession(resumed) {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 		_ = d.hs.host.Kill(ctx, app.PaneID(resumed.Pane))
