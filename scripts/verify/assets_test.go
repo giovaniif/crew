@@ -56,6 +56,32 @@ func TestAssetsPushWritesToTheOrphanBranchAndReturnsPinnedURLs(t *testing.T) {
 	}
 }
 
+func TestAssetsCheckKeepsAnExemptFileNameWithASpace(t *testing.T) {
+	r := newEvRepo(t, "web/public/my shot.png")
+	mustOK(t, realGitEnv(t), "assets", "check", "--repo", r.dir, "--base", "main")
+}
+
+func TestAssetsPushLeavesOtherIndexFilesAndEscapesURLs(t *testing.T) {
+	remote := t.TempDir()
+	git(t, remote, "init", "-q", "--bare")
+	r := newEvRepo(t, "a.go")
+	git(t, r.dir, "remote", "add", "origin", remote)
+	e := realGitEnv(t)
+	other := filepath.Join(e.state, "assets-index")
+	write(t, other, "another push")
+	img := filepath.Join(t.TempDir(), "after#1.png")
+	writePNG(t, img, 4, 4)
+	got := mustOK(t, e, "assets", "push", "--repo", r.dir, "--remote", "origin", "--slug", "giovaniif/crew", "--dir", "42", img)
+	commit := git(t, remote, "rev-parse", "pr-assets")
+	want := "https://raw.githubusercontent.com/giovaniif/crew/" + commit + "/42/after%231.png"
+	if urls := got["urls"].([]any); len(urls) != 1 || urls[0] != want {
+		t.Errorf("urls %v, want %s", urls, want)
+	}
+	if b, err := os.ReadFile(other); err != nil || string(b) != "another push" {
+		t.Errorf("the push changed a file it does not own: %q %v", b, err)
+	}
+}
+
 func TestAnnotateMakesABeforeAfterPairWithAHighlightBox(t *testing.T) {
 	e, _ := testEnv(t)
 	dir := t.TempDir()
