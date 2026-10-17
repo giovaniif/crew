@@ -1,6 +1,7 @@
 package main
 
 import (
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -34,14 +35,14 @@ func assets(e *env, args []string, r *result) {
 }
 
 func assetsCheck(e *env, repo, base string, r *result) {
-	out, ok := e.git(repo, "diff", "--name-only", "--diff-filter=AMR", base+"...HEAD")
-	if !ok {
+	out, _, code := e.sys.exec(cmd{dir: repo, name: "git", args: []string{"diff", "-z", "--name-only", "--diff-filter=AMR", base + "...HEAD"}})
+	if code != 0 {
 		r.fail("cannot diff against "+base, "git fetch origin main")
 		return
 	}
 	var imgs []string
-	for _, f := range strings.Fields(out) {
-		if imageExt[strings.ToLower(filepath.Ext(f))] && !strings.HasPrefix(f, "docs/images/readme/") && !strings.HasPrefix(f, "web/public/") && !strings.HasPrefix(f, "macos/") {
+	for _, f := range strings.Split(out, "\x00") {
+		if f != "" && imageExt[strings.ToLower(filepath.Ext(f))] && !strings.HasPrefix(f, "docs/images/readme/") && !strings.HasPrefix(f, "web/public/") && !strings.HasPrefix(f, "macos/") {
 			imgs = append(imgs, f)
 			r.fail("the PR branch commits an image: "+f, "remove it and push it with go run ./scripts/verify assets push --dir <pr> "+f)
 		}
@@ -73,9 +74,13 @@ func assetsPush(e *env, repo string, o opts, r *result) {
 			return
 		}
 	}
-	idx := filepath.Join(e.state, "assets-index")
-	_ = os.Remove(idx)
-	defer func() { _ = os.Remove(idx) }()
+	idxDir, err := os.MkdirTemp(e.state, "assets-index-")
+	if err != nil {
+		r.fail("cannot make a temporary git index: "+err.Error(), "check "+e.state)
+		return
+	}
+	defer func() { _ = os.RemoveAll(idxDir) }()
+	idx := filepath.Join(idxDir, "index")
 	vars := append(os.Environ(), "GIT_INDEX_FILE="+idx)
 	if email, _ := e.git(repo, "config", "user.email"); email == "" {
 		vars = append(vars, "GIT_AUTHOR_NAME=crew-verify", "GIT_AUTHOR_EMAIL=crew-verify@users.noreply.github.com", "GIT_COMMITTER_NAME=crew-verify", "GIT_COMMITTER_EMAIL=crew-verify@users.noreply.github.com")
@@ -133,7 +138,11 @@ func assetsPush(e *env, repo string, o opts, r *result) {
 	}
 	var urls []string
 	for _, p := range paths {
-		urls = append(urls, "https://raw.githubusercontent.com/"+slug+"/"+commit+"/"+p)
+		parts := strings.Split(p, "/")
+		for i, s := range parts {
+			parts[i] = url.PathEscape(s)
+		}
+		urls = append(urls, "https://raw.githubusercontent.com/"+slug+"/"+commit+"/"+strings.Join(parts, "/"))
 	}
 	r.set("commit", commit)
 	r.set("urls", urls)

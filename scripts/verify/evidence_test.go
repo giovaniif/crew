@@ -143,6 +143,9 @@ func TestEvidenceTestThatPassesOnBaseIsNotAFailingTestFirst(t *testing.T) {
 	if strings.Contains(text, "base repro") {
 		t.Errorf("a no-repro note does not count:\n%s", text)
 	}
+	if !strings.Contains(text, "git checkout <head> -- <test files>") {
+		t.Errorf("the hint does not keep the checkout at base:\n%s", text)
+	}
 }
 
 func TestEvidenceAddRefusesTheWrongCheckout(t *testing.T) {

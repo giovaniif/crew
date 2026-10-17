@@ -241,8 +241,8 @@ func stopIso(e *env, st isoState) {
 	for _, s := range []string{st.Socket + "-tui", st.Socket} {
 		e.sys.exec(cmd{name: "tmux", args: []string{"-L", s, "kill-server"}})
 	}
-	if strings.HasPrefix(st.Home, "/tmp/crew-iso-") {
-		_ = os.RemoveAll(st.Home)
+	if home := filepath.Clean(st.Home); filepath.Dir(home) == "/tmp" && strings.HasPrefix(home, "/tmp/crew-iso-") {
+		_ = os.RemoveAll(home)
 	}
 	_ = os.Remove(isoPath(e))
 }

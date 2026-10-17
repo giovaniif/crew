@@ -4,12 +4,14 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -224,8 +226,32 @@ func main() {
 	if state == "" {
 		state = fmt.Sprintf("/tmp/crew-verify-%d", os.Getuid())
 	}
-	_ = os.MkdirAll(state, 0o700)
+	if err := privateState(state); err != nil {
+		r := newResult()
+		r.fail("the state dir "+state+" is not a private dir of this user: "+err.Error(), "remove it or set VERIFY_HOME to a new path")
+		os.Exit(emit(os.Stdout, r))
+	}
 	os.Exit(run(os.Args[1:], &env{out: os.Stdout, sys: realSys{}, repo: repo, state: state, now: time.Now}))
+}
+
+func privateState(state string) error {
+	if err := os.MkdirAll(state, 0o700); err != nil {
+		return err
+	}
+	fi, err := os.Lstat(state)
+	if err != nil {
+		return err
+	}
+	if !fi.IsDir() {
+		return errors.New("not a directory")
+	}
+	if fi.Mode().Perm() != 0o700 {
+		return fmt.Errorf("mode %o, want 700", fi.Mode().Perm())
+	}
+	if st, ok := fi.Sys().(*syscall.Stat_t); !ok || int(st.Uid) != os.Getuid() {
+		return errors.New("another user owns it")
+	}
+	return nil
 }
 
 func repoRoot() (string, error) {
