@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+loop="${1:?usage: run patrol|maintenance|digest}"
+case "$loop" in
+  patrol) budget="${CREW_LOOP_BUDGET:-55m}" ;;
+  maintenance) budget="${CREW_LOOP_BUDGET:-110m}" ;;
+  digest) budget="${CREW_LOOP_BUDGET:-15m}" ;;
+  *) echo "unknown loop: $loop" >&2; exit 2 ;;
+esac
+
+repo="${CREW_LOOP_REPO:?CREW_LOOP_REPO is not set}"
+state="${XDG_STATE_HOME:-$HOME/.local/state}/crew-loops"
+mkdir -p "$state"
+
+exec 9>"$state/$loop.lock"
+if ! flock -n 9; then
+  echo "$loop: an earlier run still holds the lock" >&2
+  exit 0
+fi
+
+git -C "$repo" fetch --quiet origin main
+wt="$state/wt-$loop-$(date -u +%Y%m%dT%H%M%SZ)"
+git -C "$repo" worktree add --quiet --detach "$wt" origin/main
+
+finish() {
+  git -C "$repo" worktree remove --force "$wt" >/dev/null 2>&1 || rm -rf "$wt"
+  git -C "$repo" worktree prune
+}
+trap finish EXIT
+
+prompt="$wt/scripts/loops/$loop.md"
+if [ ! -f "$prompt" ]; then
+  echo "$loop: $prompt is not on main" >&2
+  exit 1
+fi
+
+if [ -r /etc/homelab-notify.env ]; then
+  export CREW_LOOP_NTFY=1
+else
+  export CREW_LOOP_NTFY=0
+fi
+export CREW_LOOP_NAME="$loop"
+export CREW_LOOP_BUDGET_LEFT="$budget"
+
+cd "$wt"
+set +e
+timeout --kill-after=2m "$budget" claude -p "$(cat "$prompt")" \
+  --permission-mode bypassPermissions \
+  --output-format text \
+  >"$state/$loop.last.log" 2>&1
+code=$?
+set -e
+cat "$state/$loop.last.log"
+exit "$code"

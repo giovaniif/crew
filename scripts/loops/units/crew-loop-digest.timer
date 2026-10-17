@@ -1,0 +1,10 @@
+[Unit]
+Description=crew digest loop schedule
+
+[Timer]
+OnCalendar=*-*-* 08:00:00 America/Sao_Paulo
+Persistent=true
+RandomizedDelaySec=2min
+
+[Install]
+WantedBy=timers.target

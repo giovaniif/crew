@@ -1,0 +1,12 @@
+[Unit]
+Description=crew patrol loop (headless Claude Code)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=CREW_LOOP_REPO=@REPO@
+Environment=PATH=@PATH@
+ExecStart=@BIN@/run patrol
+TimeoutStartSec=60min
+Nice=10

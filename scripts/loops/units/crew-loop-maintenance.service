@@ -1,0 +1,12 @@
+[Unit]
+Description=crew maintenance loop (headless Claude Code)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=CREW_LOOP_REPO=@REPO@
+Environment=PATH=@PATH@
+ExecStart=@BIN@/run maintenance
+TimeoutStartSec=120min
+Nice=10

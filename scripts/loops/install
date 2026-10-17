@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+here="$(cd "$(dirname "$0")" && pwd)"
+repo="$(git -C "$here" worktree list --porcelain | sed -n '1s/^worktree //p')"
+units="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
+bin="${XDG_DATA_HOME:-$HOME/.local/share}/crew-loops"
+stamp="$(date +%Y%m%d-%H%M%S)"
+names=(crew-loop-patrol crew-loop-maintenance crew-loop-digest)
+
+backup() {
+  if [ -e "$1" ]; then
+    cp -p "$1" "$1.bak-$stamp"
+    echo "backup: $1.bak-$stamp"
+  fi
+}
+
+if [ "${1:-}" = "--remove" ]; then
+  for n in "${names[@]}"; do
+    systemctl --user disable --now "$n.timer" 2>/dev/null || true
+    for f in "$units/$n.service" "$units/$n.timer"; do
+      backup "$f"
+      rm -f "$f"
+    done
+  done
+  backup "$bin/run"
+  rm -f "$bin/run"
+  systemctl --user daemon-reload
+  echo "removed the crew loops"
+  exit 0
+fi
+if [ $# -gt 0 ]; then
+  echo "usage: scripts/loops/install [--remove]" >&2
+  exit 2
+fi
+
+mkdir -p "$units" "$bin"
+if ! cmp -s "$here/run" "$bin/run"; then
+  backup "$bin/run"
+  install -m 755 "$here/run" "$bin/run"
+  echo "installed: $bin/run"
+fi
+
+for src in "$here"/units/*; do
+  dst="$units/$(basename "$src")"
+  tmp="$(mktemp)"
+  sed -e "s|@REPO@|$repo|g" -e "s|@BIN@|$bin|g" -e "s|@PATH@|$PATH|g" "$src" >"$tmp"
+  if cmp -s "$tmp" "$dst"; then
+    rm -f "$tmp"
+    continue
+  fi
+  backup "$dst"
+  mv "$tmp" "$dst"
+  chmod 644 "$dst"
+  echo "installed: $dst"
+done
+
+systemctl --user daemon-reload
+for n in "${names[@]}"; do
+  systemctl --user enable --now "$n.timer"
+done
+systemctl --user list-timers 'crew-loop-*' --no-pager
