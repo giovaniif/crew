@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -105,12 +106,20 @@ type mapRecord struct {
 
 func mapResultsPath(e *env) string { return filepath.Join(e.state, "map-results.json") }
 
-func loadMapResults(e *env) map[string]map[string]mapRecord {
+func loadMapResults(e *env, r *result) (map[string]map[string]mapRecord, bool) {
 	all := map[string]map[string]mapRecord{}
-	if b, err := os.ReadFile(mapResultsPath(e)); err == nil {
-		_ = json.Unmarshal(b, &all)
+	b, err := os.ReadFile(mapResultsPath(e))
+	if errors.Is(err, os.ErrNotExist) {
+		return all, true
 	}
-	return all
+	if err == nil {
+		err = json.Unmarshal(b, &all)
+	}
+	if err != nil {
+		r.fail("cannot read the map results: "+err.Error(), "fix or remove "+mapResultsPath(e))
+		return nil, false
+	}
+	return all, true
 }
 
 func mapCmd(e *env, args []string, r *result) {
@@ -147,7 +156,10 @@ func mapCmd(e *env, args []string, r *result) {
 }
 
 func mapStatus(e *env, areas map[string]area, r *result) {
-	results := loadMapResults(e)
+	results, ok := loadMapResults(e, r)
+	if !ok {
+		return
+	}
 	var names []string
 	for n := range areas {
 		names = append(names, n)
@@ -200,7 +212,10 @@ func mapRun(e *env, a area, only string, r *result) {
 			return
 		}
 	}
-	results := loadMapResults(e)
+	results, ok := loadMapResults(e, r)
+	if !ok {
+		return
+	}
 	if results[a.Name] == nil {
 		results[a.Name] = map[string]mapRecord{}
 	}
@@ -235,8 +250,16 @@ func mapRun(e *env, a area, only string, r *result) {
 		results[a.Name][rc.Label] = rec
 		recs = append(recs, rec)
 	}
-	b, _ := json.MarshalIndent(results, "", "  ")
-	_ = os.WriteFile(mapResultsPath(e), b, 0o644)
+	b, err := json.MarshalIndent(results, "", "  ")
+	if err == nil {
+		err = os.MkdirAll(e.state, 0o700)
+	}
+	if err == nil {
+		err = os.WriteFile(mapResultsPath(e), b, 0o644)
+	}
+	if err != nil {
+		r.fail("cannot save the map results: "+err.Error(), "check that "+e.state+" is a writable dir")
+	}
 	r.set("area", a.Name)
 	r.set("recipes", recs)
 }

@@ -164,6 +164,8 @@ See [ADR 0015](../../docs/adr/0015-session-lifecycle.md).
 - **Slack worker.** `WithSlack(app.SlackConnector, every)` starts one goroutine that syncs the mates: at start, after each `mate.set`, `mate.remove`, `mate.set_tokens` and `mate.clear_tokens`, and every `every` (`Run` passes `slack.New` and 30 s). It never runs on the loop.
   - Each enabled mate with both tokens gets its own goroutine that runs `SlackMate.Run`. A mate that is not enabled is `paused`. A mate with no tokens is `no_tokens`. When the tokens change (a SHA-256 of them), the worker stops and starts again. When the mate goes, it stops.
   - The status from the adapter is the state of the mate in `mate.list`. After a token error, the mate stays in `error` until its tokens change. The log has the Slack error, never a token.
+  - After each sync, each state change of a mate and each turn that runs, the worker makes the board (`domain.NewMateBoard`) and posts `MatesChanged` to the loop only when the board changed. It takes the board lock of the worker first and lets it go before it posts, because the loop also takes that lock. A thread link is a `MateThreadChanged` event, so subscribers get `mate_thread`.
+  - `mate.pause`, `mate.resume` and `mate.stop_all` edit `config.toml` and start a sync. Tests: `go test ./internal/daemon/ -run 'MateStopAll|MatePause|MateThreadsAre|MateSetup'`.
 - **Owner claim.** `mate.claim` draws a code with `crypto/rand` (`domain.NewPairCode`) and keeps one `domain.MateClaim` for each mate in memory. A direct message to that mate whose text is the code (case, spaces and `-` do not count), from a Slack user ID, before the 10 minutes end, writes that user ID to `owner` with the backup of `config.set`. Then the mate replies in the direct message. The code works one time. A mention or a message in a channel never claims. Tests: `go test ./internal/daemon/ -run 'MateWorker|MateClaim|MateToken|MateNewTokens|MateClearTokens'`.
 
 ## Mate threads
@@ -375,6 +377,7 @@ Tests have names `*Cleanup*`: `go test ./internal/domain/... -run Cleanup` and `
 - `headlessPool` keeps one `app.HeadlessTab` for each session, under its own mutex. It is not loop state. A command opens the tab if necessary, under the `max_headless` limit (`domain.AdmitHeadless`).
 - A reaper runs every 15 s (`WithHeadlessBrowser`). It stops the tabs of ended sessions and idle tabs (`domain.HeadlessToStop`). It never stops a tab while a command runs. When the daemon stops, it stops all tabs.
 - `browser.cookies.import` merges the cookies into `$CREW_HOME/browser/profiles/default/cookies.json` (0600) and sends them to each tab that runs. A new tab gets all kept cookies.
+- `browser.headless.view` takes a screenshot of a tab that runs. It does not start a tab and does not change the idle time of the tab, so the tab still stops when it is idle. The reaper does not stop the tab while the screenshot runs.
 - The automation `browser` is kept in memory when the run starts its session. After a daemon restart, that session uses `any`.
 
 ## Shell and nvim
