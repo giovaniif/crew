@@ -70,6 +70,12 @@ The dry run occurs on a pull request that touches `macos/`, `.goreleaser.yaml` o
   - The detail has Overview (the definition) and Runs (history, Open session, Rerun). Run… (⌘R) opens `AutomationRunSheet` with a multi-line context field. A started run selects its session in the main window.
   - New… and Edit… open `AutomationEditSheet`. Save writes the global `config.toml` through `automation.save`. A repo automation has no Edit…: the detail shows its `.crew.toml`.
   - Test: `swift test --filter Automations`. Snapshots: `automations*.png`.
+- Mates (`Mates.swift`, views `MatesWindow`, `LiveMatesWindow`; ⇧⌘M, ADR 0053):
+  - `ViewState.mates` is the `mates` board of `view.subscribe` (`MateBoard`, `MateRow`, `MateThread`). The window draws it live. `MateRow.label` gives the state and the guard, and `currentWork` gives the threads in `work`.
+  - `MatesModel` (main actor, over `Caller`) calls `mate.list` and `approval.list`, `mate.pause`, `mate.resume`, `mate.stop_all` (the kill switch, with a confirmation), `mate.set` (Settings… and Add a mate…, from `MateDraft`), `mate.setup`, `mate.set_tokens`, `mate.claim` and `approval.decide`.
+  - After Add a mate…, `MateConnectSheet` shows the manifest link, takes the two tokens and shows the claim code.
+  - A thread opens its session in the main window or its Slack link. When all mates are stopped, the sidebar footer ends with "all mates stopped".
+  - Test: `swift test --filter 'Mates|ViewDecoding|LiveState|Sidebar'`.
 - New session (`NewSession.swift`, view `NewSessionSheet`):
   - ⌘N opens the sheet. The New button of the toolbar also opens it.
   - `NewSession.load(state:)` calls `session.options`. It gets the harnesses, their models and efforts, and the `[defaults.<harness>]` model and effort. The app cannot read a remote `config.toml`.
@@ -169,6 +175,12 @@ The dry run occurs on a pull request that touches `macos/`, `.goreleaser.yaml` o
     - The sheet shows the count for each site (`CookieImport.summary`). The user selects the sites. An import first deletes the cookies of those sites in the profile, then sets the new ones.
     - Cookies stay on the Mac. They never go to the server or into a log.
     - Fixtures are in `Tests/testdata/cookies`. `swift test --filter CookieImport` runs the suite. The Chrome tests run only on macOS.
+  - Send profile to server (`ServerProfile.swift`, the same `CookieImportSheet` with `target: .server`; #383): Send cookies to the server… in the profile menu.
+    - The sources are the cookies of the current profile, a browser profile on the Mac or a file. The user selects the sites.
+    - `ServerProfile.cookies` keeps only the cookies of the selected sites (by `CookieImport.site`) with a name and a domain. `ServerProfileSend.send` sends them with `browser.cookies.import` and shows `imported` and `total`. With no selected cookie, it sends nothing.
+    - Only this explicit action sends cookies to the server. An older server (`unknown_method`) gets "This server has no headless browser. Update the server."
+  - Headless tab (`HeadlessView`): while the Browser view shows and the connection is live, `LiveWindow` calls `browser.headless.view` for the selected session every second (`HeadlessView.interval`). When the session has a headless tab on the server, the tab strip shows "Server · read-only". A click on it shows the last screenshot. You cannot control this tab from the Mac. The call never starts a headless tab. A failed call, or `{"live":false}`, removes the frame.
+  - Test: `swift test --filter 'ServerProfile|HeadlessView'`.
   - While `agentControl` is on, the tab shows "An agent controls this tab" and a Take over button.
   - Test: `swift test --filter Browser`. `SnapshotTests` draws `browser-latte`, `browser-mocha` and `browser-iphone`.
 - Browser for agents (`BrowserAgent.swift`, view side `BrowserDriver`; the CLI is in [cmd/crew/](../cmd/crew/AGENTS.md)):

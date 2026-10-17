@@ -15,10 +15,27 @@ func testEnv(t *testing.T) (*env, *fakeSys) {
 	e := &env{
 		sys:   fs,
 		repo:  t.TempDir(),
-		state: t.TempDir(),
+		state: shortTempDir(t),
 		now:   func() time.Time { return time.Date(2026, 10, 17, 12, 0, 0, 0, time.UTC) },
 	}
+	t.Cleanup(func() {
+		if st, err := loadIso(e); err == nil {
+			if home := filepath.Clean(st.Home); filepath.Dir(home) == "/tmp" && strings.HasPrefix(home, "/tmp/crew-iso-") {
+				_ = os.RemoveAll(home)
+			}
+		}
+	})
 	return e, fs
+}
+
+func shortTempDir(t *testing.T) string {
+	t.Helper()
+	dir, err := os.MkdirTemp("/tmp", "vfy")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(dir) })
+	return dir
 }
 
 func git(t *testing.T, dir string, args ...string) string {
@@ -70,6 +87,52 @@ func TestSelftestRunsTheGoTestsOfTheCLI(t *testing.T) {
 	got, code := runJSON(t, e, "selftest")
 	if code != 1 || !strings.Contains(problemText(got), "FAIL") {
 		t.Errorf("exit %d: %s", code, problemText(got))
+	}
+}
+
+func TestTheStateDirMustBeAPrivateDirOfThisUser(t *testing.T) {
+	root := shortTempDir(t)
+	fresh := filepath.Join(root, "new")
+	if err := privateState(fresh); err != nil {
+		t.Errorf("a new state dir: %v", err)
+	}
+	if fi, err := os.Stat(fresh); err != nil || fi.Mode().Perm() != 0o700 {
+		t.Errorf("the new state dir is not 0700: %v", err)
+	}
+	open := filepath.Join(root, "open")
+	if err := os.Mkdir(open, 0o777); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(open, 0o777); err != nil {
+		t.Fatal(err)
+	}
+	if privateState(open) == nil {
+		t.Error("a world-writable state dir is trusted")
+	}
+	link := filepath.Join(root, "link")
+	if err := os.Symlink(fresh, link); err != nil {
+		t.Fatal(err)
+	}
+	if privateState(link) == nil {
+		t.Error("a symlink state dir is trusted")
+	}
+}
+
+func TestIsoDownNeverRemovesAPathOutsideAnIsoHome(t *testing.T) {
+	e, _ := testEnv(t)
+	iso, err := os.MkdirTemp("/tmp", "crew-iso-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(iso) })
+	victim := shortTempDir(t)
+	write(t, filepath.Join(victim, "keep"), "x")
+	if err := saveIso(e, isoState{Home: iso + "/../" + filepath.Base(victim), Bin: "/bin/true"}); err != nil {
+		t.Fatal(err)
+	}
+	mustOK(t, e, "iso", "down")
+	if _, err := os.Stat(filepath.Join(victim, "keep")); err != nil {
+		t.Errorf("iso down removed %s", victim)
 	}
 }
 
