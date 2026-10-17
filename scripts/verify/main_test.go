@@ -18,6 +18,13 @@ func testEnv(t *testing.T) (*env, *fakeSys) {
 		state: shortTempDir(t),
 		now:   func() time.Time { return time.Date(2026, 10, 17, 12, 0, 0, 0, time.UTC) },
 	}
+	t.Cleanup(func() {
+		if st, err := loadIso(e); err == nil {
+			if home := filepath.Clean(st.Home); filepath.Dir(home) == "/tmp" && strings.HasPrefix(home, "/tmp/crew-iso-") {
+				_ = os.RemoveAll(home)
+			}
+		}
+	})
 	return e, fs
 }
 
