@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -98,6 +99,10 @@ func mac(e *env, args []string, r *result) {
 	dir, err := outDir(e, o, "mac-"+runID)
 	if err != nil {
 		r.fail(err.Error(), "check the --out-dir")
+		return
+	}
+	if ents, err := os.ReadDir(dir); err != nil || len(ents) > 0 {
+		r.bad("the --out-dir "+dir+" is not empty", "give an empty or new --out-dir")
 		return
 	}
 	var arts []map[string]any
