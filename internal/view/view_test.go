@@ -233,3 +233,32 @@ func TestViewForThePhoneHasTheKillSwitch(t *testing.T) {
 		t.Fatal("the phone got no stopped mates diff")
 	}
 }
+
+func TestViewMatesListTheLocalConversationsOfEachMate(t *testing.T) {
+	st := nativeFixture()
+	st.Sessions = append(st.Sessions,
+		domain.Session{ID: "l1", TaskID: "t1", Harness: domain.HarnessClaude, State: domain.StateDone, Mate: &domain.MateSeat{Name: "webby", Local: true}},
+		domain.Session{ID: "l2", TaskID: "t1", Harness: domain.HarnessClaude, State: domain.StateRunning, Mate: &domain.MateSeat{Name: "webby", Local: true}},
+		domain.Session{ID: "l3", TaskID: "t1", Harness: domain.HarnessClaude, State: domain.StateRunning, Mate: &domain.MateSeat{Name: "webby"}},
+	)
+	v, state := view.NewNative(st)
+	webby := state.Mates.Mates[1]
+	if len(webby.Conversations) != 2 || webby.Conversations[0].ID != "l2" || webby.Conversations[1].ID != "l1" || webby.Conversations[0].State != domain.StateRunning || webby.Conversations[0].Session == "" {
+		t.Fatalf("conversations %+v", webby.Conversations)
+	}
+	if len(webby.Work) != 1 || webby.Work[0] != "l2" {
+		t.Fatalf("work %v", webby.Work)
+	}
+	if helper := state.Mates.Mates[0]; len(helper.Conversations) != 0 || helper.Conversations == nil {
+		t.Fatalf("helper conversations %+v", helper.Conversations)
+	}
+	var mates *view.Mates
+	for _, d := range v.ApplyNative(rpc.Diff{Seq: 20, Session: &domain.Session{ID: "l2", TaskID: "t1", Harness: domain.HarnessClaude, State: domain.StateRunning, Ended: true, Mate: &domain.MateSeat{Name: "webby", Local: true}}}) {
+		if d.Mates != nil {
+			mates = d.Mates
+		}
+	}
+	if mates == nil || !mates.Mates[1].Conversations[0].Ended || len(mates.Mates[1].Work) != 0 {
+		t.Fatalf("mates after the end %+v", mates)
+	}
+}
