@@ -70,6 +70,14 @@ public struct DaemonCheck: Codable, Equatable, Sendable {
     public var installed: Bool
     public var running: Bool
     public var linger: Bool
+    public var execOK: Bool?
+    public var failing: Bool?
+    public var reason: String?
+
+    enum CodingKeys: String, CodingKey {
+        case installed, running, linger, failing, reason
+        case execOK = "exec_ok"
+    }
 }
 
 public struct Probe: Equatable, Sendable {
@@ -173,8 +181,11 @@ public enum Checklist {
         guard let daemon = probe.daemon, daemon.installed else {
             return CheckItem(id: "daemon", title: "Daemon", state: .failed, detail: "not set up as a service", fix: "Set up")
         }
+        if daemon.failing == true {
+            return CheckItem(id: "daemon", title: "Daemon", state: .failed, detail: daemon.reason ?? "the service fails", fix: "Set up or update")
+        }
         guard daemon.running else {
-            return CheckItem(id: "daemon", title: "Daemon", state: .failed, detail: "installed but not running", fix: "Set up")
+            return CheckItem(id: "daemon", title: "Daemon", state: .failed, detail: "installed but not running", fix: "Set up or update")
         }
         if let command = lingerCommand(probe) {
             return CheckItem(id: "daemon", title: "Daemon", state: .warning, detail: "running, but linger is off: the daemon and every session stop at logout", command: command)
@@ -318,13 +329,16 @@ public final class ServerSetup {
             let binary = try self.binary(platform)
             let daemon = try await self.shell.run("\(binary) setup daemon", input: nil)
             guard daemon.status == 0 else { throw self.failure("crew setup daemon", daemon) }
-            if replaced, before.daemon?.running == true {
+            if (replaced && before.daemon?.running == true) || before.daemon?.failing == true {
                 let restart = try await self.shell.run(Self.restart(platform), input: nil)
                 guard restart.status == 0 else { throw self.failure("restarting the daemon", restart) }
             }
             let after = try await self.refresh()
             guard after.build == self.appBuild else {
                 throw ServerSetupError(message: "\(self.server.name) reports build \(after.build ?? "none") after setup, not \(self.appBuild)")
+            }
+            if after.daemon?.failing == true {
+                throw ServerSetupError(message: "the daemon still fails after crew setup daemon: \(after.daemon?.reason ?? "no reason given")")
             }
             self.notice = replaced ? "Installed \(self.appBuild) on \(self.server.name)" : "\(self.server.name) is set up"
         }
@@ -409,6 +423,35 @@ public final class ServerSetup {
         } catch {
             self.error = String(describing: error)
         }
+    }
+}
+
+public enum DaemonFixState: Equatable, Sendable {
+    case ready
+    case fixing
+    case failed(String)
+}
+
+@MainActor
+@Observable
+public final class DaemonFix {
+    public let setup: ServerSetup
+    public private(set) var state: DaemonFixState = .ready
+
+    public init(setup: ServerSetup) {
+        self.setup = setup
+    }
+
+    public func run(reconnect: () -> Void) async {
+        guard state != .fixing else { return }
+        state = .fixing
+        await setup.setUp()
+        if let error = setup.error {
+            state = .failed(error)
+            return
+        }
+        state = .ready
+        reconnect()
     }
 }
 
