@@ -318,6 +318,15 @@ func TestNewMateFlowShowsARefusalAndStaysOpen(t *testing.T) {
 	}
 }
 
+func TestNewMateFlowTakesShiftedLetters(t *testing.T) {
+	m, _ := matesModel(t, withLocalMates(fixture(1, 0)))
+	m = press(m, "a")
+	m = update(m, tea.KeyPressMsg{Code: 'q', ShiftedCode: 'Q', Text: "Q", Mod: tea.ModShift})
+	if out := screen(m); !strings.Contains(out, "name   Q▏") {
+		t.Fatalf("shifted letter lost:\n%s", out)
+	}
+}
+
 func TestSidebarShowsMateFacesAndAMatesSection(t *testing.T) {
 	c := &fakeCaller{mates: testMates}
 	m := tui.New(tui.Options{Theme: tui.Latte(), Now: clock, Calls: c})
