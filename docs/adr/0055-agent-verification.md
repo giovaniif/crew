@@ -21,7 +21,7 @@ We add a set of tools and docs. Each tool is a Go program under `scripts/`. It r
 | Evidence bundle | a folder that `verify evidence init` makes | The proofs of one PR claim, pinned to the base and head commits. |
 | Land gate | `scripts/land` | It decides if a PR is ready, merges it, and writes the daily review. |
 | Verification skill | `.claude/skills/verify/SKILL.md` | How to start the isolated crew, drive it, prove a change and clean up. |
-| Babysit skill | `.claude/skills/babysit/SKILL.md` | How to get a PR to ready: CI, CodeRabbit, threads and the branch. |
+| Babysit skill | `.claude/skills/babysit/SKILL.md` | How to get a PR to ready: CI and the branch. |
 
 ### Output rules of the CLIs
 
@@ -68,7 +68,7 @@ The base is the merge-base of the head with `origin/main`. One checkout holds bo
 ### The land gate
 
 - `land check` follows step 9 of the root `AGENTS.md`. It is true only when the PR is ready: not a draft, the required checks are green, no review thread is open, the branch is up to date with `main`, and each file has a patch (fail closed). The owner does not approve each PR.
-- The required checks come from the branch protection of `main`: `build`, `tdd`, `mutate` and `CodeRabbit`.
+- The required checks come from the branch protection of `main`: `build`, `tdd` and `mutate`. CodeRabbit is not part of the process (owner decision, 2026-10-18).
 - Other findings are flags. They do not block, and the ledger and the daily review show them:
   - irreversible effects: SQL migrations that drop or rename, the release workflow, `.goreleaser.yaml`, `scripts/install.sh`, setup code that edits `~/.claude`, `~/.codex` or the nvim config, and cleanup code that removes worktrees
   - changes to CI or to the gate: `.github/`, `.coderabbit*`, `scripts/land`, `scripts/verify` and `.claude/skills`
