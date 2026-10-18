@@ -46,7 +46,7 @@ Keep Phase A under 20 minutes. Do not wait for slow macOS CI jobs. The next run 
    - Reproduce it on base.
    - Commit the failing test alone. Then commit the fix. Follow the commit rules of the root `AGENTS.md` (no comments, test commit first).
    - Prove it on head, run `go run ./scripts/verify design-check`, then `go run ./scripts/verify evidence verify <bundle>`. It must be `ok`.
-7. **Open the PR** (never a draft) with `Closes #<n>`, a conventional title, and this body: what was wrong and how you found it, zoom crops, then full before and after pairs for each viewport (`verify annotate`, `verify assets push`), the test plan, the output of the Validate commands, and a `## Verification` section from the bundle. End the body with the line `🤖 Generated with [Claude Code](https://claude.com/claude-code)`. Assign the owner, comment `@coderabbitai review`, and do one babysit pass.
+7. **Open the PR** (never a draft) with `Closes #<n>`, a conventional title, and this body: what was wrong and how you found it, zoom crops, then full before and after pairs for each viewport (`verify annotate`, `verify assets push`), the test plan, the output of the Validate commands, and a `## Verification` section from the bundle. End the body with the line `🤖 Generated with [Claude Code](https://claude.com/claude-code)`. Assign the owner and do one babysit pass.
 8. `go run ./scripts/verify iso down`. Run it also after a failure.
 
 ## Commits
