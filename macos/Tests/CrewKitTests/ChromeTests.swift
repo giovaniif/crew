@@ -55,16 +55,17 @@ struct ChromeTests {
 
     @Test func theViewSwitcherEnablesEveryViewForASessionAndNewIsOn() {
         let views = Toolbar.views(session: true)
-        #expect(views.map(\.title) == ["Terminal", "Review", "Shell", "nvim", "Browser"])
-        #expect(views.map(\.enabled) == [true, true, true, true, true])
+        #expect(views.map(\.title) == ["Chat", "Terminal", "Review", "Shell", "nvim", "Browser"])
+        #expect(views.map(\.enabled) == [true, true, true, true, true, true])
         #expect(views.allSatisfy { $0.help == nil })
         #expect(Toolbar.newEnabled)
     }
 
     @Test func withoutASessionTheSessionViewsAreDisabledAndSayWhy() {
         let views = Toolbar.views(session: false)
-        #expect(views.map(\.enabled) == [true, false, false, false, false])
+        #expect(views.map(\.enabled) == [false, true, false, false, false, false])
         #expect(views.map(\.help) == [
+            "Start or select a session to see its chat",
             nil,
             "Start or select a session to review its changes",
             "Start or select a session to open a shell in its worktree",
@@ -73,7 +74,7 @@ struct ChromeTests {
         ])
     }
 
-    @Test(arguments: [MainView.review, .shell, .nvim, .browser])
+    @Test(arguments: [MainView.chat, .review, .shell, .nvim, .browser])
     func aSessionShortcutWithoutASessionSaysWhy(view: MainView) {
         #expect(Toolbar.needsSession(view) == Toolbar.views(session: false).first { $0.title == view.rawValue }?.help)
     }

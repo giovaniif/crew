@@ -123,6 +123,13 @@ struct SnapshotTests {
         _ = try shoot("browser-iphone", .seededBrowser(device: .iphone, agent: false))
     }
 
+    @Test func theChatViewShowsMessagesToolsAndAnInlineApproval() throws {
+        let rep = try shoot("chat-latte", .seededChat())
+        #expect(pixels(rep, near: Palette.latte.hex(.blue)) > 200)
+        _ = try shoot("chat-mocha", .seededChat(), dark: true)
+        _ = try shoot("chat-fresh", .seededChat(fresh: true))
+    }
+
     @Test func theInspectorCanBeHidden() throws {
         _ = try shoot("window-no-inspector", .seeded(inspector: false))
     }
