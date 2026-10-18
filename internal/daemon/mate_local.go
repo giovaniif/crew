@@ -86,6 +86,43 @@ func (d *Daemon) mateNew(req rpc.Request) (*rpc.Response, bool) {
 	if err := json.Unmarshal(req.Params, &p); err != nil || strings.TrimSpace(p.Name) == "" {
 		return errorResponse(req.ID, rpc.CodeBadRequest, "mate.new needs a name"), true
 	}
+	return d.startMateConversation(req.ID, p, "", "")
+}
+
+func (d *Daemon) mateFresh(req rpc.Request) (*rpc.Response, bool) {
+	var p rpc.MateFreshParams
+	if err := json.Unmarshal(req.Params, &p); err != nil || strings.TrimSpace(p.Session) == "" {
+		return errorResponse(req.ID, rpc.CodeBadRequest, "mate.fresh needs a session"), true
+	}
+	var old domain.Session
+	var found bool
+	if !d.query(func(s *state) { old, found = s.sessions[p.Session] }) {
+		return nil, false
+	}
+	switch {
+	case !found:
+		return errorResponse(req.ID, rpc.CodeNotFound, "no session "+p.Session), true
+	case old.Mate == nil:
+		return errorResponse(req.ID, rpc.CodeBadRequest, "session "+p.Session+" is not a conversation with a mate"), true
+	}
+	if !old.Ended {
+		resp, ok := d.sessionSend(rpc.Request{Method: rpc.MethodSessionSend, Params: mustJSON(rpc.SessionSendParams{Session: old.ID, Text: domain.MateHandoffPrompt(d.mateMemoryPath(old.Mate.Name))})})
+		switch {
+		case !ok:
+			return nil, false
+		case resp.Error != nil:
+			return errorResponse(req.ID, resp.Error.Code, "crew could not ask for a handoff: "+resp.Error.Message), true
+		}
+	}
+	dir := ""
+	if p.SameWorktree {
+		dir = old.Dir
+	}
+	return d.startMateConversation(req.ID, rpc.MateNewParams{Name: old.Mate.Name, Prompt: p.Prompt}, dir, old.StartWorkspace)
+}
+
+func (d *Daemon) startMateConversation(id uint64, p rpc.MateNewParams, dir, workspace string) (*rpc.Response, bool) {
+	req := rpc.Request{ID: id}
 	m, _, ok := d.findMate(p.Name)
 	if !ok {
 		return errorResponse(req.ID, rpc.CodeNotFound, fmt.Sprintf("no mate %q", p.Name)), true
@@ -94,10 +131,13 @@ func (d *Daemon) mateNew(req rpc.Request) (*rpc.Response, bool) {
 	if !d.query(func(s *state) { workspaces = sorted(s.workspaces) }) {
 		return nil, false
 	}
-	root := ""
-	if ws, found := domain.MateRepoWorkspace(m, workspaces, p.Repo); found {
+	root := workspace
+	ws, found := domain.MateRepoWorkspace(m, workspaces, p.Repo)
+	switch {
+	case root != "":
+	case found:
 		root = ws.Root
-	} else if p.Repo != "" {
+	case p.Repo != "":
 		return errorResponse(req.ID, rpc.CodeBadRequest, fmt.Sprintf("repo %q is not a registered single-repo workspace", p.Repo)), true
 	}
 	memory, err := d.readMateMemory(m.Name)
@@ -108,7 +148,7 @@ func (d *Daemon) mateNew(req rpc.Request) (*rpc.Response, bool) {
 	seat := &domain.MateSeat{Name: m.Name, Owner: m.Owner, Local: true}
 	session, rerr, ok := d.startSessionWith(rpc.NewSessionParams{
 		Workspace: root, WorkItem: mateWorkItem(m.Name, p.Prompt), Harness: m.Agent, Model: m.Model, Effort: m.Effort, Prompt: p.Prompt,
-	}, "", system, seat)
+	}, "", sessionExtras{system: system, seat: seat, dir: dir})
 	switch {
 	case !ok:
 		return nil, false
