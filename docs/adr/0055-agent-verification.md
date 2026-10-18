@@ -77,6 +77,18 @@ The base is the merge-base of the head with `origin/main`. One checkout holds bo
 - The mode is in `scripts/land/config.json`. The default is `live`: `land merge` runs `gh pr merge --merge --match-head-commit <sha>`, because this repo merges with merge commits. In `shadow` mode, `land merge` only writes the ledger.
 - `land digest --since 24h` prints each PR that merged in the period, with its flags, its watch result and any revert, as JSON and as a short Markdown summary. A daily agent posts it for the owner. This daily review replaces a review of each PR before the merge.
 
+### The scheduled loops
+
+Three systemd user timers on the Linux server run headless Claude Code (`scripts/loops/`). Each run uses a fresh worktree of `origin/main`, `--permission-mode bypassPermissions` and a hard `timeout`.
+
+| Loop | When | What it does |
+|---|---|---|
+| `patrol` | each hour | It babysits and merges agent PRs, watches merged PRs, and opens one new verified fix. The `patrol run log` issue is its lock. |
+| `maintenance` | each day | It fixes map drift in one PR, which merges by step 9. |
+| `digest` | each day, 08:00 America/Sao_Paulo | It posts the daily review to the pinned `Daily merge review` issue, and to ntfy when it can read the topic. |
+
+Cloud agents cannot do this work, because they cannot drive tmux, Playwright or the isolated crew on the server.
+
 ## Why
 
 - One JSON shape lets an agent read `ok` and `hint` and not parse text.
@@ -91,6 +103,8 @@ The base is the merge-base of the head with `origin/main`. One checkout holds bo
 - **Live control of the Mac app:** the server has no macOS. CI artifacts are the proof.
 
 ## Consequences
+
+- The loops post with the gh account of the owner. GitHub does not notify a user of their own comments. Thus the daily review issue and ntfy are the channels to the owner. `/etc/homelab-notify.env` is root-only now, so the digest posts only to the issue until the owner makes the topic readable.
 
 - PRs that change `scripts/verify`, `scripts/land` or the skills merge like other PRs. The daily review flags them.
 - The feature map must stay current. A maintenance loop runs its recipes and fixes drift.

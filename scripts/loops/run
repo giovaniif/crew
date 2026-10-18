@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+loop="${1:?usage: run patrol|maintenance|digest}"
+case "$loop" in
+  patrol) budget="${CREW_LOOP_BUDGET:-55m}" ;;
+  maintenance) budget="${CREW_LOOP_BUDGET:-110m}" ;;
+  digest) budget="${CREW_LOOP_BUDGET:-15m}" ;;
+  *) echo "unknown loop: $loop" >&2; exit 2 ;;
+esac
+
+here="$(cd "$(dirname "$0")" && pwd)"
+repo="${CREW_LOOP_REPO:?CREW_LOOP_REPO is not set}"
+state="${XDG_STATE_HOME:-$HOME/.local/state}/crew-loops"
+mkdir -p "$state"
+
+exec 9>"$state/$loop.lock"
+if ! flock -n 9; then
+  echo "$loop: an earlier run still holds the lock" >&2
+  exit 0
+fi
+
+stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+git -C "$repo" fetch --quiet origin main
+wt="$state/wt-$loop-$stamp"
+work="$state/work-$loop-$stamp"
+mkdir -p "$work"
+git -C "$repo" worktree add --quiet --detach "$wt" origin/main
+
+finish() {
+  if [ -d "$wt/scripts/verify" ]; then
+    (cd "$wt" && timeout 3m go run ./scripts/verify iso down >/dev/null 2>&1) || true
+  fi
+  "$here/cleanup" "$repo" "$state/backup" "$work"/* "$wt"
+  rmdir "$work" 2>/dev/null || true
+}
+trap finish EXIT
+
+prompt="$wt/scripts/loops/$loop.md"
+if [ ! -f "$prompt" ]; then
+  echo "$loop: $prompt is not on main" >&2
+  exit 1
+fi
+
+if [ -r /etc/homelab-notify.env ]; then
+  export CREW_LOOP_NTFY=1
+else
+  export CREW_LOOP_NTFY=0
+fi
+export CREW_LOOP_NAME="$loop"
+export CREW_LOOP_WORK="$work"
+
+cd "$wt"
+set +e
+timeout --kill-after=2m "$budget" claude -p "$(cat "$prompt")" \
+  --permission-mode bypassPermissions \
+  --output-format text \
+  >"$state/$loop.last.log" 2>&1
+code=$?
+set -e
+cat "$state/$loop.last.log"
+
+if [ "$loop" = patrol ] && { [ "$code" -eq 124 ] || [ "$code" -eq 137 ]; }; then
+  issue="$(gh issue list -R giovaniif/crew --state open --search 'in:title "patrol run log"' --json number --jq '.[0].number' 2>/dev/null || true)"
+  if [ -n "$issue" ]; then
+    gh issue comment "$issue" -R giovaniif/crew --body "run-end $(date -u +%Y-%m-%dT%H:%M:%SZ) timeout: the runner stopped the agent after $budget (exit $code)" >/dev/null || true
+  fi
+fi
+exit "$code"
