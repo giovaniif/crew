@@ -38,6 +38,22 @@ public struct MateThread: Codable, Sendable, Equatable, Identifiable {
     }
 }
 
+public struct MateConversation: Codable, Sendable, Equatable, Identifiable {
+    public var id: String
+    public var session: String
+    public var state: String
+    public var ended: Bool
+
+    public init(id: String, session: String = "", state: String = "idle", ended: Bool = false) {
+        self.id = id
+        self.session = session
+        self.state = state
+        self.ended = ended
+    }
+
+    public var label: String { session.isEmpty ? id : session }
+}
+
 public struct MateRow: Codable, Sendable, Equatable, Identifiable {
     public var name: String
     public var state: String
@@ -45,14 +61,19 @@ public struct MateRow: Codable, Sendable, Equatable, Identifiable {
     public var hold: String?
     @NullAsEmpty public var work: [String]
     @NullAsEmpty public var threads: [MateThread]
+    @NullAsEmpty public var conversations: [MateConversation]
 
-    public init(name: String, state: String, error: String? = nil, hold: String? = nil, work: [String] = [], threads: [MateThread] = []) {
+    public init(
+        name: String, state: String, error: String? = nil, hold: String? = nil, work: [String] = [], threads: [MateThread] = [],
+        conversations: [MateConversation] = []
+    ) {
         self.name = name
         self.state = state
         self.error = error
         self.hold = hold
         self.work = work
         self.threads = threads
+        self.conversations = conversations
     }
 
     public var id: String { name }
@@ -72,7 +93,7 @@ public struct MateRow: Codable, Sendable, Equatable, Identifiable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case name, state, error, work, threads
+        case name, state, error, work, threads, conversations
         case hold = "guard"
     }
 }
