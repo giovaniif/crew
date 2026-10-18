@@ -1616,14 +1616,14 @@ button.danger {
   margin: 4px 0 0;
 }
 
-.tags {
+.mtags {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   justify-content: center;
 }
 
-.tag {
+.mtag {
   font: 500 12px var(--mono);
   padding: 5px 10px;
   border-radius: 99px;
@@ -1678,10 +1678,19 @@ button.danger {
   font: 13px/1.5 var(--mono);
 }
 
-.slack-button {
+.mate-actions .slack-button {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  background: var(--base);
+  color: var(--text);
+  border: 1px solid var(--surface);
+}
+
+.conv-list a {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .steps {
@@ -1804,6 +1813,6 @@ button.danger {
   flex-direction: column;
 }
 
-.mate-bar .tag {
+.mate-bar .mtag {
   min-height: 44px;
 }

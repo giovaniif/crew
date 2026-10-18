@@ -562,7 +562,7 @@ function MateBar({ api, session, mate, snapshot }: { api: Authed; session: Sessi
           <span className="face-state">{stateWords[state]}</span>
         </span>
       </a>
-      <button type="button" className="tag" disabled={busy} onClick={fresh}>
+      <button type="button" className="mtag" disabled={busy} onClick={fresh}>
         Start fresh
       </button>
       {note ? <p role="alert">{note}</p> : null}

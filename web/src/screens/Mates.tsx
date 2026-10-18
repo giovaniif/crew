@@ -456,9 +456,9 @@ export function MateProfile({ api, name, board }: { api: Authed; name: string; b
         <h1>{name}</h1>
         <StateWord state={state} />
         {def && <p className="mate-tag">{def.prompt}</p>}
-        <div className="tags">
+        <div className="mtags">
           {chips.map((c) => (
-            <span key={c} className="tag">
+            <span key={c} className="mtag">
               {c}
             </span>
           ))}
@@ -624,9 +624,9 @@ export function NewMate({ api }: { api: Authed }) {
       {step === 1 && (
         <>
           <h2>2 · Personality</h2>
-          <div className="tags">
+          <div className="mtags">
             {presets.map(([label, text]) => (
-              <button key={label} type="button" className="tag" onClick={() => setMate({ ...mate, prompt: text })}>
+              <button key={label} type="button" className="mtag" onClick={() => setMate({ ...mate, prompt: text })}>
                 {label}
               </button>
             ))}
