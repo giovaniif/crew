@@ -315,6 +315,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.auto != nil {
 			return m.automationPaste(msg.Content), nil
 		}
+		if m.rv.typing {
+			m.rv.text += msg.Content
+			return m, nil
+		}
 	case automationsMsg:
 		return m.automationsLoaded(msg), nil
 	case mateApprovalsMsg:
