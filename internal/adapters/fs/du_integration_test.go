@@ -5,6 +5,8 @@ package fs_test
 import (
 	"bytes"
 	"context"
+	"errors"
+	iofs "io/fs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -69,7 +71,7 @@ func TestDiskDuDoesNotFollowSymlinks(t *testing.T) {
 }
 
 func TestDiskDuFailsForAMissingDirectory(t *testing.T) {
-	if _, err := (fs.Du{}).Size(context.Background(), filepath.Join(t.TempDir(), "missing")); err == nil {
-		t.Error("want an error")
+	if _, err := (fs.Du{}).Size(context.Background(), filepath.Join(t.TempDir(), "missing")); !errors.Is(err, iofs.ErrNotExist) {
+		t.Errorf("err = %v, want fs.ErrNotExist", err)
 	}
 }
