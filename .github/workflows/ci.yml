@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v5
         with:
@@ -39,7 +39,8 @@ jobs:
       - run: ./bin/crew version
       - run: make lint
       - run: BUDGET_SCALE=2 scripts/bench-hook.sh ./bin/crew
-      - run: sudo apt-get update && sudo apt-get install -y tmux neovim
+      - run: brew list tmux >/dev/null 2>&1 || brew install tmux
+      - run: brew list neovim >/dev/null 2>&1 || brew install neovim
       - run: go test ./...
       - run: go vet -tags integration -composites=false ./...
       - run: go test -p 2 -tags integration ./...
