@@ -20,4 +20,4 @@ A background job empties the trash, 4 at a time. Cleanup never deletes branches.
 
 ## Disk sizes
 
-`app.DiskSizes.Get` never waits. `du` runs in a pool of 2, and its results stay in a cache for 5 min. Nothing on the loop, the render path or a request waits for it. See [ADR 0030](../../docs/adr/0030-worktrees-disk-view.md).
+`app.DiskSizes.Get` never waits. `du` runs in a pool of 2, and its results stay in a cache for 5 min. If the folder is not on disk (`fs.ErrNotExist`), the size is `domain.SizeMissing`, a final value. Nothing on the loop, the render path or a request waits for it. See [ADR 0030](../../docs/adr/0030-worktrees-disk-view.md).

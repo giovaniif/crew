@@ -95,7 +95,7 @@ See [ADR 0023](../../docs/adr/0023-review-pane.md). `r` opens the review of the 
 `w` opens it. See [ADR 0030](../../docs/adr/0030-worktrees-disk-view.md).
 
 - **Header.** Volume free and total, the worktree total, the reclaimable total, the auto-cleanup interval and the size of the shared deps store. The reclaimable total (`domain.Reclaimable`) counts the rows that the engine would remove, or back up and remove. If a total does not include sizes that are still in measurement, it ends in `+`.
-- **Rows.** One for each worktree from `disk.view`. A size that is still in measurement shows `…`. Nothing on the render path waits for `du`.
+- **Rows.** One for each worktree from `disk.view`. A size that is still in measurement shows `…`. A worktree folder that is not on disk shows `missing`. The totals do not include it, and they do not wait for it. Nothing on the render path waits for `du`.
 - **Actions.**
   - `d` and `b` (after `y`) call `cleanup.worktree`. `d` removes only merged clean worktrees. `b` first backs up a dirty or detached worktree. Both end with the last process and repo-state checks of the engine.
   - **CAUTION:** `d` and `b` really remove worktrees. Try them only on temp repos.

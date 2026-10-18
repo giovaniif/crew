@@ -39,6 +39,27 @@ func TestTotalSizeSumsEveryMeasuredWorktreeAndCountsTheRest(t *testing.T) {
 	}
 }
 
+func TestDiskTotalsLeaveOutAMissingFolderWithoutWaitingForIt(t *testing.T) {
+	rows := []DiskRow{
+		{WorktreeID: "a", Size: SizeMissing, Action: CleanupRemove},
+		{WorktreeID: "b", Size: 40, Action: CleanupRemove},
+		{WorktreeID: "c", Size: SizeMissing, Action: CleanupKeep},
+	}
+	cases := []struct {
+		name string
+		fn   func([]DiskRow) (int64, int)
+	}{
+		{"Reclaimable", Reclaimable},
+		{"TotalSize", TotalSize},
+	}
+	for _, c := range cases {
+		total, pending := c.fn(rows)
+		if total != 40 || pending != 0 {
+			t.Errorf("%s = %d, %d pending; want 40, 0", c.name, total, pending)
+		}
+	}
+}
+
 func TestWorktreeStatusSaysWhatTheWorktreeIsDoing(t *testing.T) {
 	merged := &PullRequest{Number: 1, State: PRMerged}
 	cases := []struct {
