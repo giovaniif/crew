@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { App, type AppEnv } from "../App";
@@ -31,35 +31,40 @@ const board: Mates = {
           ended: false,
         },
       ],
+      conversations: [],
     },
-    { name: "webby", state: "paused", work: [], threads: [] },
-    { name: "fresh", state: "no_tokens", work: [], threads: [] },
+    { name: "webby", state: "paused", work: [], threads: [], conversations: [{ id: "s2", session: "fix the docs", state: "waiting", ended: false }] },
+    { name: "fresh", state: "ready", work: [], threads: [], conversations: [] },
   ],
 };
 
 const defs = {
   mates: [
-    { name: "helper", prompt: "Help.", agent: "claude", repos: ["api"], enabled: true },
+    { name: "helper", prompt: "Help.\nMore help.", agent: "claude", model: "opus", effort: "high", repos: ["api"], avatar: "owl", enabled: true },
     { name: "webby", prompt: "Web.", agent: "codex", enabled: false },
     { name: "fresh", prompt: "New.", agent: "claude", enabled: true },
   ],
   limits: { hop_limit: 5, turns_per_hour: 20, daily_turns: 100, daily_tokens: 0, stop: false },
 };
 
-function setup(hash = "#/mates", mates: Mates = board) {
+function setup(hash = "#/mates", mates: Mates = board, approvals: unknown[] = []) {
+  window.location.hash = "";
   const sockets = new FakeSockets();
   const server = new FakeServer()
     .on("GET", "/api/v1/hello", { status: 200, body: { api: "v1", build: "v0.12.0+abc" } })
     .on("GET", "/api/v1/workspaces", { status: 200, body: { workspaces: [], last_used: "" } })
     .on("GET", "/api/v1/mates", { status: 200, body: defs })
-    .on("GET", "/api/v1/approvals", { status: 200, body: [] })
+    .on("GET", "/api/v1/approvals", { status: 200, body: approvals })
     .on("POST", "/api/v1/mates/stop", { status: 200, body: defs.limits })
     .on("POST", "/api/v1/mates/helper/pause", { status: 200, body: defs.mates[0] })
     .on("POST", "/api/v1/mates/webby/resume", { status: 200, body: defs.mates[1] })
-    .on("POST", "/api/v1/mates", { status: 200, body: { name: "scout", prompt: "Scout.", agent: "claude", enabled: true } })
-    .on("GET", "/api/v1/mates/scout/setup", { status: 200, body: { manifest: "{}", url: "https://api.slack.com/apps?new_app=1" } })
-    .on("POST", "/api/v1/mates/scout/tokens", { status: 200, body: { name: "scout", has_bot_token: true, has_app_token: true } })
-    .on("POST", "/api/v1/mates/scout/claim", { status: 200, body: { name: "scout", code: "ABCD2345", expires_at: "2026-10-03T12:10:00Z" } });
+    .on("POST", "/api/v1/mates", { status: 200, body: { name: "scout", prompt: "Scout.", agent: "codex", enabled: true } })
+    .on("POST", "/api/v1/mates/helper/new", { status: 200, body: { ID: "s9" } })
+    .on("POST", "/api/v1/mates/webby/new", { status: 200, body: { ID: "s8" } })
+    .on("POST", "/api/v1/sessions/s2/messages", { status: 200, body: { queued: false } })
+    .on("GET", "/api/v1/mates/helper/memory", { status: 200, body: { name: "helper", path: "/m/helper/memory.md", text: "- Tests come first.", limit: 8192 } })
+    .on("POST", "/api/v1/mates/helper/memory", { status: 200, body: { name: "helper", path: "/m/helper/memory.md", text: "- Small PRs.", limit: 8192 } })
+    .on("GET", "/api/v1/mates/fresh/setup", { status: 200, body: { manifest: "{}", url: "https://api.slack.com/apps?new_app=1" } });
   const storage = new MemoryStorage();
   storage.setItem("crew.auth", JSON.stringify({ token: "t0k", device }));
   const env: AppEnv = {
@@ -75,9 +80,13 @@ function setup(hash = "#/mates", mates: Mates = board) {
   };
   render(<App env={env} />);
   sockets.last.open();
-  sockets.last.push({ state: { ...goldenState(), mates } });
+  const st = goldenState();
+  st.sessions = st.sessions.map((x) => (x.ID === "s2" ? { ...x, Mate: { Name: "webby", Local: true } } : x));
+  sockets.last.push({ state: { ...st, mates } });
   return { server, sockets };
 }
+
+const calls = (server: FakeServer) => server.calls.map((c) => c.method + " " + c.path);
 
 describe("Mates", () => {
   it("is a tab", () => {
@@ -85,25 +94,35 @@ describe("Mates", () => {
     expect(screen.getByRole("link", { name: "Mates" })).toHaveAttribute("href", "#/mates");
   });
 
-  it("shows each mate with its state, current work and threads that link to Slack and the session", async () => {
+  it("shows a face card for each mate with its state, linked to the profile", async () => {
     setup();
-    const helper = await screen.findByRole("listitem", { name: "helper" });
-    expect(helper).toHaveTextContent("connected");
-    expect(helper).toHaveTextContent("Works on add login");
-    const threads = within(helper).getByRole("list", { name: "Threads of helper" });
-    expect(within(threads).getByRole("link", { name: "add login" })).toHaveAttribute("href", "#/sessions/s1");
-    expect(within(threads).getByRole("link", { name: "Slack" })).toHaveAttribute("href", "https://app.slack.com/client/T1/C1/thread/C1-1700.0001");
-    expect(screen.getByRole("listitem", { name: "webby" })).toHaveTextContent("paused");
+    const helper = await screen.findByRole("link", { name: /^helper/ });
+    expect(helper).toHaveAttribute("href", "#/mates/helper");
+    expect(await within(helper).findByRole("img", { name: "Owl working" })).toBeInTheDocument();
+    expect(helper).toHaveTextContent("Help.");
+    expect(helper).not.toHaveTextContent("More help.");
+    expect(helper).toHaveTextContent("working");
+    expect(within(screen.getByRole("link", { name: /^webby/ })).getByText("paused")).toBeInTheDocument();
+    expect(within(screen.getByRole("link", { name: /^fresh/ })).getByText("idle")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "New mate" })).toHaveAttribute("href", "#/mates/new");
     expect(await screen.findByText("No approvals wait for you.")).toBeInTheDocument();
   });
 
-  it("pauses a mate and resumes a paused one", async () => {
-    const { server } = setup();
-    const user = userEvent.setup();
-    await user.click(within(await screen.findByRole("listitem", { name: "helper" })).getByRole("button", { name: "Pause" }));
-    await user.click(within(screen.getByRole("listitem", { name: "webby" })).getByRole("button", { name: "Resume" }));
-    await waitFor(() => expect(server.calls.map((c) => c.method + " " + c.path)).toContain("POST /api/v1/mates/webby/resume"));
-    expect(server.calls.map((c) => c.method + " " + c.path)).toContain("POST /api/v1/mates/helper/pause");
+  it("shows needs you on the face of a mate with a pending approval", async () => {
+    const ask = {
+      ID: "a1",
+      SessionID: "s1",
+      Mate: "helper",
+      Requester: "Gus",
+      Action: { Kind: "merge", Tool: "Bash", Input: "gh pr merge 1" },
+      At: "2026-10-03T11:00:00Z",
+      State: "pending",
+    };
+    setup("#/mates", board, [ask]);
+    const helper = await screen.findByRole("link", { name: /^helper/ });
+    expect(await within(helper).findByText("needs you")).toBeInTheDocument();
+    expect(within(helper).getByRole("img", { name: "Owl needs" })).toBeInTheDocument();
+    expect(screen.getByRole("listitem", { name: "helper: merge" })).toBeInTheDocument();
   });
 
   it("stops all mates only after a confirm", async () => {
@@ -128,37 +147,139 @@ describe("Mates", () => {
     setup("", { ...board, stopped: true });
     expect(await screen.findByRole("status")).toHaveTextContent("All mates are stopped");
   });
+});
 
-  it("edits the settings of a mate", async () => {
-    const { server } = setup();
+describe("Mate profile", () => {
+  it("shows the face, the prompt, the brains, the threads and the memory", async () => {
+    setup("#/mates/helper");
+    expect(await screen.findByRole("heading", { name: "helper" })).toBeInTheDocument();
+    expect(await screen.findByRole("img", { name: "Owl working" })).toBeInTheDocument();
+    for (const chip of ["claude", "opus", "effort high", "api"]) {
+      expect(screen.getByText(chip)).toBeInTheDocument();
+    }
+    const list = screen.getByRole("list", { name: "Conversations of helper" });
+    expect(within(list).getByRole("link", { name: /add login/ })).toHaveAttribute("href", "#/sessions/s1");
+    expect(within(list).getByRole("link", { name: "Slack" })).toHaveAttribute("href", "https://app.slack.com/client/T1/C1/thread/C1-1700.0001");
+    expect(await screen.findByText("- Tests come first.")).toBeInTheDocument();
+  });
+
+  it("lists the local conversations and resumes a paused mate", async () => {
+    const { server } = setup("#/mates/webby");
+    const list = await screen.findByRole("list", { name: "Conversations of webby" });
+    expect(within(list).getByRole("link", { name: /fix the docs/ })).toHaveAttribute("href", "#/sessions/s2");
+    await userEvent.setup().click(screen.getByRole("button", { name: "Resume" }));
+    await waitFor(() => expect(calls(server)).toContain("POST /api/v1/mates/webby/resume"));
+  });
+
+  it("pauses a mate", async () => {
+    const { server } = setup("#/mates/helper");
+    await userEvent.setup().click(await screen.findByRole("button", { name: "Pause" }));
+    await waitFor(() => expect(calls(server)).toContain("POST /api/v1/mates/helper/pause"));
+  });
+
+  it("starts a new conversation and opens it", async () => {
+    const { server } = setup("#/mates/helper");
+    await userEvent.setup().click(await screen.findByRole("button", { name: "+ New conversation" }));
+    await waitFor(() => expect(window.location.hash).toBe("#/sessions/s9"));
+    expect(calls(server)).toContain("POST /api/v1/mates/helper/new");
+  });
+
+  it("edits the memory", async () => {
+    const { server } = setup("#/mates/helper");
     const user = userEvent.setup();
-    const helper = await screen.findByRole("listitem", { name: "helper" });
-    await user.click(within(helper).getByRole("button", { name: "Settings" }));
-    const form = within(helper).getByRole("form", { name: "Settings of helper" });
-    const model = within(form).getByLabelText("Model");
-    await user.type(model, "opus");
-    await user.click(within(form).getByRole("button", { name: "Save" }));
-    await waitFor(() =>
-      expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/mates")?.body).toEqual({
-        mate: { name: "helper", prompt: "Help.", agent: "claude", model: "opus", repos: ["api"], enabled: true },
-      }),
+    await screen.findByText("- Tests come first.");
+    await user.click(screen.getByRole("button", { name: "Edit memory" }));
+    const box = screen.getByLabelText("Memory of helper");
+    await user.clear(box);
+    await user.type(box, "- Small PRs.");
+    await user.click(screen.getByRole("button", { name: "Save memory" }));
+    expect(await screen.findByText("- Small PRs.")).toBeInTheDocument();
+    expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/mates/helper/memory")?.body).toEqual({ text: "- Small PRs." });
+  });
+
+  it("offers Connect to Slack with the Slack mark for a mate without Slack", async () => {
+    setup("#/mates/fresh");
+    const user = userEvent.setup();
+    const button = await screen.findByRole("button", { name: /Connect to Slack/ });
+    expect(within(button).getByRole("img", { name: "Slack" })).toBeInTheDocument();
+    await user.click(button);
+    expect(await screen.findByRole("link", { name: "Make the Slack app from the manifest" })).toHaveAttribute(
+      "href",
+      "https://api.slack.com/apps?new_app=1",
     );
   });
 
-  it("adds a mate, links the Slack manifest, saves the tokens and shows the claim code", async () => {
-    const { server } = setup();
+  it("does not offer Slack to a connected mate", async () => {
+    setup("#/mates/helper");
+    await screen.findByRole("heading", { name: "helper" });
+    expect(screen.queryByRole("button", { name: /Connect to Slack/ })).toBeNull();
+  });
+});
+
+describe("New mate", () => {
+  it("makes a mate in three steps: face, personality with tone, brains", async () => {
+    const { server } = setup("#/mates/new");
     const user = userEvent.setup();
-    await user.click(await screen.findByRole("button", { name: "Add a mate" }));
-    const form = screen.getByRole("form", { name: "New mate" });
-    await user.type(within(form).getByLabelText("Name"), "scout");
-    await user.type(within(form).getByLabelText("Prompt"), "Scout.");
-    await user.click(within(form).getByRole("button", { name: "Add mate" }));
-    const link = await screen.findByRole("link", { name: "Make the Slack app from the manifest" });
-    expect(link).toHaveAttribute("href", "https://api.slack.com/apps?new_app=1");
-    await user.type(screen.getByLabelText("Bot token"), "xoxb-1");
-    await user.type(screen.getByLabelText("App token"), "xapp-1");
-    await user.click(screen.getByRole("button", { name: "Save tokens" }));
-    expect(await screen.findByText("ABCD2345")).toBeInTheDocument();
-    expect(server.calls.find((c) => c.path === "/api/v1/mates/scout/tokens")?.body).toEqual({ bot_token: "xoxb-1", app_token: "xapp-1" });
+    await user.click(await screen.findByRole("button", { name: "Quill" }));
+    expect(screen.getByRole("button", { name: "Quill" })).toHaveAttribute("aria-pressed", "true");
+    await user.click(screen.getByRole("button", { name: "Color #209fb5" }));
+    await user.type(screen.getByLabelText("Name"), "scout");
+    await user.click(screen.getByRole("button", { name: "Next: personality" }));
+    await user.type(screen.getByLabelText("Prompt"), "Scout the repo.");
+    expect(screen.getByRole("region", { name: "Added to the prompt" })).toHaveTextContent("Middle step. Adds no text.");
+    fireEvent.change(screen.getByLabelText("Terse to Chatty"), { target: { value: "1" } });
+    expect(screen.getAllByText("Terse 2/5").length).toBeGreaterThan(0);
+    expect(screen.getByRole("region", { name: "Added to the prompt" })).toHaveTextContent("Keep answers short. Use lists, not paragraphs.");
+    await user.click(screen.getByRole("button", { name: "Next: brains" }));
+    await user.selectOptions(screen.getByLabelText("Agent"), "codex");
+    await user.type(screen.getByLabelText("Model"), "gpt-5");
+    await user.type(screen.getByLabelText("Effort"), "high");
+    await user.type(screen.getByLabelText("Repos"), "api, web");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+    await waitFor(() =>
+      expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/mates")?.body).toEqual({
+        mate: {
+          name: "scout",
+          prompt: "Scout the repo.\n\nKeep answers short. Use lists, not paragraphs.",
+          agent: "codex",
+          model: "gpt-5",
+          effort: "high",
+          repos: ["api", "web"],
+          avatar: "quill",
+          color: "#209fb5",
+          enabled: true,
+        },
+      }),
+    );
+    await waitFor(() => expect(window.location.hash).toBe("#/mates/scout"));
+  });
+
+  it("goes back a step and keeps the choices", async () => {
+    setup("#/mates/new");
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText("Name"), "scout");
+    await user.click(screen.getByRole("button", { name: "Next: personality" }));
+    await user.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.getByLabelText("Name")).toHaveValue("scout");
+  });
+});
+
+describe("Mate conversation", () => {
+  it("shows the face of the mate and starts fresh after it asks for a handoff", async () => {
+    const { server } = setup("#/sessions/s2");
+    const user = userEvent.setup();
+    expect(await screen.findByRole("img", { name: /^Owl paused$|paused$/ })).toBeInTheDocument();
+    await user.click(await screen.findByRole("button", { name: "Start fresh" }));
+    await waitFor(() => expect(window.location.hash).toBe("#/sessions/s8"));
+    expect(calls(server).filter((c) => c.startsWith("POST"))).toEqual(["POST /api/v1/sessions/s2/messages", "POST /api/v1/mates/webby/new"]);
+    expect(server.calls.find((c) => c.path === "/api/v1/sessions/s2/messages")?.body).toEqual({
+      text: "Before we stop: add a short handoff to your memory file. Note what you did, what is left and what you learned.",
+    });
+  });
+
+  it("has no Start fresh on a session of no mate", async () => {
+    setup("#/sessions/s1");
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.queryByRole("button", { name: "Start fresh" })).toBeNull();
   });
 });
