@@ -14,7 +14,9 @@ Read these first: the root `AGENTS.md`, `scripts/AGENTS.md`, `docs/adr/0055-agen
 
 Agent PRs are the open PRs by the owner account whose body ends with the Claude Code line, and the PRs that the ledger (`go run ./scripts/land ledger`) shows.
 
-For each one, in its own new worktree (`git worktree add`, never this one for two PRs):
+Make each extra worktree under `$CREW_LOOP_WORK` (`git worktree add "$CREW_LOOP_WORK/<name>" ...`). Push each change before the run ends. After the run, the runner backs up the uncommitted changes of each worktree there as a patch, then removes it. It keeps the branches and each worktree that a process still uses. It also runs `verify iso down`, and it posts `run-end` when the timeout stops you.
+
+For each one, in its own new worktree (never this one for two PRs):
 
 1. Read the thread for human replies after the newest agent comment:
    - "merge": run `go run ./scripts/land merge <pr>`.

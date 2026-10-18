@@ -23,8 +23,10 @@ if [ "${1:-}" = "--remove" ]; then
       rm -f "$f"
     done
   done
-  backup "$bin/run"
-  rm -f "$bin/run"
+  for f in run cleanup; do
+    backup "$bin/$f"
+    rm -f "$bin/$f"
+  done
   systemctl --user daemon-reload
   echo "removed the crew loops"
   exit 0
@@ -35,16 +37,25 @@ if [ $# -gt 0 ]; then
 fi
 
 mkdir -p "$units" "$bin"
-if ! cmp -s "$here/run" "$bin/run"; then
-  backup "$bin/run"
-  install -m 755 "$here/run" "$bin/run"
-  echo "installed: $bin/run"
-fi
+for f in run cleanup; do
+  if ! cmp -s "$here/$f" "$bin/$f"; then
+    backup "$bin/$f"
+    install -m 755 "$here/$f" "$bin/$f"
+    echo "installed: $bin/$f"
+  fi
+done
+
+escape() {
+  printf '%s' "$1" | sed 's/[\\&|]/\\&/g'
+}
+repo_e="$(escape "$repo")"
+bin_e="$(escape "$bin")"
+path_e="$(escape "$PATH")"
 
 for src in "$here"/units/*; do
   dst="$units/$(basename "$src")"
   tmp="$(mktemp)"
-  sed -e "s|@REPO@|$repo|g" -e "s|@BIN@|$bin|g" -e "s|@PATH@|$PATH|g" "$src" >"$tmp"
+  sed -e "s|@REPO@|$repo_e|g" -e "s|@BIN@|$bin_e|g" -e "s|@PATH@|$path_e|g" "$src" >"$tmp"
   if cmp -s "$tmp" "$dst"; then
     rm -f "$tmp"
     continue

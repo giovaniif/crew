@@ -5,8 +5,8 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-Environment=CREW_LOOP_REPO=@REPO@
-Environment=PATH=@PATH@
-ExecStart=@BIN@/run digest
+Environment="CREW_LOOP_REPO=@REPO@"
+Environment="PATH=@PATH@"
+ExecStart="@BIN@/run" digest
 TimeoutStartSec=20min
 Nice=10

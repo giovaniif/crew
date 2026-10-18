@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+repo="${1:?usage: cleanup <repo> <backup dir> <worktree>...}"
+backup="${2:?usage: cleanup <repo> <backup dir> <worktree>...}"
+shift 2
+
+in_use() {
+  local dir pid link
+  dir="$(cd "$1" && pwd -P)"
+  for pid in /proc/[0-9]*; do
+    [ "$pid" = "/proc/$$" ] && continue
+    link="$(readlink "$pid/cwd" 2>/dev/null)" || continue
+    case "$link" in
+      "$dir" | "$dir"/*) return 0 ;;
+    esac
+  done
+  return 1
+}
+
+for wt in "$@"; do
+  [ -d "$wt" ] || continue
+  if in_use "$wt"; then
+    echo "kept $wt: in use"
+    continue
+  fi
+  if [ -n "$(git -C "$wt" status --porcelain)" ]; then
+    mkdir -p "$backup"
+    patch="$backup/$(basename "$wt")-$(date -u +%Y%m%dT%H%M%SZ).patch"
+    git -C "$wt" add -A
+    if ! git -C "$wt" diff --cached --binary HEAD >"$patch"; then
+      echo "kept $wt: backup failed"
+      continue
+    fi
+    echo "backup $patch"
+  fi
+  if git -C "$repo" worktree remove --force "$wt"; then
+    echo "removed $wt"
+  else
+    echo "kept $wt: git worktree remove failed"
+  fi
+done
+git -C "$repo" worktree prune

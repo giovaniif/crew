@@ -6,7 +6,7 @@ Read these first: the root `AGENTS.md`, `scripts/AGENTS.md`, `docs/adr/0055-agen
 
 1. Read the clock with `date -u`. Never write an estimated time.
 2. If an open PR with the title prefix `docs(features): map maintenance` exists, babysit it (the babysit skill) and merge it with `go run ./scripts/land merge <pr>` when it is landable. Do not open a second one. Stop after that.
-3. Make a branch `features-maintenance-<YYYYMMDD>` from `origin/main` in a new worktree.
+3. Make a branch `features-maintenance-<YYYYMMDD>` from `origin/main` in a new worktree under `$CREW_LOOP_WORK`. Push before the run ends. After the run, the runner backs up the uncommitted changes there as a patch and removes the worktree. It keeps the branch.
 4. **Index hygiene.** Compare the user-facing surfaces of crew with the map:
    - the CLI subcommands in `cmd/crew/`
    - the TUI views and keys in `internal/tui/`
