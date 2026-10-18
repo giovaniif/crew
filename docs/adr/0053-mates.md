@@ -1,6 +1,6 @@
 # ADR 0053: Mates in Slack
 
-Status: accepted, 2026-10-14. Epic #377. Issues #379, #381, #382, #384, #385, #386, #387 and #388 implement it.
+Status: accepted, 2026-10-14. Epic #377. Issues #379, #381, #382, #384, #385, #386, #387 and #388 implement it. [ADR 0056](0056-local-mates.md) amends it: mates are local first, and Slack is a connector.
 
 ## Context
 
