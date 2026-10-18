@@ -352,7 +352,7 @@ func (m Model) mateCreated(msg mateCreatedMsg) Model {
 }
 
 func typedRune(msg tea.KeyPressMsg) (string, bool) {
-	if msg.Mod != 0 || utf8.RuneCountInString(msg.Text) != 1 {
+	if msg.Mod&^tea.ModShift != 0 || utf8.RuneCountInString(msg.Text) != 1 {
 		return "", false
 	}
 	return msg.Text, true
