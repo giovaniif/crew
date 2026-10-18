@@ -8,6 +8,11 @@ shift 2
 in_use() {
   local dir pid link
   dir="$(cd "$1" && pwd -P)"
+  if [ ! -d /proc/self ]; then
+    lsof -w -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | grep -qxF "$dir" && return 0
+    lsof -w -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | grep -q "^$dir/" && return 0
+    return 1
+  fi
   for pid in /proc/[0-9]*; do
     [ "$pid" = "/proc/$$" ] && continue
     link="$(readlink "$pid/cwd" 2>/dev/null)" || continue
