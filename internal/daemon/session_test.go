@@ -641,6 +641,38 @@ func TestNewSessionNormalizesTheWorkspacePath(t *testing.T) {
 	}
 }
 
+func TestResumeSessionAppliesTheSessionStartHookThatArrivesBeforeTheResumedSessionIsRegistered(t *testing.T) {
+	r := startSessions(t, &memStore{}, nil)
+	ctx := context.Background()
+	var s domain.Session
+	if err := r.c.Call(ctx, rpc.MethodNewSession, rpc.NewSessionParams{Workspace: "/src/api", WorkItem: "x", Harness: "claude"}, &s); err != nil {
+		t.Fatal(err)
+	}
+	first := rpc.Hook{Harness: "claude", Event: "SessionStart", Pane: s.Pane, At: time.Now(), Payload: []byte(`{"session_id":"c-1"}`)}
+	if err := r.c.Call(ctx, rpc.MethodHook, first, nil); err != nil {
+		t.Fatal(err)
+	}
+	endSession(t, r, s.ID)
+	r.host.mu.Lock()
+	r.host.creating, r.host.createGate = make(chan struct{}, 1), make(chan struct{})
+	r.host.mu.Unlock()
+	done := make(chan error, 1)
+	go func() { done <- dial(t, r.path).Call(ctx, rpc.MethodResumeSession, rpc.SessionRef{ID: s.ID}, nil) }()
+	<-r.host.creating
+	early := rpc.Hook{Harness: "claude", Event: "SessionStart", Pane: "%7", At: time.Now(), Payload: []byte(`{"session_id":"c-2"}`)}
+	if err := r.c.Call(ctx, rpc.MethodHook, early, nil); err != nil {
+		t.Fatal(err)
+	}
+	close(r.host.createGate)
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
+	st := r.state(t)
+	if len(st.Sessions) != 1 || st.Sessions[0].ResumeID != "c-2" {
+		t.Fatalf("sessions %+v; want the early hook's resume id c-2", st.Sessions)
+	}
+}
+
 func TestResumeSessionRelaunchesAnEndedSessionWithTheHarnessIDItLastReported(t *testing.T) {
 	r := startSessions(t, &memStore{}, nil)
 	ctx := context.Background()

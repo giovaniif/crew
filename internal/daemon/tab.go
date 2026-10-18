@@ -188,7 +188,7 @@ func (d *Daemon) newTab(in tabInput, p rpc.TabParams) (domain.Tab, *rpc.Error, b
 			Model: p.Model, Effort: p.Effort, State: domain.StateIdle, Dir: in.home.Path, Tab: in.home.ID,
 			StartedAt: now, StartModel: p.Model, StartEffort: p.Effort, StartWorkspace: in.session.StartWorkspace,
 		}
-		if !d.commit(SessionChanged{Session: session}) {
+		if !d.commitStartedSession(session) {
 			_ = d.hs.host.Kill(ctx, pane)
 			return domain.Tab{}, nil, false
 		}

@@ -1,0 +1,10 @@
+[Unit]
+Description=crew maintenance loop schedule
+
+[Timer]
+OnCalendar=*-*-* 02:30:00 America/Sao_Paulo
+Persistent=true
+RandomizedDelaySec=2min
+
+[Install]
+WantedBy=timers.target

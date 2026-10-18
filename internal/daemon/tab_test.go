@@ -77,6 +77,21 @@ func TestTabNewShellOpensAShellInTheWorktreeAndShowsIt(t *testing.T) {
 	}
 }
 
+func TestTabNewAgentAppliesTheHookThatArrivedBeforeItsSessionWasRegistered(t *testing.T) {
+	r := startTabs(t)
+	early := rpc.Hook{Harness: "claude", Event: "SessionStart", Pane: "%t1", At: time.Now(), Payload: []byte(`{"session_id":"c-9"}`)}
+	if err := r.c.Call(context.Background(), rpc.MethodHook, early, nil); err != nil {
+		t.Fatal(err)
+	}
+	tab, err := r.tab(t, rpc.MethodTabNew, rpc.TabParams{Session: "host", Kind: "agent", Harness: "claude"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := session(snapshot(t, r.path), tab.ID); got.ResumeID != "c-9" {
+		t.Fatalf("tab session %+v; want the early hook's resume id c-9", got)
+	}
+}
+
 func TestTabNewAgentStartsASessionThatOwnsNoWorktree(t *testing.T) {
 	r := startTabs(t)
 	tab, err := r.tab(t, rpc.MethodTabNew, rpc.TabParams{Session: "host", Kind: "agent", Harness: "claude", Model: "opus"})

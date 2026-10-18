@@ -3,6 +3,7 @@ package daemon
 import (
 	"time"
 
+	"github.com/giovaniif/crew/internal/domain"
 	"github.com/giovaniif/crew/internal/rpc"
 )
 
@@ -46,6 +47,13 @@ func (s *state) makeRoomForEarlyHook(now time.Time) {
 	if len(s.earlyHooks) >= earlyHookPanes {
 		delete(s.earlyHooks, oldest)
 	}
+}
+
+func (d *Daemon) commitStartedSession(session domain.Session) bool {
+	return d.query(func(s *state) {
+		s.emit(SessionChanged{Session: session})
+		s.replayEarlyHooks(session.Pane, d.ws.now())
+	})
 }
 
 func (s *state) replayEarlyHooks(pane string, now time.Time) {
