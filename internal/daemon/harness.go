@@ -99,7 +99,7 @@ func (d *Daemon) launchSession(p rpc.LaunchParams) (domain.Session, *rpc.Error, 
 			return domain.Session{}, nil, false
 		}
 	}
-	if !d.commit(SessionChanged{Session: session}) {
+	if !d.commitStartedSession(session) {
 		return domain.Session{}, nil, false
 	}
 	return session, nil, true
