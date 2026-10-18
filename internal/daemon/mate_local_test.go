@@ -23,6 +23,7 @@ effort = "high"
 repos = ["api"]
 avatar = "robot-2"
 color = "#3a7bd5"
+tone = { terse = 1, formal = 5 }
 `
 
 func localRig(t *testing.T) (mateRig, string) {
@@ -169,5 +170,42 @@ func TestLocalMateSessionRunsADangerousActionWithNoApproval(t *testing.T) {
 	}
 	if got := pendingApprovals(t, c); len(got) != 0 {
 		t.Fatalf("approvals %+v", got)
+	}
+}
+
+func TestMateListHasTheToneAndTheToneAxes(t *testing.T) {
+	r, _ := localRig(t)
+	var list rpc.MateList
+	if err := r.c.Call(context.Background(), rpc.MethodMateList, nil, &list); err != nil {
+		t.Fatal(err)
+	}
+	if len(list.Mates) != 1 || list.Mates[0].Tone != (domain.MateTone{Terse: 1, Formal: 5}) {
+		t.Fatalf("mates %+v, problems %v", list.Mates, list.Problems)
+	}
+	if len(list.Tones) != 3 || list.Tones[0].Key != "terse" {
+		t.Fatalf("tones %+v", list.Tones)
+	}
+}
+
+func TestMateBoardHasTheAvatarAndTheColor(t *testing.T) {
+	r, _ := localRig(t)
+	waitFor(t, func() bool {
+		s := boardState(boardOf(t, r.c), "helper")
+		return s.Avatar == "robot-2" && s.Color == "#3a7bd5"
+	})
+}
+
+func TestMateNewPutsTheToneInTheSystemPrompt(t *testing.T) {
+	r, _ := localRig(t)
+	if err := r.c.Call(context.Background(), rpc.MethodMateNew, rpc.MateNewParams{Name: "helper"}, nil); err != nil {
+		t.Fatal(err)
+	}
+	r.host.mu.Lock()
+	cmd := strings.Join(r.host.specs[0].Command, "\n")
+	r.host.mu.Unlock()
+	for _, want := range domain.MateToneSentences(domain.MateTone{Terse: 1, Formal: 5}) {
+		if !strings.Contains(cmd, want) {
+			t.Errorf("no %q in %s", want, cmd)
+		}
 	}
 }

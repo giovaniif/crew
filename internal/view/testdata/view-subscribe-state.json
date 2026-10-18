@@ -218,13 +218,15 @@
             "state": "running",
             "ended": false
           }
-        ]
+        ],
+        "conversations": []
       },
       {
         "name": "webby",
         "state": "paused",
         "work": [],
-        "threads": []
+        "threads": [],
+        "conversations": []
       }
     ]
   }
