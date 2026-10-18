@@ -153,7 +153,17 @@ public struct LiveWindow: View {
     }
 
     public var body: some View {
-        browserLayer(window)
+        browserLayer(window).task(id: mateNames) { await loadMates() }
+    }
+
+    private var mateNames: [String] {
+        store.state?.mates?.mates.map(\.name) ?? []
+    }
+
+    private func loadMates() async {
+        let m = mates ?? MatesModel(caller: store)
+        mates = m
+        await m.load()
     }
 
     private var window: some View {
@@ -169,11 +179,6 @@ public struct LiveWindow: View {
         .onChange(of: keys.bound, initial: true) { terminals.views.bound = keys.bound }
 #endif
         .onAppear { store.start() }
-        .task(id: store.state?.mates?.mates.map(\.name) ?? []) {
-            let m = mates ?? MatesModel(caller: store)
-            mates = m
-            await m.load()
-        }
         .task(id: headlessKey) { await watchHeadless(headlessKey) }
         .onChange(of: store.state?.seq) {
             reconcile(filter: filter)
