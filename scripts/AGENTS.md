@@ -62,7 +62,7 @@ Repo tooling. The repo-wide rules are in the [root AGENTS.md](../AGENTS.md).
   - Phone: `scripts/web-screenshot` with the fake API, light and dark (`phone-*.png`).
   - Mac: it downloads the `macos-snapshots` artifact of the newest green `ci` run on main with `gh` (or of `README_MAC_RUN`) and copies the main window, review, new session, automations, browser, disk, first-run and menu bar shots (`mac-*.png`). Without the artifact, the Mac shots stay as they are.
   - If `oxipng` is on `PATH`, it optimizes each PNG. It fails when a PNG is larger than `README_SHOT_LIMIT` (default 400 KB).
-- **`verify`** (`go run ./scripts/verify <command>`): the agent verification CLI (ADR [0055](../docs/adr/0055-agent-verification.md)). It is not in the `crew` binary. Agents use it with the skill in `.claude/skills/verify/SKILL.md`.
+- **`verify`** (`go run ./scripts/verify <command>`): the agent verification CLI (ADR [0055](../docs/adr/0055-agent-verification.md)). It is not in the `crew` binary. Agents (Claude Code and Codex) follow the skill in [.claude/skills/verify/SKILL.md](../.claude/skills/verify/SKILL.md).
   - Each command prints exactly one JSON object with `ok`, `problems` (`{msg, hint}`) and its data. The exit code is 0 for ok, 1 for a failure and 2 for a usage error.
   - Its state is in `VERIFY_HOME` (default `/tmp/crew-verify-$UID`).
   - `doctor`: the tools (go, git, tmux, node 22.18+, the Playwright Chromium, freeze), the branch, the machine load, TCP port 5199 and `/tmp`.
@@ -88,3 +88,18 @@ Repo tooling. The repo-wide rules are in the [root AGENTS.md](../AGENTS.md).
   - `annotate --before b.png --after a.png [--crop x0,y0,x1,y1] [--box ...] [--caption-before t] [--caption-after t] --out f`: a before/after pair.
   - `assets push --dir <n> files...` writes to the orphan `pr-assets` branch with plumbing commands. It prints commit-pinned raw URLs. `assets check` fails when the branch adds an image.
   - `selftest`: `go test ./scripts/verify/`. Its tests use a fake `sys` (no tmux, node or network) and real temporary repos.
+- **`land`** (`go run ./scripts/land check|verdict|merge|watch|ledger <pr>`, `go run ./scripts/land digest --since 24h`): the merge helper of step 9 in the root `AGENTS.md` (ADR 0055). It uses the same JSON and exit codes as `verify`. It reads GitHub with `gh`.
+  - `check`: `landable` is true when the PR is ready by the repo rule. The blockers are:
+    - a draft, a mergeable state that is not `clean` (thus also a branch that is behind), open review threads (or an unknown thread state), changes requested
+    - a required check of the branch protection (`build`, `tdd`, `mutate`, `CodeRabbit`) that is not green. When it cannot read the protection, every check blocks.
+  - `check` also gives `flags` for the daily review. A flag does not block, unless you add `--strict`. The flags are:
+    - no `PASS` or `PASS+NOTES` verdict for the current head
+    - self-or-CI changes: `.github/`, `.coderabbit*`, `scripts/land`, `scripts/verify`, `.claude/skills`, `scripts/tdd-check`, `scripts/mutate`, `scripts/lint-*`, `.golangci.yml`
+    - irreversible effects: destructive SQL in `internal/adapters/sqlite/migrations` (also split over lines), a removed or renamed migration, `.goreleaser.yaml`, `scripts/install.sh`, the release workflow, setup code (`cmd/crew/setup*`, the adapter `setup` files, `internal/adapters/onboard`), cleanup code (`internal/app/cleanup*`, `internal/domain/cleanup*`, a new `git worktree remove`), env files
+    - a file with no patch (it was not scanned), and no `.claude/skills/verify/SKILL.md`.
+  - `verdict <pr> --verdict PASS|PASS+NOTES|FAIL|HUMAN [--bundle dir] [--notes t] [--dry-run]`: posts `<!-- land:verdict v=1 sha=<head> verdict=<X> -->`. A `PASS` needs a bundle that `verify evidence verify` passes, for the PR head.
+  - `merge [--strict]`: runs `check`, then follows `mode` in `scripts/land/config.json`. `live` (the default) runs `gh pr merge --merge --match-head-commit <head>` when the PR is ready. `shadow` only writes the ledger. `off` does nothing.
+  - `watch`: reads the checks of the merge commit. A red check is a regression: open a revert PR and tell the owner.
+  - `ledger [pr]`: the decisions, with their flags. Each decision is one JSON comment on the open issue with the label `land-ledger`. `merge` makes that issue when there is none.
+  - `digest --since 24h`: the merged PRs of the period with their flags, as JSON and as a short Markdown summary (`markdown`). The owner uses it in the daily review.
+  - Its tests are in `scripts/land`, with a fake `gh`.
