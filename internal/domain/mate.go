@@ -8,16 +8,18 @@ import (
 )
 
 type Mate struct {
-	Name    string   `json:"name"`
-	Prompt  string   `json:"prompt"`
-	Agent   string   `json:"agent"`
-	Model   string   `json:"model,omitempty"`
-	Effort  string   `json:"effort,omitempty"`
-	Repos   []string `json:"repos,omitempty"`
-	Owner   string   `json:"owner,omitempty"`
-	Avatar  string   `json:"avatar,omitempty"`
-	Color   string   `json:"color,omitempty"`
-	Enabled bool     `json:"enabled"`
+	Name     string   `json:"name"`
+	Prompt   string   `json:"prompt"`
+	Agent    string   `json:"agent"`
+	Model    string   `json:"model,omitempty"`
+	Effort   string   `json:"effort,omitempty"`
+	Repos    []string `json:"repos,omitempty"`
+	Owner    string   `json:"owner,omitempty"`
+	Avatar   string   `json:"avatar,omitempty"`
+	Color    string   `json:"color,omitempty"`
+	Tone     MateTone `json:"tone,omitzero"`
+	NoMemory bool     `json:"no_memory,omitempty"`
+	Enabled  bool     `json:"enabled"`
 }
 
 const mateNameMax = 32
@@ -55,6 +57,9 @@ func ValidateMate(m Mate, workspaces []Workspace) error {
 	}
 	if m.Color != "" && !mateColor.MatchString(m.Color) {
 		return fail("color %q is not a hex color such as #3a7bd5", m.Color)
+	}
+	if err := checkMateTone(m.Tone); err != nil {
+		return fail("%v", err)
 	}
 	var seen []Repo
 	for _, ref := range m.Repos {
