@@ -3,12 +3,15 @@ package app_test
 import (
 	"context"
 	"errors"
+	"fmt"
+	"io/fs"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/giovaniif/crew/internal/app"
+	"github.com/giovaniif/crew/internal/domain"
 )
 
 type gatedSizer struct {
@@ -172,6 +175,18 @@ func TestDiskSizesRetryAFailedMeasurementOnceItIsStale(t *testing.T) {
 	d.Wait()
 	if size, known := d.Get("/w/a"); !known || size != 500 {
 		t.Errorf("Get after the retry = %d, %v; want 500, true", size, known)
+	}
+}
+
+func TestDiskSizesReportAMissingFolderAsAFinalMissingSize(t *testing.T) {
+	sizer := newGatedSizer(nil)
+	sizer.err = fmt.Errorf("du /w/gone: %w", fs.ErrNotExist)
+	close(sizer.release)
+	d := app.NewDiskSizes(sizer, 2, time.Minute, time.Now)
+	d.Get("/w/gone")
+	d.Wait()
+	if size, known := d.Get("/w/gone"); !known || size != domain.SizeMissing {
+		t.Errorf("Get = %d, %v; want domain.SizeMissing, true", size, known)
 	}
 }
 

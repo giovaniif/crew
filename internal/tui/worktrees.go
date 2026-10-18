@@ -332,8 +332,11 @@ func formatBytes(n int64) string {
 }
 
 func sizeText(n int64) string {
-	if n == domain.SizePending {
+	switch n {
+	case domain.SizePending:
 		return "…"
+	case domain.SizeMissing:
+		return "missing"
 	}
 	return formatBytes(n)
 }
@@ -508,7 +511,7 @@ func (m Model) diskRowLine(r domain.DiskRow, w domain.Worktree, cols diskColumns
 	}
 	ports := portLabel(w.Ports)
 	sizeStyle := s.text
-	if r.Size == domain.SizePending {
+	if r.Size == domain.SizePending || r.Size == domain.SizeMissing {
 		sizeStyle = s.dim
 	}
 	return m.line(sel, []piece{
