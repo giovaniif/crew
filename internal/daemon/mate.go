@@ -21,6 +21,8 @@ type mateDoc struct {
 	Effort  string   `toml:"effort"`
 	Repos   []string `toml:"repos"`
 	Owner   string   `toml:"owner"`
+	Avatar  string   `toml:"avatar"`
+	Color   string   `toml:"color"`
 	Enabled *bool    `toml:"enabled"`
 }
 
@@ -42,7 +44,7 @@ func parseMates(text, path string) ([]domain.Mate, []string) {
 	for i, d := range doc.Mate {
 		mates[i] = domain.Mate{
 			Name: d.Name, Prompt: d.Prompt, Agent: d.Agent, Model: d.Model, Effort: d.Effort,
-			Repos: d.Repos, Owner: d.Owner, Enabled: d.Enabled == nil || *d.Enabled,
+			Repos: d.Repos, Owner: d.Owner, Avatar: d.Avatar, Color: d.Color, Enabled: d.Enabled == nil || *d.Enabled,
 		}
 	}
 	return mates, problems
@@ -144,6 +146,8 @@ func (d *Daemon) mateMethod(req rpc.Request) *rpc.Response {
 	case rpc.MethodMateStopAll:
 		defer d.kickMates()
 		return d.mateStopAll(req)
+	case rpc.MethodMateMemory, rpc.MethodMateSetMemory:
+		return d.mateMemory(req)
 	}
 	src, err := readConfig(d.cfg.path)
 	if err != nil {

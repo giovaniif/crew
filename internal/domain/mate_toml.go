@@ -26,6 +26,8 @@ func MateTOML(m Mate) string {
 		fmt.Fprintf(&b, "repos = [%s]\n", strings.Join(quoted, ", "))
 	}
 	field("owner", m.Owner)
+	field("avatar", m.Avatar)
+	field("color", m.Color)
 	if !m.Enabled {
 		b.WriteString("enabled = false\n")
 	}

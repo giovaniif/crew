@@ -121,12 +121,12 @@ func (d *Daemon) syncMates(ctx context.Context) {
 			continue
 		}
 		if reader == nil {
-			states[m.Name] = rpc.MateState{Name: m.Name, State: domain.MateNoTokens}
+			states[m.Name] = rpc.MateState{Name: m.Name, State: domain.MateReady}
 			continue
 		}
 		bot, appToken, err := reader.MateTokens(m.Name)
 		if err != nil {
-			states[m.Name] = rpc.MateState{Name: m.Name, State: domain.MateNoTokens}
+			states[m.Name] = rpc.MateState{Name: m.Name, State: domain.MateReady}
 			continue
 		}
 		want[m.Name] = mateTarget{print: tokenPrint(bot, appToken), bot: bot, app: appToken}

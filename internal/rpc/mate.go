@@ -94,3 +94,27 @@ type ApprovalDecideParams struct {
 	ID      string `json:"id"`
 	Approve bool   `json:"approve"`
 }
+
+const (
+	MethodMateNew       = "mate.new"
+	MethodMateMemory    = "mate.memory"
+	MethodMateSetMemory = "mate.set_memory"
+)
+
+type MateNewParams struct {
+	Name   string `json:"name"`
+	Repo   string `json:"repo,omitempty"`
+	Prompt string `json:"prompt,omitempty"`
+}
+
+type MateMemory struct {
+	Name  string `json:"name"`
+	Path  string `json:"path"`
+	Text  string `json:"text"`
+	Limit int    `json:"limit"`
+}
+
+type MateSetMemoryParams struct {
+	Name string `json:"name"`
+	Text string `json:"text"`
+}
