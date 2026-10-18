@@ -21,6 +21,7 @@ public struct WindowScene {
     public var message: String?
     public var servers: [ServerKind]
     public var browser: BrowserChrome?
+    public var chat: ChatScene?
 
     public init(
         state: ViewState?, connection: ConnectionStatus, selected: String? = nil, filter: String = "",
@@ -61,6 +62,32 @@ public struct WindowScene {
                 PromptChoice(id: "3", label: "No, and tell Claude what to do differently"),
             ])
         ))
+    }
+
+    public static func seededChat(fresh: Bool = false) -> WindowScene {
+        let rows: [ChatRow] = fresh ? [
+            .owner(id: "u0", text: "The login test fails on CI one time in five. Can you look?"),
+            .agent(id: "a0", text: "Fixed and pushed. PR #88 is open."),
+            .handoff(id: "handoff-1"),
+            .note(id: "n1", text: "New conversation · read memory.md (5 notes)"),
+            .agent(id: "a1", text: "Fresh start. From my notes: the login flake fix is pushed and PR #88 is open. Do you want me to watch CI, or pick up something new?"),
+            .owner(id: "u1", text: "Watch CI and ping me if it goes red."),
+            .tool(id: "t1", mark: "◐", summary: "Bash gh pr checks 88 --watch", failed: false),
+        ] : [
+            .owner(id: "u1", text: "The login test fails on CI one time in five. Can you look?"),
+            .agent(id: "a1", text: "Found it. The test reads the clock twice, so the token can expire between the two reads. I froze the clock in setup."),
+            .tool(id: "t1", mark: "✓", summary: "Edit auth/login_test.go", failed: false),
+            .tool(id: "t2", mark: "✓", summary: "Bash go test ./auth -count=50", failed: false),
+            .agent(id: "a2", text: "50 runs pass. May I push the fix?"),
+        ]
+        let card = fresh ? nil : PermissionCard(session: "s1", prompt: Prompt(id: "p1", text: "Bash: git push origin 88-login-flake", choices: [
+            PromptChoice(id: "1", label: "Yes"),
+            PromptChoice(id: "2", label: "Yes, and don't ask again for git push commands"),
+            PromptChoice(id: "3", label: "No, and tell Claude what to do differently"),
+        ]))
+        var scene = WindowScene(state: Seed.window, connection: .live, selected: "s1", view: .chat, card: card)
+        scene.chat = ChatScene(rows: rows, hasOlder: !fresh)
+        return scene
     }
 
     public static func seededBrowser(device: DevicePreset = .desktop, agent: Bool = true) -> WindowScene {
@@ -126,6 +153,10 @@ public struct WindowActions {
     public var dismissError: () -> Void = {}
     public var newSession: () -> Void = {}
     public var answer: (String) -> Void = { _ in }
+    public var chatDraft: (String) -> Void = { _ in }
+    public var chatSend: () -> Void = {}
+    public var chatOlder: () -> Void = {}
+    public var decide: (String, Bool) -> Void = { _, _ in }
     public var hideCard: () -> Void = {}
     public var dismissMessage: () -> Void = {}
     public var sessionMenu: (SessionMenuItem, String) -> Void = { _, _ in }
