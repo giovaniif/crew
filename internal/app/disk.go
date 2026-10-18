@@ -2,8 +2,12 @@ package app
 
 import (
 	"context"
+	"errors"
+	"io/fs"
 	"sync"
 	"time"
+
+	"github.com/giovaniif/crew/internal/domain"
 )
 
 type Sizer interface {
@@ -85,7 +89,10 @@ func (d *DiskSizes) measure(path string) {
 	if e.forgotten {
 		e.forgotten, e.measuredAt = false, time.Time{}
 	}
-	if err == nil {
+	switch {
+	case err == nil:
 		e.size, e.known = size, true
+	case errors.Is(err, fs.ErrNotExist):
+		e.size, e.known = domain.SizeMissing, true
 	}
 }

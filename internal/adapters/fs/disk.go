@@ -25,6 +25,9 @@ var (
 type Du struct{}
 
 func (Du) Size(ctx context.Context, path string) (int64, error) {
+	if _, err := os.Lstat(path); err != nil {
+		return 0, fmt.Errorf("du %s: %w", path, err)
+	}
 	out, err := exec.CommandContext(ctx, "du", "-sk", "-P", path).Output()
 	if err != nil {
 		var exit *exec.ExitError

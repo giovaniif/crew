@@ -433,3 +433,13 @@ func TestWorktreesDiskBarStaysItsWidthWhenWorktreesShareFiles(t *testing.T) {
 	}
 	t.Fatalf("no disk bar:\n%s", out)
 }
+
+func TestWorktreesAMissingFolderShowsMissingInsteadOfAPendingSize(t *testing.T) {
+	rows := diskRows()
+	rows[3].Size = domain.SizeMissing
+	out := screen(diskModel(diskView(rows...)).open().m)
+	row := lineWith(t, out, "missing")
+	if strings.Contains(row, "…") {
+		t.Errorf("row = %q, want a final missing size, not a pending one", row)
+	}
+}
