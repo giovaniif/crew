@@ -21,6 +21,10 @@ public enum Snapshot {
         renderView(MatesWindow(scene: scene), size: size, dark: dark)
     }
 
+    public static func render(newMate wizard: MateWizard, size: CGSize, dark: Bool) -> NSBitmapImageRep {
+        renderView(NewMateSheet(wizard: wizard, repoChoices: ["api", "web", "docs", "cli"], save: { _, _ in }, cancel: {}), size: size, dark: dark)
+    }
+
     public static func renderAutomationRun(_ automation: Automation, size: CGSize, dark: Bool) -> NSBitmapImageRep {
         renderView(AutomationRunSheet(automation: automation, run: { _, _ in }, cancel: {}), size: size, dark: dark)
     }

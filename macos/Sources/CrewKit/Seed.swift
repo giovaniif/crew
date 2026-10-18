@@ -34,12 +34,14 @@ public struct SeedSession: Sendable {
     public var ended: Bool
     public var since: String?
     public var worktrees: [SeedWorktree]
+    public var mate: String?
 
     public init(
         id: String, name: String, state: String, harness: String = "claude", where: String = "",
         model: String = "", effort: String = "", contextLeft: Int? = nil, unread: Bool = false,
-        muted: Bool = false, ended: Bool = false, since: String? = nil, worktrees: [SeedWorktree] = []
+        muted: Bool = false, ended: Bool = false, since: String? = nil, worktrees: [SeedWorktree] = [], mate: String? = nil
     ) {
+        self.mate = mate
         self.id = id
         self.name = name
         self.state = state
@@ -75,7 +77,7 @@ public struct SeedQuota: Sendable {
 public enum Seed {
     public static let now = Date(timeIntervalSince1970: 1_800_000_000)
 
-    public static func state(sessions: [SeedSession], limits: [SeedQuota] = []) -> ViewState {
+    public static func state(sessions: [SeedSession], limits: [SeedQuota] = [], mates: [String] = []) -> ViewState {
         let stamp = ISO8601DateFormatter()
         var order = 0
         var worktrees: [[String: Any]] = []
@@ -104,7 +106,7 @@ public enum Seed {
                 ])
             }
             if !s.ended { order += 1 }
-            out.append([
+            var item: [String: Any] = [
                 "ID": s.id, "TaskID": "t-" + s.id, "Harness": s.harness, "Pane": "%\(order)", "Model": s.model,
                 "Effort": s.effort, "State": s.state, "Ended": s.ended, "Unread": s.unread, "Focused": false,
                 "Muted": s.muted, "WorktreeIDs": s.worktrees.map(\.id), "ResumeID": "", "Transcript": "", "Dir": "",
@@ -112,7 +114,9 @@ public enum Seed {
                 "Limits": NSNull(), "LimitsAt": "0001-01-01T00:00:00Z", "Switches": NSNull(), "SwitchWarning": false,
                 "name": s.name, "where": s.where, "banner": "", "since": s.since ?? NSNull(),
                 "order": s.ended ? -1 : order, "board": board,
-            ])
+            ]
+            if let mate = s.mate { item["Mate"] = ["Name": mate, "Owner": "", "Authority": "", "Local": true] }
+            out.append(item)
         }
         let quotas: [[String: Any]] = limits.map { q in
             [
@@ -121,11 +125,14 @@ public enum Seed {
                 "label": q.label, "low": q.left < 20, "stale_at": stamp.string(from: q.staleAt),
             ]
         }
-        let object: [String: Any] = [
+        var object: [String: Any] = [
             "seq": 1, "workspaces": [] as [Any], "projects": [] as [Any], "tasks": [] as [Any], "worktrees": worktrees, "sessions": out,
             "limits": quotas, "sends": [] as [Any], "events": [] as [Any],
             "subagents": [] as [Any], "drafts": [] as [Any],
         ]
+        if !mates.isEmpty {
+            object["mates"] = ["stopped": false, "mates": mates.map { ["name": $0, "state": "ready", "work": [] as [Any], "threads": [] as [Any]] }]
+        }
         do {
             return try JSONDecoder().decode(ViewState.self, from: JSONSerialization.data(withJSONObject: object))
         } catch {
@@ -170,5 +177,80 @@ public enum Seed {
             SeedQuota(harness: "claude", label: "7d", left: 41, resetsAt: now.addingTimeInterval(259_200), staleAt: now.addingTimeInterval(600)),
             SeedQuota(harness: "codex", label: "7d", left: 14, resetsAt: now.addingTimeInterval(86_400), staleAt: now.addingTimeInterval(-60)),
         ])
+    }
+
+    public static var mates: ViewState {
+        let ago = { (seconds: Double) in ISO8601DateFormatter().string(from: now.addingTimeInterval(-seconds)) }
+        return state(sessions: [
+            SeedSession(id: "m1", name: "review api #42 login redirect", state: "running", where: "api@42-login-redirect",
+                        model: "opus", effort: "high", contextLeft: 38, since: ago(240),
+                        worktrees: [SeedWorktree(id: "mw1", repo: "api", branch: "42-login-redirect", pr: 42, checks: "pending")], mate: "iris"),
+            SeedSession(id: "m2", name: "check web #118 billing export", state: "permission", where: "web@billing-export",
+                        model: "opus", effort: "high", contextLeft: 61, unread: true, since: ago(60),
+                        worktrees: [SeedWorktree(id: "mw2", repo: "web", branch: "billing-export", pr: 118, checks: "passing")], mate: "iris"),
+            SeedSession(id: "m3", name: "fix flaky login test", state: "running", harness: "codex", where: "api@88-login-flake",
+                        model: "gpt-5", effort: "medium", contextLeft: 70, since: ago(300),
+                        worktrees: [SeedWorktree(id: "mw3", repo: "api", branch: "88-login-flake", pr: 88, checks: "failing")], mate: "bolt"),
+            SeedSession(id: "m4", name: "deflake e2e", state: "running", harness: "codex", where: "web@e2e-flake",
+                        model: "gpt-5", effort: "high", contextLeft: 44, since: ago(900),
+                        worktrees: [SeedWorktree(id: "mw4", repo: "web", branch: "e2e-flake", pr: 120, checks: "pending")], mate: "pip"),
+            SeedSession(id: "s4", name: "refactor cache layer", state: "running", where: "api@cache-layer",
+                        model: "opus", effort: "high", contextLeft: 54, since: ago(40),
+                        worktrees: [SeedWorktree(id: "mw5", repo: "api", branch: "cache-layer")]),
+            SeedSession(id: "m5", name: "release notes 1.4", state: "done", where: "docs@release-notes",
+                        model: "opus", effort: "medium", contextLeft: 66, unread: true, since: ago(1_800),
+                        worktrees: [SeedWorktree(id: "mw6", repo: "docs", branch: "release-notes")], mate: "owl"),
+            SeedSession(id: "m7", name: "e2e retries", state: "waiting", harness: "codex", where: "web@e2e-retries",
+                        model: "gpt-5", effort: "high", contextLeft: 80, since: ago(2_000),
+                        worktrees: [SeedWorktree(id: "mw7", repo: "web", branch: "e2e-retries")], mate: "pip"),
+            SeedSession(id: "s6", name: "bump dependencies", state: "done", where: "cli@bump-deps",
+                        model: "sonnet", effort: "medium", contextLeft: 66, since: ago(3_600),
+                        worktrees: [SeedWorktree(id: "mw8", repo: "cli", branch: "bump-deps", pr: 77, checks: "passing")]),
+            SeedSession(id: "m6", name: "review cache layer refactor", state: "done", where: "api@cache-layer-review",
+                        model: "opus", ended: true, mate: "iris"),
+        ], mates: mateDefinitions.map(\.name))
+    }
+
+    public static var mateDefinitions: [MateDefinition] {
+        func mate(_ name: String, _ agent: String, _ model: String, _ effort: String, _ repos: [String], _ prompt: String, _ tones: [(ToneAxis, Int)]) -> MateDefinition {
+            var t = MateTones()
+            for (axis, step) in tones { t[axis] = step }
+            var d = MateDefinition(name: name, prompt: prompt, agent: agent)
+            d.tone = t.value
+            d.model = model
+            d.effort = effort
+            d.repos = repos
+            d.avatar = name
+            return d
+        }
+        return [
+            mate("iris", "claude", "opus", "high", ["api", "web"], "Careful reviewer. Reads every line, asks before it guesses.\n\nYou are Iris, a careful code reviewer. Read the whole diff before you comment. Point at exact lines.", [(.terse, 1), (.cautious, 1)]),
+            mate("bolt", "codex", "gpt-5", "medium", ["api"], "Fast bug fixer. Smallest diff that makes the test pass.", [(.cautious, 3)]),
+            mate("sage", "claude", "sonnet", "low", ["docs"], "Patient explainer. Writes docs people actually finish.", [(.terse, 3), (.formal, 3)]),
+            mate("owl", "claude", "opus", "medium", ["cli", "docs"], "Release captain. Changelogs, version bumps, no surprises.", []),
+            mate("pip", "codex", "gpt-5", "high", ["web"], "Test gardener. Hunts flakes and keeps CI green.", [(.terse, 0)]),
+        ]
+    }
+
+    public static var mateMemory: MateMemory {
+        MateMemory(
+            name: "iris", path: "~/.crew/mates/iris/memory.md",
+            text: "- The owner prefers small PRs. One review comment per concern.\n- api: tests run with make test.\n- Handoff, Oct 17: the cache refactor review is half done. Next: internal/cache/evict.go.\n- web uses pnpm, not npm.\n",
+            limit: 8192
+        )
+    }
+
+    public static func wizard(step: MateStep) -> MateWizard {
+        let json = #"[{"harness":"claude","name":"Claude Code","tag":"CC","models":["opus","sonnet","haiku"],"efforts":["low","medium","high","max"],"model":"opus","effort":"high"},{"harness":"codex","name":"Codex","tag":"CX","models":["gpt-5"],"efforts":["low","medium","high"],"model":"gpt-5","effort":"medium"}]"#
+        let options = (try? JSONDecoder().decode([HarnessOptions].self, from: Data(json.utf8))) ?? []
+        var w = MateWizard(options: options, taken: ["bolt", "sage", "owl", "pip"])
+        w.choose(face: "iris")
+        if step.rawValue >= MateStep.personality.rawValue { w.apply(preset: 0) }
+        if step.rawValue >= MateStep.brains.rawValue {
+            w.toggle(repo: "api")
+            w.toggle(repo: "web")
+        }
+        w.step = step
+        return w
     }
 }

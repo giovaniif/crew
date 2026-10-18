@@ -11,6 +11,7 @@ public final class WindowRouter {
     public var shell: (session: String, worktree: String)?
     public var shellSeq = 0
     public var newSessionRequested = false
+    public var mateProfile: String?
 
     public init() {}
 

@@ -21,13 +21,17 @@ public struct WindowScene {
     public var message: String?
     public var servers: [ServerKind]
     public var browser: BrowserChrome?
+    public var mateLooks: [String: MateLook]
+    public var freshConfirm: String?
 
     public init(
         state: ViewState?, connection: ConnectionStatus, selected: String? = nil, filter: String = "",
         inspector: Bool = true, endedExpanded: Bool = false, server: String = "This Mac", now: Date = Seed.now, focusFilter: Int = 0,
         review: ReviewScreen? = nil, view: MainView = .terminal, pane: String? = nil, popup: String? = nil, paneError: String? = nil, card: PermissionCard? = nil, message: String? = nil, servers: [ServerKind] = [],
-        browser: BrowserChrome? = nil
+        browser: BrowserChrome? = nil, mateLooks: [String: MateLook] = [:], freshConfirm: String? = nil
     ) {
+        self.mateLooks = mateLooks
+        self.freshConfirm = freshConfirm
         self.servers = servers
         self.browser = browser
         self.state = state
@@ -78,6 +82,15 @@ public struct WindowScene {
 
     public static func seededReview(layout: DiffLayout = .unified) -> WindowScene {
         WindowScene(state: Seed.window, connection: .live, selected: "s2", review: Seed.review(layout: layout))
+    }
+
+    public static func seededMates(freshConfirm: Bool = false) -> WindowScene {
+        let looks = Dictionary(uniqueKeysWithValues: Seed.mateDefinitions.map { ($0.name, MateLook.of($0)) })
+        return WindowScene(state: Seed.mates, connection: .live, selected: "m1", mateLooks: looks, freshConfirm: freshConfirm ? "m1" : nil)
+    }
+
+    func look(_ name: String) -> MateLook {
+        mateLooks[name] ?? MateLook.of(name: name, avatar: nil, color: nil)
     }
 
     var sidebar: Sidebar? { state.map { Sidebar(state: $0, filter: filter) } }
@@ -131,6 +144,11 @@ public struct WindowActions {
     public var sessionMenu: (SessionMenuItem, String) -> Void = { _, _ in }
     public var switchServer: (ServerKind) -> Void = { _ in }
     public var addServer: () -> Void = {}
+    public var openMates: () -> Void = {}
+    public var openMate: (String) -> Void = { _ in }
+    public var startFresh: (String) -> Void = { _ in }
+    public var confirmFresh: (String) -> Void = { _ in }
+    public var cancelFresh: () -> Void = {}
 
     public init() {}
 }
@@ -185,6 +203,13 @@ public struct MainWindow: View {
                 }
             }
             .overlay { PopupShell(scene: scene, actions: actions) }
+            .overlay(alignment: .topLeading) {
+                if let id = scene.freshConfirm, let mate = scene.state?.sessions.first(where: { $0.id == id })?.mate?.name {
+                    FreshConfirm(mate: mate, confirm: { actions.confirmFresh(id) }, cancel: actions.cancelFresh)
+                        .padding(.leading, Metrics.sidebarWidth + 40)
+                        .padding(.top, 6)
+                }
+            }
         }
         .foregroundStyle(theme(.text))
         .background(theme(.base))
@@ -200,11 +225,36 @@ struct ToolbarStrip: View {
         let theme = Theme(scheme)
         HStack(spacing: Metrics.gutter) {
             Image(systemName: "sidebar.left").foregroundStyle(theme(.subtext))
+            if let session = scene.session, let mate = session.mate?.name {
+                MateFace(look: scene.look(mate), state: FaceState.of(state: session.state, ended: session.ended), size: 26)
+                    .onTapGesture { actions.openMate(mate) }
+                    .help("Open the profile of \(MateNames.display(mate))")
+            }
             VStack(alignment: .leading, spacing: 1) {
-                Text(scene.session?.name ?? "crew").font(.system(size: 13, weight: .semibold)).lineLimit(1)
+                HStack(spacing: 4) {
+                    if let mate = scene.session?.mate?.name {
+                        Text(MateNames.display(mate)).font(.system(size: 13, weight: .semibold))
+                        Text("—").foregroundStyle(theme(.subtext))
+                    }
+                    Text(scene.session?.name ?? "crew")
+                        .font(.system(size: 13, weight: scene.session?.mate == nil ? .semibold : .regular))
+                        .foregroundStyle(scene.session?.mate == nil ? theme(.text) : theme(.subtext))
+                }
+                .lineLimit(1)
                 Text(scene.session?.where ?? "").font(Metrics.mono).foregroundStyle(theme(.subtext)).lineLimit(1)
             }
             .frame(minWidth: 160, alignment: .leading)
+            if let session = scene.session, StartFresh.offered(session) {
+                Button { actions.startFresh(session.id) } label: {
+                    Label("Start Fresh", systemImage: "arrow.clockwise")
+                        .font(.system(size: 12, weight: .medium))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(RoundedRectangle(cornerRadius: 5).stroke(theme(.surface)))
+                }
+                .buttonStyle(.plain)
+                .help("Start a new conversation with the same mate. The mate writes a handoff to its memory first.")
+            }
             HStack(spacing: 2) {
                 ForEach(Toolbar.views(session: scene.session != nil)) { tab in
                     let active = scene.session != nil && tab.title == (scene.review == nil ? scene.view.rawValue : MainView.review.rawValue)
@@ -263,6 +313,27 @@ struct ToolbarStrip: View {
         .padding(.horizontal, Metrics.gutter)
         .frame(height: Metrics.toolbarHeight)
         .background(theme(.mantle))
+    }
+}
+
+struct FreshConfirm: View {
+    let mate: String
+    let confirm: () -> Void
+    let cancel: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(StartFresh.title(mate)).font(.system(size: 13, weight: .semibold))
+            Text(StartFresh.detail(mate)).font(.system(size: 12)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            HStack {
+                Spacer()
+                Button("Cancel", action: cancel).keyboardShortcut(.cancelAction)
+                Button("Start Fresh", action: confirm).keyboardShortcut(.defaultAction).buttonStyle(.borderedProminent)
+            }
+        }
+        .padding(14)
+        .frame(width: 320)
+        .background(RoundedRectangle(cornerRadius: 10).fill(.background).shadow(color: .black.opacity(0.18), radius: 12, y: 4))
     }
 }
 
