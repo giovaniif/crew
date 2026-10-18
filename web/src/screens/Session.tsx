@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import Markdown from "react-markdown";
-import { ApiError, answerPrompt, getPrompt, interrupt, messagesPage, sendMessage, unsend, type Authed, type Prompt } from "../api";
+import { ApiError, answerPrompt, getPrompt, interrupt, messagesPage, sendMessage, startFresh, unsend, type Authed, type Prompt } from "../api";
+import { faceState, stateWords } from "../faces";
+import { MateFace, useMateDefs } from "./Mates";
 import { timeInState } from "../sessions";
 import type { Message, QueuedSend, Session, StreamClient, StreamSnapshot, StreamStatus } from "../stream";
 import { emptyTranscript, newestCursor, toolRow, withFrame, withPage, type Transcript } from "../transcript";
@@ -530,6 +532,44 @@ function ConfirmInterrupt({ api, session, onClose }: { api: Authed; session: str
   );
 }
 
+function MateBar({ api, session, mate, snapshot }: { api: Authed; session: Session; mate: string; snapshot: StreamSnapshot }) {
+  const { defs } = useMateDefs(api);
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState("");
+  const def = defs.find((d) => d.name === mate);
+  const row = snapshot.state?.mates?.mates.find((m) => m.name === mate);
+  const state = row ? faceState(row, []) : "idle";
+
+  async function fresh() {
+    setBusy(true);
+    setNote("");
+    try {
+      const out = await startFresh(api, session.ID, mate);
+      window.location.hash = "#/sessions/" + encodeURIComponent(out.ID);
+    } catch (err) {
+      setNote(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mate-bar">
+      <a href={"#/mates/" + encodeURIComponent(mate)} className="mate-bar-who">
+        <MateFace name={mate} avatar={def?.avatar} color={def?.color} state={state} px={44} />
+        <span>
+          <strong>{mate}</strong>
+          <span className="face-state">{stateWords[state]}</span>
+        </span>
+      </a>
+      <button type="button" className="tag" disabled={busy} onClick={fresh}>
+        Start fresh
+      </button>
+      {note ? <p role="alert">{note}</p> : null}
+    </div>
+  );
+}
+
 export function SessionScreen({
   id,
   snapshot,
@@ -563,6 +603,7 @@ export function SessionScreen({
   const sends = (snapshot.state?.sends ?? []).filter((s) => s.session === id);
   return (
     <div className="chat-screen">
+      {session.Mate?.Name ? <MateBar api={api} session={session} mate={session.Mate.Name} snapshot={snapshot} /> : null}
       <Header session={session} now={now} onInterrupt={() => setConfirming(true)} />
       <Connection snapshot={snapshot} now={now} onRetry={onRetry} />
       <main className="chat-main">

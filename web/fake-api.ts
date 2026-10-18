@@ -83,7 +83,7 @@ export function fakeStreamState(now = Date.now()) {
       fakeSession("s3", { State: "running", name: "add retries", where: "api@retries", since: ago(8) }),
       fakeSession("s4", { State: "done", Unread: true, name: "update the docs", where: "docs@setup", banner: "Rewrote the setup section. (6m40s)", since: ago(20) }),
       fakeSession("s5", { Harness: "codex", State: "done", name: "bump deps", where: "web@deps", banner: "Bumped vite and vitest; the tests pass. (3m2s)", since: ago(125) }),
-      fakeSession("s6", { State: "idle", name: "explore the auth flow", where: "api@main", since: ago(26 * 60) }),
+      fakeSession("s6", { State: "running", name: "explore the auth flow", where: "api@main", since: ago(4), Mate: { Name: "pip", Local: true } }),
     ],
     limits: [quota("claude", "five_hour", "5h", 38, 130), quota("claude", "seven_day", "7d", 19, 3 * 24 * 60), quota("codex", "five_hour", "5h", 77, 200)],
     sends: [
@@ -108,9 +108,11 @@ function fakeMates(stopped: boolean) {
           { mate: "helper", team: "T1", channel: "C1", thread_ts: "1700.0002", session_id: "s3", url: "https://app.slack.com/client/T1/C1/thread/C1-1700.0002", session: "add retries", state: "running", ended: false },
           { mate: "helper", team: "T1", channel: "C1", thread_ts: "1700.0001", session_id: "s5", url: "https://app.slack.com/client/T1/C1/thread/C1-1700.0001", session: "bump deps", state: "done", ended: false },
         ],
+        conversations: [],
       },
-      { name: "reviewer", state: "connected", guard: stopped ? "stopped" : "rate_limit", work: [], threads: [] },
-      { name: "webby", state: "paused", ...held, work: [], threads: [] },
+      { name: "pip", state: "ready", ...held, work: ["s6"], threads: [], conversations: [{ id: "s6", session: "explore the auth flow", state: "running", ended: false }] },
+      { name: "reviewer", state: "connected", guard: stopped ? "stopped" : "rate_limit", work: [], threads: [], conversations: [] },
+      { name: "webby", state: "paused", ...held, work: [], threads: [], conversations: [] },
     ],
   };
 }
@@ -316,12 +318,21 @@ export function fakeApi(build = "v0.12.0+demo"): Plugin {
         if (req.method === "GET" && path === "/api/v1/mates") {
           send(res, 200, {
             mates: [
-              { name: "helper", prompt: "You help with the api.", agent: "claude", repos: ["api"], enabled: true },
-              { name: "reviewer", prompt: "You review PRs.", agent: "claude", enabled: true },
+              { name: "helper", prompt: "Fast fixer. Short replies, small PRs.", agent: "codex", model: "gpt-5", effort: "medium", repos: ["api"], avatar: "bolt", enabled: true },
+              { name: "pip", prompt: "Careful reviewer. Asks before it merges.", agent: "claude", model: "opus", effort: "high", repos: ["api", "web"], avatar: "pip", enabled: true },
+              { name: "reviewer", prompt: "Docs and tests. Never skips a case.", agent: "claude", avatar: "iris", enabled: true },
               { name: "webby", prompt: "You help with the web.", agent: "codex", enabled: false },
             ],
             limits: { hop_limit: 5, turns_per_hour: 20, daily_turns: 100, daily_tokens: 0, stop: false },
           });
+          return;
+        }
+        if (req.method === "GET" && /^\/api\/v1\/mates\/[^/]+\/memory$/.test(path)) {
+          send(res, 200, { name: path.split("/")[4], path: "~/.crew/mates/" + path.split("/")[4] + "/memory.md", text: "- Owner wants small PRs, one per issue.\n- Tests come first in api/.\n- Never force-push main.", limit: 8192 });
+          return;
+        }
+        if (req.method === "POST" && /^\/api\/v1\/mates\/[^/]+\/new$/.test(path)) {
+          send(res, 200, { ID: "s6" });
           return;
         }
         if (req.method === "GET" && path === "/api/v1/approvals") {
