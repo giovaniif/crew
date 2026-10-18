@@ -6,6 +6,7 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/giovaniif/crew/internal/adapters/claude"
 	"github.com/giovaniif/crew/internal/app"
@@ -73,6 +74,23 @@ func TestStatusLineFromAnUnknownPaneIsIgnored(t *testing.T) {
 	}
 	if diff := next(t, sub.Diffs); diff.Session == nil || diff.Session.Model != "" || diff.Session.State != domain.StateDone {
 		t.Fatalf("diff %+v", diff)
+	}
+}
+
+func TestLaunchAppliesTheHookThatArrivedBeforeTheSessionWasRegistered(t *testing.T) {
+	host := &fakeHost{}
+	_, path := start(t, &memStore{}, daemon.WithHarnesses(host, claude.Adapter{}))
+	c := dial(t, path)
+	early := rpc.Hook{Harness: "claude", Event: "SessionStart", Pane: "%7", At: time.Now(), Payload: []byte(`{"session_id":"c-9"}`)}
+	if err := c.Call(context.Background(), rpc.MethodHook, early, nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Call(context.Background(), rpc.MethodLaunch, rpc.LaunchParams{Harness: "claude", Dir: "/w"}, nil); err != nil {
+		t.Fatal(err)
+	}
+	st := snapshot(t, path)
+	if len(st.Sessions) != 1 || st.Sessions[0].ResumeID != "c-9" {
+		t.Fatalf("sessions %+v; want the early hook's resume id c-9", st.Sessions)
 	}
 }
 
