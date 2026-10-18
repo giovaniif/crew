@@ -1,6 +1,6 @@
 ---
 name: babysit
-description: Drive one crew PR to ready. Fix CI, answer and resolve CodeRabbit threads, re-request review, keep the branch up to date, then run the land gate. Use it when asked to babysit, watch or get a PR green in giovaniif/crew.
+description: Drive one crew PR to ready. Fix CI, keep the branch up to date, then run the land gate. Use it when asked to babysit, watch or get a PR green in giovaniif/crew.
 ---
 
 # Babysit a crew PR
@@ -9,7 +9,7 @@ One agent for each PR, in its own worktree. Never babysit in a worktree that you
 
 ## Ready means
 
-- The required checks of `main` are green on the PR head: `build`, `tdd`, `mutate` and `CodeRabbit`. Read them from branch protection, not from memory:
+- The required checks of `main` are green on the PR head: `build`, `tdd` and `mutate`. Read them from branch protection, not from memory:
 
   ```sh
   gh api repos/giovaniif/crew/branches/main/protection --jq .required_status_checks.contexts
@@ -34,23 +34,14 @@ One agent for each PR, in its own worktree. Never babysit in a worktree that you
 
    Fix the commit order (test commit first, then the code). Run `scripts/tdd-check origin/main HEAD` locally on a clean tree before you push.
 4. **mutate.** It fails below 80% on `internal/domain` and `internal/app`. Add a test that kills the surviving mutants. Do not lower the bar.
-5. **Review threads.** For each CodeRabbit finding:
-   - fix it, push, reply in the thread with the commit, and resolve the thread
-   - or reply with the reason that you decline it, and resolve the thread.
-
-   List open threads with GraphQL (`reviewThreads(first:100){nodes{id isResolved comments(first:1){nodes{body path}}}}`). Resolve with the `resolveReviewThread` mutation.
-6. **CodeRabbit.** After each push, check that its newest review is for the PR head (compare the review commit with `headRefOid`).
-   - If it is not, comment `@coderabbitai review`.
-   - CodeRabbit is often rate limited. Its comment then gives a wait time. Wait at least that long, and never less than 15 min, then ask one time again.
-   - Never poke it while its review is in progress. A new request can cancel the run.
-7. **Behind main.** Update the branch on GitHub with a merge commit:
+5. **Behind main.** Update the branch on GitHub with a merge commit:
 
    ```sh
    gh api -X PUT repos/giovaniif/crew/pulls/<pr>/update-branch
    ```
 
    Then CI runs again. A clean automatic merge can still break the build.
-8. **macOS jobs.** All `ci` jobs run on macOS runners. They are slow (15 to 30 min is normal). Wait. Do not cancel and re-run them.
+6. **macOS jobs.** All `ci` jobs run on macOS runners. They are slow (15 to 30 min is normal). Wait. Do not cancel and re-run them.
 
 ## Gotchas
 
