@@ -66,6 +66,7 @@ function setup(hash = "#/mates", mates: Mates = board, approvals: unknown[] = []
     .on("POST", "/api/v1/mates", { status: 200, body: { name: "scout", prompt: "Scout.", agent: "codex", enabled: true } })
     .on("POST", "/api/v1/mates/helper/new", { status: 200, body: { ID: "s9" } })
     .on("POST", "/api/v1/mates/webby/new", { status: 200, body: { ID: "s8" } })
+    .on("POST", "/api/v1/sessions/s2/fresh", { status: 200, body: { ID: "s8" } })
     .on("POST", "/api/v1/sessions/s2/messages", { status: 200, body: { queued: false } })
     .on("GET", "/api/v1/mates/helper/memory", { status: 200, body: { name: "helper", path: "/m/helper/memory.md", text: "- Tests come first.", limit: 8192 } })
     .on("POST", "/api/v1/mates/helper/memory", { status: 200, body: { name: "helper", path: "/m/helper/memory.md", text: "- Small PRs.", limit: 8192 } })
@@ -271,16 +272,24 @@ describe("New mate", () => {
 });
 
 describe("Mate conversation", () => {
-  it("shows the face of the mate and starts fresh after it asks for a handoff", async () => {
+  it("shows the face of the mate and starts fresh with mate.fresh in the same worktree", async () => {
     const { server } = setup("#/sessions/s2");
     const user = userEvent.setup();
     expect(await screen.findByRole("img", { name: /^Owl paused$|paused$/ })).toBeInTheDocument();
-    await user.click(await screen.findByRole("button", { name: "Start fresh" }));
+    expect(await screen.findByRole("checkbox", { name: "Keep this worktree" })).toBeChecked();
+    await user.click(screen.getByRole("button", { name: "Start fresh" }));
     await waitFor(() => expect(window.location.hash).toBe("#/sessions/s8"));
-    expect(calls(server).filter((c) => c.startsWith("POST"))).toEqual(["POST /api/v1/sessions/s2/messages", "POST /api/v1/mates/webby/new"]);
-    expect(server.calls.find((c) => c.path === "/api/v1/sessions/s2/messages")?.body).toEqual({
-      text: "Before we stop: add a short handoff to your memory file. Note what you did, what is left and what you learned.",
-    });
+    expect(calls(server).filter((c) => c.startsWith("POST"))).toEqual(["POST /api/v1/sessions/s2/fresh"]);
+    expect(server.calls.find((c) => c.path === "/api/v1/sessions/s2/fresh")?.body).toEqual({ same_worktree: true });
+  });
+
+  it("starts fresh in a new worktree when the owner clears Keep this worktree", async () => {
+    const { server } = setup("#/sessions/s2");
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("checkbox", { name: "Keep this worktree" }));
+    await user.click(screen.getByRole("button", { name: "Start fresh" }));
+    await waitFor(() => expect(window.location.hash).toBe("#/sessions/s8"));
+    expect(server.calls.find((c) => c.path === "/api/v1/sessions/s2/fresh")?.body).toEqual({ same_worktree: false });
   });
 
   it("has no Start fresh on a session of no mate", async () => {
