@@ -86,6 +86,35 @@ struct SnapshotTests {
         _ = try save("mates-stopped-mocha", Snapshot.render(mates: stopped, size: Self.size, dark: true), size: Self.size)
     }
 
+    @Test func theMatesGalleryShowsAFaceForEachMate() throws {
+        let rep = try save("mates-gallery", Snapshot.render(mates: .seeded(), size: Self.size, dark: false), size: Self.size)
+        #expect(pixels(rep, near: FaceAccent.mauve.light) > 200)
+        #expect(pixels(rep, near: FaceAccent.sapphire.light) > 200)
+        _ = try save("mates-gallery-mocha", Snapshot.render(mates: .seeded(), size: Self.size, dark: true), size: Self.size)
+    }
+
+    @Test func theMateProfileShowsConversationsAndMemory() throws {
+        let rep = try save("mate-profile", Snapshot.render(mates: .seeded(profile: "iris"), size: Self.size, dark: false), size: Self.size)
+        #expect(pixels(rep, near: FaceAccent.mauve.light) > 200)
+        #expect(pixels(rep, near: "#e01e5a") > 10)
+        _ = try save("mate-profile-clear", Snapshot.render(mates: .seeded(profile: "iris", confirmClear: true), size: Self.size, dark: false), size: Self.size)
+    }
+
+    @Test func theNewMateSheetHasFourSteps() throws {
+        let sheet = CGSize(width: 860, height: 700)
+        for step in MateStep.allCases {
+            let rep = try save("new-mate-\(step.rawValue + 1)-\(step.title.lowercased())", Snapshot.render(newMate: Seed.wizard(step: step), size: sheet, dark: false), size: sheet)
+            #expect(pixels(rep, near: FaceAccent.mauve.light) > 100)
+        }
+        _ = try save("new-mate-2-personality-mocha", Snapshot.render(newMate: Seed.wizard(step: .personality), size: sheet, dark: true), size: sheet)
+    }
+
+    @Test func theMainWindowShowsMateFacesAndStartFresh() throws {
+        let rep = try shoot("main-mates", .seededMates())
+        #expect(pixels(rep, near: FaceAccent.mauve.light) > 100)
+        _ = try shoot("main-mates-start-fresh", .seededMates(freshConfirm: true))
+    }
+
     @Test func theDiskWindowMarksDirtyAndMergedWorktrees() throws {
         let rep = try shootDisk("disk-worktrees", .seeded())
         #expect(pixels(rep, near: Palette.latte.hex(.peach)) > 20)

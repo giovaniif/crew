@@ -46,6 +46,8 @@ public struct LiveWindow: View {
     @State private var profileName = ""
     @State private var headless: HeadlessView
     @State private var serverSend: ServerProfileSend
+    @State private var mates: MatesModel?
+    @State private var freshConfirm: String?
     @State private var fix: DaemonFix?
 #if canImport(WebKit)
     @State private var webViews = BrowserWebViews()
@@ -110,6 +112,8 @@ public struct LiveWindow: View {
             popup: panes.popup, paneError: panes.error, card: attention?.card, message: windowMessage, servers: servers
         )
         scene.browser = browserChrome()
+        scene.mateLooks = Dictionary((mates?.definitions ?? []).map { ($0.name, MateLook.of($0)) }, uniquingKeysWith: { a, _ in a })
+        scene.freshConfirm = freshConfirm
         scene.fix = fix?.state
         return scene
     }
@@ -152,7 +156,17 @@ public struct LiveWindow: View {
     }
 
     public var body: some View {
-        browserLayer(window)
+        browserLayer(window).task(id: mateNames) { await loadMates() }
+    }
+
+    private var mateNames: [String] {
+        store.state?.mates?.mates.map(\.name) ?? []
+    }
+
+    private func loadMates() async {
+        let m = mates ?? MatesModel(caller: store)
+        mates = m
+        await m.load()
     }
 
     private var window: some View {
@@ -557,6 +571,29 @@ public struct LiveWindow: View {
         var a = WindowActions()
         a.switchServer = switchServer
         a.addServer = { openWindow(id: "setup") }
+        a.openMates = {
+            router.mateProfile = nil
+            openWindow(id: "mates")
+        }
+        a.openMate = { name in
+            router.mateProfile = name
+            openWindow(id: "mates")
+        }
+        a.startFresh = { freshConfirm = $0 }
+        a.cancelFresh = { freshConfirm = nil }
+        a.confirmFresh = { id in
+            freshConfirm = nil
+            guard let state = store.state, let session = state.sessions.first(where: { $0.id == id }) else { return }
+            let m = mates ?? MatesModel(caller: store)
+            mates = m
+            Task {
+                if let next = await m.startFresh(session, state: state) {
+                    nav.select(next)
+                } else if let failure = m.message {
+                    explanation = failure
+                }
+            }
+        }
         a.select = { nav.select($0) }
         a.filter = { value in
             filter = value
