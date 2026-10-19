@@ -69,6 +69,7 @@ Write all prose docs and new ADRs in ASD-STE100 Simplified Technical English. Us
 - **Shell out, do not reimplement:** use the `git`, `gh` and `tmux` CLIs. Do not use a Go git library.
 - **Never destroy user work:** cleanup code backs up uncommitted changes before it removes anything. It never deletes branches. It never touches a worktree that a process uses. Each change to cleanup needs tests for these cases.
 - **Do not change the user's setup:** the tmux adapter uses only the `crew` tmux server. Setup commands merge into the `~/.claude` and `~/.codex` config idempotently. They back up the file first, and you can undo them. Tests never touch the real `~/.claude`, `~/.codex` or `~/.config/nvim`.
+- **The Mac app is the primary UI:** the Mac app is the default surface and the most important one. The PWA and the TUI are also important, but they come second. For a UI change, design the Mac app first and use it as the reference. Use a light, native macOS look: white content, a light grey sidebar, SF Pro, the native toolbar, sheets and segmented controls. Then make the PWA and the TUI agree with it. Mac CI screenshots are the first evidence for a UI change (see [macos/](macos/AGENTS.md)).
 
 ## Tests: TDD, enforced by CI
 
@@ -102,8 +103,8 @@ Write all prose docs and new ADRs in ASD-STE100 Simplified Technical English. Us
    If a PR changes what the TUI draws, show screenshots of the new behavior in its body. Make them with `scripts/screenshot` from a neutral demo folder, never a real home or project. Push them to the `pr-assets` branch under `<issue-number>/`. Embed them by their `raw.githubusercontent.com` URL (see [scripts/](scripts/AGENTS.md)).
 6. If a criterion is wrong or impossible, do not quietly drop it. Say so in the PR and on the issue.
 7. main is protected. Merge only through a PR with build, tdd and mutate green and the branch up to date with main.
-8. CodeRabbit reviews each PR and is a required check. Before you merge, fix or answer each finding and resolve all review threads.
-9. Merge your own PR when it is ready. Ready means: build, tdd, mutate and CodeRabbit are green, all review threads are resolved and the branch is up to date with main. Do not wait for the owner to approve. Merge with `gh pr merge --merge --match-head-commit <sha>`. The owner examines the merged PRs in a daily review.
+8. The PR review is our own validation: CI (build, tdd, mutate), the evidence of `scripts/verify` and the land gate. CodeRabbit is not part of the process.
+9. Merge your own PR when it is ready. Ready means: build, tdd and mutate are green and the branch is up to date with main. Do not wait for the owner to approve. Merge with `gh pr merge --merge --match-head-commit <sha>`. The owner examines the merged PRs in a daily review.
 
 ## Repo hygiene
 

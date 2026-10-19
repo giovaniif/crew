@@ -73,7 +73,7 @@ func TestMateWorkerConnectsEachEnabledMateThatHasTokens(t *testing.T) {
 	}
 	waitState(t, c, "reviewer", domain.MateConnected)
 	states := mateStates(t, c)
-	if states["builder"].State != domain.MatePaused || states["helper"].State != domain.MateNoTokens {
+	if states["builder"].State != domain.MatePaused || states["helper"].State != domain.MateReady {
 		t.Errorf("states %+v", states)
 	}
 	mates := hub.snapshot()
@@ -92,7 +92,7 @@ func TestMateClearTokensDisconnectsTheMate(t *testing.T) {
 	if err := c.Call(context.Background(), rpc.MethodMateClearTokens, rpc.MateClearTokensParams{Name: "reviewer"}, nil); err != nil {
 		t.Fatal(err)
 	}
-	waitState(t, c, "reviewer", domain.MateNoTokens)
+	waitState(t, c, "reviewer", domain.MateReady)
 	waitFor(t, func() bool { m := hub.snapshot(); return len(m) == 1 && m[0].stopped })
 }
 

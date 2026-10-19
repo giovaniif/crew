@@ -38,21 +38,53 @@ public struct MateThread: Codable, Sendable, Equatable, Identifiable {
     }
 }
 
+public struct MateConversation: Codable, Sendable, Equatable, Identifiable {
+    public var session: String
+    public var name: String
+    public var state: String
+    public var ended: Bool
+    public var startedAt: String?
+
+    public init(session: String, name: String = "", state: String = "idle", ended: Bool = false, startedAt: String? = nil) {
+        self.session = session
+        self.name = name
+        self.state = state
+        self.ended = ended
+        self.startedAt = startedAt
+    }
+
+    public var id: String { session }
+
+    enum CodingKeys: String, CodingKey {
+        case session, name, state, ended
+        case startedAt = "started_at"
+    }
+}
+
 public struct MateRow: Codable, Sendable, Equatable, Identifiable {
     public var name: String
     public var state: String
     public var error: String?
     public var hold: String?
+    public var avatar: String?
+    public var color: String?
     @NullAsEmpty public var work: [String]
     @NullAsEmpty public var threads: [MateThread]
+    @NullAsEmpty public var conversations: [MateConversation]
 
-    public init(name: String, state: String, error: String? = nil, hold: String? = nil, work: [String] = [], threads: [MateThread] = []) {
+    public init(
+        name: String, state: String, error: String? = nil, hold: String? = nil, avatar: String? = nil, color: String? = nil,
+        work: [String] = [], threads: [MateThread] = [], conversations: [MateConversation] = []
+    ) {
         self.name = name
         self.state = state
         self.error = error
         self.hold = hold
+        self.avatar = avatar
+        self.color = color
         self.work = work
         self.threads = threads
+        self.conversations = conversations
     }
 
     public var id: String { name }
@@ -72,7 +104,7 @@ public struct MateRow: Codable, Sendable, Equatable, Identifiable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case name, state, error, work, threads
+        case name, state, error, work, threads, conversations, avatar, color
         case hold = "guard"
     }
 }
@@ -95,6 +127,10 @@ public struct MateDefinition: Codable, Sendable, Equatable, Identifiable {
     public var effort: String?
     public var repos: [String]?
     public var owner: String?
+    public var avatar: String?
+    public var color: String?
+    public var tone: MateToneValue?
+    public var noMemory: Bool?
     public var enabled: Bool
 
     public init(name: String, prompt: String, agent: String = "claude", enabled: Bool = true) {
@@ -104,19 +140,26 @@ public struct MateDefinition: Codable, Sendable, Equatable, Identifiable {
         self.enabled = enabled
     }
 
+    enum CodingKeys: String, CodingKey {
+        case name, prompt, agent, model, effort, repos, owner, avatar, color, tone, enabled
+        case noMemory = "no_memory"
+    }
+
     public var id: String { name }
 }
 
 public struct MateDefinitions: Decodable, Sendable, Equatable {
     public var mates: [MateDefinition]
     public var problems: [String]
+    public var tones: [ToneAxisInfo]
 
-    enum CodingKeys: String, CodingKey { case mates, problems }
+    enum CodingKeys: String, CodingKey { case mates, problems, tones }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         mates = try c.decodeIfPresent([MateDefinition].self, forKey: .mates) ?? []
         problems = try c.decodeIfPresent([String].self, forKey: .problems) ?? []
+        tones = try c.decodeIfPresent([ToneAxisInfo].self, forKey: .tones) ?? []
     }
 }
 
@@ -173,6 +216,10 @@ public struct MateDraft: Sendable, Equatable {
     public var repos = ""
     public var prompt = ""
     public var owner: String?
+    public var avatar: String?
+    public var color: String?
+    public var tone: MateToneValue?
+    public var noMemory = false
     public var enabled = true
 
     public init() {}
@@ -185,6 +232,10 @@ public struct MateDraft: Sendable, Equatable {
         repos = (m.repos ?? []).joined(separator: ", ")
         prompt = m.prompt
         owner = m.owner
+        avatar = m.avatar
+        color = m.color
+        tone = m.tone
+        noMemory = m.noMemory ?? false
         enabled = m.enabled
     }
 
@@ -199,6 +250,10 @@ public struct MateDraft: Sendable, Equatable {
         let list = repos.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
         m.repos = list.isEmpty ? nil : list
         m.owner = owner
+        m.avatar = avatar
+        m.color = color
+        m.tone = tone
+        m.noMemory = noMemory ? true : nil
         return m
     }
 }
@@ -237,11 +292,13 @@ struct ApprovalDecideParams: Encodable, Sendable {
 public final class MatesModel {
     public private(set) var definitions: [MateDefinition] = []
     public private(set) var problems: [String] = []
+    public private(set) var tones: [ToneAxisInfo] = []
     public private(set) var approvals: [ApprovalItem] = []
     public private(set) var setup: MateSetupLink?
     public private(set) var claim: MateClaimCode?
     public var message: String?
-    private let caller: Caller
+    let caller: Caller
+    public internal(set) var memory: [String: MateMemory] = [:]
 
     public init(caller: Caller) {
         self.caller = caller
@@ -252,6 +309,7 @@ public final class MatesModel {
             let list: MateDefinitions = try await caller.call("mate.list", params: EmptyParams())
             definitions = list.mates
             problems = list.problems
+            tones = list.tones
             let pending: [ApprovalItem]? = try await caller.call("approval.list", params: EmptyParams())
             approvals = pending ?? []
         } catch {
@@ -309,7 +367,7 @@ public final class MatesModel {
     }
 
     @discardableResult
-    private func run<Params: Encodable & Sendable>(_ method: String, _ params: Params) async -> Bool {
+    func run<Params: Encodable & Sendable>(_ method: String, _ params: Params) async -> Bool {
         do {
             let _: Ignored = try await caller.call(method, params: params)
             message = nil

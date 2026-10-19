@@ -306,7 +306,8 @@ struct CrewApp: App {
                 LiveWindow(
                     store: store, server: current.name, router: router, shortcuts: launcher.settings.settings.shortcuts,
                     attention: launcher.attention, diffLayout: launcher.settings.settings.appearance.diffLayout,
-                    confirmEnd: launcher.settings.settings.general.confirmOnEnd, servers: launcher.servers.servers, switchServer: { launcher.connect($0) }
+                    confirmEnd: launcher.settings.settings.general.confirmOnEnd, servers: launcher.servers.servers, switchServer: { launcher.connect($0) },
+                    setup: launcher.setup
                 )
                 .id(current)
                 .background(MainWindowFrame())
@@ -352,7 +353,7 @@ struct CrewApp: App {
         .keyboardShortcut("a", modifiers: [.command, .shift])
         Window("Mates", id: "mates") {
             if Launch.demo {
-                MatesWindow(scene: .seeded()).frame(minWidth: 720, minHeight: 480)
+                MatesWindow(scene: .seeded()).frame(minWidth: 980, minHeight: 640)
             } else if let store = launcher.store {
                 LiveMatesWindow(store: store, router: router)
             } else {

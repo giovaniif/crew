@@ -17,28 +17,115 @@ type Runner func(ctx context.Context, name string, args ...string) error
 
 var Exec = ExecIn("/run/user")
 
+type Query func(ctx context.Context, name string, args ...string) ([]byte, error)
+
+var Output = OutputIn("/run/user")
+
 func ExecIn(runtimeRoot string) Runner {
 	return func(ctx context.Context, name string, args ...string) error {
-		cmd := exec.CommandContext(ctx, name, args...)
-		hint := ""
-		if os.Getenv("XDG_RUNTIME_DIR") == "" {
-			dir := filepath.Join(runtimeRoot, strconv.Itoa(os.Getuid()))
-			info, err := os.Stat(dir)
-			switch {
-			case err == nil && info.IsDir():
-				cmd.Env = append(os.Environ(), "XDG_RUNTIME_DIR="+dir, "DBUS_SESSION_BUS_ADDRESS=unix:path="+dir+"/bus")
-			case err != nil && !errors.Is(err, os.ErrNotExist):
-				hint = "; " + err.Error()
-			default:
-				hint = "; no user runtime dir " + dir + ", so systemd --user needs linger: sudo loginctl enable-linger $USER"
-			}
-		}
+		cmd, hint := userCommand(ctx, runtimeRoot, name, args)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("%s %v: %w: %s%s", name, args, err, bytes.TrimSpace(out), hint)
 		}
 		return nil
 	}
+}
+
+func OutputIn(runtimeRoot string) Query {
+	return func(ctx context.Context, name string, args ...string) ([]byte, error) {
+		cmd, hint := userCommand(ctx, runtimeRoot, name, args)
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+		out, err := cmd.Output()
+		if err != nil {
+			return nil, fmt.Errorf("%s %v: %w: %s%s", name, args, err, bytes.TrimSpace(stderr.Bytes()), hint)
+		}
+		return out, nil
+	}
+}
+
+func userCommand(ctx context.Context, runtimeRoot, name string, args []string) (*exec.Cmd, string) {
+	cmd := exec.CommandContext(ctx, name, args...)
+	if os.Getenv("XDG_RUNTIME_DIR") != "" {
+		return cmd, ""
+	}
+	dir := filepath.Join(runtimeRoot, strconv.Itoa(os.Getuid()))
+	info, err := os.Stat(dir)
+	switch {
+	case err == nil && info.IsDir():
+		cmd.Env = append(os.Environ(), "XDG_RUNTIME_DIR="+dir, "DBUS_SESSION_BUS_ADDRESS=unix:path="+dir+"/bus")
+		return cmd, ""
+	case err != nil && !errors.Is(err, os.ErrNotExist):
+		return cmd, "; " + err.Error()
+	}
+	return cmd, "; no user runtime dir " + dir + ", so systemd --user needs linger: sudo loginctl enable-linger $USER"
+}
+
+type State struct {
+	Active     string
+	Sub        string
+	Restarts   int
+	MainStatus int
+}
+
+func Show(ctx context.Context, u Unit, query Query) (State, error) {
+	out, err := query(ctx, "systemctl", "--user", "show", u.file(), "-p", "ActiveState,SubState,NRestarts,ExecMainStatus")
+	if err != nil {
+		return State{}, err
+	}
+	var s State
+	for _, line := range strings.Split(string(out), "\n") {
+		key, value, _ := strings.Cut(strings.TrimSpace(line), "=")
+		switch key {
+		case "ActiveState":
+			s.Active = value
+		case "SubState":
+			s.Sub = value
+		case "NRestarts":
+			s.Restarts, _ = strconv.Atoi(value)
+		case "ExecMainStatus":
+			s.MainStatus, _ = strconv.Atoi(value)
+		}
+	}
+	return s, nil
+}
+
+func Program(u Unit) (string, error) {
+	raw, err := os.ReadFile(u.path())
+	if err != nil {
+		return "", err
+	}
+	for _, line := range strings.Split(string(raw), "\n") {
+		if rest, ok := strings.CutPrefix(strings.TrimSpace(line), "ExecStart="); ok {
+			return firstWord(rest), nil
+		}
+	}
+	return "", nil
+}
+
+func firstWord(s string) string {
+	if !strings.HasPrefix(s, `"`) {
+		word, _, _ := strings.Cut(s, " ")
+		return word
+	}
+	var b strings.Builder
+	for i := 1; i < len(s); i++ {
+		c := s[i]
+		switch {
+		case c == '"':
+			return b.String()
+		case c == '\\' && i+1 < len(s):
+			i++
+			b.WriteByte(s[i])
+		case (c == '%' || c == '$') && i+1 < len(s) && s[i+1] == c:
+			i++
+			b.WriteByte(c)
+		default:
+			b.WriteByte(c)
+		}
+	}
+	return b.String()
 }
 
 type Unit struct {

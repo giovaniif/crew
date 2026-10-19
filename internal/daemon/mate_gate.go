@@ -27,7 +27,7 @@ func (e MateTurn) apply(s *state) rpc.Diff {
 }
 
 func (s *state) mateSpend(before, after domain.Session, now time.Time) {
-	if after.Mate == nil || after.Usage.Tokens <= before.Usage.Tokens {
+	if after.Mate == nil || after.Mate.Local || after.Usage.Tokens <= before.Usage.Tokens {
 		return
 	}
 	name := after.Mate.Name
@@ -39,7 +39,7 @@ func (s *state) gateHook(h rpc.Hook, now time.Time) rpc.HookReply {
 		return rpc.HookReply{}
 	}
 	session, ok := domain.SessionOnPane(s.sessionList(), h.Pane)
-	if !ok || session.Mate == nil {
+	if !ok || session.Mate == nil || session.Mate.Local {
 		return rpc.HookReply{}
 	}
 	action := *h.Action

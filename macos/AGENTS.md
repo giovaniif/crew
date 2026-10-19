@@ -70,12 +70,20 @@ The dry run occurs on a pull request that touches `macos/`, `.goreleaser.yaml` o
   - The detail has Overview (the definition) and Runs (history, Open session, Rerun). Run… (⌘R) opens `AutomationRunSheet` with a multi-line context field. A started run selects its session in the main window.
   - New… and Edit… open `AutomationEditSheet`. Save writes the global `config.toml` through `automation.save`. A repo automation has no Edit…: the detail shows its `.crew.toml`.
   - Test: `swift test --filter Automations`. Snapshots: `automations*.png`.
-- Mates (`Mates.swift`, views `MatesWindow`, `LiveMatesWindow`; ⇧⌘M, ADR 0053):
-  - `ViewState.mates` is the `mates` board of `view.subscribe` (`MateBoard`, `MateRow`, `MateThread`). The window draws it live. `MateRow.label` gives the state and the guard, and `currentWork` gives the threads in `work`.
-  - `MatesModel` (main actor, over `Caller`) calls `mate.list` and `approval.list`, `mate.pause`, `mate.resume`, `mate.stop_all` (the kill switch, with a confirmation), `mate.set` (Settings… and Add a mate…, from `MateDraft`), `mate.setup`, `mate.set_tokens`, `mate.claim` and `approval.decide`.
-  - After Add a mate…, `MateConnectSheet` shows the manifest link, takes the two tokens and shows the claim code.
-  - A thread opens its session in the main window or its Slack link. When all mates are stopped, the sidebar footer ends with "all mates stopped".
-  - Test: `swift test --filter 'Mates|ViewDecoding|LiveState|Sidebar'`.
+- Mates (`Mates.swift`, `MateProfile.swift`, `MateWizard.swift`, `MateTone.swift`, `Faces.swift`, `SlackMark.swift`; views `MatesWindow`, `MateProfileView`, `NewMateSheet`, `MateFaceView`, `LiveMatesWindow`; ⇧⌘M, ADR 0053 and [ADR 0056](../docs/adr/0056-local-mates.md)):
+  - A mate is local first. Slack is an optional connector ("Connect to Slack…" with the Slack logo).
+  - Faces: `Resources/faces.svg` has 60 symbols `crew-face-<id>-<state>` (12 faces, 5 states: idle, thinking, working, needs, paused). `build-app` copies it and `Resources/slack-mark.svg` (the official Slack mark) into `Contents/Resources`. `Face.marks` gives the same shapes as plain values, and `MateFace` draws them with `Canvas`. `MateFacesTests` checks the Swift faces against the asset. `SlackMarkTests` checks `SlackMark.parts` against the asset, and `SVGPath.parse` changes the path data into commands.
+  - `MateLook.of` gives the face and the color of a mate: `avatar` and `color` of the `[[mate]]` table, else the face whose id is the name, else face number (sum of the name bytes) mod 12, and the accent of that face (the rule of the TUI and the PWA). The status goes in this order: paused (paused or held by a guard), needs you (a pending approval, or a conversation that waits or asks for permission), working, idle. `FaceState.of` changes a session state into a face state.
+  - Gallery: `MateGallery` makes one `MateCard` for each definition of `mate.list`, with the live count, the brains and a status line (Needs you, Working on …, Paused, Idle). The source list filters by All Mates, Live, Claude and Codex. The search matches the name and the first paragraph of the prompt.
+  - Add a mate…: `NewMateSheet` has four steps (`MateWizard`): face, color and name; personality; brains (agent, model, effort and repos from `session.options` and the single-repo workspaces); Meet. The name becomes a handle (`MateNames.slug`). A face gives its name until the user types a name.
+  - Tone (`MateTones`): three axes (`terse`, `cautious`, `formal`) with five steps. Each step that is not the middle step adds one sentence. The "Added to the prompt" box shows the sentences. The sentences come from the `tones` of `mate.list` (`ToneAxisInfo`), else from the built-in copy in `ToneAxis.sentences`. The mate saves `tone` (`MateToneValue`, 1 to 5, the middle step is left out) and `no_memory`. The daemon adds the sentences to the system prompt.
+  - Profile: `MateConversations` gives the live and past sessions whose `Mate.Name` is the mate. New Conversation calls `mate.new`. The memory panel reads `mate.memory`, Edit… and Clear… call `mate.set_memory`, and `MemoryMeter` shows the size against the limit.
+  - Start Fresh (`StartFresh`, in the profile and in the main toolbar of a mate session): after a confirmation, `MatesModel.startFresh` sends a handoff prompt with `session.send`, then calls `mate.new` in the repo of the session. The old session stays.
+  - Main window: the sidebar has a Mates entry (`MatesEntry`) that opens the Mates window. A session row of a mate shows its face and name (`SidebarRow.mate`, `face`). The toolbar shows the face of the mate. A click on the face opens its profile (`WindowRouter.mateProfile`).
+  - `ViewState.mates` is the `mates` board of `view.subscribe` (`MateBoard`, `MateRow`, `MateThread`). `MateRow.label` gives the state and the guard. The profile shows Slack threads, Pause and Resume.
+  - `MatesModel` (main actor, over `Caller`) also calls `mate.list`, `approval.list`, `mate.pause`, `mate.resume`, `mate.stop_all` (the kill switch, with a confirmation), `mate.set`, `mate.setup`, `mate.set_tokens`, `mate.claim` and `approval.decide`. After Connect to Slack…, `MateConnectSheet` shows the manifest link, takes the two tokens and shows the claim code.
+  - Snapshots: `mates-gallery*`, `mate-profile*`, `new-mate-<n>-<step>*`, `main-mates*`. `Seed.mates`, `Seed.mateDefinitions` and `Seed.wizard(step:)` are the seeds.
+  - Test: `swift test --filter 'Mate|SlackMark|ViewDecoding|LiveState|Sidebar'`.
 - New session (`NewSession.swift`, view `NewSessionSheet`):
   - ⌘N opens the sheet. The New button of the toolbar also opens it.
   - `NewSession.load(state:)` calls `session.options`. It gets the harnesses, their models and efforts, and the `[defaults.<harness>]` model and effort. The app cannot read a remote `config.toml`.
@@ -118,7 +126,8 @@ The dry run occurs on a pull request that touches `macos/`, `.goreleaser.yaml` o
   - `TerminalHub` (`@Observable`, main actor) opens again after a drop with `Backoff` and sets `pause-after=5`. It draws each attached pane from `display-message` (size, cursor, modes) and `capture-pane -p -e -J -S -2000`. It ignores output that the capture already has (it tracks reply numbers in the event stream).
   - A pane that paused while hidden gets `refresh-client -A '%p:continue'` and a redraw when it shows again.
   - Keys go as `send-keys -H` (256 bytes for each command). Sizes go as `refresh-client -C @w:CxR`, deduplicated for each window.
-  - If the size of a pane is different from the grid of the view (because the TUI shows it), the pane is letterboxed with a note.
+  - Each terminal view (Terminal, Shell and nvim) fills all of its area at the font size of the user. `PaneHost.layout` calculates the grid (`PaneGrid`: view size divided by cell size) and sends it as the size of the pane when the pane shows and at each change of the window or sidebar size. The font size does not change to fit a pane.
+  - The hub finds TUI clients with `list-clients` (clients that are not in control mode) when it connects and at each layout change. Only if a TUI client is attached and the pane size is different from the grid, a note names the tty of that client (`Letterbox`). The view continues to fill its area.
 - Terminal views (`CrewViews/TerminalPane.swift`, macOS only, SwiftTerm):
   - There is one `PaneHost` for each pane id, cached in `TerminalViews`. Thus a switch of sessions keeps scrollback and cursor.
   - In a focused terminal, each key without ⌘ goes to the pane (`performKeyEquivalent`, which decides by `TerminalKeys.goesToPane`). Thus ⌃C, Esc and ⌃H/J/K/L get to agents and nvim.
@@ -240,8 +249,16 @@ The dry run occurs on a pull request that touches `macos/`, `.goreleaser.yaml` o
     1. It copies the bundled `Contents/Resources/bin/<os>_<arch>/crew` through the stdin of the same ssh to a temp file in `~/.local/bin`.
     2. It `mv`s the file into place as `crew` (atomic). It leaves a binary of the alphas where it is. If the build already matches, it skips this, so a second run changes nothing.
     3. It runs `crew setup daemon`. This also runs the migration from the alphas (see [cmd/crew/](../cmd/crew/AGENTS.md)).
-    4. If it replaced the binary of a running daemon, it restarts the service (`systemctl --user restart crew-daemon.service`, or `launchctl kickstart -k` of `dev.crew.daemon` on a Mac). It never stops the service, so tmux sessions continue.
-  - `Checklist.items` changes the probe into the rows of the Servers tab, with fix-its: Set up, Update server, the linger command `sudo loginctl enable-linger <user>`, `ssh -t <host> gh auth login`.
+    4. If it replaced the binary of a running daemon, or if the check said `failing`, it restarts the service (`systemctl --user restart crew-daemon.service`, or `launchctl kickstart -k` of `dev.crew.daemon` on a Mac). It never stops the service, so tmux sessions continue.
+    5. If the check after setup still says `failing`, setup fails with the `reason`.
+  - `Checklist.items` changes the probe into the rows of the Servers tab, with fix-its: Set up, Update server, Set up or update, the linger command `sudo loginctl enable-linger <user>`, `ssh -t <host> gh auth login`.
+    - `DaemonCheck` decodes `exec_ok`, `failing` and `reason` as optionals, so a check from an older server still decodes.
+    - When `failing` is true, the Daemon row fails. It shows the `reason` and the fix-it Set up or update.
+  - Fix in the connection banner (`DaemonFix`, `DaemonFixState`):
+    - `ConnectionBanner(_:fix:)` adds Fix to "No crew daemon · retrying" and "Reconnecting in N s" when the window has a `DaemonFix`. "Build mismatch" keeps Reconnect.
+    - `DaemonFix.run` runs `ServerSetup.setUp` for the server of the window (remote or This Mac), then connects again.
+    - While it runs, the banner shows "Fixing the daemon". If it fails, the banner shows "Fix failed · retrying" with the step and the error, and Fix stays.
+    - `LiveWindow(setup:)` gets the `ServerSetup` of the launcher.
   - Each row of the workspace step has Remove (also in its context menu). `WorkspaceRemoval` gives the confirmation: it says that no files, worktrees or branches are deleted, and it names the live sessions whose `Dir` is in the workspace. The new-session sheet has "Manage workspaces…", which opens Settings › Workspaces (the Settings tab is stored in `settings.tab`). Test: `swift test --filter WorkspaceRemoval`.
   - Hooks and the workspace step use `ServerSettings` over the `ViewStore` of the new server. The workspace step uses the workspace path field (`ServerSettings.path`).
   - `swift test --filter Servers` runs the suite. Its fake `ssh`, `uname` and `systemctl` scripts run the remote side locally against a temp home.
