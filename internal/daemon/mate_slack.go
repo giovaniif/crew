@@ -28,6 +28,7 @@ type slackWorkers struct {
 	kick    chan struct{}
 	mu      sync.Mutex
 	states  map[string]rpc.MateState
+	looks   map[string]domain.Mate
 	running map[string]*mateWorker
 	claims  map[string]domain.MateClaim
 	seen    []string
@@ -115,7 +116,9 @@ func (d *Daemon) syncMates(ctx context.Context) {
 	states := map[string]rpc.MateState{}
 	want := map[string]mateTarget{}
 	list := d.loadMates(src)
+	looks := map[string]domain.Mate{}
 	for _, m := range list.Mates {
+		looks[m.Name] = m
 		if !m.Enabled {
 			states[m.Name] = rpc.MateState{Name: m.Name, State: domain.MatePaused}
 			continue
@@ -152,6 +155,7 @@ func (d *Daemon) syncMates(ctx context.Context) {
 		go d.runMate(wctx, name, w)
 	}
 	d.slack.states = states
+	d.slack.looks = looks
 	d.slack.limits = list.Limits
 }
 
@@ -159,6 +163,9 @@ func (d *Daemon) publishMates() {
 	d.query(func(s *state) {
 		d.slack.mu.Lock()
 		states := slices.Collect(maps.Values(d.slack.states))
+		for i := range states {
+			states[i] = d.slack.withLook(states[i])
+		}
 		limits := d.slack.limits
 		d.slack.mu.Unlock()
 		board := domain.NewMateBoard(states, limits, s.mateUsage, d.ws.now())
@@ -222,7 +229,7 @@ func (d *Daemon) mateStates(mates []domain.Mate, limits domain.MateLimits) []rpc
 	for _, m := range mates {
 		if s, ok := d.slack.states[m.Name]; ok {
 			s.Guard = domain.MateGuard(limits, 0, usage[m.Name], now)
-			out = append(out, s)
+			out = append(out, d.slack.withLook(s))
 		}
 	}
 	return out
@@ -302,4 +309,10 @@ func (d *Daemon) setMateOwner(name, user string) error {
 		return d.replaceConfig(src, next)
 	}
 	return fmt.Errorf("no mate %q", name)
+}
+
+func (w *slackWorkers) withLook(s rpc.MateState) rpc.MateState {
+	m := w.looks[s.Name]
+	s.Avatar, s.Color = m.Avatar, m.Color
+	return s
 }

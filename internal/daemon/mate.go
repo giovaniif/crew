@@ -14,16 +14,18 @@ import (
 )
 
 type mateDoc struct {
-	Name    string   `toml:"name"`
-	Prompt  string   `toml:"prompt"`
-	Agent   string   `toml:"agent"`
-	Model   string   `toml:"model"`
-	Effort  string   `toml:"effort"`
-	Repos   []string `toml:"repos"`
-	Owner   string   `toml:"owner"`
-	Avatar  string   `toml:"avatar"`
-	Color   string   `toml:"color"`
-	Enabled *bool    `toml:"enabled"`
+	Name     string          `toml:"name"`
+	Prompt   string          `toml:"prompt"`
+	Agent    string          `toml:"agent"`
+	Model    string          `toml:"model"`
+	Effort   string          `toml:"effort"`
+	Repos    []string        `toml:"repos"`
+	Owner    string          `toml:"owner"`
+	Avatar   string          `toml:"avatar"`
+	Color    string          `toml:"color"`
+	Tone     domain.MateTone `toml:"tone"`
+	NoMemory bool            `toml:"no_memory"`
+	Enabled  *bool           `toml:"enabled"`
 }
 
 func parseMates(text, path string) ([]domain.Mate, []string) {
@@ -44,7 +46,7 @@ func parseMates(text, path string) ([]domain.Mate, []string) {
 	for i, d := range doc.Mate {
 		mates[i] = domain.Mate{
 			Name: d.Name, Prompt: d.Prompt, Agent: d.Agent, Model: d.Model, Effort: d.Effort,
-			Repos: d.Repos, Owner: d.Owner, Avatar: d.Avatar, Color: d.Color, Enabled: d.Enabled == nil || *d.Enabled,
+			Repos: d.Repos, Owner: d.Owner, Avatar: d.Avatar, Color: d.Color, Tone: d.Tone, NoMemory: d.NoMemory, Enabled: d.Enabled == nil || *d.Enabled,
 		}
 	}
 	return mates, problems
@@ -109,7 +111,7 @@ func (d *Daemon) registeredWorkspaces() []domain.Workspace {
 }
 
 func (d *Daemon) loadMates(src string) rpc.MateList {
-	list := rpc.MateList{Mates: []domain.Mate{}}
+	list := rpc.MateList{Mates: []domain.Mate{}, Tones: domain.MateToneAxes()}
 	parsed, problems := parseMates(src, d.cfg.path)
 	valid, invalid := domain.CheckMates(parsed, d.registeredWorkspaces())
 	limits, limitProblems := parseMateLimits(src, d.cfg.path)

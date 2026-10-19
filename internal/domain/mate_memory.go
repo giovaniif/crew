@@ -29,6 +29,12 @@ func mateMemoryTail(memory string) (string, bool) {
 func MateSystemPrompt(m Mate, memory, path string) string {
 	var b strings.Builder
 	b.WriteString(strings.TrimRight(m.Prompt, "\n"))
+	if tone := MateToneSentences(m.Tone); len(tone) > 0 {
+		b.WriteString("\n\n" + strings.Join(tone, "\n"))
+	}
+	if m.NoMemory {
+		return b.String() + "\n"
+	}
 	b.WriteString("\n\n## Your memory\n\n")
 	b.WriteString("You are the mate " + m.Name + ". Your memory file is " + path + ". It continues across your conversations. ")
 	b.WriteString("Add short notes to it when you learn something that a later conversation needs: decisions, preferences of the owner and facts about the repos. ")
