@@ -604,6 +604,12 @@ func (d *Daemon) dispatch(c *conn, line []byte) (*rpc.Response, bool) {
 	case rpc.MethodMateList, rpc.MethodMateShow, rpc.MethodMateSet, rpc.MethodMateRemove, rpc.MethodMateSetTokens, rpc.MethodMateClearTokens, rpc.MethodMateClaim,
 		rpc.MethodMatePause, rpc.MethodMateResume, rpc.MethodMateStopAll, rpc.MethodMateSetup:
 		return d.mateMethod(req), true
+	case rpc.MethodMateMemory, rpc.MethodMateSetMemory:
+		return d.mateMethod(req), true
+	case rpc.MethodMateNew:
+		return d.mateNew(req)
+	case rpc.MethodMateFresh:
+		return d.mateFresh(req)
 	case rpc.MethodAutomationList, rpc.MethodAutomationShow:
 		return d.automationMethod(req), true
 	case rpc.MethodAutomationRun:

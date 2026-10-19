@@ -81,6 +81,16 @@ func (d *Daemon) newSession(req rpc.Request) (*rpc.Response, bool) {
 }
 
 func (d *Daemon) startSession(p rpc.NewSessionParams, prompt string) (domain.Session, *rpc.Error, bool) {
+	return d.startSessionWith(p, prompt, sessionExtras{})
+}
+
+type sessionExtras struct {
+	system string
+	seat   *domain.MateSeat
+	dir    string
+}
+
+func (d *Daemon) startSessionWith(p rpc.NewSessionParams, prompt string, extra sessionExtras) (domain.Session, *rpc.Error, bool) {
 	adapter, ok := d.hs.adapters[domain.Harness(p.Harness)]
 	if !ok || d.hs.host == nil || d.sess.worktrees == nil {
 		return domain.Session{}, &rpc.Error{Code: rpc.CodeBadRequest, Message: "no harness " + p.Harness}, true
@@ -118,6 +128,9 @@ func (d *Daemon) startSession(p rpc.NewSessionParams, prompt string) (domain.Ses
 	}
 	slug := domain.TaskSlug(in.task)
 	plan := domain.PlanSessionStart(in.ws, slug, d.sess.worktreeHome, in.taken)
+	if extra.dir != "" {
+		plan = domain.SessionPlan{Dir: extra.dir}
+	}
 	name := slug
 	if plan.Worktree != nil {
 		name = plan.Worktree.Branch
@@ -125,7 +138,7 @@ func (d *Daemon) startSession(p rpc.NewSessionParams, prompt string) (domain.Ses
 	started, err := d.sessions().Start(d.ws.ctx, app.NewSession{
 		ID: newID(), Task: in.task, Plan: plan, Harness: adapter,
 		Name: name, Model: p.Model, Effort: p.Effort, Prompt: prompt,
-		ProjectSetup: in.projectSetup,
+		ProjectSetup: in.projectSetup, SystemPrompt: extra.system,
 	})
 	if err != nil {
 		if started.Worktree != nil && !d.query(func(s *state) { s.putWorktree(*started.Worktree) }) {
@@ -137,6 +150,7 @@ func (d *Daemon) startSession(p rpc.NewSessionParams, prompt string) (domain.Ses
 	started.Session.StartModel = started.Session.Model
 	started.Session.StartEffort = started.Session.Effort
 	started.Session.StartWorkspace = in.ws.Root
+	started.Session.Mate = extra.seat
 	queued := false
 	ok = d.query(func(s *state) {
 		if in.isNew {

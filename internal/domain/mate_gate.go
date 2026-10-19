@@ -40,6 +40,7 @@ type MateSeat struct {
 	Origin    string       `json:",omitempty"`
 	Asked     []ActionKind `json:",omitempty"`
 	Hops      int          `json:",omitempty"`
+	Local     bool         `json:",omitempty"`
 }
 
 type ActionScope struct {

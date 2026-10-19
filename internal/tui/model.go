@@ -100,6 +100,8 @@ type Model struct {
 	mp         *matesPanel
 	mateBoard  domain.MateBoard
 	mateLinks  map[string]domain.MateLink
+	mateDefs   map[string]domain.Mate
+	mateTones  []domain.MateToneAxis
 	shellTabs  map[string]domain.ShellTab
 	activeTabs map[string]string
 	tabNew     *tabChooser
@@ -215,6 +217,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.onboardChecked = true
 			return m, m.fetchOnboarding(false)
 		}
+		if len(m.mateBoard.Mates) > 0 && m.mateDefs == nil {
+			return m, m.fetchMateList()
+		}
 	case onboardStatusMsg, onboardInstalledMsg, onboardFinishedMsg, onboardNvimMsg, setupPopupFailedMsg, setupPopupRetryMsg:
 		return m.onboardMsg(msg)
 	case popupFailedMsg:
@@ -315,6 +320,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.auto != nil {
 			return m.automationPaste(msg.Content), nil
 		}
+		if m.mp != nil {
+			return m.matesPaste(msg.Content), nil
+		}
 		if m.rv.typing {
 			m.rv.text += msg.Content
 			return m, nil
@@ -323,6 +331,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.automationsLoaded(msg), nil
 	case mateApprovalsMsg:
 		return m.approvalsLoaded(msg), nil
+	case mateListMsg:
+		if msg.err == nil {
+			m.setMateDefs(msg.mates)
+			m.mateTones = msg.tones
+		}
+	case mateMemoryMsg:
+		return m.memoryLoaded(msg), nil
+	case mateCreatedMsg:
+		return m.mateCreated(msg), nil
 	case sessionStartedMsg:
 		if m.opts.NewSessionOnly {
 			return m, m.showNewAndQuit(msg.session.ID)
@@ -588,6 +605,11 @@ func (m Model) key(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if m.opts.Calls != nil {
 			return m.openProjects(), nil
 		}
+	case "c":
+		if se, ok := m.sessions[m.selected]; ok && se.Mate != nil {
+			return m, m.newConversation(se.Mate.Name, "")
+		}
+		return m.openMates()
 	case "C":
 		if m.opts.Calls != nil {
 			return m.openMates()

@@ -10,7 +10,8 @@ private func fakeTmux(_ bin: FakeBin, exitAfterCapture: Bool) throws -> String {
       n=$((n+1))
       printf '%%begin 1 %s 1\\n' $n
       case "$line" in
-        display-message*) printf '%%3 @2 80 24 5 1 0 0 0 0 0 1 0\\n' ;;
+        display-message*) printf '%%3 @2 200 50 5 1 0 0 0 0 0 1 0\\n' ;;
+        list-clients*) printf '1 200x50 \\n' ;;
         capture-pane*) printf 'hello\\nworld\\n' ;;
       esac
       printf '%%end 1 %s 1\\n' $n
@@ -44,11 +45,15 @@ private func waitUntil(_ condition: @MainActor () -> Bool) async throws {
 
 @MainActor
 struct TerminalHubTests {
-    @Test(.timeLimit(.minutes(1))) func anAttachedPaneGetsItsHistoryThenLiveOutputAndSizesGoToItsWindow() async throws {
+    @Test(.timeLimit(.minutes(1))) func agentShellAndNvimPanesAt200x50AreResizedToTheGridOfTheirView() async throws {
         let bin = try FakeBin()
         let tmux = try fakeTmux(bin, exitAfterCapture: false)
         let hub = TerminalHub(endpoint: .local(binary: "crew"), backoff: Backoff(first: .milliseconds(50), limit: .milliseconds(100))) { _, _ in
-            NativeClient(argv: [tmux], session: "crew-native-1-1", panes: [PaneState(pane: "%3", window: "@2", cols: 80, rows: 24)])
+            NativeClient(argv: [tmux], session: "crew-native-1-1", panes: [
+                PaneState(pane: "%3", window: "@2", cols: 200, rows: 50),
+                PaneState(pane: "%5", window: "@4", cols: 200, rows: 50),
+                PaneState(pane: "%7", window: "@6", cols: 200, rows: 50),
+            ])
         }
         hub.start()
         defer { hub.stop() }
@@ -58,12 +63,18 @@ struct TerminalHubTests {
         #expect(sink.text.hasPrefix("\u{1b}chello\r\nworld"))
         #expect(sink.text.contains("\u{1b}[2;6H"))
         #expect(hub.status == .live)
-        hub.resize(pane: "%3", cols: 100, rows: 30)
+        try await waitUntil { bin.read("commands").contains("list-clients") }
+        #expect(hub.letterbox(pane: "%3", viewCols: 150, viewRows: 40) == nil)
+        hub.resize(pane: "%3", cols: 150, rows: 40)
+        hub.resize(pane: "%5", cols: 150, rows: 40)
+        hub.resize(pane: "%7", cols: 120, rows: 35)
         hub.send(pane: "%3", bytes: [0x1b])
         try await waitUntil { bin.read("commands").contains("send-keys") }
         let commands = bin.read("commands")
         #expect(commands.contains("refresh-client -f pause-after="))
-        #expect(commands.contains("refresh-client -C @2:100x30"))
+        #expect(commands.contains("refresh-client -C @2:150x40"))
+        #expect(commands.contains("refresh-client -C @4:150x40"))
+        #expect(commands.contains("refresh-client -C @6:120x35"))
         #expect(commands.contains("send-keys -H -t %3 1b"))
     }
 
