@@ -9,6 +9,8 @@ type LaunchRequest struct {
 	Effort string
 	Prompt string
 	Resume string
+
+	SystemPrompt string
 }
 
 type HarnessAdapter interface {

@@ -82,3 +82,39 @@ func claimMate(r *http.Request, d Daemon) (any, error) {
 	}
 	return out, nil
 }
+
+func newMateConversation(r *http.Request, d Daemon) (any, error) {
+	var p rpc.MateNewParams
+	if r.ContentLength != 0 {
+		if err := decodeBody(r, &p); err != nil {
+			return nil, err
+		}
+	}
+	p.Name = r.PathValue("name")
+	var out domain.Session
+	if err := d.Call(r.Context(), rpc.MethodMateNew, p, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func mateMemory(r *http.Request, d Daemon) (any, error) {
+	var out rpc.MateMemory
+	if err := d.Call(r.Context(), rpc.MethodMateMemory, rpc.MateNameParams{Name: r.PathValue("name")}, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func setMateMemory(r *http.Request, d Daemon) (any, error) {
+	var p rpc.MateSetMemoryParams
+	if err := decodeBody(r, &p); err != nil {
+		return nil, err
+	}
+	p.Name = r.PathValue("name")
+	var out rpc.MateMemory
+	if err := d.Call(r.Context(), rpc.MethodMateSetMemory, p, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}

@@ -66,10 +66,15 @@ struct SidebarView: View {
             .padding(.vertical, 6)
             .background(RoundedRectangle(cornerRadius: Metrics.corner).fill(theme(.crust)))
             .padding(Metrics.gutter)
+            if let state = scene.state {
+                MatesEntryView(entry: MatesEntry(state: state), scene: scene, open: actions.openMates)
+                    .padding(.horizontal, Metrics.gutter)
+                    .padding(.bottom, 8)
+            }
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 2) {
                     ForEach(sidebar?.rows ?? []) { row in
-                        SidebarRowView(row: row, selected: row.id == scene.selected)
+                        SidebarRowView(row: row, selected: row.id == scene.selected, look: row.mate.map(scene.look))
                             .onTapGesture { actions.select(row.id) }
                             .contextMenu { SessionMenu(row: row, ended: false, actions: actions) }
                     }
@@ -87,7 +92,7 @@ struct SidebarView: View {
                         .padding(.top, 10)
                         if scene.endedExpanded {
                             ForEach(ended) { row in
-                                SidebarRowView(row: row, selected: row.id == scene.selected)
+                                SidebarRowView(row: row, selected: row.id == scene.selected, look: row.mate.map(scene.look))
                                     .opacity(0.7)
                                     .onTapGesture { actions.select(row.id) }
                                     .contextMenu { SessionMenu(row: row, ended: true, actions: actions) }
@@ -103,6 +108,41 @@ struct SidebarView: View {
                 .foregroundStyle(theme(.subtext))
                 .padding(Metrics.gutter)
         }
+    }
+}
+
+struct MatesEntryView: View {
+    let entry: MatesEntry
+    let scene: WindowScene
+    let open: () -> Void
+    @Environment(\.colorScheme) private var scheme
+
+    var body: some View {
+        let theme = Theme(scheme)
+        Button(action: open) {
+            HStack(spacing: 8) {
+                HStack(spacing: -6) {
+                    ForEach(entry.names.prefix(5), id: \.self) { name in
+                        MateFace(look: scene.look(name), size: 22)
+                            .background(Circle().fill(theme(.base)))
+                    }
+                    if entry.names.isEmpty {
+                        Image(systemName: "person.2.circle").font(.system(size: 18)).foregroundStyle(theme(.subtext))
+                    }
+                }
+                Text("Mates").font(.system(size: 13, weight: .semibold))
+                Text(entry.label).font(.system(size: 11.5)).foregroundStyle(theme(.subtext)).lineLimit(1)
+                Spacer(minLength: 2)
+                Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold)).foregroundStyle(theme(.grey))
+            }
+            .padding(.horizontal, 9)
+            .padding(.vertical, 7)
+            .background(RoundedRectangle(cornerRadius: 8).fill(theme(.base)))
+            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(theme(.surface), lineWidth: 0.5))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help("Open the Mates window (⇧⌘M)")
     }
 }
 
@@ -129,16 +169,24 @@ struct SessionMenu: View {
 struct SidebarRowView: View {
     let row: SidebarRow
     let selected: Bool
+    var look: MateLook?
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         let theme = Theme(scheme)
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 7) {
-                GlyphView(style: row.style)
-                Text(row.name)
-                    .font(.system(size: 13, weight: row.bold ? .bold : .regular))
-                    .lineLimit(1)
+                if let look, let mate = row.mate {
+                    MateFace(look: look, state: row.face, size: 20).padding(.horizontal, -5)
+                    (Text(MateNames.display(mate)).fontWeight(.semibold) + Text(" · ") + Text(row.name))
+                        .font(.system(size: 13, weight: row.bold ? .bold : .regular))
+                        .lineLimit(1)
+                } else {
+                    GlyphView(style: row.style)
+                    Text(row.name)
+                        .font(.system(size: 13, weight: row.bold ? .bold : .regular))
+                        .lineLimit(1)
+                }
                 Text(row.badge)
                     .font(.system(size: 9, weight: .bold, design: .monospaced))
                     .padding(.horizontal, 4)
