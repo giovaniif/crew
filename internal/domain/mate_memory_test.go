@@ -107,6 +107,37 @@ func TestMateRepoWorkspace(t *testing.T) {
 	}
 }
 
+func TestMateStartRoot(t *testing.T) {
+	ws := append([]Workspace{{Root: "/w/two", Kind: WorkspaceSingle, Repos: []Repo{{Name: "two", Path: "/w/two"}}}}, mateWorkspaces...)
+	cases := []struct {
+		name  string
+		repos []string
+		repo  string
+		want  string
+		fails string
+	}{
+		{"the first repo of the mate", []string{"solo"}, "", "/w/solo", ""},
+		{"a repo that the owner names", []string{"solo"}, "two", "/w/two", ""},
+		{"a mate with no repos", nil, "", "", ""},
+		{"a named repo that does not resolve", []string{"solo"}, "nope", "", "nope"},
+		{"mate repos that do not resolve", []string{"api"}, "", "", "api"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := MateStartRoot(Mate{Name: "a", Repos: tc.repos}, ws, tc.repo)
+			if got != tc.want {
+				t.Errorf("root %q, want %q", got, tc.want)
+			}
+			switch {
+			case tc.fails == "" && err != nil:
+				t.Errorf("err %v", err)
+			case tc.fails != "" && (err == nil || !strings.Contains(err.Error(), tc.fails)):
+				t.Errorf("err %v, want one that names %q", err, tc.fails)
+			}
+		})
+	}
+}
+
 func TestMateHandoffPromptNamesTheMemoryFile(t *testing.T) {
 	got := MateHandoffPrompt("/h/mates/a/memory.md")
 	if !strings.Contains(got, "/h/mates/a/memory.md") || !strings.Contains(got, "handoff") || strings.Contains(got, "\n") {
