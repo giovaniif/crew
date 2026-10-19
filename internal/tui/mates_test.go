@@ -237,16 +237,28 @@ func TestMateDetailShowsTheConversationsAndTheMemory(t *testing.T) {
 	}
 }
 
-func TestMateDetailStartFreshAsksForAHandoffThenStartsANewConversation(t *testing.T) {
+func TestMateDetailStartFreshCallsMateFreshInTheSameWorktree(t *testing.T) {
 	m, c := matesModel(t, withLocalMates(fixture(1, 0)))
 	m = pressCmd(m, key("enter"))
 	pressCmd(m, key("f"))
-	if got := callsOf(c, rpc.MethodSessionSend); len(got) != 1 || got[0].params != (rpc.SessionSendParams{Session: "s01", Text: domain.MateHandoff}) {
-		t.Fatalf("send calls %+v", got)
+	if got := callsOf(c, rpc.MethodMateFresh); len(got) != 1 || got[0].params != (rpc.MateFreshParams{Session: "s01", SameWorktree: true}) {
+		t.Fatalf("fresh calls %+v", got)
+	}
+	if got := callsOf(c, rpc.MethodSessionSend); len(got) != 0 {
+		t.Fatalf("the tui sent the handoff itself: %+v", got)
 	}
 	methods := c.methods()
-	if methods[len(methods)-2] != rpc.MethodMateNew || methods[len(methods)-1] != rpc.MethodSessionFocus {
+	if methods[len(methods)-1] != rpc.MethodSessionFocus {
 		t.Fatalf("calls %v", methods)
+	}
+}
+
+func TestMateDetailShiftFStartsFreshInANewWorktree(t *testing.T) {
+	m, c := matesModel(t, withLocalMates(fixture(1, 0)))
+	m = pressCmd(m, key("enter"))
+	pressCmd(m, key("F"))
+	if got := callsOf(c, rpc.MethodMateFresh); len(got) != 1 || got[0].params != (rpc.MateFreshParams{Session: "s01"}) {
+		t.Fatalf("fresh calls %+v", got)
 	}
 }
 

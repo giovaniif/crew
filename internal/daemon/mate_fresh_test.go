@@ -57,6 +57,25 @@ func TestMateFreshInTheSameWorktreeStartsInTheOldDir(t *testing.T) {
 	}
 }
 
+func TestMateFreshMarksTheNewSessionWithTheOldOne(t *testing.T) {
+	r, _, old := freshRig(t)
+	var fresh domain.Session
+	if err := r.c.Call(context.Background(), rpc.MethodMateFresh, rpc.MateFreshParams{Session: old.ID, SameWorktree: true}, &fresh); err != nil {
+		t.Fatal(err)
+	}
+	if fresh.Mate == nil || fresh.Mate.FreshFrom != old.ID {
+		t.Fatalf("fresh seat %+v, want fresh from %q", fresh.Mate, old.ID)
+	}
+	for _, s := range r.mateSessions(t) {
+		if s.ID == fresh.ID && s.Mate.FreshFrom != old.ID {
+			t.Fatalf("the sessions lost the marker: %+v", s.Mate)
+		}
+		if s.ID == old.ID && s.Mate.FreshFrom != "" {
+			t.Fatalf("the old session is marked: %+v", s.Mate)
+		}
+	}
+}
+
 func TestMateFreshOfAnUnknownSessionIsNotFound(t *testing.T) {
 	r, _ := localRig(t)
 	err := r.c.Call(context.Background(), rpc.MethodMateFresh, rpc.MateFreshParams{Session: "nope"}, nil)

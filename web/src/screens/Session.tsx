@@ -565,6 +565,7 @@ function MateBar({ api, session, mate, snapshot }: { api: Authed; session: Sessi
   const { defs } = useMateDefs(api);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
+  const [keep, setKeep] = useState(true);
   const def = defs.find((d) => d.name === mate);
   const row = snapshot.state?.mates?.mates.find((m) => m.name === mate);
   const state = row ? faceState(row, []) : "idle";
@@ -573,7 +574,7 @@ function MateBar({ api, session, mate, snapshot }: { api: Authed; session: Sessi
     setBusy(true);
     setNote("");
     try {
-      const out = await startFresh(api, session.ID, mate);
+      const out = await startFresh(api, session.ID, keep);
       window.location.hash = "#/sessions/" + encodeURIComponent(out.ID);
     } catch (err) {
       setNote(errorText(err));
@@ -591,6 +592,10 @@ function MateBar({ api, session, mate, snapshot }: { api: Authed; session: Sessi
           <span className="face-state">{stateWords[state]}</span>
         </span>
       </a>
+      <label className="mate-bar-keep">
+        <input type="checkbox" checked={keep} onChange={(e) => setKeep(e.target.checked)} />
+        Keep this worktree
+      </label>
       <button type="button" className="mtag" disabled={busy} onClick={fresh}>
         Start fresh
       </button>

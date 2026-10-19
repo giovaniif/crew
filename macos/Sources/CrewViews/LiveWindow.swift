@@ -452,8 +452,8 @@ public struct LiveWindow: View {
         if chat?.session != session { chat = ChatModel(session: session, caller: store) }
         guard let model = chat else { return }
         while !Task.isCancelled {
-            let path = store.state?.sessions.first { $0.id == session }?.transcript ?? ""
-            await model.refresh(transcript: path)
+            let from = store.state?.sessions.first { $0.id == session }?.mate?.freshFrom
+            await model.refresh(freshFrom: from)
             try? await Task.sleep(for: ChatModel.interval)
         }
     }
@@ -605,13 +605,13 @@ public struct LiveWindow: View {
         }
         a.startFresh = { freshConfirm = $0 }
         a.cancelFresh = { freshConfirm = nil }
-        a.confirmFresh = { id in
+        a.confirmFresh = { id, keep in
             freshConfirm = nil
-            guard let state = store.state, let session = state.sessions.first(where: { $0.id == id }) else { return }
+            guard let session = store.state?.sessions.first(where: { $0.id == id }) else { return }
             let m = mates ?? MatesModel(caller: store)
             mates = m
             Task {
-                if let next = await m.startFresh(session, state: state) {
+                if let next = await m.startFresh(session, sameWorktree: keep) {
                     nav.select(next)
                 } else if let failure = m.message {
                     explanation = failure

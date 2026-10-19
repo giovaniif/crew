@@ -3,20 +3,23 @@ import Foundation
 public struct SessionMate: Codable, Sendable, Equatable {
     public var name: String
     public var local: Bool
+    public var freshFrom: String?
 
-    public init(name: String, local: Bool = false) {
+    public init(name: String, local: Bool = false, freshFrom: String? = nil) {
         self.name = name
         self.local = local
+        self.freshFrom = freshFrom
     }
 
     enum CodingKeys: String, CodingKey {
-        case name = "Name", local = "Local"
+        case name = "Name", local = "Local", freshFrom = "FreshFrom"
     }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         name = try c.decode(String.self, forKey: .name)
         local = try c.decodeIfPresent(Bool.self, forKey: .local) ?? false
+        freshFrom = try c.decodeIfPresent(String.self, forKey: .freshFrom).flatMap { $0.isEmpty ? nil : $0 }
     }
 }
 
@@ -251,8 +254,6 @@ public struct MatesEntry: Sendable, Equatable {
 }
 
 public enum StartFresh {
-    public static let handoff = "Before we start fresh: write a short handoff to your memory file. Say what you did, what is left and the next step. Keep the file small. Then stop and wait."
-
     public static func offered(_ session: Session) -> Bool {
         session.mate != nil && !session.ended
     }
@@ -262,7 +263,7 @@ public enum StartFresh {
     }
 
     public static func detail(_ mate: String) -> String {
-        "\(MateNames.display(mate)) writes a handoff to memory, then a new conversation opens in the same repo. Personality and memory stay. This conversation stays until you end it."
+        "\(MateNames.display(mate)) writes a handoff to memory, then a new conversation opens in the same worktree. Personality and memory stay. This conversation stays until you end it."
     }
 }
 
@@ -277,9 +278,13 @@ struct MateMemoryParams: Encodable, Sendable {
     var text: String
 }
 
-struct MateSendParams: Encodable, Sendable {
+struct MateFreshParams: Encodable, Sendable {
     var session: String
-    var text: String
+    var sameWorktree: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case session, sameWorktree = "same_worktree"
+    }
 }
 
 extension MatesModel {
@@ -319,15 +324,15 @@ extension MatesModel {
         }
     }
 
-    public func startFresh(_ session: Session, state: ViewState) async -> String? {
-        guard StartFresh.offered(session), let mate = session.mate?.name else { return nil }
+    public func startFresh(_ session: Session, sameWorktree: Bool = true) async -> String? {
+        guard StartFresh.offered(session) else { return nil }
         do {
-            let _: Ignored = try await caller.call("session.send", params: MateSendParams(session: session.id, text: StartFresh.handoff))
+            let started: StartedSession = try await caller.call("mate.fresh", params: MateFreshParams(session: session.id, sameWorktree: sameWorktree))
+            message = nil
+            return started.id
         } catch {
             message = ReviewController.message(error)
             return nil
         }
-        let repo = MateConversations(state: state, mate: mate).repo(of: session.id)
-        return await newConversation(mate, repo: repo)
     }
 }

@@ -1817,6 +1817,18 @@ button.danger {
   min-height: 44px;
 }
 
+.mate-bar-keep {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin: 0;
+  gap: 6px;
+  min-height: 44px;
+  font-size: 13px;
+  color: var(--subtext);
+  white-space: nowrap;
+}
+
 .msg-mate {
   display: flex;
   align-items: flex-end;

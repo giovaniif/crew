@@ -73,7 +73,7 @@ public struct WindowScene {
         let rows: [ChatRow] = fresh ? [
             .owner(id: "u0", text: "The login test fails on CI one time in five. Can you look?"),
             .agent(id: "a0", text: "Fixed and pushed. PR #88 is open."),
-            .handoff(id: "handoff-1"),
+            .handoff(id: "handoff"),
             .note(id: "n1", text: "New conversation · read memory.md (5 notes)"),
             .agent(id: "a1", text: "Fresh start. From my notes: the login flake fix is pushed and PR #88 is open. Do you want me to watch CI, or pick up something new?"),
             .owner(id: "u1", text: "Watch CI and ping me if it goes red."),
@@ -180,7 +180,7 @@ public struct WindowActions {
     public var openMates: () -> Void = {}
     public var openMate: (String) -> Void = { _ in }
     public var startFresh: (String) -> Void = { _ in }
-    public var confirmFresh: (String) -> Void = { _ in }
+    public var confirmFresh: (String, Bool) -> Void = { _, _ in }
     public var cancelFresh: () -> Void = {}
 
     public init() {}
@@ -238,7 +238,7 @@ public struct MainWindow: View {
             .overlay { PopupShell(scene: scene, actions: actions) }
             .overlay(alignment: .topLeading) {
                 if let id = scene.freshConfirm, let mate = scene.state?.sessions.first(where: { $0.id == id })?.mate?.name {
-                    FreshConfirm(mate: mate, confirm: { actions.confirmFresh(id) }, cancel: actions.cancelFresh)
+                    FreshConfirm(mate: mate, confirm: { actions.confirmFresh(id, $0) }, cancel: actions.cancelFresh)
                         .padding(.leading, Metrics.sidebarWidth + 40)
                         .padding(.top, 6)
                 }
@@ -351,17 +351,19 @@ struct ToolbarStrip: View {
 
 struct FreshConfirm: View {
     let mate: String
-    let confirm: () -> Void
+    let confirm: (Bool) -> Void
     let cancel: () -> Void
+    @State private var keepWorktree = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(StartFresh.title(mate)).font(.system(size: 13, weight: .semibold))
             Text(StartFresh.detail(mate)).font(.system(size: 12)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            Toggle("Keep this worktree", isOn: $keepWorktree).font(.system(size: 12)).toggleStyle(.checkbox)
             HStack {
                 Spacer()
                 Button("Cancel", action: cancel).keyboardShortcut(.cancelAction)
-                Button("Start Fresh", action: confirm).keyboardShortcut(.defaultAction).buttonStyle(.borderedProminent)
+                Button("Start Fresh") { confirm(keepWorktree) }.keyboardShortcut(.defaultAction).buttonStyle(.borderedProminent)
             }
         }
         .padding(14)
