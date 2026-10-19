@@ -79,6 +79,9 @@ Unknown paths under `/api/` answer `not_found`.
 | `GET /api/v1/mates/{name}/setup` | yes | `mate.setup` | → `{"manifest","url"}`, the Slack app manifest and its link |
 | `POST /api/v1/mates/{name}/tokens` | yes | `mate.set_tokens` | `{"bot_token","app_token"}` → `{"name","has_bot_token","has_app_token"}`; the name comes from the path, and no response holds a token |
 | `POST /api/v1/mates/{name}/claim` | yes | `mate.claim` | → `{"name","code","expires_at"}`, the one-time owner code |
+| `POST /api/v1/mates/{name}/new` | yes | `mate.new` | `{"repo","prompt"}` (both optional, the body can be empty) → the new session |
+| `GET /api/v1/mates/{name}/memory` | yes | `mate.memory` | → `{"name","path","text","limit"}` |
+| `POST /api/v1/mates/{name}/memory` | yes | `mate.set_memory` | `{"text"}` → the same; an empty text clears the memory |
 
 - Auth is `Authorization: Bearer <token>`. Before the method runs, serve checks it with `device.check` on the connection of the request. Then it checks it against the set of revoked device IDs.
 - `pair` passes the address of the caller as `addr`. This is `RemoteAddr`. If the peer is a loopback or private address (the location of a proxy in front of serve), it is the last `X-Forwarded-For` entry, else `X-Real-IP`. serve ignores a forged header from a direct client.

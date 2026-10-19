@@ -13,6 +13,7 @@ const (
 	MateError      MateConnection = "error"
 	MatePaused     MateConnection = "paused"
 	MateNoTokens   MateConnection = "no_tokens"
+	MateReady      MateConnection = "ready"
 )
 
 const MateClaimTTL = 10 * time.Minute

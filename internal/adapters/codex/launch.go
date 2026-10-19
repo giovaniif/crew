@@ -15,6 +15,8 @@ type LaunchRequest struct {
 	Effort string
 	Prompt string
 	Resume string
+
+	SystemPrompt string
 }
 
 func LaunchSpec(req LaunchRequest) app.PaneSpec {
@@ -31,6 +33,9 @@ func launchSpec(bin string, req LaunchRequest) app.PaneSpec {
 	}
 	if req.Effort != "" {
 		command = append(command, "-c", fmt.Sprintf("model_reasoning_effort=%q", req.Effort))
+	}
+	if req.SystemPrompt != "" {
+		command = append(command, "-c", fmt.Sprintf("developer_instructions=%q", req.SystemPrompt))
 	}
 	if req.Prompt != "" {
 		command = append(command, "--", req.Prompt)

@@ -31,13 +31,12 @@ type mateAddIO struct {
 type mateAddOptions struct {
 	Agent  string
 	Prompt string
-	NoOpen bool
 }
 
 const defaultMateAgent = "claude"
 
 func defaultMatePrompt(name string) string {
-	return fmt.Sprintf("You are %s, a helpful teammate of the crew. Answer in the thread, keep replies short, and ask when a request is not clear.", name)
+	return fmt.Sprintf("You are %s, a helpful teammate of the crew. Keep replies short, and ask when a request is not clear.", name)
 }
 
 func parseMateAdd(args []string) (string, mateAddOptions, error) {
@@ -49,7 +48,6 @@ func parseMateAdd(args []string) (string, mateAddOptions, error) {
 		fs.SetOutput(io.Discard)
 		fs.StringVar(&opts.Agent, "agent", "", "")
 		fs.StringVar(&opts.Prompt, "prompt", "", "")
-		fs.BoolVar(&opts.NoOpen, "no-open", false, "")
 		if err := fs.Parse(rest); err != nil {
 			return "", opts, err
 		}
@@ -81,8 +79,20 @@ func mateAdd(ctx context.Context, c mateCaller, mio mateAddIO, name string, opts
 	if err := c.Call(ctx, rpc.MethodMateSet, rpc.MateSetParams{Mate: m}, &domain.Mate{}); err != nil {
 		return err
 	}
+	fmt.Fprintf(mio.Out, "added %s. Start a conversation with crew mate new %s, or connect it to Slack with crew mate slack %s.\n", name, name, name)
+	return nil
+}
+
+func mateSlack(ctx context.Context, c mateCaller, mio mateAddIO, name string, noOpen bool) error {
+	var m domain.Mate
+	if err := c.Call(ctx, rpc.MethodMateShow, rpc.MateShowParams{Name: name}, &m); err != nil {
+		return err
+	}
+	if m.Name == "" {
+		m.Name = name
+	}
 	writeMateSetup(mio.Out, m)
-	if !opts.NoOpen {
+	if !noOpen {
 		link := domain.MateManifestURL(domain.MateManifest(m))
 		if mio.Open == nil || mio.Open(link) != nil {
 			fmt.Fprintln(mio.Out, "crew could not open a browser. Please open this link yourself.")
@@ -91,6 +101,40 @@ func mateAdd(ctx context.Context, c mateCaller, mio mateAddIO, name string, opts
 	if err := askTokens(ctx, c, mio, name); err != nil {
 		return fmt.Errorf("the mate %s is saved, but its tokens are not: %w; run crew mate tokens %s when you have them", name, err, name)
 	}
+	return nil
+}
+
+func parseMateNew(args []string) (rpc.MateNewParams, error) {
+	var p rpc.MateNewParams
+	var words []string
+	rest := args
+	for len(rest) > 0 {
+		fs := flag.NewFlagSet("mate new", flag.ContinueOnError)
+		fs.SetOutput(io.Discard)
+		repo := fs.String("repo", p.Repo, "")
+		if err := fs.Parse(rest); err != nil {
+			return p, err
+		}
+		p.Repo = *repo
+		if fs.NArg() == 0 {
+			break
+		}
+		words = append(words, fs.Arg(0))
+		rest = fs.Args()[1:]
+	}
+	if len(words) == 0 {
+		return p, errors.New("crew mate new needs a name")
+	}
+	p.Name, p.Prompt = words[0], strings.Join(words[1:], " ")
+	return p, nil
+}
+
+func mateNew(ctx context.Context, c mateCaller, out io.Writer, p rpc.MateNewParams) error {
+	var s domain.Session
+	if err := c.Call(ctx, rpc.MethodMateNew, p, &s); err != nil {
+		return err
+	}
+	fmt.Fprintf(out, "started a new conversation with %s: session %s\n", p.Name, s.ID)
 	return nil
 }
 
