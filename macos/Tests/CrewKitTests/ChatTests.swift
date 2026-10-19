@@ -26,7 +26,7 @@ struct ChatLogTests {
             chatMessage("t3", 32, "tool", "exit 1", tool: #"{"name":"Edit","status":"failed"}"#),
             chatMessage("s1", 40, "system", "Compacted"),
             chatMessage("a2", 50, "assistant", ""),
-        ])), transcript: "/t/a.jsonl")
+        ])))
         #expect(log.rows == [
             .owner(id: "u1", text: "The login test fails"),
             .agent(id: "a1", text: "Found it"),
@@ -39,7 +39,7 @@ struct ChatLogTests {
 
     @Test func aNullPageIsEmpty() throws {
         var log = ChatLog()
-        log.newest(try decodeChatPage(#"{"messages":null,"before":0}"#), transcript: "")
+        log.newest(try decodeChatPage(#"{"messages":null,"before":0}"#))
         #expect(log.rows.isEmpty)
         #expect(!log.hasOlder)
     }
@@ -49,11 +49,11 @@ struct ChatLogTests {
         log.newest(try decodeChatPage(chatPage([
             chatMessage("u1", 10, "user", "go"),
             chatMessage("t1", 20, "tool", tool: #"{"name":"Bash","status":"running"}"#),
-        ])), transcript: "/t/a")
+        ])))
         log.newest(try decodeChatPage(chatPage([
             chatMessage("t1", 20, "tool", tool: #"{"name":"Bash","status":"done"}"#),
             chatMessage("a1", 30, "assistant", "ok"),
-        ])), transcript: "/t/a")
+        ])))
         #expect(log.rows == [
             .owner(id: "u1", text: "go"),
             .tool(id: "t1", mark: "✓", summary: "Bash", failed: false),
@@ -63,7 +63,7 @@ struct ChatLogTests {
 
     @Test func anOlderPageGoesAboveAndMovesTheCursor() throws {
         var log = ChatLog()
-        log.newest(try decodeChatPage(chatPage([chatMessage("a2", 300, "assistant", "two")], before: 300)), transcript: "/t/a")
+        log.newest(try decodeChatPage(chatPage([chatMessage("a2", 300, "assistant", "two")], before: 300)))
         #expect(log.hasOlder)
         #expect(log.before == 300)
         log.older(try decodeChatPage(chatPage([chatMessage("u1", 100, "user", "one")], before: 0)))
@@ -71,18 +71,18 @@ struct ChatLogTests {
         #expect(!log.hasOlder)
     }
 
-    @Test func aNewTranscriptKeepsTheOldRowsAboveAHandoffDivider() throws {
+    @Test func theEarlierConversationGoesAboveAHandoffDivider() throws {
         var log = ChatLog()
-        log.newest(try decodeChatPage(chatPage([chatMessage("u1", 10, "user", "old")])), transcript: "/t/a")
-        log.newest(try decodeChatPage(chatPage([chatMessage("u2", 10, "user", "new")])), transcript: "/t/b")
-        #expect(log.rows == [.owner(id: "u1", text: "old"), .handoff(id: "handoff-1"), .owner(id: "u2", text: "new")])
+        log.handoff(from: try decodeChatPage(chatPage([chatMessage("u1", 10, "user", "old")])))
+        log.newest(try decodeChatPage(chatPage([chatMessage("u2", 10, "user", "new")])))
+        #expect(log.rows == [.owner(id: "u1", text: "old"), .handoff(id: "handoff"), .owner(id: "u2", text: "new")])
     }
 
-    @Test func theFirstTranscriptOfASessionHasNoDivider() throws {
+    @Test func aSessionThatIsNotAStartFreshHasNoDivider() throws {
         var log = ChatLog()
-        log.newest(try decodeChatPage(chatPage([])), transcript: "")
-        log.newest(try decodeChatPage(chatPage([chatMessage("u1", 10, "user", "hi")])), transcript: "/t/a")
-        #expect(log.rows == [.owner(id: "u1", text: "hi")])
+        log.newest(try decodeChatPage(chatPage([chatMessage("u1", 10, "user", "old")])))
+        log.newest(try decodeChatPage(chatPage([chatMessage("u2", 20, "user", "new")])))
+        #expect(!log.rows.contains(.handoff(id: "handoff")))
     }
 }
 
@@ -127,7 +127,7 @@ struct ChatModelTests {
 
     @Test func refreshReadsTheNewestPageAndTheApprovalsOfThisSession() async throws {
         let (chat, caller) = make()
-        await chat.refresh(transcript: "/t/a")
+        await chat.refresh(freshFrom: nil)
         #expect(caller.methods() == ["transcript.page", "approval.list"])
         let params = try #require(caller.calls.first?.params)
         #expect(params["session"] as? String == "s1")
@@ -136,9 +136,20 @@ struct ChatModelTests {
         #expect(chat.approvals.map(\.id) == ["a1"])
     }
 
+    @Test func aStartFreshReadsTheOldSessionOnceAboveTheDivider() async throws {
+        let (chat, caller) = make()
+        await chat.refresh(freshFrom: "s0")
+        #expect(caller.methods() == ["transcript.page", "transcript.page", "approval.list"])
+        #expect(caller.calls[0].params["session"] as? String == "s0")
+        #expect(caller.calls[1].params["session"] as? String == "s1")
+        #expect(chat.log.rows.contains(.handoff(id: "handoff")))
+        await chat.refresh(freshFrom: "s0")
+        #expect(caller.calls.filter { $0.params["session"] as? String == "s0" }.count == 1)
+    }
+
     @Test func olderAsksForThePageBeforeTheOldestMessage() async throws {
         let (chat, caller) = make()
-        await chat.refresh(transcript: "/t/a")
+        await chat.refresh(freshFrom: nil)
         caller.replies["transcript.page"] = .success(chatPage([chatMessage("a0", 5, "assistant", "earlier")]))
         await chat.loadOlder()
         #expect(try #require(caller.calls.last?.params)["before"] as? Int == 10)
@@ -177,7 +188,7 @@ struct ChatModelTests {
 
     @Test func decidingAnApprovalCallsDecideAndRemovesIt() async throws {
         let (chat, caller) = make()
-        await chat.refresh(transcript: "/t/a")
+        await chat.refresh(freshFrom: nil)
         await chat.decide("a1", approve: true)
         let params = try #require(caller.calls.last?.params)
         #expect(caller.calls.last?.method == "approval.decide")
@@ -189,7 +200,7 @@ struct ChatModelTests {
     @Test func aServerWithoutApprovalsStillShowsTheChat() async {
         let (chat, caller) = make()
         caller.replies["approval.list"] = .failure(RPCError(code: "unknown_method", message: "unknown"))
-        await chat.refresh(transcript: "/t/a")
+        await chat.refresh(freshFrom: nil)
         #expect(chat.log.rows.count == 1)
         #expect(chat.error == nil)
     }
