@@ -34,6 +34,8 @@ go run ./scripts/verify tui drive --restart --out-dir /tmp/crew-verify-map/revie
 
 ### diff, comments and send on a real repo (manual: the seeded worktrees are not repos; the review needs a session on a temp repo with changes, see internal/adapters/git tests)
 
+### crew review comment, scope and send from the CLI (manual: it needs a real repo diff and a live harness to receive the send)
+
 ## Cleanup
 
 ```sh
