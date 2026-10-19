@@ -202,11 +202,13 @@ struct ToolbarStrip: View {
         let theme = Theme(scheme)
         HStack(spacing: Metrics.gutter) {
             Image(systemName: "sidebar.left").foregroundStyle(theme(.subtext))
-            VStack(alignment: .leading, spacing: 1) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(scene.session?.name ?? "crew").font(.system(size: 13, weight: .semibold)).lineLimit(1)
-                Text(scene.session?.where ?? "").font(Metrics.mono).foregroundStyle(theme(.subtext)).lineLimit(1)
+                if let place = scene.session?.where, !place.isEmpty {
+                    Text(place).font(Metrics.mono).foregroundStyle(theme(.subtext)).lineLimit(1)
+                }
             }
-            .frame(minWidth: 160, alignment: .leading)
+            .frame(minWidth: 160, maxHeight: .infinity, alignment: .leading)
             HStack(spacing: 2) {
                 ForEach(Toolbar.views(session: scene.session != nil)) { tab in
                     let active = scene.session != nil && tab.title == (scene.review == nil ? scene.view.rawValue : MainView.review.rawValue)

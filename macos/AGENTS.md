@@ -118,7 +118,8 @@ The dry run occurs on a pull request that touches `macos/`, `.goreleaser.yaml` o
   - `TerminalHub` (`@Observable`, main actor) opens again after a drop with `Backoff` and sets `pause-after=5`. It draws each attached pane from `display-message` (size, cursor, modes) and `capture-pane -p -e -J -S -2000`. It ignores output that the capture already has (it tracks reply numbers in the event stream).
   - A pane that paused while hidden gets `refresh-client -A '%p:continue'` and a redraw when it shows again.
   - Keys go as `send-keys -H` (256 bytes for each command). Sizes go as `refresh-client -C @w:CxR`, deduplicated for each window.
-  - If the size of a pane is different from the grid of the view (because the TUI shows it), the pane is letterboxed with a note.
+  - Each terminal view (Terminal, Shell and nvim) fills all of its area at the font size of the user. `PaneHost.layout` calculates the grid (`PaneGrid`: view size divided by cell size) and sends it as the size of the pane when the pane shows and at each change of the window or sidebar size. The font size does not change to fit a pane.
+  - The hub finds TUI clients with `list-clients` (clients that are not in control mode) when it connects and at each layout change. Only if a TUI client is attached and the pane size is different from the grid, a note names the tty of that client (`Letterbox`). The view continues to fill its area.
 - Terminal views (`CrewViews/TerminalPane.swift`, macOS only, SwiftTerm):
   - There is one `PaneHost` for each pane id, cached in `TerminalViews`. Thus a switch of sessions keeps scrollback and cursor.
   - In a focused terminal, each key without ⌘ goes to the pane (`performKeyEquivalent`, which decides by `TerminalKeys.goesToPane`). Thus ⌃C, Esc and ⌃H/J/K/L get to agents and nvim.

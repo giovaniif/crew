@@ -239,6 +239,8 @@ public enum ControlCommand {
         "refresh-client -C \(window):\(cols)x\(rows)"
     }
 
+    public static let clients = "list-clients -F '#{client_control_mode} #{client_width}x#{client_height} #{client_tty}'"
+
     public static func pauseAfter(seconds: Int) -> String {
         "refresh-client -f pause-after=\(seconds)"
     }
