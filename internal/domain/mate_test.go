@@ -46,6 +46,12 @@ func TestValidateMate(t *testing.T) {
 		{"unknown repo", func(m *Mate) { m.Repos = []string{"api", "billing"} }, "billing"},
 		{"empty repo", func(m *Mate) { m.Repos = []string{""} }, "repo"},
 		{"repo twice", func(m *Mate) { m.Repos = []string{"api", "/w/shop/api"} }, "twice"},
+		{"avatar and color", func(m *Mate) { m.Avatar = "robot-2"; m.Color = "#3a7bd5" }, ""},
+		{"avatar with upper case", func(m *Mate) { m.Avatar = "Robot" }, "avatar"},
+		{"avatar too long", func(m *Mate) { m.Avatar = strings.Repeat("a", 33) }, "avatar"},
+		{"color is a name", func(m *Mate) { m.Color = "blue" }, "color"},
+		{"color is short hex", func(m *Mate) { m.Color = "#fff" }, "color"},
+		{"color in upper case hex", func(m *Mate) { m.Color = "#3A7BD5" }, ""},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -106,6 +112,11 @@ func TestMateTOMLWritesOnlySetFields(t *testing.T) {
 		"repos = [\"api\", \"web\"]\n" +
 		"owner = \"U012ABCDEF\"\n" +
 		"enabled = false\n"
+	if got := MateTOML(m); got != want {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
+	}
+	m.Avatar, m.Color = "robot-2", "#3a7bd5"
+	want = strings.Replace(want, "enabled", "avatar = \"robot-2\"\ncolor = \"#3a7bd5\"\nenabled", 1)
 	if got := MateTOML(m); got != want {
 		t.Errorf("got:\n%s\nwant:\n%s", got, want)
 	}

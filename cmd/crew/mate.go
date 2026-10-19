@@ -13,7 +13,7 @@ import (
 	"github.com/giovaniif/crew/internal/rpc"
 )
 
-const mateUsage = "usage: crew mate list | show <name> | remove <name> | add <name> [--agent a] [--prompt p] [--no-open] | tokens <name> [--clear] | claim <name> | pause <name> | resume <name> | stop [--off] | set <name> [--agent a] [--prompt p] [--model m] [--effort e] [--repo r]... [--no-repos] [--owner id] [--enable|--disable]"
+const mateUsage = "usage: crew mate list | show <name> | remove <name> | add <name> [--agent a] [--prompt p] | new <name> [--repo r] [text] | slack <name> [--no-open] | memory <name> | tokens <name> [--clear] | claim <name> | pause <name> | resume <name> | stop [--off] | set <name> [--agent a] [--prompt p] [--model m] [--effort e] [--repo r]... [--no-repos] [--owner id] [--avatar id] [--color #rrggbb] [--enable|--disable]"
 
 func runMate(args []string, stdout, stderr io.Writer) int {
 	if !mateArgsOK(args) {
@@ -34,8 +34,13 @@ func mateArgsOK(args []string) bool {
 	switch args[0] {
 	case "list":
 		return len(args) == 1
-	case "show", "remove", "claim", "pause", "resume":
+	case "show", "remove", "claim", "pause", "resume", "memory":
 		return len(args) == 2
+	case "slack":
+		return len(args) == 2 || len(args) == 3 && args[2] == "--no-open"
+	case "new":
+		_, err := parseMateNew(args[1:])
+		return err == nil
 	case "stop":
 		return len(args) == 1 || len(args) == 2 && args[1] == "--off"
 	case "set":
@@ -63,6 +68,8 @@ func mateFromFlags(base domain.Mate, args []string) (domain.Mate, error) {
 	model := fs.String("model", "", "")
 	effort := fs.String("effort", "", "")
 	owner := fs.String("owner", "", "")
+	avatar := fs.String("avatar", "", "")
+	color := fs.String("color", "", "")
 	fs.Var(&repos, "repo", "")
 	noRepos := fs.Bool("no-repos", false, "")
 	enable := fs.Bool("enable", false, "")
@@ -90,6 +97,10 @@ func mateFromFlags(base domain.Mate, args []string) (domain.Mate, error) {
 			base.Effort = *effort
 		case "owner":
 			base.Owner = *owner
+		case "avatar":
+			base.Avatar = *avatar
+		case "color":
+			base.Color = *color
 		case "repo":
 			base.Repos = []string(repos)
 		case "no-repos":
@@ -123,6 +134,20 @@ func mateCommand(args []string, stdout io.Writer) error {
 		return mateAdd(ctx, c, stdMateIO(stdout), name, opts)
 	case "claim":
 		return mateClaim(ctx, c, stdout, args[1])
+	case "slack":
+		return mateSlack(ctx, c, stdMateIO(stdout), args[1], len(args) == 3)
+	case "new":
+		p, err := parseMateNew(args[1:])
+		if err != nil {
+			return err
+		}
+		return mateNew(ctx, c, stdout, p)
+	case "memory":
+		var mem rpc.MateMemory
+		if err := c.Call(ctx, rpc.MethodMateMemory, rpc.MateNameParams{Name: args[1]}, &mem); err != nil {
+			return err
+		}
+		fmt.Fprintf(stdout, "%s (%d of %d bytes)\n%s", mem.Path, len(mem.Text), mem.Limit, mem.Text)
 	case "pause", "resume", "stop":
 		return mateControl(ctx, c, stdout, args)
 	case "tokens":
@@ -199,6 +224,8 @@ func printMate(w io.Writer, m domain.Mate) {
 	row("effort", m.Effort)
 	row("repos", strings.Join(m.Repos, ","))
 	row("owner", m.Owner)
+	row("avatar", m.Avatar)
+	row("color", m.Color)
 	row("enabled", yesNo(m.Enabled))
 	fmt.Fprintln(w, "prompt:")
 	for _, line := range strings.Split(strings.TrimRight(m.Prompt, "\n"), "\n") {

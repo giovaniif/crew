@@ -134,23 +134,57 @@ public struct PaneState: Decodable, Equatable, Sendable {
     }
 }
 
-public struct Letterbox: Equatable, Sendable {
+public struct TUIClient: Equatable, Sendable {
+    public var tty: String
     public var cols: Int
     public var rows: Int
 
-    public init?(paneCols: Int, paneRows: Int, viewCols: Int, viewRows: Int) {
-        guard paneCols != viewCols || paneRows != viewRows else { return nil }
+    public init(tty: String, cols: Int, rows: Int) {
+        self.tty = tty
+        self.cols = cols
+        self.rows = rows
+    }
+
+    public static func parse(_ lines: [String]) -> [TUIClient] {
+        lines.compactMap { line in
+            let f = line.split(separator: " ", maxSplits: 2).map(String.init)
+            guard f.count == 3, f[0] == "0" else { return nil }
+            let size = f[1].split(separator: "x").compactMap { Int($0) }
+            guard size.count == 2 else { return nil }
+            return TUIClient(tty: f[2], cols: size[0], rows: size[1])
+        }
+    }
+}
+
+public struct PaneGrid: Equatable, Sendable {
+    public var cols: Int
+    public var rows: Int
+
+    public init(cols: Int, rows: Int) {
+        self.cols = cols
+        self.rows = rows
+    }
+
+    public init?(width: Double, height: Double, cellWidth: Double, cellHeight: Double) {
+        guard cellWidth > 0, cellHeight > 0 else { return nil }
+        cols = max(Int(width / cellWidth), 2)
+        rows = max(Int(height / cellHeight), 2)
+    }
+}
+
+public struct Letterbox: Equatable, Sendable {
+    public var cols: Int
+    public var rows: Int
+    public var tty: String
+
+    public init?(paneCols: Int, paneRows: Int, viewCols: Int, viewRows: Int, clients: [TUIClient]) {
+        guard let client = clients.first, paneCols != viewCols || paneRows != viewRows else { return nil }
         cols = paneCols
         rows = paneRows
+        tty = client.tty
     }
 
-    public var note: String { "The TUI is showing this pane at \(cols)×\(rows)" }
-
-    public func fontSize(base: Double, cellWidth: Double, cellHeight: Double, width: Double, height: Double) -> Double {
-        guard cellWidth > 0, cellHeight > 0 else { return base }
-        let scale = min(1, width / (Double(cols) * cellWidth), height / (Double(rows) * cellHeight))
-        return max((base * scale * 2).rounded(.down) / 2, 5)
-    }
+    public var note: String { "The TUI on \(tty) is showing this pane at \(cols)×\(rows)" }
 }
 
 public enum PauseAction: Equatable, Sendable {

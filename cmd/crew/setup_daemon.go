@@ -27,9 +27,12 @@ const (
 )
 
 type daemonCheck struct {
-	Installed bool `json:"installed"`
-	Running   bool `json:"running"`
-	Linger    bool `json:"linger"`
+	Installed bool   `json:"installed"`
+	Running   bool   `json:"running"`
+	Linger    bool   `json:"linger"`
+	ExecOK    bool   `json:"exec_ok"`
+	Failing   bool   `json:"failing"`
+	Reason    string `json:"reason,omitempty"`
 }
 
 func runSetupDaemon(args []string, stdout, stderr io.Writer, env func(string) string, self, goos string) int {
@@ -60,7 +63,7 @@ func runSetupDaemon(args []string, stdout, stderr io.Writer, env func(string) st
 	svc := daemonService(env, self, userHome, os.Getuid(), goos)
 	switch {
 	case *check:
-		return printDaemonCheck(ctx, svc, env, stdout, stderr)
+		return printDaemonCheck(ctx, svc, env, self, stdout, stderr)
 	case *remove:
 		removed, err := removeServe(ctx, svc)
 		switch {
@@ -142,7 +145,7 @@ func daemonService(env func(string) string, self, userHome string, uid int, goos
 	}}
 }
 
-func printDaemonCheck(ctx context.Context, svc serveService, env func(string) string, stdout, stderr io.Writer) int {
+func printDaemonCheck(ctx context.Context, svc serveService, env func(string) string, self string, stdout, stderr io.Writer) int {
 	var c daemonCheck
 	switch _, err := os.Stat(svc.path()); {
 	case err == nil:
@@ -162,12 +165,42 @@ func printDaemonCheck(ctx context.Context, svc serveService, env func(string) st
 			return 1
 		}
 		c.Linger = on
+		if c.Installed {
+			c.ExecOK, c.Reason = unitHealth(ctx, svc.unit, self)
+			c.Failing = c.Reason != ""
+		}
+	}
+	if svc.launchd {
+		c.ExecOK = c.Installed
 	}
 	if err := json.NewEncoder(stdout).Encode(c); err != nil {
 		fmt.Fprintf(stderr, "crew setup daemon: %v\n", err)
 		return 1
 	}
 	return 0
+}
+
+func unitHealth(ctx context.Context, u systemd.Unit, self string) (bool, string) {
+	program, err := systemd.Program(u)
+	if err != nil {
+		return false, err.Error()
+	}
+	facts := domain.DaemonUnit{ExecPath: resolved(program), Self: resolved(self)}
+	if program != "" {
+		info, err := os.Stat(program)
+		facts.ExecExists = err == nil && !info.IsDir()
+	}
+	if state, err := systemd.Show(ctx, u, systemd.Output); err == nil {
+		facts.Active, facts.Sub, facts.Restarts, facts.MainStatus = state.Active, state.Sub, state.Restarts, state.MainStatus
+	}
+	return domain.DaemonUnitHealth(facts)
+}
+
+func resolved(path string) string {
+	if real, err := filepath.EvalSymlinks(path); err == nil {
+		return real
+	}
+	return path
 }
 
 func lingerOn(ctx context.Context, env func(string) string) (bool, error) {

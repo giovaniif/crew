@@ -12,6 +12,9 @@ type MateStatus struct {
 	State MateConnection `json:"state"`
 	Error string         `json:"error,omitempty"`
 	Guard MateGuardStop  `json:"guard,omitempty"`
+
+	Avatar string `json:"avatar,omitempty"`
+	Color  string `json:"color,omitempty"`
 }
 
 type MateBoard struct {

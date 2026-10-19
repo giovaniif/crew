@@ -228,3 +228,56 @@ func TestSystemdRemoveWithoutAUnitIsANoop(t *testing.T) {
 		t.Fatalf("removed %v err %v calls %q", removed, err, s.calls)
 	}
 }
+
+func TestProgramReadsTheExecStartBinaryBackFromTheUnit(t *testing.T) {
+	dir := t.TempDir()
+	u := unit(dir)
+	u.Program = []string{`/home/me/my "100%" $bin\crew`, "daemon"}
+	if _, err := systemd.Install(context.Background(), u, (&systemctl{}).run); err != nil {
+		t.Fatal(err)
+	}
+	got, err := systemd.Program(u)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != u.Program[0] {
+		t.Fatalf("program %q, want %q", got, u.Program[0])
+	}
+}
+
+func TestProgramOfAUnitWithoutExecStartIsEmpty(t *testing.T) {
+	dir := t.TempDir()
+	u := unit(dir)
+	if err := os.WriteFile(filepath.Join(dir, "crew-serve.service"), []byte("[Service]\nRestart=always\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := systemd.Program(u); err != nil || got != "" {
+		t.Fatalf("program %q err %v", got, err)
+	}
+}
+
+func TestShowReadsTheRestartLoopOfTheUnit(t *testing.T) {
+	var asked []string
+	query := func(_ context.Context, name string, args ...string) ([]byte, error) {
+		asked = append([]string{name}, args...)
+		return []byte("ActiveState=activating\nSubState=auto-restart\nNRestarts=69000\nExecMainStatus=203\n"), nil
+	}
+	got, err := systemd.Show(context.Background(), unit(t.TempDir()), query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := systemd.State{Active: "activating", Sub: "auto-restart", Restarts: 69000, MainStatus: 203}
+	if got != want {
+		t.Fatalf("state %+v, want %+v", got, want)
+	}
+	if !reflect.DeepEqual(asked, []string{"systemctl", "--user", "show", "crew-serve.service", "-p", "ActiveState,SubState,NRestarts,ExecMainStatus"}) {
+		t.Fatalf("asked %q", asked)
+	}
+}
+
+func TestShowFailsWhenSystemctlFails(t *testing.T) {
+	query := func(context.Context, string, ...string) ([]byte, error) { return nil, errors.New("no bus") }
+	if _, err := systemd.Show(context.Background(), unit(t.TempDir()), query); err == nil {
+		t.Fatal("no error")
+	}
+}
