@@ -108,9 +108,10 @@ func (d *Daemon) workspaceDirs(req rpc.Request) *rpc.Response {
 	if !filepath.IsAbs(p.Path) {
 		return errorResponse(req.ID, rpc.CodeBadRequest, "path must be absolute: "+p.Path)
 	}
-	children, err := d.ws.fs.Children(filepath.Clean(p.Path))
+	dir := filepath.Clean(p.Path)
+	children, err := d.ws.fs.Children(dir)
 	if err != nil {
-		return errorResponse(req.ID, rpc.CodeNotFound, err.Error())
+		return errorResponse(req.ID, rpc.CodeNotFound, dir+": "+err.Error())
 	}
 	if children == nil {
 		children = []domain.Child{}

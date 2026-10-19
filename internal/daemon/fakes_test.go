@@ -243,6 +243,7 @@ type fakeFS struct {
 	gate     chan struct{}
 	markers  map[string]domain.GitMarker
 	children map[string][]domain.Child
+	dirErrs  map[string]error
 }
 
 func (f fakeFS) Marker(path string) (domain.GitMarker, error) {
@@ -256,7 +257,12 @@ func (f fakeFS) Marker(path string) (domain.GitMarker, error) {
 	return m, nil
 }
 
-func (f fakeFS) Children(path string) ([]domain.Child, error) { return f.children[path], nil }
+func (f fakeFS) Children(path string) ([]domain.Child, error) {
+	if err := f.dirErrs[path]; err != nil {
+		return nil, err
+	}
+	return f.children[path], nil
+}
 
 type fakeGit map[string]app.RepoFacts
 
