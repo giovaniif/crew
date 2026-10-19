@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/giovaniif/crew/internal/domain"
 	"github.com/giovaniif/crew/internal/rpc"
@@ -206,6 +207,43 @@ func TestMateNewPutsTheToneInTheSystemPrompt(t *testing.T) {
 	for _, want := range domain.MateToneSentences(domain.MateTone{Terse: 1, Formal: 5}) {
 		if !strings.Contains(cmd, want) {
 			t.Errorf("no %q in %s", want, cmd)
+		}
+	}
+}
+
+func TestResumingAMateSessionStartsTheHarnessWithTheMateSystemPrompt(t *testing.T) {
+	r, memory := localRig(t)
+	ctx := context.Background()
+	var s domain.Session
+	if err := r.c.Call(ctx, rpc.MethodMateNew, rpc.MateNewParams{Name: "helper", Prompt: "fix the login bug"}, &s); err != nil {
+		t.Fatal(err)
+	}
+	hook := rpc.Hook{Harness: "claude", Event: "SessionStart", Pane: s.Pane, At: time.Now(), Payload: []byte(`{"session_id":"c-1"}`)}
+	if err := r.c.Call(ctx, rpc.MethodHook, hook, nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.c.Call(ctx, rpc.MethodMateSetMemory, rpc.MateSetMemoryParams{Name: "helper", Text: "- The owner likes tests first.\n"}, nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.c.Call(ctx, rpc.MethodEndSession, rpc.SessionRef{ID: s.ID}, nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.c.Call(ctx, rpc.MethodResumeSession, rpc.SessionRef{ID: s.ID}, nil); err != nil {
+		t.Fatal(err)
+	}
+	r.host.mu.Lock()
+	cmd := slices.Clone(r.host.specs[len(r.host.specs)-1].Command)
+	r.host.mu.Unlock()
+	if i := slices.Index(cmd, "--resume"); i < 0 || cmd[i+1] != "c-1" {
+		t.Fatalf("command %v", cmd)
+	}
+	i := slices.Index(cmd, "--append-system-prompt")
+	if i < 0 || i+1 >= len(cmd) {
+		t.Fatalf("command %v", cmd)
+	}
+	for _, want := range []string{"You help with the api.", "- The owner likes tests first.", memory} {
+		if !strings.Contains(cmd[i+1], want) {
+			t.Errorf("system prompt has no %q:\n%s", want, cmd[i+1])
 		}
 	}
 }
