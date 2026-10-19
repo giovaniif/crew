@@ -1,3 +1,4 @@
+import type { ToneAxis } from "./faces";
 import type { Message } from "./stream";
 
 export type Hello = {
@@ -343,12 +344,13 @@ export type Mate = {
   owner?: string;
   avatar?: string;
   color?: string;
+  tone?: Record<string, number>;
   enabled: boolean;
 };
 
 export type MateLimits = { hop_limit: number; turns_per_hour: number; daily_turns: number; daily_tokens: number; stop: boolean };
 
-export type MateList = { mates: Mate[]; problems?: string[]; limits: MateLimits };
+export type MateList = { mates: Mate[]; problems?: string[]; limits: MateLimits; tones?: ToneAxis[] };
 
 export type MateSetup = { manifest: string; url: string };
 

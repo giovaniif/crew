@@ -110,7 +110,7 @@ function fakeMates(stopped: boolean) {
         ],
         conversations: [],
       },
-      { name: "pip", state: "ready", ...held, work: ["s6"], threads: [], conversations: [{ id: "s6", session: "explore the auth flow", state: "running", ended: false }] },
+      { name: "pip", state: "ready", ...held, work: ["s6"], threads: [], conversations: [{ session: "s6", name: "explore the auth flow", state: "running", ended: false, started_at: new Date(Date.now() - 4 * minute).toISOString() }] },
       { name: "reviewer", state: "connected", guard: stopped ? "stopped" : "rate_limit", work: [], threads: [], conversations: [] },
       { name: "webby", state: "paused", ...held, work: [], threads: [], conversations: [] },
     ],
@@ -324,6 +324,11 @@ export function fakeApi(build = "v0.12.0+demo"): Plugin {
               { name: "webby", prompt: "You help with the web.", agent: "codex", enabled: false },
             ],
             limits: { hop_limit: 5, turns_per_hour: 20, daily_turns: 100, daily_tokens: 0, stop: false },
+            tones: [
+              { key: "terse", low: "Terse", high: "Chatty", steps: ["Keep answers very short.", "Keep answers short. Use lists, not paragraphs.", "", "Explain your thinking in a few sentences.", "Explain your thinking in full."] },
+              { key: "cautious", low: "Cautious", high: "Bold", steps: ["Ask before each change.", "Ask before you run a command that changes files or pushes.", "", "Make reasonable choices without asking.", "Act on your own judgment."] },
+              { key: "formal", low: "Formal", high: "Playful", steps: ["Write in a formal, neutral tone.", "Write in a plain, professional tone.", "", "Use a light, friendly tone.", "Be playful."] },
+            ],
           });
           return;
         }

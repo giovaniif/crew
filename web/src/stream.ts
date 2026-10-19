@@ -121,13 +121,15 @@ export type MateThread = {
   ended: boolean;
 };
 
-export type MateConversation = { id: string; session: string; state: AgentState; ended: boolean };
+export type MateConversation = { session: string; name: string; state: AgentState; ended: boolean; started_at: string };
 
 export type MateRow = {
   name: string;
   state: "connecting" | "connected" | "error" | "paused" | "no_tokens" | "ready" | (string & {});
   error?: string;
   guard?: string;
+  avatar?: string;
+  color?: string;
   work: string[];
   threads: MateThread[];
   conversations?: MateConversation[];

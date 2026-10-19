@@ -556,7 +556,7 @@ function MateBar({ api, session, mate, snapshot }: { api: Authed; session: Sessi
   return (
     <div className="mate-bar">
       <a href={"#/mates/" + encodeURIComponent(mate)} className="mate-bar-who">
-        <MateFace name={mate} avatar={def?.avatar} color={def?.color} state={state} px={44} />
+        <MateFace name={mate} avatar={row?.avatar || def?.avatar} color={row?.color || def?.color} state={state} px={44} />
         <span>
           <strong>{mate}</strong>
           <span className="face-state">{stateWords[state]}</span>

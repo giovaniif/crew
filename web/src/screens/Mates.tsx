@@ -17,7 +17,7 @@ import {
   setMateTokens,
   stopAllMates,
 } from "../api";
-import { ACCENTS, FACES, type FaceState, faceColor, faceOf, faceState, faceSvg, stateWords, TONES, toneLines, tonePrompt } from "../faces";
+import { ACCENTS, FACES, type FaceState, faceColor, faceOf, faceState, faceSvg, stateWords, type ToneAxis, toneLines, toneOf } from "../faces";
 import type { MateRow, Mates as MateBoard } from "../stream";
 import { ApprovalList } from "./Approvals";
 
@@ -61,8 +61,9 @@ export function SlackMark({ px }: { px: number }) {
   );
 }
 
-export function useMateDefs(api: Authed): { defs: Mate[]; problems: string[]; error: string; reload: () => void } {
+export function useMateDefs(api: Authed): { defs: Mate[]; tones: ToneAxis[]; problems: string[]; error: string; reload: () => void } {
   const [defs, setDefs] = useState<Mate[]>([]);
+  const [tones, setTones] = useState<ToneAxis[]>([]);
   const [problems, setProblems] = useState<string[]>([]);
   const [error, setError] = useState("");
   const seq = useRef(0);
@@ -74,6 +75,7 @@ export function useMateDefs(api: Authed): { defs: Mate[]; problems: string[]; er
           return;
         }
         setDefs(out.mates ?? []);
+        setTones(out.tones ?? []);
         setProblems(out.problems ?? []);
         setError("");
       })
@@ -85,7 +87,7 @@ export function useMateDefs(api: Authed): { defs: Mate[]; problems: string[]; er
       seq.current++;
     };
   }, [reload]);
-  return { defs, problems, error, reload };
+  return { defs, tones, problems, error, reload };
 }
 
 function useAskingMates(api: Authed): string[] {
@@ -337,7 +339,7 @@ export function Mates({ api, now, board }: { api: Authed; now: number; board?: M
           const state = faceState(row, asking);
           return (
             <a key={row.name} className="mate-card" href={"#/mates/" + encodeURIComponent(row.name)} aria-label={row.name + ", " + stateWords[state]}>
-              <MateFace name={row.name} avatar={def?.avatar} color={def?.color} state={state} px={64} />
+              <MateFace name={row.name} avatar={row.avatar || def?.avatar} color={row.color || def?.color} state={state} px={64} />
               <strong className="mate-name">{row.name}</strong>
               {def && <span className="mate-tag">{firstLine(def.prompt)}</span>}
               <StateWord state={state} />
@@ -452,7 +454,7 @@ export function MateProfile({ api, name, board }: { api: Authed; name: string; b
         ‹ Mates
       </a>
       <div className="profile-head">
-        <MateFace name={name} avatar={def?.avatar} color={def?.color} state={state} px={112} />
+        <MateFace name={name} avatar={row.avatar || def?.avatar} color={row.color || def?.color} state={state} px={112} />
         <h1>{name}</h1>
         <StateWord state={state} />
         {def && <p className="mate-tag">{def.prompt}</p>}
@@ -482,9 +484,9 @@ export function MateProfile({ api, name, board }: { api: Authed; name: string; b
       {local.length === 0 && row.threads.length === 0 && <p className="muted">No conversations yet.</p>}
       <ul className="mate-threads conv-list" aria-label={"Conversations of " + name}>
         {local.map((c) => (
-          <li key={c.id}>
-            <a href={"#/sessions/" + encodeURIComponent(c.id)}>
-              <span className={"thread-state state-" + (c.ended ? "ended" : c.state)}>{c.ended ? "ended" : c.state}</span> {c.session || c.id}
+          <li key={c.session}>
+            <a href={"#/sessions/" + encodeURIComponent(c.session)}>
+              <span className={"thread-state state-" + (c.ended ? "ended" : c.state)}>{c.ended ? "ended" : c.state}</span> {c.name || c.session}
             </a>
           </li>
         ))}
@@ -542,6 +544,7 @@ const presets: [string, string][] = [
 ];
 
 export function NewMate({ api }: { api: Authed }) {
+  const { tones } = useMateDefs(api);
   const [step, setStep] = useState(0);
   const [face, setFace] = useState(FACES[0].id);
   const [color, setColor] = useState("");
@@ -558,7 +561,8 @@ export function NewMate({ api }: { api: Authed }) {
     try {
       const out = await saveMate(api, {
         ...mate,
-        prompt: tonePrompt(mate.prompt, tone),
+        prompt: mate.prompt.trim(),
+        tone: toneOf(tones, tone),
         repos: splitRepos(repos),
         avatar: face,
         color: color || undefined,
@@ -572,7 +576,7 @@ export function NewMate({ api }: { api: Authed }) {
     }
   }
 
-  const lines = toneLines(tone);
+  const lines = toneLines(tones, tone);
   return (
     <main className="screen mates new-mate">
       <div className="mates-top">
@@ -637,8 +641,8 @@ export function NewMate({ api }: { api: Authed }) {
           </label>
           <p className="muted">The mate also reads its memory file at the start of each conversation.</p>
           <h2>Tone</h2>
-          {TONES.map((t, i) => (
-            <div key={t.low} className="tone">
+          {tones.map((t, i) => (
+            <div key={t.key} className="tone">
               <span>{t.low}</span>
               <input
                 type="range"
@@ -656,8 +660,8 @@ export function NewMate({ api }: { api: Authed }) {
           ))}
           <section className="added" aria-label="Added to the prompt">
             <h3>Added to the prompt</h3>
-            {TONES.map((t, i) => (
-              <p key={t.low} className="arow">
+            {tones.map((t, i) => (
+              <p key={t.key} className="arow">
                 <span className="muted">
                   {t.low} {tone[i] + 1}/5
                 </span>

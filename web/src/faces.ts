@@ -158,38 +158,12 @@ export function faceGlyph(f: Face, st: FaceState): [string, string] {
   return [a, b];
 }
 
-export type Tone = { low: string; high: string; steps: string[] };
+export type ToneAxis = { key: string; low: string; high: string; steps: string[] };
 
-export const TONES: Tone[] = [
-  {
-    low: "Terse",
-    high: "Chatty",
-    steps: ["Answer in as few words as you can.", "Keep answers short. Use lists, not paragraphs.", "", "Explain your steps as you work.", "Talk freely and think out loud."],
-  },
-  {
-    low: "Cautious",
-    high: "Bold",
-    steps: [
-      "Ask before each change that is not small.",
-      "Ask before you run a command that changes files or pushes.",
-      "",
-      "Make reasonable choices without asking.",
-      "Act on your own judgment and move fast.",
-    ],
-  },
-  {
-    low: "Formal",
-    high: "Playful",
-    steps: ["Use a formal, professional tone.", "Keep a calm, neutral tone.", "", "Use a friendly, relaxed tone.", "Be playful and use humor."],
-  },
-];
-
-export function toneLines(steps: number[]): string[] {
-  return TONES.map((t, i) => t.steps[steps[i]] ?? "").filter((s) => s !== "");
+export function toneLines(tones: ToneAxis[], steps: number[]): string[] {
+  return tones.map((t, i) => t.steps[steps[i] ?? 2] ?? "").filter((s) => s !== "");
 }
 
-export function tonePrompt(prompt: string, steps: number[]): string {
-  const lines = toneLines(steps);
-  const base = prompt.trim();
-  return lines.length === 0 ? base : base + "\n\n" + lines.join(" ");
+export function toneOf(tones: ToneAxis[], steps: number[]): Record<string, number> {
+  return Object.fromEntries(tones.map((t, i) => [t.key, (steps[i] ?? 2) + 1]));
 }
