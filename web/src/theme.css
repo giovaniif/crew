@@ -1816,3 +1816,13 @@ button.danger {
 .mate-bar .mtag {
   min-height: 44px;
 }
+
+.mate-bar-keep {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  font-size: 13px;
+  color: var(--subtext);
+  white-space: nowrap;
+}
