@@ -86,7 +86,7 @@ func (d *Daemon) mateNew(req rpc.Request) (*rpc.Response, bool) {
 	if err := json.Unmarshal(req.Params, &p); err != nil || strings.TrimSpace(p.Name) == "" {
 		return errorResponse(req.ID, rpc.CodeBadRequest, "mate.new needs a name"), true
 	}
-	return d.startMateConversation(req.ID, p, "", "")
+	return d.startMateConversation(req.ID, p, mateStart{})
 }
 
 func (d *Daemon) mateFresh(req rpc.Request) (*rpc.Response, bool) {
@@ -118,10 +118,16 @@ func (d *Daemon) mateFresh(req rpc.Request) (*rpc.Response, bool) {
 	if p.SameWorktree {
 		dir = old.Dir
 	}
-	return d.startMateConversation(req.ID, rpc.MateNewParams{Name: old.Mate.Name, Prompt: p.Prompt}, dir, old.StartWorkspace)
+	return d.startMateConversation(req.ID, rpc.MateNewParams{Name: old.Mate.Name, Prompt: p.Prompt}, mateStart{dir: dir, workspace: old.StartWorkspace, freshFrom: old.ID})
 }
 
-func (d *Daemon) startMateConversation(id uint64, p rpc.MateNewParams, dir, workspace string) (*rpc.Response, bool) {
+type mateStart struct {
+	dir       string
+	workspace string
+	freshFrom string
+}
+
+func (d *Daemon) startMateConversation(id uint64, p rpc.MateNewParams, at mateStart) (*rpc.Response, bool) {
 	req := rpc.Request{ID: id}
 	m, _, ok := d.findMate(p.Name)
 	if !ok {
@@ -131,7 +137,7 @@ func (d *Daemon) startMateConversation(id uint64, p rpc.MateNewParams, dir, work
 	if !d.query(func(s *state) { workspaces = sorted(s.workspaces) }) {
 		return nil, false
 	}
-	root := workspace
+	root := at.workspace
 	ws, found := domain.MateRepoWorkspace(m, workspaces, p.Repo)
 	switch {
 	case root != "":
@@ -145,10 +151,10 @@ func (d *Daemon) startMateConversation(id uint64, p rpc.MateNewParams, dir, work
 		return errorResponse(req.ID, rpc.CodeFailed, err.Error()), true
 	}
 	system := domain.MateSystemPrompt(m, memory, d.mateMemoryPath(m.Name))
-	seat := &domain.MateSeat{Name: m.Name, Owner: m.Owner, Local: true}
+	seat := &domain.MateSeat{Name: m.Name, Owner: m.Owner, Local: true, FreshFrom: at.freshFrom}
 	session, rerr, ok := d.startSessionWith(rpc.NewSessionParams{
 		Workspace: root, WorkItem: mateWorkItem(m.Name, p.Prompt), Harness: m.Agent, Model: m.Model, Effort: m.Effort, Prompt: p.Prompt,
-	}, "", sessionExtras{system: system, seat: seat, dir: dir})
+	}, "", sessionExtras{system: system, seat: seat, dir: at.dir})
 	switch {
 	case !ok:
 		return nil, false
