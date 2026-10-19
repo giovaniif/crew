@@ -80,6 +80,9 @@ type fakeCaller struct {
 	dirs   map[string][]domain.Child
 	autos  []domain.Automation
 	asks   []domain.Approval
+	mates  []domain.Mate
+	tones  []domain.MateToneAxis
+	memory string
 }
 
 func (f *fakeCaller) Call(_ context.Context, method string, params, out any) error {
@@ -99,6 +102,25 @@ func (f *fakeCaller) Call(_ context.Context, method string, params, out any) err
 	}
 	if method == rpc.MethodApprovalList {
 		*out.(*[]domain.Approval) = f.asks
+		return nil
+	}
+	if method == rpc.MethodMateList {
+		*out.(*rpc.MateList) = rpc.MateList{Mates: f.mates, Tones: f.tones}
+		return nil
+	}
+	if method == rpc.MethodMateMemory || method == rpc.MethodMateSetMemory {
+		name := ""
+		switch p := params.(type) {
+		case rpc.MateNameParams:
+			name = p.Name
+		case rpc.MateSetMemoryParams:
+			name, f.memory = p.Name, p.Text
+		}
+		*out.(*rpc.MateMemory) = rpc.MateMemory{Name: name, Path: "/h/.crew/mates/" + name + "/memory.md", Text: f.memory, Limit: domain.MateMemoryLimit}
+		return nil
+	}
+	if method == rpc.MethodMateNew {
+		*out.(*domain.Session) = domain.Session{ID: "m1", State: domain.StateIdle, Mate: &domain.MateSeat{Name: params.(rpc.MateNewParams).Name, Local: true}}
 		return nil
 	}
 	if method == rpc.MethodAutomationList {
