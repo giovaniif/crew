@@ -60,6 +60,19 @@ func MateRepoWorkspace(m Mate, workspaces []Workspace, repo string) (Workspace, 
 	return MateWorkspace(Mate{Repos: []string{repo}}, workspaces)
 }
 
+func MateStartRoot(m Mate, workspaces []Workspace, repo string) (string, error) {
+	ws, found := MateRepoWorkspace(m, workspaces, repo)
+	switch {
+	case found:
+		return ws.Root, nil
+	case repo != "":
+		return "", fmt.Errorf("repo %q is not a registered single-repo workspace", repo)
+	case len(m.Repos) > 0:
+		return "", fmt.Errorf("no repo of mate %q is a registered single-repo workspace: %s", m.Name, strings.Join(m.Repos, ", "))
+	}
+	return "", nil
+}
+
 func MateHandoffPrompt(path string) string {
 	return "The owner starts a fresh conversation with you now. Before you stop, write a short handoff to your memory file " + path + ": what you did, what is open and what the next conversation must know. Keep the file under 8 KB. Then stop."
 }
