@@ -257,6 +257,10 @@ func (d *Daemon) resumeSession(req rpc.Request) (*rpc.Response, bool) {
 	if !d.query(func(s *state) { task = s.tasks[session.TaskID] }) {
 		return nil, false
 	}
+	adapter, rerr := d.mateResumeAdapter(session, adapter)
+	if rerr != nil {
+		return errorResponse(req.ID, rerr.Code, rerr.Message), true
+	}
 	resumed, err := d.sessions().Resume(d.ws.ctx, session, adapter, domain.NameFor(task, nil))
 	switch {
 	case errors.Is(err, app.ErrNotResumable):
