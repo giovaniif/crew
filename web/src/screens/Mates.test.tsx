@@ -33,7 +33,7 @@ const board: Mates = {
       ],
       conversations: [],
     },
-    { name: "webby", state: "paused", work: [], threads: [], conversations: [{ id: "s2", session: "fix the docs", state: "waiting", ended: false }] },
+    { name: "webby", state: "paused", work: [], threads: [], conversations: [{ session: "s2", name: "fix the docs", state: "waiting", ended: false, started_at: "2026-10-03T11:00:00Z" }] },
     { name: "fresh", state: "ready", work: [], threads: [], conversations: [] },
   ],
 };
@@ -45,6 +45,11 @@ const defs = {
     { name: "fresh", prompt: "New.", agent: "claude", enabled: true },
   ],
   limits: { hop_limit: 5, turns_per_hour: 20, daily_turns: 100, daily_tokens: 0, stop: false },
+  tones: [
+    { key: "terse", low: "Brief", high: "Wordy", steps: ["Say almost nothing.", "Write one line per answer.", "", "Say more.", "Say all of it."] },
+    { key: "cautious", low: "Cautious", high: "Bold", steps: ["C1.", "C2.", "", "C4.", "C5."] },
+    { key: "formal", low: "Formal", high: "Playful", steps: ["F1.", "F2.", "", "F4.", "F5."] },
+  ],
 };
 
 function setup(hash = "#/mates", mates: Mates = board, approvals: unknown[] = []) {
@@ -227,9 +232,9 @@ describe("New mate", () => {
     await user.click(screen.getByRole("button", { name: "Next: personality" }));
     await user.type(screen.getByLabelText("Prompt"), "Scout the repo.");
     expect(screen.getByRole("region", { name: "Added to the prompt" })).toHaveTextContent("Middle step. Adds no text.");
-    fireEvent.change(screen.getByLabelText("Terse to Chatty"), { target: { value: "1" } });
-    expect(screen.getAllByText("Terse 2/5").length).toBeGreaterThan(0);
-    expect(screen.getByRole("region", { name: "Added to the prompt" })).toHaveTextContent("Keep answers short. Use lists, not paragraphs.");
+    fireEvent.change(screen.getByLabelText("Brief to Wordy"), { target: { value: "1" } });
+    expect(screen.getAllByText("Brief 2/5").length).toBeGreaterThan(0);
+    expect(screen.getByRole("region", { name: "Added to the prompt" })).toHaveTextContent("Write one line per answer.");
     await user.click(screen.getByRole("button", { name: "Next: brains" }));
     await user.selectOptions(screen.getByLabelText("Agent"), "codex");
     await user.type(screen.getByLabelText("Model"), "gpt-5");
@@ -240,7 +245,8 @@ describe("New mate", () => {
       expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/mates")?.body).toEqual({
         mate: {
           name: "scout",
-          prompt: "Scout the repo.\n\nKeep answers short. Use lists, not paragraphs.",
+          prompt: "Scout the repo.",
+          tone: { terse: 2, cautious: 3, formal: 3 },
           agent: "codex",
           model: "gpt-5",
           effort: "high",
