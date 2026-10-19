@@ -67,3 +67,11 @@ func TestLaunchResumesTheCodexThreadByID(t *testing.T) {
 		t.Fatalf("command %v, want %v", got.Command, want)
 	}
 }
+
+func TestLaunchSetsTheSystemPromptAsDeveloperInstructions(t *testing.T) {
+	got := LaunchSpec(LaunchRequest{Dir: "/w", SystemPrompt: "You are \"helper\".\nBe brief.", Prompt: "hi"})
+	want := []string{"codex", "-c", `developer_instructions="You are \"helper\".\nBe brief."`, "--", "hi"}
+	if !slices.Equal(got.Command, want) {
+		t.Fatalf("command %v, want %v", got.Command, want)
+	}
+}

@@ -35,3 +35,11 @@ func TestLaunchResumesTheClaudeSessionByID(t *testing.T) {
 		t.Fatalf("command %v, want %v", got.Command, want)
 	}
 }
+
+func TestLaunchAppendsTheSystemPromptBeforeTheFirstPrompt(t *testing.T) {
+	got := claude.Adapter{}.Launch(app.LaunchRequest{Dir: "/w", Model: "opus", SystemPrompt: "You are helper.\nBe brief.", Prompt: "hi"})
+	want := []string{"claude", "--model", "opus", "--append-system-prompt", "You are helper.\nBe brief.", "--", "hi"}
+	if !reflect.DeepEqual(got.Command, want) {
+		t.Fatalf("command %v, want %v", got.Command, want)
+	}
+}

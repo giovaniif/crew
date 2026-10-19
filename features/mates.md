@@ -29,6 +29,18 @@ go run ./scripts/verify iso crew --expect "no mates" -- mate list
 
 ### a mate answers in a Slack thread (manual: needs a real Slack workspace and tokens; the isolated crew blanks them)
 
+### C opens the mates and approvals view in the TUI
+
+```sh
+go run ./scripts/verify tui drive --restart --out-dir /tmp/crew-verify-map/mates --steps '[{"expect":"SESSIONS","timeout":8000},{"keys":"C"},{"expect":"MATES"},{"expect":"APPROVALS"},{"shot":"tui-mates.png"},{"keys":"Escape"}]'
+```
+
+### PWA Mates tab opens at both viewports
+
+```sh
+go run ./scripts/verify web drive / --viewport both --out-dir /tmp/crew-verify-map/mates --steps '[{"click":{"role":"link","name":"Mates"}},{"expect":{"role":"link","name":"Mates"}},{"shot":"mates.png"}]'
+```
+
 ## Cleanup
 
 ```sh
