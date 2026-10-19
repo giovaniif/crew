@@ -1,7 +1,9 @@
 package fs
 
 import (
+	"errors"
 	"fmt"
+	iofs "io/fs"
 	"os"
 	"path/filepath"
 
@@ -16,7 +18,7 @@ type FS struct{}
 func (FS) Marker(path string) (domain.GitMarker, error) {
 	info, err := os.Stat(path)
 	if err != nil {
-		return domain.GitNone, err
+		return domain.GitNone, withoutPath(err)
 	}
 	if !info.IsDir() {
 		return domain.GitNone, fmt.Errorf("not a directory")
@@ -39,7 +41,7 @@ func marker(dir string) domain.GitMarker {
 func (FS) Children(path string) ([]domain.Child, error) {
 	entries, err := os.ReadDir(path)
 	if err != nil {
-		return nil, err
+		return nil, withoutPath(err)
 	}
 	var out []domain.Child
 	for _, e := range entries {
@@ -51,4 +53,12 @@ func (FS) Children(path string) ([]domain.Child, error) {
 		out = append(out, domain.Child{Name: e.Name(), Path: child, Git: marker(child)})
 	}
 	return out, nil
+}
+
+func withoutPath(err error) error {
+	var pe *iofs.PathError
+	if errors.As(err, &pe) {
+		return pe.Err
+	}
+	return err
 }
