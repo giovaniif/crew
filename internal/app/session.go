@@ -37,6 +37,7 @@ type NewSession struct {
 	Prompt  string
 
 	ProjectSetup string
+	SystemPrompt string
 }
 
 type Started struct {
@@ -68,7 +69,7 @@ func (s Sessions) Start(ctx context.Context, req NewSession) (Started, error) {
 			}
 		}
 	}
-	spec := req.Harness.Launch(LaunchRequest{Name: req.Name, Dir: dir, Model: req.Model, Effort: req.Effort, Prompt: req.Prompt})
+	spec := req.Harness.Launch(LaunchRequest{Name: req.Name, Dir: dir, Model: req.Model, Effort: req.Effort, Prompt: req.Prompt, SystemPrompt: req.SystemPrompt})
 	pane, err := s.Host.Create(ctx, spec)
 	if err != nil {
 		return Started{Worktree: wt}, fmt.Errorf("launch %s: %w", req.Harness.Harness(), err)

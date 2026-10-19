@@ -306,7 +306,8 @@ struct CrewApp: App {
                 LiveWindow(
                     store: store, server: current.name, router: router, shortcuts: launcher.settings.settings.shortcuts,
                     attention: launcher.attention, diffLayout: launcher.settings.settings.appearance.diffLayout,
-                    confirmEnd: launcher.settings.settings.general.confirmOnEnd, servers: launcher.servers.servers, switchServer: { launcher.connect($0) }
+                    confirmEnd: launcher.settings.settings.general.confirmOnEnd, servers: launcher.servers.servers, switchServer: { launcher.connect($0) },
+                    setup: launcher.setup
                 )
                 .id(current)
                 .background(MainWindowFrame())

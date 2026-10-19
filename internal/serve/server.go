@@ -112,6 +112,10 @@ func (s *Server) routes() []route {
 		{"GET /api/v1/mates/{name}/setup", mateSetup},
 		{"POST /api/v1/mates/{name}/tokens", setMateTokens},
 		{"POST /api/v1/mates/{name}/claim", claimMate},
+		{"POST /api/v1/mates/{name}/new", newMateConversation},
+		{"POST /api/v1/sessions/{id}/fresh", freshMateConversation},
+		{"GET /api/v1/mates/{name}/memory", mateMemory},
+		{"POST /api/v1/mates/{name}/memory", setMateMemory},
 	}
 }
 
