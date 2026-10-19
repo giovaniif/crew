@@ -123,6 +123,10 @@ func (f *fakeCaller) Call(_ context.Context, method string, params, out any) err
 		*out.(*domain.Session) = domain.Session{ID: "m1", State: domain.StateIdle, Mate: &domain.MateSeat{Name: params.(rpc.MateNewParams).Name, Local: true}}
 		return nil
 	}
+	if method == rpc.MethodMateFresh {
+		*out.(*domain.Session) = domain.Session{ID: "m2", State: domain.StateIdle, Mate: &domain.MateSeat{Name: "helper", Local: true, FreshFrom: params.(rpc.MateFreshParams).Session}}
+		return nil
+	}
 	if method == rpc.MethodAutomationList {
 		*out.(*rpc.AutomationList) = rpc.AutomationList{Automations: f.autos}
 		return nil
