@@ -59,3 +59,7 @@ func MateRepoWorkspace(m Mate, workspaces []Workspace, repo string) (Workspace, 
 	}
 	return MateWorkspace(Mate{Repos: []string{repo}}, workspaces)
 }
+
+func MateHandoffPrompt(path string) string {
+	return "The owner starts a fresh conversation with you now. Before you stop, write a short handoff to your memory file " + path + ": what you did, what is open and what the next conversation must know. Keep the file under 8 KB. Then stop."
+}

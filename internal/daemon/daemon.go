@@ -608,6 +608,8 @@ func (d *Daemon) dispatch(c *conn, line []byte) (*rpc.Response, bool) {
 		return d.mateMethod(req), true
 	case rpc.MethodMateNew:
 		return d.mateNew(req)
+	case rpc.MethodMateFresh:
+		return d.mateFresh(req)
 	case rpc.MethodAutomationList, rpc.MethodAutomationShow:
 		return d.automationMethod(req), true
 	case rpc.MethodAutomationRun:

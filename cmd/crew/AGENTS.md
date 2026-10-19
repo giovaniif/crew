@@ -46,7 +46,11 @@ Hooks call `crew hook`. It writes one message to the socket and exits. It never 
   - The service gets the current `CREW_HOME` and the PATH of the login shell (`$SHELL -l -c`, through `internal/adapters/loginshell`), not the PATH of the caller. Thus a daemon set up through a bare `ssh -T` still gives agent panes a full PATH.
   - The install, backup and remove rules are the same as for `setup serve`. It logs to `$CREW_HOME/daemon-service.log`.
   - On Linux, if `loginctl show-user $USER -p Linger` is not `Linger=yes`, it tells you that the daemon stops at logout. It prints `sudo loginctl enable-linger $USER`.
-  - `--check` prints `{"installed","running","linger"}` as JSON for the Mac app. On macOS, `linger` is always true.
+  - `--check` prints `{"installed","running","linger","exec_ok","failing","reason"}` as JSON for the Mac app. On macOS, `linger` is always true. An old app ignores the new fields.
+    - On Linux, `exec_ok` is false when the `ExecStart` binary of the unit does not exist or is not the `crew` that runs the check (after symlinks). `systemd.Program` reads the binary from the unit file.
+    - `failing` is true when `exec_ok` is false, or when `systemctl --user show` (`systemd.Show`) reports a restart loop: `activating`/`auto-restart`, or `NRestarts` > 0 with an `ExecMainStatus` that is not 0. A `failed` unit also counts.
+    - `reason` tells the problem in plain words. `domain.DaemonUnitHealth` makes this decision. On macOS, `failing` is always false.
+    - Test: `go test ./cmd/crew -run SetupDaemonCheck`.
   - Tests: `go test ./cmd/crew/ -run SetupDaemon`. They put a fake `systemctl`, `launchctl`, `loginctl` and login shell on `PATH`, with a temp `HOME`. See [ADR 0049](../../docs/adr/0049-macos-app.md).
 - `crew notify stream` prints the banners and withdrawals of the daemon as JSON lines. It never starts a daemon. It waits for one, because a daemon started through the bare `ssh -T` of the bridge gives each agent pane that PATH without login.
   - `crew notify bridge [--remote-bin path] <ssh host>` runs it through `ssh` on the Mac when the daemon is on a remote host. It posts each banner locally and connects again automatically.

@@ -119,3 +119,11 @@ type MateSetMemoryParams struct {
 	Name string `json:"name"`
 	Text string `json:"text"`
 }
+
+const MethodMateFresh = "mate.fresh"
+
+type MateFreshParams struct {
+	Session      string `json:"session"`
+	SameWorktree bool   `json:"same_worktree,omitempty"`
+	Prompt       string `json:"prompt,omitempty"`
+}

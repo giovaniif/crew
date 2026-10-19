@@ -23,6 +23,7 @@ public struct WindowScene {
     public var browser: BrowserChrome?
     public var mateLooks: [String: MateLook]
     public var freshConfirm: String?
+    public var fix: DaemonFixState?
 
     public init(
         state: ViewState?, connection: ConnectionStatus, selected: String? = nil, filter: String = "",
@@ -116,6 +117,7 @@ public struct WindowActions {
     public var toggleInspector: () -> Void = {}
     public var toggleEnded: () -> Void = {}
     public var reconnect: () -> Void = {}
+    public var fixDaemon: () -> Void = {}
     public var toggleReview: () -> Void = {}
     public var toggleSidebar: () -> Void = {}
     public var setScope: (ReviewScope) -> Void = { _ in }
@@ -168,8 +170,8 @@ public struct MainWindow: View {
         VStack(spacing: 0) {
             ToolbarStrip(scene: scene, actions: actions)
             Rectangle().fill(theme(.surface)).frame(height: 1)
-            if let banner = ConnectionBanner(scene.connection) {
-                BannerView(banner: banner, reconnect: actions.reconnect)
+            if let banner = ConnectionBanner(scene.connection, fix: scene.fix) {
+                BannerView(banner: banner, reconnect: banner.fixes ? actions.fixDaemon : actions.reconnect)
             }
             HStack(spacing: 0) {
                 if let review = scene.review {
@@ -230,20 +232,20 @@ struct ToolbarStrip: View {
                     .onTapGesture { actions.openMate(mate) }
                     .help("Open the profile of \(MateNames.display(mate))")
             }
-            VStack(alignment: .leading, spacing: 1) {
-                HStack(spacing: 4) {
-                    if let mate = scene.session?.mate?.name {
-                        Text(MateNames.display(mate)).font(.system(size: 13, weight: .semibold))
-                        Text("—").foregroundStyle(theme(.subtext))
-                    }
-                    Text(scene.session?.name ?? "crew")
-                        .font(.system(size: 13, weight: scene.session?.mate == nil ? .semibold : .regular))
-                        .foregroundStyle(scene.session?.mate == nil ? theme(.text) : theme(.subtext))
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                if let mate = scene.session?.mate?.name {
+                    Text(MateNames.display(mate)).font(.system(size: 13, weight: .semibold)).lineLimit(1)
+                    Text("—").foregroundStyle(theme(.subtext))
                 }
-                .lineLimit(1)
-                Text(scene.session?.where ?? "").font(Metrics.mono).foregroundStyle(theme(.subtext)).lineLimit(1)
+                Text(scene.session?.name ?? "crew")
+                    .font(.system(size: 13, weight: scene.session?.mate == nil ? .semibold : .regular))
+                    .foregroundStyle(scene.session?.mate == nil ? theme(.text) : theme(.subtext))
+                    .lineLimit(1)
+                if let place = scene.session?.where, !place.isEmpty {
+                    Text(place).font(Metrics.mono).foregroundStyle(theme(.subtext)).lineLimit(1)
+                }
             }
-            .frame(minWidth: 160, alignment: .leading)
+            .frame(minWidth: 160, maxHeight: .infinity, alignment: .leading)
             if let session = scene.session, StartFresh.offered(session) {
                 Button { actions.startFresh(session.id) } label: {
                     Label("Start Fresh", systemImage: "arrow.clockwise")

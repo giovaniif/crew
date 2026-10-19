@@ -52,10 +52,12 @@ struct FakeServer {
         case "$*" in
           "version --build") echo "\(build)" ;;
           "setup daemon --check")
-            if [ -f "\(bin.path("unit"))" ]; then echo '{"installed":true,"running":true,"linger":false}'
+            if [ -f "\(bin.path("loop"))" ]; then echo '{"installed":true,"running":false,"linger":false,"exec_ok":true,"failing":true,"reason":"the daemon stops at start, and systemd restarts it again and again (69000 restarts, exit status 203)"}'
+            elif [ -f "\(bin.path("unit"))" ]; then echo '{"installed":true,"running":true,"linger":false}'
             else echo '{"installed":false,"running":false,"linger":false}'; fi ;;
           "setup daemon")
             echo "setup daemon" >> "\(bin.path("daemon.log"))"
+            rm -f "\(bin.path("loop"))"
             if [ -f "\(bin.path("unit"))" ]; then echo "already set up"; else touch "\(bin.path("unit"))"; echo "wrote and started"; fi ;;
           *) echo "unexpected $*" >> "\(bin.path("daemon.log"))"; exit 2 ;;
         esac
@@ -140,6 +142,83 @@ struct ServersTests {
         #expect(items["gh"]?.command == "ssh -t 'box' gh auth login")
         #expect(items["crew"]?.state == .failed)
         #expect(items["crew"]?.fix == "Set up")
+    }
+
+    @Test func aFailingDaemonFailsTheRowWithTheReasonAndOffersSetUpOrUpdate() {
+        let check = #"{"installed":true,"running":false,"linger":true,"exec_ok":false,"failing":true,"reason":"the service runs /tmp/go-build1/crew.test, which does not exist"}"#
+        let probe = Probe.parse("kernel=Linux\nmachine=x86_64\nuser=me\nbuild=v1\ndaemon=\(check)\n")
+        let item = Checklist.items(server: .ssh(host: "box"), probe: probe, appBuild: "v1").first { $0.id == "daemon" }
+        #expect(item?.state == .failed)
+        #expect(item?.detail == "the service runs /tmp/go-build1/crew.test, which does not exist")
+        #expect(item?.fix == "Set up or update")
+    }
+
+    @Test func aCheckFromAnOlderServerStillDecodes() {
+        let probe = Probe.parse(#"daemon={"installed":true,"running":true,"linger":true}"# + "\n")
+        #expect(probe.daemon?.failing == nil)
+        #expect(probe.daemon?.running == true)
+    }
+
+    @Test(.timeLimit(.minutes(1))) func setUpOnADaemonInARestartLoopWritesTheUnitAgainAndRestartsIt() async throws {
+        let server = try FakeServer()
+        try server.installOld(build: "v1.2.0 abc")
+        try server.bin.write("loop", "")
+        let setup = server.setup()
+        await setup.check()
+        let before = setup.checklist.first { $0.id == "daemon" }
+        #expect(before?.state == .failed)
+        #expect(before?.detail.contains("69000 restarts") == true)
+        #expect(before?.fix == "Set up or update")
+        await setup.setUp()
+        #expect(setup.error == nil)
+        #expect(server.bin.read("daemon.log") == "setup daemon\n")
+        #expect(server.bin.read("systemctl.log") == "--user restart crew-daemon.service\n")
+        #expect(setup.checklist.first { $0.id == "daemon" }?.state != .failed)
+    }
+
+    @Test(.timeLimit(.minutes(1))) func fixRunsSetupDaemonAndThenConnectsAgain() async throws {
+        let server = try FakeServer()
+        try server.installOld(build: "v1.2.0 abc")
+        try server.bin.write("loop", "")
+        let fix = DaemonFix(setup: server.setup())
+        var reconnects = 0
+        await fix.run { reconnects += 1 }
+        #expect(fix.state == .ready)
+        #expect(reconnects == 1)
+        #expect(server.bin.read("daemon.log") == "setup daemon\n")
+    }
+
+    @Test(.timeLimit(.minutes(1))) func aFixThatFailsShowsTheStepAndTheErrorAndDoesNotReconnect() async throws {
+        let server = try FakeServer(unreachable: true)
+        let fix = DaemonFix(setup: server.setup())
+        var reconnects = 0
+        await fix.run { reconnects += 1 }
+        #expect(reconnects == 0)
+        guard case let .failed(message) = fix.state else {
+            Issue.record("state \(fix.state)")
+            return
+        }
+        #expect(message.contains("checking the server"))
+        #expect(message.contains("Connection refused"))
+    }
+
+    @Test func theBannerOffersFixWhenTheDaemonIsAwayOrDropped() {
+        let away = ConnectionBanner(.unavailable("no crew daemon is running"), fix: .ready)
+        #expect(away?.action == "Fix")
+        #expect(away?.fixes == true)
+        #expect(ConnectionBanner(.reconnecting(in: .seconds(4)), fix: .ready)?.action == "Fix")
+        #expect(ConnectionBanner(.unavailable("x"))?.action == nil)
+        #expect(ConnectionBanner(.connecting, fix: .ready)?.action == nil)
+        let mismatch = ConnectionBanner(.versionMismatch("v2 and v1"), fix: .ready)
+        #expect(mismatch?.action == "Reconnect")
+        #expect(mismatch?.fixes == false)
+        let fixing = ConnectionBanner(.unavailable("x"), fix: .fixing)
+        #expect(fixing?.title == "Fixing the daemon")
+        #expect(fixing?.action == nil)
+        let failed = ConnectionBanner(.unavailable("x"), fix: .failed("crew setup daemon failed (exit 1): no bus"))
+        #expect(failed?.title == "Fix failed · retrying")
+        #expect(failed?.detail == "crew setup daemon failed (exit 1): no bus")
+        #expect(failed?.action == "Fix")
     }
 
     @Test func aServerOnAnotherBuildOffersTheUpdate() {
