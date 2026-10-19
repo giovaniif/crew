@@ -98,4 +98,3 @@ func MateFaceState(st MateStatus, approvals int, sessions []AgentState) FaceStat
 	}
 	return FaceIdle
 }
-
