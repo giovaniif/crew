@@ -138,13 +138,11 @@ func (d *Daemon) startMateConversation(id uint64, p rpc.MateNewParams, at mateSt
 		return nil, false
 	}
 	root := at.workspace
-	ws, found := domain.MateRepoWorkspace(m, workspaces, p.Repo)
-	switch {
-	case root != "":
-	case found:
-		root = ws.Root
-	case p.Repo != "":
-		return errorResponse(req.ID, rpc.CodeBadRequest, fmt.Sprintf("repo %q is not a registered single-repo workspace", p.Repo)), true
+	if root == "" {
+		var err error
+		if root, err = domain.MateStartRoot(m, workspaces, p.Repo); err != nil {
+			return errorResponse(req.ID, rpc.CodeBadRequest, err.Error()), true
+		}
 	}
 	memory, err := d.readMateMemory(m.Name)
 	if err != nil {
