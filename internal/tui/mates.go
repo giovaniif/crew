@@ -255,7 +255,15 @@ func (m Model) decideApproval(id string, approve bool) tea.Cmd {
 	}
 }
 
-func (m Model) newConversation(name, handoffTo string) tea.Cmd {
+func (m Model) newConversation(name string) tea.Cmd {
+	return m.startMate(rpc.MethodMateNew, rpc.MateNewParams{Name: name})
+}
+
+func (m Model) startFresh(session string, sameWorktree bool) tea.Cmd {
+	return m.startMate(rpc.MethodMateFresh, rpc.MateFreshParams{Session: session, SameWorktree: sameWorktree})
+}
+
+func (m Model) startMate(method string, params any) tea.Cmd {
 	c := m.opts.Calls
 	if c == nil {
 		return nil
@@ -263,13 +271,8 @@ func (m Model) newConversation(name, handoffTo string) tea.Cmd {
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), callTimeout)
 		defer cancel()
-		if handoffTo != "" {
-			if err := c.Call(ctx, rpc.MethodSessionSend, rpc.SessionSendParams{Session: handoffTo, Text: domain.MateHandoff}, nil); err != nil {
-				return errMsg{err}
-			}
-		}
 		var s domain.Session
-		if err := c.Call(ctx, rpc.MethodMateNew, rpc.MateNewParams{Name: name}, &s); err != nil {
+		if err := c.Call(ctx, method, params, &s); err != nil {
 			return errMsg{err}
 		}
 		return sessionStartedMsg{session: s}
@@ -505,11 +508,11 @@ func (m Model) detailKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 	case "c":
 		m.mp = nil
-		return m, m.newConversation(d.name, "")
-	case "f":
+		return m, m.newConversation(d.name)
+	case "f", "F":
 		if d.cursor < len(convs) && !convs[d.cursor].Ended {
 			m.mp = nil
-			return m, m.newConversation(d.name, convs[d.cursor].ID)
+			return m, m.startFresh(convs[d.cursor].ID, k == "f")
 		}
 	case "m":
 		d.editing, d.edit = true, d.memory.Text
@@ -552,7 +555,7 @@ func (m Model) matesKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "c":
 		if p.cursor < len(mates) {
 			m.mp = nil
-			return m, m.newConversation(mates[p.cursor].Name, "")
+			return m, m.newConversation(mates[p.cursor].Name)
 		}
 	case "a":
 		p.create = &mateCreate{tone: [3]int{2, 2, 2}}
@@ -802,7 +805,7 @@ func (m Model) detailLines() ([]string, int) {
 	}
 	return append(out, m.hints(
 		[]string{"enter", "open", "c", "new conversation", "f", "start fresh"},
-		[]string{"m", "edit memory", "esc", "back"})...), sel
+		[]string{"F", "fresh, new worktree", "m", "edit memory", "esc", "back"})...), sel
 }
 
 func (m Model) createLines() []string {

@@ -99,4 +99,3 @@ func MateFaceState(st MateStatus, approvals int, sessions []AgentState) FaceStat
 	return FaceIdle
 }
 
-const MateHandoff = "Before we stop: add a short handoff to your memory file. Note what you did, what is left and what you learned."
