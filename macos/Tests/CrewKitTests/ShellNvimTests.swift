@@ -14,6 +14,16 @@ struct ShellNvimTests {
         return (ShellNvim(caller: caller), caller)
     }
 
+    @Test func theChatViewKeepsTheAgentPaneAndCloseGoesBackToTheTerminal() {
+        let (views, caller) = make()
+        views.showChat()
+        #expect(views.view == .chat)
+        #expect(views.pane(session: "s1", agent: "%a1") == "%a1")
+        views.close()
+        #expect(views.view == .terminal)
+        #expect(caller.calls.isEmpty)
+    }
+
     @Test func aShellOpensInTheSelectedWorktreeAndShowsItsPane() async throws {
         let (views, caller) = make()
         await views.toggleShell(session: "s1", worktree: "/w/api")

@@ -22,6 +22,7 @@ var shop = fakeFS{
 		{Name: "web", Path: "/shop/web", Git: domain.GitDir},
 		{Name: "api-wt", Path: "/shop/api-wt", Git: domain.GitFile},
 	}},
+	dirErrs: map[string]error{"/gone": errors.New("no such file or directory")},
 }
 
 var shopGit = fakeGit{"/shop/api": {DefaultBranch: "main", Branch: "feat", ChangedFiles: 2}}
@@ -282,5 +283,14 @@ func TestWorkspaceDirsListsSubfoldersWithoutAddingTheFolder(t *testing.T) {
 	var rerr *rpc.Error
 	if _, err := c.WorkspaceDirs(ctx, "relative"); !errors.As(err, &rerr) || rerr.Code != rpc.CodeBadRequest {
 		t.Errorf("relative path: %v", err)
+	}
+}
+
+func TestWorkspaceDirsErrorNamesTheFolder(t *testing.T) {
+	c, _ := startWorkspaces(t, &memStore{})
+	_, err := c.WorkspaceDirs(context.Background(), "/gone/")
+	var rerr *rpc.Error
+	if !errors.As(err, &rerr) || rerr.Code != rpc.CodeNotFound || rerr.Message != "/gone: no such file or directory" {
+		t.Errorf("err = %v", err)
 	}
 }

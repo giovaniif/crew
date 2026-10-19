@@ -152,3 +152,12 @@ func BenchmarkDiscovery(b *testing.B) {
 		b.Fatalf("discovery over %d repos took %v, budget 300ms", repos, perOp)
 	}
 }
+
+func TestDiscoverMissingFolderNamesThePathOnce(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "nope")
+	_, err := app.DiscoverWorkspace(fs.FS{}, root, nil)
+	want := root + ": no such file or directory"
+	if err == nil || err.Error() != want {
+		t.Fatalf("err = %v, want %q", err, want)
+	}
+}
