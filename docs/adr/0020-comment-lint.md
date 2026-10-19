@@ -8,7 +8,6 @@ Status: superseded by [ADR 0044](0044-no-comments.md) on 2026-10-03. Was accepte
 - Every Go comment group opens with a marker: `// why: <text>` or `// bug: <text>` (`/* why: */` for block comments). `bug:` names a concrete bug or tool quirk being worked around; `why:` covers everything else. Only the first line of a multi-line comment carries it. Doc comments, package docs and trailing comments are covered too.
 - Exempt: tool directives (`//go:`, `//line`, `//export`, `//nolint:` with a reason after `//`), `// TODO(#n)`, `// Code generated ... DO NOT EDIT.`, and `// Copyright` / `// SPDX-License-Identifier:` headers. A directive line inside a group resets it, so the comment after it needs its own marker.
 - `scripts/lint-comments` enforces this and `make lint` runs it. Non-Go files (shell, YAML, Lua, txtar) follow the same rule with `# why:` / `-- why:`; review covers them, not the linter.
-- CodeRabbit (`.coderabbit.yaml`) flags any added or kept comment without such a reason and asks for its removal, since a marker alone does not prove the reason is real.
 - `scripts/tdd-check` ignores test changes that touch only comments, so a comment cleanup does not need a failing test.
 
 ## Why

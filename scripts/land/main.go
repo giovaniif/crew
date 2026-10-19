@@ -312,7 +312,7 @@ func checkChecks(g gh, p pull, r *result) {
 	if known {
 		for _, c := range prot.Required.Contexts {
 			if s, ok := state[c]; !ok {
-				r.fail("required check "+c+" has not reported", "wait for CI, or request the review (@coderabbitai review)")
+				r.fail("required check "+c+" has not reported", "wait for CI")
 			} else if !good(s) {
 				r.fail("required check "+c+" is "+s, "wait for it to finish, or fix the failure; do not re-run to get a pass")
 			}
