@@ -21,6 +21,7 @@ public struct WindowScene {
     public var message: String?
     public var servers: [ServerKind]
     public var browser: BrowserChrome?
+    public var fix: DaemonFixState?
 
     public init(
         state: ViewState?, connection: ConnectionStatus, selected: String? = nil, filter: String = "",
@@ -103,6 +104,7 @@ public struct WindowActions {
     public var toggleInspector: () -> Void = {}
     public var toggleEnded: () -> Void = {}
     public var reconnect: () -> Void = {}
+    public var fixDaemon: () -> Void = {}
     public var toggleReview: () -> Void = {}
     public var toggleSidebar: () -> Void = {}
     public var setScope: (ReviewScope) -> Void = { _ in }
@@ -150,8 +152,8 @@ public struct MainWindow: View {
         VStack(spacing: 0) {
             ToolbarStrip(scene: scene, actions: actions)
             Rectangle().fill(theme(.surface)).frame(height: 1)
-            if let banner = ConnectionBanner(scene.connection) {
-                BannerView(banner: banner, reconnect: actions.reconnect)
+            if let banner = ConnectionBanner(scene.connection, fix: scene.fix) {
+                BannerView(banner: banner, reconnect: banner.fixes ? actions.fixDaemon : actions.reconnect)
             }
             HStack(spacing: 0) {
                 if let review = scene.review {

@@ -232,8 +232,16 @@ The dry run occurs on a pull request that touches `macos/`, `.goreleaser.yaml` o
     1. It copies the bundled `Contents/Resources/bin/<os>_<arch>/crew` through the stdin of the same ssh to a temp file in `~/.local/bin`.
     2. It `mv`s the file into place as `crew` (atomic). It leaves a binary of the alphas where it is. If the build already matches, it skips this, so a second run changes nothing.
     3. It runs `crew setup daemon`. This also runs the migration from the alphas (see [cmd/crew/](../cmd/crew/AGENTS.md)).
-    4. If it replaced the binary of a running daemon, it restarts the service (`systemctl --user restart crew-daemon.service`, or `launchctl kickstart -k` of `dev.crew.daemon` on a Mac). It never stops the service, so tmux sessions continue.
-  - `Checklist.items` changes the probe into the rows of the Servers tab, with fix-its: Set up, Update server, the linger command `sudo loginctl enable-linger <user>`, `ssh -t <host> gh auth login`.
+    4. If it replaced the binary of a running daemon, or if the check said `failing`, it restarts the service (`systemctl --user restart crew-daemon.service`, or `launchctl kickstart -k` of `dev.crew.daemon` on a Mac). It never stops the service, so tmux sessions continue.
+    5. If the check after setup still says `failing`, setup fails with the `reason`.
+  - `Checklist.items` changes the probe into the rows of the Servers tab, with fix-its: Set up, Update server, Set up or update, the linger command `sudo loginctl enable-linger <user>`, `ssh -t <host> gh auth login`.
+    - `DaemonCheck` decodes `exec_ok`, `failing` and `reason` as optionals, so a check from an older server still decodes.
+    - When `failing` is true, the Daemon row fails. It shows the `reason` and the fix-it Set up or update.
+  - Fix in the connection banner (`DaemonFix`, `DaemonFixState`):
+    - `ConnectionBanner(_:fix:)` adds Fix to "No crew daemon · retrying" and "Reconnecting in N s" when the window has a `DaemonFix`. "Build mismatch" keeps Reconnect.
+    - `DaemonFix.run` runs `ServerSetup.setUp` for the server of the window (remote or This Mac), then connects again.
+    - While it runs, the banner shows "Fixing the daemon". If it fails, the banner shows "Fix failed · retrying" with the step and the error, and Fix stays.
+    - `LiveWindow(setup:)` gets the `ServerSetup` of the launcher.
   - Each row of the workspace step has Remove (also in its context menu). `WorkspaceRemoval` gives the confirmation: it says that no files, worktrees or branches are deleted, and it names the live sessions whose `Dir` is in the workspace. The new-session sheet has "Manage workspaces…", which opens Settings › Workspaces (the Settings tab is stored in `settings.tab`). Test: `swift test --filter WorkspaceRemoval`.
   - Hooks and the workspace step use `ServerSettings` over the `ViewStore` of the new server. The workspace step uses the workspace path field (`ServerSettings.path`).
   - `swift test --filter Servers` runs the suite. Its fake `ssh`, `uname` and `systemctl` scripts run the remote side locally against a temp home.
