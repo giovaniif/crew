@@ -52,6 +52,11 @@ const defs = {
   ],
 };
 
+const chat = [
+  { id: "u1", cursor: 1, turn: "p1", role: "user", text: "Fix the docs", at: "2026-10-03T11:00:00Z" },
+  { id: "a1", cursor: 2, turn: "p1", role: "assistant", text: "I fixed the docs.", at: "2026-10-03T11:01:00Z" },
+];
+
 function setup(hash = "#/mates", mates: Mates = board, approvals: unknown[] = []) {
   window.location.hash = "";
   const sockets = new FakeSockets();
@@ -67,6 +72,8 @@ function setup(hash = "#/mates", mates: Mates = board, approvals: unknown[] = []
     .on("POST", "/api/v1/mates/helper/new", { status: 200, body: { ID: "s9" } })
     .on("POST", "/api/v1/mates/webby/new", { status: 200, body: { ID: "s8" } })
     .on("POST", "/api/v1/sessions/s2/messages", { status: 200, body: { queued: false } })
+    .on("GET", "/api/v1/sessions/s2/messages?limit=50", { status: 200, body: { messages: chat, before: 0 } })
+    .on("GET", "/api/v1/sessions/s1/messages?limit=50", { status: 200, body: { messages: chat, before: 0 } })
     .on("GET", "/api/v1/mates/helper/memory", { status: 200, body: { name: "helper", path: "/m/helper/memory.md", text: "- Tests come first.", limit: 8192 } })
     .on("POST", "/api/v1/mates/helper/memory", { status: 200, body: { name: "helper", path: "/m/helper/memory.md", text: "- Small PRs.", limit: 8192 } })
     .on("GET", "/api/v1/mates/fresh/setup", { status: 200, body: { manifest: "{}", url: "https://api.slack.com/apps?new_app=1" } });
@@ -281,6 +288,29 @@ describe("Mate conversation", () => {
     expect(server.calls.find((c) => c.path === "/api/v1/sessions/s2/messages")?.body).toEqual({
       text: "Before we stop: add a short handoff to your memory file. Note what you did, what is left and what you learned.",
     });
+  });
+
+  it("shows the name and face of the mate on each message of the mate", async () => {
+    setup("#/sessions/s2");
+    const log = within(await screen.findByRole("log", { name: "Messages" }));
+    const reply = await log.findByRole("article", { name: "Webby" });
+    expect(within(reply).getByText("I fixed the docs.")).toBeInTheDocument();
+    expect(within(reply).getByText("Webby")).toBeInTheDocument();
+    expect(within(reply).getByRole("img", { name: /paused$/ })).toBeInTheDocument();
+    expect(log.queryByRole("article", { name: "You" })).toBeNull();
+  });
+
+  it("asks you to message the mate by name", async () => {
+    setup("#/sessions/s2");
+    expect(await screen.findByRole("textbox", { name: "Message" })).toHaveAttribute("placeholder", "Message Webby…");
+  });
+
+  it("shows no face on a session of no mate", async () => {
+    setup("#/sessions/s1");
+    const log = within(await screen.findByRole("log", { name: "Messages" }));
+    expect(await log.findByText("I fixed the docs.")).toBeInTheDocument();
+    expect(log.queryByRole("article")).toBeNull();
+    expect(log.queryByRole("img")).toBeNull();
   });
 
   it("has no Start fresh on a session of no mate", async () => {
