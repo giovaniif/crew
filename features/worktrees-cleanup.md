@@ -28,6 +28,8 @@ Expect: each seeded worktree is `keep` with `facts unavailable`, because the fol
 
 ### cleanup of a merged worktree on a temp repo (manual: needs a temp repo with a merged PR in the fake gh; the rules are in internal/domain cleanup tests and internal/app tests)
 
+### crew setup-worktree runs the .crew.toml recipe (manual: it needs a repo with a .crew.toml setup recipe)
+
 ## Cleanup
 
 ```sh

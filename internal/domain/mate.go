@@ -8,14 +8,18 @@ import (
 )
 
 type Mate struct {
-	Name    string   `json:"name"`
-	Prompt  string   `json:"prompt"`
-	Agent   string   `json:"agent"`
-	Model   string   `json:"model,omitempty"`
-	Effort  string   `json:"effort,omitempty"`
-	Repos   []string `json:"repos,omitempty"`
-	Owner   string   `json:"owner,omitempty"`
-	Enabled bool     `json:"enabled"`
+	Name     string   `json:"name"`
+	Prompt   string   `json:"prompt"`
+	Agent    string   `json:"agent"`
+	Model    string   `json:"model,omitempty"`
+	Effort   string   `json:"effort,omitempty"`
+	Repos    []string `json:"repos,omitempty"`
+	Owner    string   `json:"owner,omitempty"`
+	Avatar   string   `json:"avatar,omitempty"`
+	Color    string   `json:"color,omitempty"`
+	Tone     MateTone `json:"tone,omitzero"`
+	NoMemory bool     `json:"no_memory,omitempty"`
+	Enabled  bool     `json:"enabled"`
 }
 
 const mateNameMax = 32
@@ -23,6 +27,8 @@ const mateNameMax = 32
 var (
 	mateName    = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]*$`)
 	slackUserID = regexp.MustCompile(`^[UW][A-Z0-9]{8,}$`)
+	mateAvatar  = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,31}$`)
+	mateColor   = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
 	mateAgents  = []Harness{HarnessClaude, HarnessCodex}
 )
 
@@ -45,6 +51,15 @@ func ValidateMate(m Mate, workspaces []Workspace) error {
 	}
 	if m.Owner != "" && !slackUserID.MatchString(m.Owner) {
 		return fail("owner %q is not a Slack user ID such as U012ABCDEF", m.Owner)
+	}
+	if m.Avatar != "" && !mateAvatar.MatchString(m.Avatar) {
+		return fail("avatar %q must be 1 to 32 characters: lower case letters, digits and -", m.Avatar)
+	}
+	if m.Color != "" && !mateColor.MatchString(m.Color) {
+		return fail("color %q is not a hex color such as #3a7bd5", m.Color)
+	}
+	if err := checkMateTone(m.Tone); err != nil {
+		return fail("%v", err)
 	}
 	var seen []Repo
 	for _, ref := range m.Repos {

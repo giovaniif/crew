@@ -1,3 +1,4 @@
+import type { ToneAxis } from "./faces";
 import type { Message } from "./stream";
 
 export type Hello = {
@@ -341,12 +342,15 @@ export type Mate = {
   effort?: string;
   repos?: string[];
   owner?: string;
+  avatar?: string;
+  color?: string;
+  tone?: Record<string, number>;
   enabled: boolean;
 };
 
 export type MateLimits = { hop_limit: number; turns_per_hour: number; daily_turns: number; daily_tokens: number; stop: boolean };
 
-export type MateList = { mates: Mate[]; problems?: string[]; limits: MateLimits };
+export type MateList = { mates: Mate[]; problems?: string[]; limits: MateLimits; tones?: ToneAxis[] };
 
 export type MateSetup = { manifest: string; url: string };
 
@@ -382,4 +386,25 @@ export function setMateTokens(a: Authed, name: string, bot: string, app: string)
 
 export function claimMate(a: Authed, name: string): Promise<MateClaim> {
   return authedRequest<MateClaim>(a, matePath(name, "claim"), "POST");
+}
+
+export type MateMemory = { name: string; path: string; text: string; limit: number };
+
+export function newMateConversation(a: Authed, name: string): Promise<{ ID: string }> {
+  return authedRequest<{ ID: string }>(a, matePath(name, "new"), "POST", {});
+}
+
+export function mateMemory(a: Authed, name: string): Promise<MateMemory> {
+  return authedRequest<MateMemory>(a, matePath(name, "memory"));
+}
+
+export function setMateMemory(a: Authed, name: string, text: string): Promise<MateMemory> {
+  return authedRequest<MateMemory>(a, matePath(name, "memory"), "POST", { text });
+}
+
+export const handoffText = "Before we stop: add a short handoff to your memory file. Note what you did, what is left and what you learned.";
+
+export async function startFresh(a: Authed, session: string, mate: string): Promise<{ ID: string }> {
+  await sendMessage(a, session, handoffText);
+  return newMateConversation(a, mate);
 }
