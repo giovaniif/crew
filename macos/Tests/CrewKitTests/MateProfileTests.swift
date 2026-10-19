@@ -148,6 +148,16 @@ struct MateProfileTests {
         #expect(gallery.shown.map(\.name) == ["owl"])
     }
 
+    @Test func aHeldMateIsPausedAndAnApprovalNeedsYou() throws {
+        var state = Seed.mates
+        state.mates?.mates[0].hold = "rate_limit"
+        let held = MateGallery(definitions: Seed.mateDefinitions, state: state)
+        #expect(held.cards[0].status.face == .paused)
+        let approval = try JSONDecoder().decode(ApprovalItem.self, from: Data(#"{"ID":"a1","SessionID":"x","Mate":"sage","Requester":"","Action":{"Kind":"push","Tool":"Bash","Input":"git push"},"At":"","State":"pending"}"#.utf8))
+        let asked = MateGallery(definitions: Seed.mateDefinitions, state: Self.crew, approvals: [approval])
+        #expect(asked.cards[2].status == MateStatusLine(state: "permission", text: "Needs you", face: .needs))
+    }
+
     @Test func aPausedMateSaysSo() {
         var defs = Seed.mateDefinitions
         defs[2].enabled = false

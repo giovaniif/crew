@@ -51,6 +51,12 @@ struct MateFacesTests {
         #expect(a.color == a.face.accent.light)
     }
 
+    @Test func theFallbackFaceIsTheFaceOfTheNameElseTheSumOfTheBytes() {
+        #expect(Face.fallback(for: "owl").id == "owl")
+        let sum = "reviewer".utf8.reduce(0) { $0 + Int($1) }
+        #expect(Face.fallback(for: "reviewer") == Face.all[sum % 12])
+    }
+
     @Test func theAvatarAndColorOfTheMateWin() {
         let look = MateLook.of(name: "x", avatar: "owl", color: "#123456")
         #expect(look.face.id == "owl")
