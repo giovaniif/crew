@@ -295,6 +295,7 @@ func (m Model) body() ([]string, int, []string) {
 			owners = append(owners, own)
 		}
 	}
+	out = append(out, m.sidebarMateLines()...)
 	return out, selRow, owners
 }
 
@@ -314,8 +315,13 @@ func (m Model) sessionLines(e entry, sel bool) []string {
 	if label := rowPortLabel(e.ports()); label != "" {
 		right = append(right, piece{s.teal, label + " "})
 	}
+	left := []piece{bar, m.glyph(x), {s.dim, fmt.Sprintf(" %d ", e.num)}}
+	if x.Mate != nil {
+		f := domain.FaceOf(m.mateDef(x.Mate.Name))
+		left = append(left, piece{m.faceStyle(x.Mate.Name), f.Glyph[0] + " "}, piece{s.bold, x.Mate.Name + " · "})
+	}
 	out := []string{m.line(sel,
-		[]piece{bar, m.glyph(x), {s.dim, fmt.Sprintf(" %d ", e.num)}, {s.bold, name}},
+		append(left, piece{s.bold, name}),
 		append(right, tag, piece{s.text, " "}))}
 	if sel {
 		trees := "root only"

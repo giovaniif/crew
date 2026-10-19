@@ -106,3 +106,10 @@ func TestMateRepoWorkspace(t *testing.T) {
 		})
 	}
 }
+
+func TestMateHandoffPromptNamesTheMemoryFile(t *testing.T) {
+	got := MateHandoffPrompt("/h/mates/a/memory.md")
+	if !strings.Contains(got, "/h/mates/a/memory.md") || !strings.Contains(got, "handoff") || strings.Contains(got, "\n") {
+		t.Errorf("got %q", got)
+	}
+}

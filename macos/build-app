@@ -17,6 +17,7 @@ plutil -replace CFBundleVersion -string "${CREW_APP_BUILD:-0}" "$app/Contents/In
 plutil -replace CrewVersion -string "$version" "$app/Contents/Info.plist"
 cp "$bin" "$app/Contents/MacOS/crew"
 cp ../docs/images/brand/crewTemplate.png ../docs/images/brand/crewTemplate@2x.png "$app/Contents/Resources/"
+cp Resources/faces.svg Resources/slack-mark.svg "$app/Contents/Resources/"
 iconset="$(mktemp -d)/AppIcon.iconset"
 mkdir -p "$iconset"
 for size in 16 32 128 256 512; do

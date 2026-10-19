@@ -12,6 +12,8 @@ public struct SidebarRow: Sendable, Equatable, Identifiable {
     public var needsYou: Bool
     public var shortcut: String?
     public var worktrees: [String]
+    public var mate: String?
+    public var face: FaceState
 }
 
 public struct Sidebar: Sendable, Equatable {
@@ -58,7 +60,9 @@ public struct Sidebar: Sendable, Equatable {
             style: StateStyle(state: s.state),
             needsYou: StateStyle.needsYou(s.state),
             shortcut: shortcut,
-            worktrees: s.worktreeIDs.compactMap { worktrees[$0] }.map(worktreeLine)
+            worktrees: s.worktreeIDs.compactMap { worktrees[$0] }.map(worktreeLine),
+            mate: s.mate?.name,
+            face: FaceState.of(state: s.state, ended: s.ended)
         )
     }
 

@@ -4,18 +4,18 @@
 
  MATES                                          
 
-▌ helper connected                      working 
-▌   task number 1                       running 
-  webby paused                                  
+▌ [● ●] ! helper                    ◆ needs you 
+▌ [ o ]   Careful reviewer. Asks before it merg…
+▌         claude · opus · high        connected 
+▌         task number 1                 running 
+  [─ ─]   webby                        ‖ paused 
+  [ ─ ]   Fast fixer.                           
 
- APPROVALS                                      
-  helper: merge                             Gus 
+ NEEDS YOU ──────────────────────────────────── 
+  [● ●] ! helper: merge                     Gus 
 
- p pause  X stop all  y/n approve  esc close    
-
-
-
-
+ enter open  c new conversation  a new mate     
+ p pause  y/n approve  X stop all  esc close    
 
 
 

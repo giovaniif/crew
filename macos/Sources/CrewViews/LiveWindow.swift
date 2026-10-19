@@ -45,7 +45,11 @@ public struct LiveWindow: View {
     @State private var profilePrompt: ProfilePrompt?
     @State private var profileName = ""
     @State private var headless: HeadlessView
+    @State private var chat: ChatModel?
     @State private var serverSend: ServerProfileSend
+    @State private var mates: MatesModel?
+    @State private var freshConfirm: String?
+    @State private var fix: DaemonFix?
 #if canImport(WebKit)
     @State private var webViews = BrowserWebViews()
     @State private var cookieImport: BrowserProfile?
@@ -70,8 +74,9 @@ public struct LiveWindow: View {
     public init(
         store: ViewStore, server: String, router: WindowRouter = WindowRouter(), shortcuts: Shortcuts = .defaults,
         attention: Attention? = nil, diffLayout: DiffLayout = .unified, confirmEnd: Bool = true,
-        servers: [ServerKind] = [], switchServer: @escaping (ServerKind) -> Void = { _ in }
+        servers: [ServerKind] = [], switchServer: @escaping (ServerKind) -> Void = { _ in }, setup: ServerSetup? = nil
     ) {
+        _fix = State(initialValue: setup.map(DaemonFix.init(setup:)))
         self.servers = servers
         self.switchServer = switchServer
         _store = State(initialValue: store)
@@ -108,6 +113,12 @@ public struct LiveWindow: View {
             popup: panes.popup, paneError: panes.error, card: attention?.card, message: windowMessage, servers: servers
         )
         scene.browser = browserChrome()
+        if panes.view == .chat, let chat, chat.session == nav.selected {
+            scene.chat = ChatScene(rows: chat.log.rows, approvals: chat.approvals, draft: chat.draft, error: chat.error, hasOlder: chat.log.hasOlder)
+        }
+        scene.mateLooks = Dictionary((mates?.definitions ?? []).map { ($0.name, MateLook.of($0)) }, uniquingKeysWith: { a, _ in a })
+        scene.freshConfirm = freshConfirm
+        scene.fix = fix?.state
         return scene
     }
 
@@ -149,7 +160,17 @@ public struct LiveWindow: View {
     }
 
     public var body: some View {
-        browserLayer(window)
+        browserLayer(window).task(id: mateNames) { await loadMates() }
+    }
+
+    private var mateNames: [String] {
+        store.state?.mates?.mates.map(\.name) ?? []
+    }
+
+    private func loadMates() async {
+        let m = mates ?? MatesModel(caller: store)
+        mates = m
+        await m.load()
     }
 
     private var window: some View {
@@ -166,6 +187,7 @@ public struct LiveWindow: View {
 #endif
         .onAppear { store.start() }
         .task(id: headlessKey) { await watchHeadless(headlessKey) }
+        .task(id: chatKey) { await watchChat(chatKey) }
         .onChange(of: store.state?.seq) {
             reconcile(filter: filter)
             newSession?.observe(store.state)
@@ -382,6 +404,9 @@ public struct LiveWindow: View {
 
     private func show(_ view: MainView) {
         switch view {
+        case .chat:
+            review = nil
+            panes.showChat()
         case .terminal:
             review = nil
             panes.close()
@@ -415,6 +440,22 @@ public struct LiveWindow: View {
     private var headlessKey: String? {
         guard panes.view == .browser, store.connection == .live else { return nil }
         return nav.selected
+    }
+
+    private var chatKey: String? {
+        guard panes.view == .chat, store.connection == .live else { return nil }
+        return nav.selected
+    }
+
+    private func watchChat(_ session: String?) async {
+        guard let session else { return }
+        if chat?.session != session { chat = ChatModel(session: session, caller: store) }
+        guard let model = chat else { return }
+        while !Task.isCancelled {
+            let path = store.state?.sessions.first { $0.id == session }?.transcript ?? ""
+            await model.refresh(transcript: path)
+            try? await Task.sleep(for: ChatModel.interval)
+        }
     }
 
     private func watchHeadless(_ session: String?) async {
@@ -535,6 +576,15 @@ public struct LiveWindow: View {
         }
     }
 
+    private func reconnectNow() {
+        store.stop()
+        store.start()
+#if canImport(SwiftTerm)
+        terminals.hub.stop()
+        terminals.hub.start()
+#endif
+    }
+
     private func toggleShellView() {
         review = nil
         guard let id = nav.selected, panes.view != .shell else { return }
@@ -545,6 +595,29 @@ public struct LiveWindow: View {
         var a = WindowActions()
         a.switchServer = switchServer
         a.addServer = { openWindow(id: "setup") }
+        a.openMates = {
+            router.mateProfile = nil
+            openWindow(id: "mates")
+        }
+        a.openMate = { name in
+            router.mateProfile = name
+            openWindow(id: "mates")
+        }
+        a.startFresh = { freshConfirm = $0 }
+        a.cancelFresh = { freshConfirm = nil }
+        a.confirmFresh = { id in
+            freshConfirm = nil
+            guard let state = store.state, let session = state.sessions.first(where: { $0.id == id }) else { return }
+            let m = mates ?? MatesModel(caller: store)
+            mates = m
+            Task {
+                if let next = await m.startFresh(session, state: state) {
+                    nav.select(next)
+                } else if let failure = m.message {
+                    explanation = failure
+                }
+            }
+        }
         a.select = { nav.select($0) }
         a.filter = { value in
             filter = value
@@ -553,13 +626,10 @@ public struct LiveWindow: View {
         a.toggleInspector = { inspector.toggle() }
         a.newSession = { openNewSession() }
         a.toggleEnded = { endedExpanded.toggle() }
-        a.reconnect = {
-            store.stop()
-            store.start()
-#if canImport(SwiftTerm)
-            terminals.hub.stop()
-            terminals.hub.start()
-#endif
+        a.reconnect = { reconnectNow() }
+        a.fixDaemon = {
+            guard let fix else { return }
+            Task { await fix.run { reconnectNow() } }
         }
         a.toggleReview = { toggleReview() }
         a.toggleSidebar = { review?.screen.sidebarShown.toggle() }
@@ -594,6 +664,10 @@ public struct LiveWindow: View {
             if let attention { Task { await attention.answer(choice: choice) } }
         }
         a.hideCard = { attention?.hideCard() }
+        a.chatDraft = { chat?.draft = $0 }
+        a.chatSend = { if let chat { Task { await chat.send() } } }
+        a.chatOlder = { if let chat { Task { await chat.loadOlder() } } }
+        a.decide = { id, approve in if let chat { Task { await chat.decide(id, approve: approve) } } }
         a.explain = { explanation = $0 }
         a.dismissMessage = {
             if explanation != nil {

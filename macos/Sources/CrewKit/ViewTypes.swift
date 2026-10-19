@@ -148,8 +148,10 @@ public struct Session: Codable, Sendable, Equatable {
     @Nullable public var since: String?
     public var order: Int
     @NullAsEmpty public var board: [BoardPR]
+    public var mate: SessionMate?
 
     enum CodingKeys: String, CodingKey {
+        case mate = "Mate"
         case id = "ID", taskID = "TaskID", harness = "Harness", pane = "Pane", model = "Model", effort = "Effort"
         case state = "State", ended = "Ended", unread = "Unread", focused = "Focused", muted = "Muted"
         case worktreeIDs = "WorktreeIDs", resumeID = "ResumeID", transcript = "Transcript", dir = "Dir"

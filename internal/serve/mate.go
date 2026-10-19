@@ -118,3 +118,18 @@ func setMateMemory(r *http.Request, d Daemon) (any, error) {
 	}
 	return out, nil
 }
+
+func freshMateConversation(r *http.Request, d Daemon) (any, error) {
+	var p rpc.MateFreshParams
+	if r.ContentLength != 0 {
+		if err := decodeBody(r, &p); err != nil {
+			return nil, err
+		}
+	}
+	p.Session = r.PathValue("id")
+	var out domain.Session
+	if err := d.Call(r.Context(), rpc.MethodMateFresh, p, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
