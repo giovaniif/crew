@@ -32,6 +32,8 @@ Expect: after the first refresh, no row shows `…` and the worktree total has n
 go run ./scripts/verify tui drive --restart --out-dir /tmp/crew-verify-map/disk --steps '[{"expect":"seeded change 2","timeout":8000},{"keys":"w"},{"expect":"WORKTREES & DISK","timeout":5000},{"keys":"Escape"},{"absent":"WORKTREES & DISK","timeout":5000}]'
 ```
 
+### disk view keys k, o and g (manual: they act on real worktree folders)
+
 ## Cleanup
 
 ```sh

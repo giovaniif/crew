@@ -26,6 +26,7 @@ public final class TerminalHub {
 
     public private(set) var status: TerminalStatus = .idle
     public private(set) var panes = TerminalPanes()
+    public private(set) var clients: [TUIClient] = []
     @ObservationIgnored public var size = (cols: 200, rows: 50)
 
     private let endpoint: Endpoint
@@ -98,7 +99,16 @@ public final class TerminalHub {
 
     public func letterbox(pane: String, viewCols: Int, viewRows: Int) -> Letterbox? {
         guard let state = panes[pane] else { return nil }
-        return Letterbox(paneCols: state.cols, paneRows: state.rows, viewCols: viewCols, viewRows: viewRows)
+        return Letterbox(paneCols: state.cols, paneRows: state.rows, viewCols: viewCols, viewRows: viewRows, clients: clients)
+    }
+
+    private func listClients() {
+        guard let link else { return }
+        Task {
+            guard let reply = try? await link.command(ControlCommand.clients), reply.ok, self.link === link else { return }
+            let found = TUIClient.parse(reply.lines)
+            if found != clients { clients = found }
+        }
     }
 
     private func run() async {
@@ -128,6 +138,7 @@ public final class TerminalHub {
             status = .live
             backoff.reset()
             link.post(ControlCommand.pauseAfter(seconds: 5))
+            listClients()
             for pane in sinks.keys.sorted() { draw(pane) }
             for await event in link.events {
                 guard !Task.isCancelled, self.link === link else { break }
@@ -159,7 +170,10 @@ public final class TerminalHub {
                     draws[pane]?.held.append(.reply(number))
                 }
             }
-        case .layout, .resume:
+        case .layout:
+            panes.apply(event)
+            listClients()
+        case .resume:
             panes.apply(event)
         case .windowClose:
             for pane in panes.apply(event) {

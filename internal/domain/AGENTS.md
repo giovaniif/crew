@@ -27,6 +27,7 @@ Pure types and rules. This package does no IO and does not import other `interna
 - `OnboardSteps`, `NextOnboardStep`, `DefaultOnboardPicks`, `HarnessOffer`, `NvimOfferFor`, `OnboardingNeeded`, the `CodexTrustStep` text: the first-run walkthrough (see [ADR 0040](../../docs/adr/0040-first-run-walkthrough.md)).
 - `SendableText`, `NextSend`, `Unsend`, `DropSends`, `RequeueSend`: the `session.send` queue (see [internal/daemon/](../daemon/AGENTS.md)).
 - Ports rules: `PortsByWorktree`, `KillGroups`. Disk rules: `Reclaimable`, `TotalSize`.
+- `DaemonUnitHealth(unit)`: whether the `crew-daemon` unit runs this `crew`, and why it fails (see [cmd/crew/](../../cmd/crew/AGENTS.md)).
 - The harness-neutral chat model that the Claude and Codex transcript parsers produce:
   - `Message`, `MessageLog`, `TranscriptLines`, `TranscriptFromHook`, `ToolSummary`, `ToolResult`, `OneLine`, `ClipText`.
   - For paging and watching:

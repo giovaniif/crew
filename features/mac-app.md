@@ -22,6 +22,10 @@ Expect: the `macos` job is `success` and the artifact has the main window, revie
 
 ### drive the Mac app live (manual: no macOS on the server; read the snapshot PNGs from the artifact)
 
+### Mates window, Settings window, cookie import sheet and permission card (manual: CI only; the server has no macOS)
+
+### crew browser drives the browser pane (manual: it needs the Mac app browser pane)
+
 ## Cleanup
 
 ```sh
