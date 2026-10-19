@@ -109,6 +109,20 @@ func TestMateNewOfAnUnknownMateIsNotFound(t *testing.T) {
 	}
 }
 
+func TestMateNewFailsWhenNoRepoOfTheMateIsASingleRepoWorkspace(t *testing.T) {
+	r := startMateRigWith(t, &memStore{}, "[[mate]]\nname = \"shopper\"\nprompt = \"You help with the shop.\"\nagent = \"claude\"\nrepos = [\"web\"]\n")
+	err := r.c.Call(context.Background(), rpc.MethodMateNew, rpc.MateNewParams{Name: "shopper", Prompt: "hi"}, nil)
+	var rerr *rpc.Error
+	if !errors.As(err, &rerr) || rerr.Code != rpc.CodeBadRequest || !strings.Contains(rerr.Message, "web") {
+		t.Fatalf("err %v", err)
+	}
+	r.host.mu.Lock()
+	defer r.host.mu.Unlock()
+	if len(r.host.specs) != 0 {
+		t.Fatalf("specs %+v", r.host.specs)
+	}
+}
+
 func TestMateNewInARepoThatIsNotRegisteredFails(t *testing.T) {
 	r, _ := localRig(t)
 	err := r.c.Call(context.Background(), rpc.MethodMateNew, rpc.MateNewParams{Name: "helper", Repo: "billing"}, nil)
