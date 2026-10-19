@@ -121,6 +121,7 @@ public enum Toolbar {
 
     public static func needsSession(_ view: MainView) -> String {
         switch view {
+        case .chat: "Start or select a session to see its chat"
         case .terminal: "Start or select a session to see its terminal"
         case .review: "Start or select a session to review its changes"
         case .shell: "Start or select a session to open a shell in its worktree"

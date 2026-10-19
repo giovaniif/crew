@@ -2,6 +2,7 @@ import Foundation
 import Observation
 
 public enum MainView: String, Sendable, Equatable, CaseIterable {
+    case chat = "Chat"
     case terminal = "Terminal"
     case review = "Review"
     case shell = "Shell"
@@ -38,7 +39,7 @@ public final class ShellNvim {
         switch view {
         case .shell: shells[session] ?? agent
         case .nvim: nvims[session] ?? agent
-        case .terminal, .review, .browser: agent
+        case .chat, .terminal, .review, .browser: agent
         }
     }
 
@@ -112,6 +113,13 @@ public final class ShellNvim {
         pending = nil
         error = nil
         view = .browser
+    }
+
+    public func showChat() {
+        generation += 1
+        pending = nil
+        error = nil
+        view = .chat
     }
 
     public func closePopup() {

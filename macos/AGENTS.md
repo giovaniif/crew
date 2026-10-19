@@ -162,7 +162,15 @@ The dry run occurs on a pull request that touches `macos/`, `.goreleaser.yaml` o
   - With a daemon that does not have `config.get` or `device.list` (`unknown_method`), those groups are empty and show a note.
   - You cannot set the cleanup interval, stale-limit age, worktree location and setup recipes. They are fixed in the daemon, or they are in the `.crew.toml` of each repo.
 - Shell and nvim views (`ShellNvim.swift`):
-  - `MainView` is the view switcher (Terminal, Review, Shell, nvim, Browser).
+  - `MainView` is the view switcher (Chat, Terminal, Review, Shell, nvim, Browser).
+  - Chat (`Chat.swift`, view `CrewViews/ChatView.swift`; #435) shows the session as a conversation. Each session has it.
+    - While the Chat view shows and the connection is live, `LiveWindow` calls `ChatModel.refresh` every 2 s (`ChatModel.interval`). It reads the newest `transcript.page` (50 messages) and `approval.list`, and keeps only the approvals of the session. An older server without `approval.list` shows the chat without approvals.
+    - `ChatLog` merges the pages by message id. A tool call that finishes changes in place. "Show earlier messages" reads the page before `before`.
+    - When the `Transcript` path of the session changes (a resume, `/clear` or Start Fresh), `ChatLog` keeps the old rows and adds the divider "Earlier conversation ended · handoff saved to memory".
+    - `ChatRow` gives the owner, agent, tool (`◐` running, `✓` done, `✗` failed) and note rows.
+    - The inline approval card is the permission dialog of the session (`InlineApproval`: Deny, Always Allow, Allow through `session.answer`). Mate approvals show Deny and Allow through `approval.decide`. In the Chat view, the floating permission card does not show.
+    - The message box sends with `session.send`. A failed send keeps the text and shows the error.
+    - Test: `swift test --filter Chat`. Snapshots: `chat-latte`, `chat-mocha`, `chat-fresh`.
   - `Toolbar.views(session:)` gives the tabs. With no selected session, Review, Shell and nvim are grey and have a tooltip (`Toolbar.needsSession`). A click on one, or its shortcut, shows that text as the window message. Thus a click never does nothing.
   - `EmptyMain` is the main column with no session: "Waiting for the daemon", "No sessions yet" or "Select a session", with a New session button.
   - `ShellNvim` (main actor, over `Caller`) calls `shell.focus` for ⌘T and ⇧⌘T. ⌘T is for the selected session: the daemon selects its first worktree, else the root of the session. ⇧⌘T shows the same shell as a popup over the current view.

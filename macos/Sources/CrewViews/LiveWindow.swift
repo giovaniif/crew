@@ -45,6 +45,7 @@ public struct LiveWindow: View {
     @State private var profilePrompt: ProfilePrompt?
     @State private var profileName = ""
     @State private var headless: HeadlessView
+    @State private var chat: ChatModel?
     @State private var serverSend: ServerProfileSend
     @State private var mates: MatesModel?
     @State private var freshConfirm: String?
@@ -112,6 +113,9 @@ public struct LiveWindow: View {
             popup: panes.popup, paneError: panes.error, card: attention?.card, message: windowMessage, servers: servers
         )
         scene.browser = browserChrome()
+        if panes.view == .chat, let chat, chat.session == nav.selected {
+            scene.chat = ChatScene(rows: chat.log.rows, approvals: chat.approvals, draft: chat.draft, error: chat.error, hasOlder: chat.log.hasOlder)
+        }
         scene.mateLooks = Dictionary((mates?.definitions ?? []).map { ($0.name, MateLook.of($0)) }, uniquingKeysWith: { a, _ in a })
         scene.freshConfirm = freshConfirm
         scene.fix = fix?.state
@@ -183,6 +187,7 @@ public struct LiveWindow: View {
 #endif
         .onAppear { store.start() }
         .task(id: headlessKey) { await watchHeadless(headlessKey) }
+        .task(id: chatKey) { await watchChat(chatKey) }
         .onChange(of: store.state?.seq) {
             reconcile(filter: filter)
             newSession?.observe(store.state)
@@ -399,6 +404,9 @@ public struct LiveWindow: View {
 
     private func show(_ view: MainView) {
         switch view {
+        case .chat:
+            review = nil
+            panes.showChat()
         case .terminal:
             review = nil
             panes.close()
@@ -432,6 +440,22 @@ public struct LiveWindow: View {
     private var headlessKey: String? {
         guard panes.view == .browser, store.connection == .live else { return nil }
         return nav.selected
+    }
+
+    private var chatKey: String? {
+        guard panes.view == .chat, store.connection == .live else { return nil }
+        return nav.selected
+    }
+
+    private func watchChat(_ session: String?) async {
+        guard let session else { return }
+        if chat?.session != session { chat = ChatModel(session: session, caller: store) }
+        guard let model = chat else { return }
+        while !Task.isCancelled {
+            let path = store.state?.sessions.first { $0.id == session }?.transcript ?? ""
+            await model.refresh(transcript: path)
+            try? await Task.sleep(for: ChatModel.interval)
+        }
     }
 
     private func watchHeadless(_ session: String?) async {
@@ -640,6 +664,10 @@ public struct LiveWindow: View {
             if let attention { Task { await attention.answer(choice: choice) } }
         }
         a.hideCard = { attention?.hideCard() }
+        a.chatDraft = { chat?.draft = $0 }
+        a.chatSend = { if let chat { Task { await chat.send() } } }
+        a.chatOlder = { if let chat { Task { await chat.loadOlder() } } }
+        a.decide = { id, approve in if let chat { Task { await chat.decide(id, approve: approve) } } }
         a.explain = { explanation = $0 }
         a.dismissMessage = {
             if explanation != nil {
