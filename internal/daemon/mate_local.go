@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/giovaniif/crew/internal/app"
 	"github.com/giovaniif/crew/internal/domain"
 	"github.com/giovaniif/crew/internal/rpc"
 )
@@ -154,4 +155,29 @@ func (d *Daemon) startMateConversation(id uint64, p rpc.MateNewParams, dir, work
 		return errorResponse(req.ID, rerr.Code, rerr.Message), true
 	}
 	return result(req.ID, session), true
+}
+
+type systemPromptHarness struct {
+	app.HarnessAdapter
+	system string
+}
+
+func (h systemPromptHarness) Launch(req app.LaunchRequest) app.PaneSpec {
+	req.SystemPrompt = h.system
+	return h.HarnessAdapter.Launch(req)
+}
+
+func (d *Daemon) mateResumeAdapter(session domain.Session, adapter app.HarnessAdapter) (app.HarnessAdapter, *rpc.Error) {
+	if session.Mate == nil || !session.Mate.Local {
+		return adapter, nil
+	}
+	m, _, ok := d.findMate(session.Mate.Name)
+	if !ok {
+		return adapter, nil
+	}
+	memory, err := d.readMateMemory(m.Name)
+	if err != nil {
+		return nil, &rpc.Error{Code: rpc.CodeFailed, Message: err.Error()}
+	}
+	return systemPromptHarness{HarnessAdapter: adapter, system: domain.MateSystemPrompt(m, memory, d.mateMemoryPath(m.Name))}, nil
 }
