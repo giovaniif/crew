@@ -19,7 +19,7 @@ Read these first: the root `AGENTS.md`, `scripts/AGENTS.md`, `docs/adr/0055-agen
    - Map drift (the app changed on purpose): fix the recipe. Never make a recipe weaker to make it pass.
    - A product gap or bug: keep the recipe failing, add a Gotcha with the issue link, and open an issue (dedupe against open issues first). The patrol loop can then take it.
 6. `go run ./scripts/verify iso down`. Run it also after a failure.
-7. If there are changes, open one PR (never a draft) with the title `docs(features): map maintenance <YYYY-MM-DD>`. The body lists each change and each new issue. End it with the line `🤖 Generated with [Claude Code](https://claude.com/claude-code)`. Comment `@coderabbitai review`. Do one babysit pass. When it is landable, merge it with `go run ./scripts/land merge <pr>` (step 9 of the root `AGENTS.md`). Else the patrol loop babysits and merges it.
+7. If there are changes, open one PR (never a draft) with the title `docs(features): map maintenance <YYYY-MM-DD>`. The body lists each change and each new issue. End it with the line `🤖 Generated with [Claude Code](https://claude.com/claude-code)`. Do one babysit pass. When it is landable, merge it with `go run ./scripts/land merge <pr>` (step 9 of the root `AGENTS.md`). Else the patrol loop babysits and merges it.
 
 Write all prose in ASD-STE100 (see `docs/style.md`). End each commit message with:
 

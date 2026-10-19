@@ -71,7 +71,7 @@ public enum MemoryNotes {
     }
 }
 
-public struct MateConversation: Sendable, Equatable, Identifiable {
+public struct MateChat: Sendable, Equatable, Identifiable {
     public var id: String
     public var title: String
     public var `where`: String
@@ -81,19 +81,19 @@ public struct MateConversation: Sendable, Equatable, Identifiable {
 }
 
 public struct MateConversations: Sendable, Equatable {
-    public var live: [MateConversation]
-    public var past: [MateConversation]
+    public var live: [MateChat]
+    public var past: [MateChat]
     private var repos: [String: String]
 
     public init(state: ViewState, mate: String) {
         let mine = state.sortedSessions.filter { $0.mate?.name == mate } + state.sessions.filter { $0.ended && $0.mate?.name == mate }
         let worktrees = Dictionary(state.worktrees.map { ($0.id, $0.repo) }, uniquingKeysWith: { a, _ in a })
         var seen = Set<String>()
-        var live: [MateConversation] = []
-        var past: [MateConversation] = []
+        var live: [MateChat] = []
+        var past: [MateChat] = []
         var repos: [String: String] = [:]
         for s in mine where seen.insert(s.id).inserted {
-            let item = MateConversation(
+            let item = MateChat(
                 id: s.id, title: s.name, where: s.where, state: s.state,
                 status: Self.status(s), face: FaceState.of(state: s.state, ended: s.ended)
             )

@@ -38,12 +38,22 @@ public struct MateThread: Codable, Sendable, Equatable, Identifiable {
     }
 }
 
-public struct BoardConversation: Codable, Sendable, Equatable {
+public struct MateConversation: Codable, Sendable, Equatable, Identifiable {
     public var session: String
     public var name: String
     public var state: String
     public var ended: Bool
-    public var startedAt: String
+    public var startedAt: String?
+
+    public init(session: String, name: String = "", state: String = "idle", ended: Bool = false, startedAt: String? = nil) {
+        self.session = session
+        self.name = name
+        self.state = state
+        self.ended = ended
+        self.startedAt = startedAt
+    }
+
+    public var id: String { session }
 
     enum CodingKeys: String, CodingKey {
         case session, name, state, ended
@@ -57,18 +67,24 @@ public struct MateRow: Codable, Sendable, Equatable, Identifiable {
     public var error: String?
     public var hold: String?
     public var avatar: String?
+    public var color: String?
     @NullAsEmpty public var work: [String]
     @NullAsEmpty public var threads: [MateThread]
-    public var conversations: [BoardConversation]?
+    @NullAsEmpty public var conversations: [MateConversation]
 
-    public init(name: String, state: String, error: String? = nil, hold: String? = nil, work: [String] = [], threads: [MateThread] = []) {
-        self.conversations = []
+    public init(
+        name: String, state: String, error: String? = nil, hold: String? = nil, avatar: String? = nil, color: String? = nil,
+        work: [String] = [], threads: [MateThread] = [], conversations: [MateConversation] = []
+    ) {
         self.name = name
         self.state = state
         self.error = error
         self.hold = hold
+        self.avatar = avatar
+        self.color = color
         self.work = work
         self.threads = threads
+        self.conversations = conversations
     }
 
     public var id: String { name }
@@ -88,7 +104,7 @@ public struct MateRow: Codable, Sendable, Equatable, Identifiable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case name, state, error, work, threads, avatar, conversations
+        case name, state, error, work, threads, conversations, avatar, color
         case hold = "guard"
     }
 }

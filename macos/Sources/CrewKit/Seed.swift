@@ -131,7 +131,7 @@ public enum Seed {
             "subagents": [] as [Any], "drafts": [] as [Any],
         ]
         if !mates.isEmpty {
-            object["mates"] = ["stopped": false, "mates": mates.map { ["name": $0, "state": "ready", "work": [] as [Any], "threads": [] as [Any]] }]
+            object["mates"] = ["stopped": false, "mates": mates.map { ["name": $0, "state": "ready", "avatar": $0, "work": [] as [Any], "threads": [] as [Any], "conversations": [] as [Any]] }]
         }
         do {
             return try JSONDecoder().decode(ViewState.self, from: JSONSerialization.data(withJSONObject: object))

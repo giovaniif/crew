@@ -168,7 +168,7 @@ struct MateProfileTests {
         let json = #"{"name":"iris","state":"ready","avatar":"owl","work":[],"threads":[],"conversations":[{"session":"s1","name":"review","state":"running","ended":false,"started_at":"2026-10-18T10:00:00Z"}]}"#
         let row = try JSONDecoder().decode(MateRow.self, from: Data(json.utf8))
         #expect(row.avatar == "owl")
-        #expect(row.conversations?.map(\.session) == ["s1"])
+        #expect(row.conversations.map(\.session) == ["s1"])
     }
 
     @Test func theSidebarEntrySumsUpTheCrew() {

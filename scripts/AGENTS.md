@@ -91,7 +91,7 @@ Repo tooling. The repo-wide rules are in the [root AGENTS.md](../AGENTS.md).
 - **`land`** (`go run ./scripts/land check|verdict|merge|watch|ledger <pr>`, `go run ./scripts/land digest --since 24h`): the merge helper of step 9 in the root `AGENTS.md` (ADR 0055). It uses the same JSON and exit codes as `verify`. It reads GitHub with `gh`.
   - `check`: `landable` is true when the PR is ready by the repo rule. The blockers are:
     - a draft, a mergeable state that is not `clean` (thus also a branch that is behind), open review threads (or an unknown thread state), changes requested
-    - a required check of the branch protection (`build`, `tdd`, `mutate`, `CodeRabbit`) that is not green. When it cannot read the protection, every check blocks.
+    - a required check of the branch protection (`build`, `tdd`, `mutate`) that is not green. When it cannot read the protection, every check blocks.
   - `check` also gives `flags` for the daily review. A flag does not block, unless you add `--strict`. The flags are:
     - no `PASS` or `PASS+NOTES` verdict for the current head
     - self-or-CI changes: `.github/`, `.coderabbit*`, `scripts/land`, `scripts/verify`, `.claude/skills`, `scripts/tdd-check`, `scripts/mutate`, `scripts/lint-*`, `.golangci.yml`

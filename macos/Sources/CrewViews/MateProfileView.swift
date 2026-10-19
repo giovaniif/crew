@@ -94,7 +94,7 @@ struct MateProfileView: View {
         .overlay(alignment: .leading) { Rectangle().fill(Color.primary.opacity(0.1)).frame(width: 1) }
     }
 
-    private func list(_ title: String, _ items: [MateConversation], live: Bool) -> some View {
+    private func list(_ title: String, _ items: [MateChat], live: Bool) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title).font(.caption.weight(.semibold)).foregroundStyle(.secondary).padding(.leading, 4)
             VStack(spacing: 0) {
