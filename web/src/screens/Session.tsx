@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import Markdown from "react-markdown";
 import { ApiError, answerPrompt, getPrompt, interrupt, messagesPage, sendMessage, startFresh, unsend, type Authed, type Prompt } from "../api";
-import { faceState, stateWords } from "../faces";
+import { faceState, stateWords, type FaceState } from "../faces";
 import { MateFace, useMateDefs } from "./Mates";
 import { timeInState } from "../sessions";
 import type { Message, QueuedSend, Session, StreamClient, StreamSnapshot, StreamStatus } from "../stream";
@@ -85,7 +85,22 @@ function ToolLine({ message }: { message: Message }) {
   );
 }
 
-function MessageLine({ message }: { message: Message }) {
+type Persona = { name: string; avatar?: string; color?: string; state: FaceState };
+
+function personaOf(session: Session, snapshot: StreamSnapshot): Persona | undefined {
+  const mate = session.Mate?.Name;
+  if (!mate) {
+    return undefined;
+  }
+  const row = snapshot.state?.mates?.mates.find((m) => m.name === mate);
+  return { name: mate, avatar: row?.avatar, color: row?.color, state: row ? faceState(row, []) : "idle" };
+}
+
+function shownName(name: string) {
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+function MessageLine({ message, persona }: { message: Message; persona?: Persona }) {
   if (message.role === "tool" || message.tool) {
     return <ToolLine message={message} />;
   }
@@ -101,6 +116,20 @@ function MessageLine({ message }: { message: Message }) {
       <div data-message className="msg msg-system">
         <p>{message.text}</p>
       </div>
+    );
+  }
+  if (persona) {
+    const name = shownName(persona.name);
+    return (
+      <article data-message className="msg-mate" aria-label={name}>
+        <MateFace name={persona.name} avatar={persona.avatar} color={persona.color} state={persona.state} px={28} />
+        <div className="msg-mate-body">
+          <span className="msg-mate-name">{name}</span>
+          <div className="msg msg-assistant msg-bubble">
+            <Markdown skipHtml>{message.text ?? ""}</Markdown>
+          </div>
+        </div>
+      </article>
     );
   }
   return (
@@ -139,7 +168,7 @@ export function usesBrowser(messages: Message[]): boolean {
   return messages.some((m) => m.role === "tool" && browserCommand.test(m.tool?.summary ?? ""));
 }
 
-function Chat({ id, client, api, status, children }: { id: string; client: StreamClient; api: Authed; status: StreamStatus; children?: ReactNode }) {
+function Chat({ id, client, api, status, persona, children }: { id: string; client: StreamClient; api: Authed; status: StreamStatus; persona?: Persona; children?: ReactNode }) {
   const [t, setT] = useState<Transcript>(emptyTranscript);
   const [loadError, setLoadError] = useState("");
   const [older, setOlder] = useState<"idle" | "loading" | "failed">("idle");
@@ -272,7 +301,7 @@ function Chat({ id, client, api, status, children }: { id: string; client: Strea
       ) : null}
       {t.loaded && t.messages.length === 0 ? <p className="muted chat-empty">No messages yet</p> : null}
       {t.messages.map((m) => (
-        <MessageLine key={m.id} message={m} />
+        <MessageLine key={m.id} message={m} persona={persona} />
       ))}
       {watchError ? <p className="error">{"Live updates stopped: " + watchError}</p> : null}
       {usesBrowser(t.messages) ? (
@@ -440,7 +469,7 @@ function Queued({ sends, onEdit, onDrop }: { sends: QueuedSend[]; onEdit: (s: Qu
   );
 }
 
-function Composer({ session, api, sends }: { session: Session; api: Authed; sends: QueuedSend[] }) {
+function Composer({ session, api, sends, persona }: { session: Session; api: Authed; sends: QueuedSend[]; persona?: Persona }) {
   const locked = session.State === "permission" && !session.Ended;
   const [draft, setDraft] = useState("");
   const [posting, setPosting] = useState(false);
@@ -486,7 +515,7 @@ function Composer({ session, api, sends }: { session: Session; api: Authed; send
         </p>
       ) : null}
       <form onSubmit={(ev) => void submit(ev)}>
-        <textarea aria-label="Message" rows={1} value={draft} disabled={locked} placeholder={locked ? "Answer the permission request first" : busy(session) ? "Queue a message" : "Message"} onChange={(ev) => setDraft(ev.target.value)} />
+        <textarea aria-label="Message" rows={1} value={draft} disabled={locked} placeholder={locked ? "Answer the permission request first" : busy(session) ? "Queue a message" : persona ? "Message " + shownName(persona.name) + "…" : "Message"} onChange={(ev) => setDraft(ev.target.value)} />
         <button type="submit" disabled={blank || posting || locked}>
           {busy(session) ? "Queue" : "Send"}
         </button>
@@ -601,17 +630,18 @@ export function SessionScreen({
     );
   }
   const sends = (snapshot.state?.sends ?? []).filter((s) => s.session === id);
+  const persona = personaOf(session, snapshot);
   return (
     <div className="chat-screen">
       {session.Mate?.Name ? <MateBar api={api} session={session} mate={session.Mate.Name} snapshot={snapshot} /> : null}
       <Header session={session} now={now} onInterrupt={() => setConfirming(true)} />
       <Connection snapshot={snapshot} now={now} onRetry={onRetry} />
       <main className="chat-main">
-        <Chat id={id} client={client} api={api} status={snapshot.status}>
+        <Chat id={id} client={client} api={api} status={snapshot.status} persona={persona}>
           <PermissionCard api={api} session={session} />
         </Chat>
       </main>
-      <Composer session={session} api={api} sends={sends} />
+      <Composer session={session} api={api} sends={sends} persona={persona} />
       {confirming ? <ConfirmInterrupt api={api} session={id} onClose={() => setConfirming(false)} /> : null}
     </div>
   );
