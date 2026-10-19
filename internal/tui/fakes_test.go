@@ -81,6 +81,7 @@ type fakeCaller struct {
 	autos  []domain.Automation
 	asks   []domain.Approval
 	mates  []domain.Mate
+	tones  []domain.MateToneAxis
 	memory string
 }
 
@@ -104,7 +105,7 @@ func (f *fakeCaller) Call(_ context.Context, method string, params, out any) err
 		return nil
 	}
 	if method == rpc.MethodMateList {
-		*out.(*rpc.MateList) = rpc.MateList{Mates: f.mates}
+		*out.(*rpc.MateList) = rpc.MateList{Mates: f.mates, Tones: f.tones}
 		return nil
 	}
 	if method == rpc.MethodMateMemory || method == rpc.MethodMateSetMemory {

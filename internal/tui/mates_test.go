@@ -35,9 +35,15 @@ var testMates = []domain.Mate{
 	{Name: "webby", Prompt: "Fast fixer.", Agent: "codex", Avatar: "bolt", Enabled: true},
 }
 
+func testTones() []domain.MateToneAxis {
+	axes := domain.MateToneAxes()
+	axes[2].Steps[4] = "Joke a lot."
+	return axes
+}
+
 func matesModel(t *testing.T, st rpc.State) (tui.Model, *fakeCaller) {
 	t.Helper()
-	c := &fakeCaller{mates: testMates, memory: "- Owner wants small PRs.\n- Tests come first.\n", asks: []domain.Approval{{
+	c := &fakeCaller{mates: testMates, tones: testTones(), memory: "- Owner wants small PRs.\n- Tests come first.\n", asks: []domain.Approval{{
 		ID: "a1", SessionID: st.Sessions[0].ID, Mate: "helper", Requester: "Gus",
 		Action: domain.Action{Kind: domain.ActionMerge, Tool: "Bash", Input: "gh pr merge 12"}, At: clock(), State: domain.ApprovalPending,
 	}}}
@@ -271,7 +277,7 @@ func TestNewMateFlowMakesAMateFromTheFaceThePersonalityAndTheBrains(t *testing.T
 	m = typeText(m, "Pair programmer.")
 	m = press(m, "tab", "left", "tab", "tab", "right", "right")
 	out := screen(m)
-	for _, want := range []string{"2 personality", "Terse", "Chatty", "2/5", "5/5", "Added to the prompt", "Keep answers short. Use lists, not paragraphs.", "Be playful and use humor."} {
+	for _, want := range []string{"2 personality", "Terse", "Chatty", "2/5", "5/5", "Added to the prompt", "Keep answers short. Use lists, not paragraphs.", "Joke a lot.", "Middle step. Adds no text."} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("step 2 lacks %q:\n%s", want, out)
 		}
@@ -289,7 +295,7 @@ func TestNewMateFlowMakesAMateFromTheFaceThePersonalityAndTheBrains(t *testing.T
 	}
 	mt := got[0].params.(rpc.MateSetParams).Mate
 	if mt.Name != "quill" || mt.Avatar != "sage" || mt.Agent != "codex" || !mt.Enabled || !slices.Equal(mt.Repos, []string{"api"}) ||
-		mt.Prompt != "Pair programmer.\n\nKeep answers short. Use lists, not paragraphs. Be playful and use humor." {
+		mt.Prompt != "Pair programmer." || mt.Tone != (domain.MateTone{Terse: 2, Cautious: 3, Formal: 5}) {
 		t.Fatalf("mate %+v", mt)
 	}
 	if !strings.Contains(screen(m), "NEEDS YOU") {
