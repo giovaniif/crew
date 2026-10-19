@@ -139,27 +139,27 @@ func TestSetupDaemonLingerOnIsQuiet(t *testing.T) {
 func TestSetupDaemonCheckPrintsJSON(t *testing.T) {
 	f := newDaemonSetupFixture(t, "linux", "no")
 	home := t.TempDir()
-	check := func() map[string]bool {
+	check := func() map[string]any {
 		code, out, errOut := f.run(t, "linux", home, "--check")
 		if code != 0 {
 			t.Fatalf("code %d err %q", code, errOut)
 		}
-		var got map[string]bool
+		var got map[string]any
 		if err := json.Unmarshal([]byte(out), &got); err != nil {
 			t.Fatalf("%q: %v", out, err)
 		}
 		return got
 	}
-	if got := check(); got["installed"] || !got["running"] || got["linger"] {
+	if got := check(); got["installed"] == true || got["running"] != true || got["linger"] == true {
 		t.Fatalf("before install %v", got)
 	}
 	f.run(t, "linux", home)
-	if got := check(); !got["installed"] || !got["running"] || got["linger"] {
+	if got := check(); got["installed"] != true || got["running"] != true || got["linger"] == true {
 		t.Fatalf("after install %v", got)
 	}
 	fakeTool(t, f.bin, "systemctl", "exit 3")
 	fakeTool(t, f.bin, "loginctl", "echo Linger=yes")
-	if got := check(); !got["installed"] || got["running"] || !got["linger"] {
+	if got := check(); got["installed"] != true || got["running"] == true || got["linger"] != true {
 		t.Fatalf("stopped with linger %v", got)
 	}
 }
@@ -223,6 +223,85 @@ func TestSetupDaemonRefusesArguments(t *testing.T) {
 	}
 	if code, _, _ := f.run(t, "windows", t.TempDir()); code != 2 {
 		t.Errorf("windows: code %d", code)
+	}
+}
+
+func (f *daemonSetupFixture) checkAs(t *testing.T, self string) map[string]any {
+	t.Helper()
+	env := envOf(map[string]string{"CREW_HOME": filepath.Join(f.home, ".crew"), "PATH": f.bin, "SHELL": f.shell, "USER": "me"})
+	var stdout, stderr bytes.Buffer
+	if code := runSetupDaemon([]string{"--check"}, &stdout, &stderr, env, self, "linux"); code != 0 {
+		t.Fatalf("code %d err %q", code, stderr.String())
+	}
+	var got map[string]any
+	if err := json.Unmarshal(stdout.Bytes(), &got); err != nil {
+		t.Fatalf("%q: %v", stdout.String(), err)
+	}
+	return got
+}
+
+func (f *daemonSetupFixture) writeUnit(t *testing.T, execStart string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(f.path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(f.path, []byte("[Service]\nExecStart="+execStart+"\nRestart=always\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func selfBinary(t *testing.T) string {
+	t.Helper()
+	self := filepath.Join(t.TempDir(), "crew")
+	if err := os.WriteFile(self, []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	return self
+}
+
+func TestSetupDaemonCheckFindsAUnitWhoseBinaryIsGone(t *testing.T) {
+	f := newDaemonSetupFixture(t, "linux", "yes")
+	gone := filepath.Join(t.TempDir(), "go-build1", "crew.test")
+	f.writeUnit(t, `"`+gone+`" "daemon"`)
+	got := f.checkAs(t, selfBinary(t))
+	if got["installed"] != true || got["running"] != true || got["linger"] != true {
+		t.Fatalf("old fields changed: %v", got)
+	}
+	reason, _ := got["reason"].(string)
+	if got["exec_ok"] != false || got["failing"] != true || !strings.Contains(reason, gone) || !strings.Contains(reason, "does not exist") {
+		t.Fatalf("check %v", got)
+	}
+}
+
+func TestSetupDaemonCheckFindsAUnitThatRunsAnotherCrew(t *testing.T) {
+	f := newDaemonSetupFixture(t, "linux", "yes")
+	other := selfBinary(t)
+	f.writeUnit(t, `"`+other+`" "daemon"`)
+	got := f.checkAs(t, selfBinary(t))
+	if got["exec_ok"] != false || got["failing"] != true || !strings.Contains(got["reason"].(string), "not this crew") {
+		t.Fatalf("check %v", got)
+	}
+}
+
+func TestSetupDaemonCheckFindsARestartLoop(t *testing.T) {
+	f := newDaemonSetupFixture(t, "linux", "yes")
+	self := selfBinary(t)
+	f.writeUnit(t, `"`+self+`" "daemon"`)
+	fakeTool(t, f.bin, "systemctl", `case "$*" in *" show "*) printf 'ActiveState=activating\nSubState=auto-restart\nNRestarts=69000\nExecMainStatus=203\n' ;; *) exit 3 ;; esac`)
+	got := f.checkAs(t, self)
+	if got["exec_ok"] != true || got["failing"] != true || got["running"] != false || !strings.Contains(got["reason"].(string), "69000 restarts") {
+		t.Fatalf("check %v", got)
+	}
+}
+
+func TestSetupDaemonCheckOfAHealthyUnitHasNoReason(t *testing.T) {
+	f := newDaemonSetupFixture(t, "linux", "yes")
+	self := selfBinary(t)
+	f.writeUnit(t, `"`+self+`" "daemon"`)
+	fakeTool(t, f.bin, "systemctl", `case "$*" in *" show "*) printf 'ActiveState=active\nSubState=running\nNRestarts=0\nExecMainStatus=0\n' ;; esac`)
+	got := f.checkAs(t, self)
+	if _, has := got["reason"]; has || got["exec_ok"] != true || got["failing"] != false {
+		t.Fatalf("check %v", got)
 	}
 }
 

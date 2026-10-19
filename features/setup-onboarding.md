@@ -19,6 +19,14 @@ go run ./scripts/verify tui drive --restart --out-dir /tmp/crew-verify-map/setup
 
 ### first-run walkthrough (manual: iso up marks the home onboarded; remove $CREW_HOME/onboarded in the isolated home and restart the TUI to see it)
 
+### version --build prints the build version
+
+```sh
+go run ./scripts/verify iso crew --expect dev -- version --build
+```
+
+### crew daemon runs in the foreground (manual: iso up starts the daemon; a second one would conflict)
+
 ## Cleanup
 
 ```sh

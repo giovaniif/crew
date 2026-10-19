@@ -57,6 +57,7 @@ func seed(n int, codex bool) []Event {
 			repo := seedRepos[w]
 			wt := domain.Worktree{
 				ID:          fmt.Sprintf("seed-wt-%d-%d", i+1, w+1),
+				SessionID:   s.ID,
 				Repo:        repo,
 				Path:        fmt.Sprintf("/tmp/seed/%s-%d", repo, i+1),
 				Branch:      fmt.Sprintf("seed-%d-%s", i+1, repo),
