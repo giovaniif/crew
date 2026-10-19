@@ -70,12 +70,20 @@ The dry run occurs on a pull request that touches `macos/`, `.goreleaser.yaml` o
   - The detail has Overview (the definition) and Runs (history, Open session, Rerun). Run… (⌘R) opens `AutomationRunSheet` with a multi-line context field. A started run selects its session in the main window.
   - New… and Edit… open `AutomationEditSheet`. Save writes the global `config.toml` through `automation.save`. A repo automation has no Edit…: the detail shows its `.crew.toml`.
   - Test: `swift test --filter Automations`. Snapshots: `automations*.png`.
-- Mates (`Mates.swift`, views `MatesWindow`, `LiveMatesWindow`; ⇧⌘M, ADR 0053):
-  - `ViewState.mates` is the `mates` board of `view.subscribe` (`MateBoard`, `MateRow`, `MateThread`). The window draws it live. `MateRow.label` gives the state and the guard, and `currentWork` gives the threads in `work`.
-  - `MatesModel` (main actor, over `Caller`) calls `mate.list` and `approval.list`, `mate.pause`, `mate.resume`, `mate.stop_all` (the kill switch, with a confirmation), `mate.set` (Settings… and Add a mate…, from `MateDraft`), `mate.setup`, `mate.set_tokens`, `mate.claim` and `approval.decide`.
-  - After Add a mate…, `MateConnectSheet` shows the manifest link, takes the two tokens and shows the claim code.
-  - A thread opens its session in the main window or its Slack link. When all mates are stopped, the sidebar footer ends with "all mates stopped".
-  - Test: `swift test --filter 'Mates|ViewDecoding|LiveState|Sidebar'`.
+- Mates (`Mates.swift`, `MateProfile.swift`, `MateWizard.swift`, `MateTone.swift`, `Faces.swift`, `SlackMark.swift`; views `MatesWindow`, `MateProfileView`, `NewMateSheet`, `MateFaceView`, `LiveMatesWindow`; ⇧⌘M, ADR 0053 and [ADR 0056](../docs/adr/0056-local-mates.md)):
+  - A mate is local first. Slack is an optional connector ("Connect to Slack…" with the Slack logo).
+  - Faces: `Resources/faces.svg` has 60 symbols `crew-face-<id>-<state>` (12 faces, 5 states: idle, thinking, working, needs, paused). `build-app` copies it and `Resources/slack-mark.svg` (the official Slack mark) into `Contents/Resources`. `Face.marks` gives the same shapes as plain values, and `MateFace` draws them with `Canvas`. `MateFacesTests` checks the Swift faces against the asset. `SlackMarkTests` checks `SlackMark.parts` against the asset, and `SVGPath.parse` changes the path data into commands.
+  - `MateLook.of` gives the face and the color of a mate: `avatar` and `color` of the `[[mate]]` table, else the face whose id is the name, else face number (sum of the name bytes) mod 12, and the accent of that face (the rule of the TUI and the PWA). The status goes in this order: paused (paused or held by a guard), needs you (a pending approval, or a conversation that waits or asks for permission), working, idle. `FaceState.of` changes a session state into a face state.
+  - Gallery: `MateGallery` makes one `MateCard` for each definition of `mate.list`, with the live count, the brains and a status line (Needs you, Working on …, Paused, Idle). The source list filters by All Mates, Live, Claude and Codex. The search matches the name and the first paragraph of the prompt.
+  - Add a mate…: `NewMateSheet` has four steps (`MateWizard`): face, color and name; personality; brains (agent, model, effort and repos from `session.options` and the single-repo workspaces); Meet. The name becomes a handle (`MateNames.slug`). A face gives its name until the user types a name.
+  - Tone (`MateTones`): three axes (`terse`, `cautious`, `formal`) with five steps. Each step that is not the middle step adds one sentence. The "Added to the prompt" box shows the sentences. The sentences come from the `tones` of `mate.list` (`ToneAxisInfo`), else from the built-in copy in `ToneAxis.sentences`. The mate saves `tone` (`MateToneValue`, 1 to 5, the middle step is left out) and `no_memory`. The daemon adds the sentences to the system prompt.
+  - Profile: `MateConversations` gives the live and past sessions whose `Mate.Name` is the mate. New Conversation calls `mate.new`. The memory panel reads `mate.memory`, Edit… and Clear… call `mate.set_memory`, and `MemoryMeter` shows the size against the limit.
+  - Start Fresh (`StartFresh`, in the profile and in the main toolbar of a mate session): after a confirmation, `MatesModel.startFresh` sends a handoff prompt with `session.send`, then calls `mate.new` in the repo of the session. The old session stays.
+  - Main window: the sidebar has a Mates entry (`MatesEntry`) that opens the Mates window. A session row of a mate shows its face and name (`SidebarRow.mate`, `face`). The toolbar shows the face of the mate. A click on the face opens its profile (`WindowRouter.mateProfile`).
+  - `ViewState.mates` is the `mates` board of `view.subscribe` (`MateBoard`, `MateRow`, `MateThread`). `MateRow.label` gives the state and the guard. The profile shows Slack threads, Pause and Resume.
+  - `MatesModel` (main actor, over `Caller`) also calls `mate.list`, `approval.list`, `mate.pause`, `mate.resume`, `mate.stop_all` (the kill switch, with a confirmation), `mate.set`, `mate.setup`, `mate.set_tokens`, `mate.claim` and `approval.decide`. After Connect to Slack…, `MateConnectSheet` shows the manifest link, takes the two tokens and shows the claim code.
+  - Snapshots: `mates-gallery*`, `mate-profile*`, `new-mate-<n>-<step>*`, `main-mates*`. `Seed.mates`, `Seed.mateDefinitions` and `Seed.wizard(step:)` are the seeds.
+  - Test: `swift test --filter 'Mate|SlackMark|ViewDecoding|LiveState|Sidebar'`.
 - New session (`NewSession.swift`, view `NewSessionSheet`):
   - ⌘N opens the sheet. The New button of the toolbar also opens it.
   - `NewSession.load(state:)` calls `session.options`. It gets the harnesses, their models and efforts, and the `[defaults.<harness>]` model and effort. The app cannot read a remote `config.toml`.
@@ -154,7 +162,15 @@ The dry run occurs on a pull request that touches `macos/`, `.goreleaser.yaml` o
   - With a daemon that does not have `config.get` or `device.list` (`unknown_method`), those groups are empty and show a note.
   - You cannot set the cleanup interval, stale-limit age, worktree location and setup recipes. They are fixed in the daemon, or they are in the `.crew.toml` of each repo.
 - Shell and nvim views (`ShellNvim.swift`):
-  - `MainView` is the view switcher (Terminal, Review, Shell, nvim, Browser).
+  - `MainView` is the view switcher (Chat, Terminal, Review, Shell, nvim, Browser).
+  - Chat (`Chat.swift`, view `CrewViews/ChatView.swift`; #435) shows the session as a conversation. Each session has it.
+    - While the Chat view shows and the connection is live, `LiveWindow` calls `ChatModel.refresh` every 2 s (`ChatModel.interval`). It reads the newest `transcript.page` (50 messages) and `approval.list`, and keeps only the approvals of the session. An older server without `approval.list` shows the chat without approvals.
+    - `ChatLog` merges the pages by message id. A tool call that finishes changes in place. "Show earlier messages" reads the page before `before`.
+    - When the `Transcript` path of the session changes (a resume, `/clear` or Start Fresh), `ChatLog` keeps the old rows and adds the divider "Earlier conversation ended · handoff saved to memory".
+    - `ChatRow` gives the owner, agent, tool (`◐` running, `✓` done, `✗` failed) and note rows.
+    - The inline approval card is the permission dialog of the session (`InlineApproval`: Deny, Always Allow, Allow through `session.answer`). Mate approvals show Deny and Allow through `approval.decide`. In the Chat view, the floating permission card does not show.
+    - The message box sends with `session.send`. A failed send keeps the text and shows the error.
+    - Test: `swift test --filter Chat`. Snapshots: `chat-latte`, `chat-mocha`, `chat-fresh`.
   - `Toolbar.views(session:)` gives the tabs. With no selected session, Review, Shell and nvim are grey and have a tooltip (`Toolbar.needsSession`). A click on one, or its shortcut, shows that text as the window message. Thus a click never does nothing.
   - `EmptyMain` is the main column with no session: "Waiting for the daemon", "No sessions yet" or "Select a session", with a New session button.
   - `ShellNvim` (main actor, over `Caller`) calls `shell.focus` for ⌘T and ⇧⌘T. ⌘T is for the selected session: the daemon selects its first worktree, else the root of the session. ⇧⌘T shows the same shell as a popup over the current view.

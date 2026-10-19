@@ -25,7 +25,9 @@ struct MainColumn: View {
 
     @ViewBuilder
     private func main(_ session: Session, _ theme: Theme) -> some View {
-        if scene.view == .browser {
+        if scene.view == .chat {
+            ChatView(chat: scene.chat ?? ChatScene(rows: []), card: scene.card?.session == session.id ? scene.card : nil, actions: actions)
+        } else if scene.view == .browser {
             BrowserPane(chrome: scene.browser ?? BrowserChrome(tabs: [], selected: "", device: .desktop, profile: BrowserProfile.standard.name, links: [], agentControl: false), act: actions.browser)
         } else {
             terminal(session, theme)
@@ -34,6 +36,7 @@ struct MainColumn: View {
 
     private func status(_ session: Session) -> String {
         if scene.view == .browser { return "Browser · " + (scene.browser?.profile ?? "") }
+        if scene.view == .chat { return "Chat · " + (session.transcript.isEmpty ? "no transcript yet" : session.transcript) }
         let pane = shown(session)
         return pane.isEmpty ? "no pane" : scene.view.rawValue + " · pane " + pane
     }
@@ -69,7 +72,7 @@ struct MainColumn: View {
                             if let message = scene.message {
                                 AttentionMessage(text: message, dismiss: actions.dismissMessage)
                             }
-                            if let card = scene.card, card.session == session.id, !card.hidden {
+                            if scene.view != .chat, let card = scene.card, card.session == session.id, !card.hidden {
                                 PermissionCardView(card: card, answer: actions.answer, hide: actions.hideCard)
                             }
                         }
