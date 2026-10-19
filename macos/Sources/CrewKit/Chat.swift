@@ -62,8 +62,6 @@ public struct ChatLog: Sendable, Equatable {
     public private(set) var before: Int64 = 0
     private var earlier: [ChatRow] = []
     private var current: [TranscriptMessage] = []
-    private var transcript: String?
-    private var handoffs = 0
 
     public init() {}
 
@@ -73,13 +71,11 @@ public struct ChatLog: Sendable, Equatable {
         earlier + current.compactMap(ChatRow.of)
     }
 
-    public mutating func newest(_ page: TranscriptPageReply, transcript path: String) {
-        if let old = transcript, old != path, !current.isEmpty {
-            handoffs += 1
-            earlier += current.compactMap(ChatRow.of) + [.handoff(id: "handoff-\(handoffs)")]
-            current = []
-        }
-        if !path.isEmpty || transcript == nil { transcript = path }
+    public mutating func handoff(from page: TranscriptPageReply) {
+        earlier = page.messages.sorted { $0.cursor < $1.cursor }.compactMap(ChatRow.of) + [.handoff(id: "handoff")]
+    }
+
+    public mutating func newest(_ page: TranscriptPageReply) {
         if current.isEmpty { before = page.before }
         for m in page.messages {
             if let i = current.firstIndex(where: { $0.key == m.key }) {
@@ -132,16 +128,26 @@ public final class ChatModel {
     public var draft = ""
     public var error: String?
     private let caller: Caller
+    private var handedOff = false
 
     public init(session: String, caller: Caller) {
         self.session = session
         self.caller = caller
     }
 
-    public func refresh(transcript: String) async {
+    public func refresh(freshFrom: String?) async {
+        if let old = freshFrom, !handedOff {
+            do {
+                let page: TranscriptPageReply = try await caller.call("transcript.page", params: TranscriptPageParams(session: old, limit: Self.pageSize))
+                log.handoff(from: page)
+                handedOff = true
+            } catch {
+                self.error = ReviewController.message(error)
+            }
+        }
         do {
             let page: TranscriptPageReply = try await caller.call("transcript.page", params: TranscriptPageParams(session: session, limit: Self.pageSize))
-            log.newest(page, transcript: transcript)
+            log.newest(page)
         } catch {
             self.error = ReviewController.message(error)
             return

@@ -85,31 +85,34 @@ struct MateProfileTests {
         #expect(caller.calls.last?.params["repo"] == nil)
     }
 
-    @Test func startFreshAsksForAHandoffThenStartsANewConversationInTheSameRepo() async {
+    @Test func startFreshCallsMateFreshAndKeepsTheWorktreeByDefault() async {
         let caller = FakeCaller()
-        caller.replies["session.send"] = .success(#"{"queued":false}"#)
-        caller.replies["mate.new"] = .success(#"{"ID":"s10"}"#)
+        caller.replies["mate.fresh"] = .success(#"{"ID":"s10"}"#)
         let model = MatesModel(caller: caller)
         let session = Self.crew.sessions.first { $0.id == "m1" }!
-        let id = await model.startFresh(session, state: Self.crew)
-        #expect(id == "s10")
-        #expect(caller.methods() == ["session.send", "mate.new"])
+        #expect(await model.startFresh(session) == "s10")
+        #expect(caller.methods() == ["mate.fresh"])
         #expect(caller.calls[0].params["session"] as? String == "m1")
-        #expect((caller.calls[0].params["text"] as? String)?.contains("memory file") == true)
-        #expect(caller.calls[1].params["name"] as? String == "iris")
-        #expect(caller.calls[1].params["repo"] as? String == "api")
+        #expect(caller.calls[0].params["same_worktree"] as? Bool == true)
+        _ = await model.startFresh(session, sameWorktree: false)
+        #expect(caller.calls[1].params["same_worktree"] as? Bool == false)
     }
 
-    @Test func startFreshStopsWhenTheHandoffFails() async {
+    @Test func startFreshShowsTheErrorOfTheDaemon() async {
         let caller = FakeCaller()
-        caller.replies["session.send"] = .failure(RPCError(code: "not_found", message: "no session"))
+        caller.replies["mate.fresh"] = .failure(RPCError(code: "failed", message: "crew could not ask for a handoff: no pane"))
         let model = MatesModel(caller: caller)
         let session = Self.crew.sessions.first { $0.id == "m1" }!
-        #expect(await model.startFresh(session, state: Self.crew) == nil)
-        #expect(caller.methods() == ["session.send"])
-        #expect(model.message == "no session")
-        let plain = Seed.window.sessions[0]
-        #expect(await model.startFresh(plain, state: Seed.window) == nil)
+        #expect(await model.startFresh(session) == nil)
+        #expect(model.message == "crew could not ask for a handoff: no pane")
+        #expect(await model.startFresh(Seed.window.sessions[0]) == nil)
+        #expect(caller.methods() == ["mate.fresh"])
+    }
+
+    @Test func theSeatOfAStartFreshNamesTheOldSession() throws {
+        let json = #"{"Name":"iris","Local":true,"FreshFrom":"m0"}"#
+        let seat = try JSONDecoder().decode(SessionMate.self, from: Data(json.utf8))
+        #expect(seat == SessionMate(name: "iris", local: true, freshFrom: "m0"))
     }
 
     @Test func theGalleryShowsACardForEachMate() {
@@ -203,6 +206,7 @@ struct MateProfileTests {
         #expect(!StartFresh.offered(Seed.window.sessions[0]))
         #expect(StartFresh.title("iris") == "Start fresh with Iris?")
         #expect(StartFresh.detail("iris").contains("handoff"))
+        #expect(StartFresh.detail("iris").contains("same worktree"))
     }
 
     @Test func aNameShowsWithACapital() {
