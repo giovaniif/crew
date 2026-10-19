@@ -49,6 +49,7 @@ public struct LiveWindow: View {
     @State private var serverSend: ServerProfileSend
     @State private var mates: MatesModel?
     @State private var freshConfirm: String?
+    @State private var fix: DaemonFix?
 #if canImport(WebKit)
     @State private var webViews = BrowserWebViews()
     @State private var cookieImport: BrowserProfile?
@@ -73,8 +74,9 @@ public struct LiveWindow: View {
     public init(
         store: ViewStore, server: String, router: WindowRouter = WindowRouter(), shortcuts: Shortcuts = .defaults,
         attention: Attention? = nil, diffLayout: DiffLayout = .unified, confirmEnd: Bool = true,
-        servers: [ServerKind] = [], switchServer: @escaping (ServerKind) -> Void = { _ in }
+        servers: [ServerKind] = [], switchServer: @escaping (ServerKind) -> Void = { _ in }, setup: ServerSetup? = nil
     ) {
+        _fix = State(initialValue: setup.map(DaemonFix.init(setup:)))
         self.servers = servers
         self.switchServer = switchServer
         _store = State(initialValue: store)
@@ -116,6 +118,7 @@ public struct LiveWindow: View {
         }
         scene.mateLooks = Dictionary((mates?.definitions ?? []).map { ($0.name, MateLook.of($0)) }, uniquingKeysWith: { a, _ in a })
         scene.freshConfirm = freshConfirm
+        scene.fix = fix?.state
         return scene
     }
 
@@ -573,6 +576,15 @@ public struct LiveWindow: View {
         }
     }
 
+    private func reconnectNow() {
+        store.stop()
+        store.start()
+#if canImport(SwiftTerm)
+        terminals.hub.stop()
+        terminals.hub.start()
+#endif
+    }
+
     private func toggleShellView() {
         review = nil
         guard let id = nav.selected, panes.view != .shell else { return }
@@ -614,13 +626,10 @@ public struct LiveWindow: View {
         a.toggleInspector = { inspector.toggle() }
         a.newSession = { openNewSession() }
         a.toggleEnded = { endedExpanded.toggle() }
-        a.reconnect = {
-            store.stop()
-            store.start()
-#if canImport(SwiftTerm)
-            terminals.hub.stop()
-            terminals.hub.start()
-#endif
+        a.reconnect = { reconnectNow() }
+        a.fixDaemon = {
+            guard let fix else { return }
+            Task { await fix.run { reconnectNow() } }
         }
         a.toggleReview = { toggleReview() }
         a.toggleSidebar = { review?.screen.sidebarShown.toggle() }

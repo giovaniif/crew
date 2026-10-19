@@ -6,7 +6,7 @@ import { disablePush, noPush, type PushEnv } from "./push";
 import { parseRoute } from "./route";
 import { Approvals } from "./screens/Approvals";
 import { Automations } from "./screens/Automations";
-import { Mates } from "./screens/Mates";
+import { MateProfile, Mates, NewMate } from "./screens/Mates";
 import { Install } from "./screens/Install";
 import { NewSession } from "./screens/NewSession";
 import { Pair } from "./screens/Pair";
@@ -58,6 +58,14 @@ function Tabs({ current }: { current: Tab }) {
       </a>
     </nav>
   );
+}
+
+function safeDecode(s: string): string {
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return s;
+  }
 }
 
 function useNow(now: () => number, every: number): number {
@@ -118,6 +126,15 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
     return (
       <>
         <Mates api={api} now={now} board={snapshot.state?.mates} />
+        <Tabs current="mates" />
+      </>
+    );
+  }
+  if (hash.startsWith("#/mates/")) {
+    const name = hash.slice("#/mates/".length);
+    return (
+      <>
+        {name === "new" ? <NewMate api={api} /> : <MateProfile api={api} name={safeDecode(name)} board={snapshot.state?.mates} />}
         <Tabs current="mates" />
       </>
     );

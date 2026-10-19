@@ -161,19 +161,38 @@ public struct ConnectionBanner: Sendable, Equatable {
     public var retrying: Bool
     public var action: String?
     public var tone: Tone
+    public var fixes = false
 
-    public init?(_ status: ConnectionStatus) {
+    public init?(_ status: ConnectionStatus, fix: DaemonFixState? = nil) {
         switch status {
         case .idle, .live:
             return nil
         case .connecting:
             self.init("Connecting to crew", "", true, nil, .blue)
+            return
         case let .reconnecting(delay):
             self.init("Reconnecting in \(delay.components.seconds) s", "The connection to the daemon dropped.", true, nil, .peach)
         case let .unavailable(message):
             self.init("No crew daemon · retrying", message, true, nil, .peach)
         case let .versionMismatch(message):
             self.init("Build mismatch · stopped", message, false, "Reconnect", .red)
+            return
+        }
+        switch fix {
+        case nil:
+            break
+        case .ready:
+            action = "Fix"
+            fixes = true
+        case .fixing:
+            title = "Fixing the daemon"
+            detail = "crew setup daemon writes the service again and restarts it."
+        case let .failed(message):
+            title = "Fix failed · retrying"
+            detail = message
+            action = "Fix"
+            fixes = true
+            tone = .red
         }
     }
 
