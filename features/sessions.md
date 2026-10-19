@@ -54,6 +54,32 @@ go run ./scripts/verify iso crew --expect seed-1-api --expect "#100 OPEN failing
 
 ### new session dialog with a real harness (manual: the fake claude holds the pane but does not run turns; use make dev FAKES=1 to try it)
 
+### workspace add, list and remove a TEST repo
+
+```sh
+rm -rf /tmp/crew-verify-map/TEST-ws && mkdir -p /tmp/crew-verify-map/TEST-ws
+git -C /tmp/crew-verify-map/TEST-ws init -q
+git -C /tmp/crew-verify-map/TEST-ws commit -q --allow-empty -m init
+go run ./scripts/verify iso crew --expect "added /tmp/crew-verify-map/TEST-ws" -- workspace add /tmp/crew-verify-map/TEST-ws
+go run ./scripts/verify iso crew --expect "TEST-ws  main" -- workspace list
+go run ./scripts/verify iso crew --expect "removed /tmp/crew-verify-map/TEST-ws" -- workspace remove /tmp/crew-verify-map/TEST-ws
+rm -rf /tmp/crew-verify-map/TEST-ws
+```
+
+### P opens the projects view
+
+```sh
+go run ./scripts/verify tui drive --restart --out-dir /tmp/crew-verify-map/sessions --steps '[{"expect":"seeded change 1","timeout":8000},{"keys":"P"},{"expect":"PROJECTS"},{"expect":"a add"},{"shot":"projects.png"},{"keys":"Escape"}]'
+```
+
+### crew new starts a session from the CLI (manual: it needs a workspace and a harness that runs turns)
+
+### crew focus moves the TUI to a session (manual: it needs an attached crew client)
+
+### crew statusline prints the Claude Code status line (manual: Claude Code calls it with JSON on stdin)
+
+### session keys x, u, M, E, R, A, K, o, tab, space and 1-9 (manual: each acts on a live harness pane; the seeded sessions have no pane)
+
 ## Cleanup
 
 ```sh
