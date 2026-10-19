@@ -75,12 +75,21 @@ The phone app: a PWA that `crew serve` embeds and serves at `/` (ADR [0046](../d
 
   Tests: `npm test -- Push` and `npm test -- Settings`.
 - `#/automations` (`screens/Automations.tsx`) lists the automations with agent, trigger and state. Run… opens a form with a multi-line context and an optional work item, then posts `/api/v1/automations/<name>/run`. A started run opens its session. A skipped or failed run shows its reason. Tests: `npm test -- Automations`.
-- `#/mates` (`screens/Mates.tsx`) shows the `mates` of the stream: the state of each mate, the guard that holds it, its current work and its threads. Each thread links to its session and to Slack. The page also has:
-  - Pause or Resume for each mate (`POST /api/v1/mates/<name>/pause|resume`).
+- **Faces.** `src/faces.ts` has the 12 faces of the design (`FACES`: id, name, accent for light and dark, the SVG parts and the 2-line TUI glyph), `faceSvg` and `faceGlyph`. The TUI and the Mac app use the same rules:
+  - The face of a mate is its `avatar` (from the stream row, else from `GET /api/v1/mates`) if that is a face id. Else it is the face with the id of the mate name. Else it is `FACES[sum of the UTF-8 bytes of the name % 12]`. The color is the `color` of the mate, else the accent of the face.
+  - `faceState`: `paused` if the mate is paused or a guard holds it. Else `needs` if the mate has a pending approval, or a thread or conversation that is not ended waits or asks for permission. Else `working` if one runs. Else `idle`.
+  - The tone axes and their sentences come from the server (`tones` of `GET /api/v1/mates`). The app keeps no copy of the sentences. `toneLines` gives the sentences of the chosen steps, and `toneOf` gives the `tone` that the app sends (`{key: step}`, 1 to 5). The server adds the sentences to the system prompt, so the prompt text stays clean.
+- `#/mates` (`screens/Mates.tsx`) shows a card for each mate of the stream: the face with its state, the name, the first line of the prompt and the state word. A card opens `#/mates/<name>`. The page also has `+` (to `#/mates/new`), the kill switch and the pending approvals ("Needs you", the same cards as `#/approvals`).
   - The kill switch: Stop all mates asks first, then posts `/api/v1/mates/stop` `{"stop":true}`. While the stream says `stopped`, the page shows Start all mates, and the session list shows "All mates are stopped".
-  - Settings for each mate (agent, model, effort, repos, prompt) and Add a mate. Both post `/api/v1/mates`. After an add, the page shows the manifest link (`GET …/setup`), takes the two tokens (`POST …/tokens`) and shows the claim code (`POST …/claim`).
-  - The pending approvals, with the same cards as `#/approvals`.
-  - Tests: `npm test -- Mates`.
+- `#/mates/<name>` is the profile: the big face, the prompt, tags for agent, model, effort and repos, and these parts:
+  - "+ New conversation" posts `/api/v1/mates/<name>/new` and opens the new session.
+  - Conversations: the local `conversations` of the stream (`session`, `name`, `state`, `ended`, `started_at`), then the Slack threads (each with a Slack link).
+  - Memory: `GET …/memory`. Edit memory opens a text box, and Save memory posts `{"text"}`. Empty text clears it.
+  - Pause or Resume (`POST …/pause|resume`) and Settings (agent, model, effort, repos, prompt, posted to `/api/v1/mates`).
+  - "Connect to Slack…" with the Slack mark, only while the state is `ready` or `no_tokens`. It shows the manifest link (`GET …/setup`), takes the two tokens (`POST …/tokens`) and shows the claim code (`POST …/claim`). Slack is optional.
+- `#/mates/new` makes a mate in three steps: 1 face, color and name; 2 the prompt, presets and the tone sliders (from `tones`), with the "Added to the prompt" box; 3 agent, model, effort and repos. Create posts `/api/v1/mates` with `avatar`, `color`, `tone` and `enabled: true`, then opens the profile.
+- A session of a mate (`Mate.Name` in the stream) shows a bar over the chat header: the face, the name and the state, and Start fresh. Start fresh sends `handoffText` to the session (the session writes a handoff to the memory), then posts `…/new` and opens the new session. The old session continues.
+- Tests: `npm test -- Mates faces`.
 - `#/approvals` (`screens/Approvals.tsx`) shows a card for each pending approval of a mate (`GET /api/v1/approvals`): the mate, the action, who asked, the tool, the exact input, the time until it expires and a link to the session. Approve and Deny post `/api/v1/approvals/<id>/approve|deny`, then the card shows the result. A 409 `stale` or a `not_found` shows "This approval is gone". The push of an approval opens this screen. Tests: `npm test -- Approvals`.
 - `#/settings` shows Settings (server, this device, Enable notifications, sign out). A tab bar under the session list and Settings switches between them.
 - `src/screens/`: one component for each screen. `src/theme.css`: the Latte palette as CSS variables, and Mocha under `prefers-color-scheme: dark`, and IBM Plex Sans and JetBrains Mono from `@fontsource`.
