@@ -607,7 +607,7 @@ func (m Model) key(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 	case "c":
 		if se, ok := m.sessions[m.selected]; ok && se.Mate != nil {
-			return m, m.newConversation(se.Mate.Name, "")
+			return m, m.newConversation(se.Mate.Name)
 		}
 		return m.openMates()
 	case "C":
