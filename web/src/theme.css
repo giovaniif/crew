@@ -1819,7 +1819,9 @@ button.danger {
 
 .mate-bar-keep {
   display: flex;
+  flex-direction: row;
   align-items: center;
+  margin: 0;
   gap: 6px;
   min-height: 44px;
   font-size: 13px;
