@@ -101,6 +101,7 @@ type Model struct {
 	mateBoard  domain.MateBoard
 	mateLinks  map[string]domain.MateLink
 	mateDefs   map[string]domain.Mate
+	mateTones  []domain.MateToneAxis
 	shellTabs  map[string]domain.ShellTab
 	activeTabs map[string]string
 	tabNew     *tabChooser
@@ -329,6 +330,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case mateListMsg:
 		if msg.err == nil {
 			m.setMateDefs(msg.mates)
+			m.mateTones = msg.tones
 		}
 	case mateMemoryMsg:
 		return m.memoryLoaded(msg), nil

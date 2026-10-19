@@ -52,11 +52,13 @@ type mateApprovalsMsg struct {
 	list    []domain.Approval
 	err     error
 	mates   []domain.Mate
+	tones   []domain.MateToneAxis
 	matesOK bool
 }
 
 type mateListMsg struct {
 	mates []domain.Mate
+	tones []domain.MateToneAxis
 	err   error
 }
 
@@ -179,7 +181,7 @@ func (m Model) fetchMateList() tea.Cmd {
 		defer cancel()
 		var out rpc.MateList
 		err := c.Call(ctx, rpc.MethodMateList, struct{}{}, &out)
-		return mateListMsg{mates: out.Mates, err: err}
+		return mateListMsg{mates: out.Mates, tones: out.Tones, err: err}
 	}
 }
 
@@ -193,7 +195,7 @@ func (m Model) openMates() (Model, tea.Cmd) {
 	return m, func() tea.Msg {
 		out := approvals().(mateApprovalsMsg)
 		if l, ok := list().(mateListMsg); ok && l.err == nil {
-			out.mates, out.matesOK = l.mates, true
+			out.mates, out.tones, out.matesOK = l.mates, l.tones, true
 		}
 		return out
 	}
@@ -216,6 +218,7 @@ func (m Model) fetchApprovals() tea.Cmd {
 func (m Model) approvalsLoaded(msg mateApprovalsMsg) Model {
 	if msg.matesOK {
 		m.setMateDefs(msg.mates)
+		m.mateTones = msg.tones
 	}
 	if m.mp == nil {
 		return m
@@ -317,7 +320,8 @@ func (m Model) createMate(cr mateCreate) tea.Cmd {
 		}
 	}
 	mate := domain.Mate{
-		Name: strings.TrimSpace(cr.name), Prompt: domain.WithTone(strings.TrimSpace(cr.prompt), cr.tone[:]),
+		Name: strings.TrimSpace(cr.name), Prompt: strings.TrimSpace(cr.prompt),
+		Tone:  domain.MateTone{Terse: cr.tone[0] + 1, Cautious: cr.tone[1] + 1, Formal: cr.tone[2] + 1},
 		Agent: string(h), Model: strings.TrimSpace(cr.model), Effort: efforts[min(cr.effort, len(efforts)-1)],
 		Repos: repos, Avatar: domain.MateFaces[cr.face].ID, Enabled: true,
 	}
@@ -551,7 +555,7 @@ func (m Model) matesKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return m, m.newConversation(mates[p.cursor].Name, "")
 		}
 	case "a":
-		p.create = &mateCreate{tone: [3]int{domain.ToneMiddle, domain.ToneMiddle, domain.ToneMiddle}}
+		p.create = &mateCreate{tone: [3]int{2, 2, 2}}
 	case "p":
 		if p.cursor < len(mates) {
 			method := rpc.MethodMatePause
@@ -836,7 +840,7 @@ func (m Model) createLines() []string {
 	case 1:
 		out = append(out, m.line(false, []piece{focus(0), {s.dim, "prompt  "}, {s.text, cleanText(cr.prompt) + cursor(0)}}, nil), "",
 			m.line(false, []piece{{s.dim, "   tone"}}, nil))
-		for i, ax := range domain.ToneAxes {
+		for i, ax := range m.toneAxes() {
 			dots := make([]string, 5)
 			for j := range dots {
 				dots[j] = "·"
@@ -847,14 +851,16 @@ func (m Model) createLines() []string {
 			out = append(out, m.line(false, []piece{focus(i + 1), {s.sub, glyphPad(ax.Low, 9)}, {s.mauve, strings.Join(dots, "─")}, {s.sub, "  " + ax.High + " "}, {s.dim, strconv.Itoa(cr.tone[i]+1) + "/5"}}, nil))
 		}
 		out = append(out, "", m.line(false, []piece{{s.header, " Added to the prompt"}}, nil))
-		for i, ax := range domain.ToneAxes {
+		for i, ax := range m.toneAxes() {
 			sentence := ax.Steps[cr.tone[i]]
 			out = append(out, m.line(false, []piece{{s.dim, "  " + ax.Low + " " + strconv.Itoa(cr.tone[i]+1) + "/5"}}, nil))
 			if sentence == "" {
 				out = append(out, m.line(false, []piece{{s.dim, " Middle step. Adds no text."}}, nil))
 				continue
 			}
-			out = append(out, m.line(false, []piece{{s.text, " " + sentence}}, nil))
+			for _, l := range wrapWords(sentence, max(m.width-2, 10)) {
+				out = append(out, m.line(false, []piece{{s.text, " " + l}}, nil))
+			}
 		}
 	case 2:
 		h := domain.Harness(mateAgents[cr.agent])
@@ -908,4 +914,27 @@ func (m Model) sidebarMateLines() []string {
 		out = append(out, m.line(false, []piece{{m.faceStyle(mt.Name), "  " + glyphCell(g[0])}, {s.text, " " + mt.Name}}, []piece{right}))
 	}
 	return out
+}
+
+func (m Model) toneAxes() []domain.MateToneAxis {
+	if len(m.mateTones) == 3 {
+		return m.mateTones
+	}
+	return domain.MateToneAxes()
+}
+
+func wrapWords(text string, width int) []string {
+	var out []string
+	line := ""
+	for _, w := range strings.Fields(text) {
+		if line != "" && utf8.RuneCountInString(line)+1+utf8.RuneCountInString(w) > width {
+			out = append(out, line)
+			line = ""
+		}
+		if line != "" {
+			line += " "
+		}
+		line += w
+	}
+	return append(out, line)
 }
