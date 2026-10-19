@@ -22,6 +22,10 @@ func TestServeMateRoutesCallTheDaemon(t *testing.T) {
 		{"POST", "/api/v1/mates/helper/resume", "", rpc.MethodMateResume, `{"name":"helper"}`, ``},
 		{"POST", "/api/v1/mates/helper/tokens", `{"bot_token":"xoxb-1","app_token":"xapp-1","name":"other"}`, rpc.MethodMateSetTokens, `{"name":"helper","bot_token":"xoxb-1","app_token":"xapp-1"}`, ``},
 		{"POST", "/api/v1/mates/helper/claim", "", rpc.MethodMateClaim, `{"name":"helper"}`, ``},
+		{"POST", "/api/v1/mates/helper/new", `{"repo":"api","prompt":"fix it","name":"other"}`, rpc.MethodMateNew, `{"name":"helper","repo":"api","prompt":"fix it"}`, ``},
+		{"POST", "/api/v1/mates/helper/new", "", rpc.MethodMateNew, `{"name":"helper"}`, ``},
+		{"GET", "/api/v1/mates/helper/memory", "", rpc.MethodMateMemory, `{"name":"helper"}`, ``},
+		{"POST", "/api/v1/mates/helper/memory", `{"text":"note","name":"other"}`, rpc.MethodMateSetMemory, `{"name":"helper","text":"note"}`, ``},
 	} {
 		f := newFakeDaemon()
 		f.devices[goodToken] = phone

@@ -26,6 +26,9 @@ func (a Adapter) Launch(req app.LaunchRequest) app.PaneSpec {
 	if req.Effort != "" {
 		command = append(command, "--effort", req.Effort)
 	}
+	if req.SystemPrompt != "" {
+		command = append(command, "--append-system-prompt", req.SystemPrompt)
+	}
 	if req.Prompt != "" {
 		command = append(command, "--", req.Prompt)
 	}

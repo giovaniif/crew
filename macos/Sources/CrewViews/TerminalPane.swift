@@ -106,54 +106,43 @@ final class PaneHost: NSView, @preconcurrency TerminalViewDelegate {
     }
 
     private static let baseSize: CGFloat = 12
+    private static let noteHeight: CGFloat = 22
     private var baseCell: NSSize?
 
-    private func setFontSize(_ size: CGFloat) {
-        guard terminal.font.pointSize != size else { return }
-        terminal.font = NSFont.monospacedSystemFont(ofSize: size, weight: .regular)
-    }
-
-    private var grid: (cols: Int, rows: Int, cell: NSSize) {
+    private var cell: NSSize {
+        if let baseCell { return baseCell }
         let t = terminal.getTerminal()
-        if baseCell == nil || terminal.font.pointSize == Self.baseSize {
-            let optimal = terminal.getOptimalFrameSize().size
-            baseCell = NSSize(width: optimal.width / CGFloat(max(t.cols, 1)), height: optimal.height / CGFloat(max(t.rows, 1)))
-        }
-        let cell = baseCell ?? .zero
-        guard cell.width > 0, cell.height > 0 else { return (t.cols, t.rows, cell) }
-        return (max(Int(bounds.width / cell.width), 2), max(Int((bounds.height - 22) / cell.height), 2), cell)
+        let optimal = terminal.getOptimalFrameSize().size
+        let size = NSSize(width: optimal.width / CGFloat(max(t.cols, 1)), height: optimal.height / CGFloat(max(t.rows, 1)))
+        if size.width > 0, size.height > 0 { baseCell = size }
+        return size
     }
 
     override func layout() {
         super.layout()
-        let fit = grid
-        boxed = hub.letterbox(pane: pane, viewCols: fit.cols, viewRows: fit.rows)
+        let cell = cell
+        let full = PaneGrid(width: Double(bounds.width), height: Double(bounds.height), cellWidth: Double(cell.width), cellHeight: Double(cell.height))
+        boxed = full.flatMap { hub.letterbox(pane: pane, viewCols: $0.cols, viewRows: $0.rows) }
+        let height = boxed == nil ? bounds.height : max(bounds.height - Self.noteHeight, 0)
+        terminal.frame = NSRect(x: 0, y: boxed == nil ? 0 : Self.noteHeight, width: bounds.width, height: height)
         if let boxed {
-            setFontSize(CGFloat(boxed.fontSize(
-                base: Double(Self.baseSize), cellWidth: Double(fit.cell.width), cellHeight: Double(fit.cell.height),
-                width: Double(bounds.width), height: Double(bounds.height - 22)
-            )))
-            let t = terminal.getTerminal()
-            if t.cols != boxed.cols || t.rows != boxed.rows { terminal.resize(cols: boxed.cols, rows: boxed.rows) }
-            let size = terminal.getOptimalFrameSize().size
-            terminal.frame = NSRect(
-                x: max((bounds.width - size.width) / 2, 0), y: max((bounds.height - 22 - size.height) / 2, 0) + 22,
-                width: size.width, height: size.height
-            )
             note.stringValue = boxed.note
             note.isHidden = false
             note.sizeToFit()
             note.frame.origin = NSPoint(x: (bounds.width - note.frame.width) / 2, y: 3)
         } else {
             note.isHidden = true
-            setFontSize(Self.baseSize)
-            terminal.frame = bounds
-            hub.resize(pane: pane, cols: terminal.getTerminal().cols, rows: terminal.getTerminal().rows)
+        }
+        let grid = PaneGrid(width: Double(bounds.width), height: Double(height), cellWidth: Double(cell.width), cellHeight: Double(cell.height))
+        if let grid {
+            let t = terminal.getTerminal()
+            if t.cols != grid.cols || t.rows != grid.rows { terminal.resize(cols: grid.cols, rows: grid.rows) }
+            hub.resize(pane: pane, cols: grid.cols, rows: grid.rows)
         }
     }
 
     func sizeChanged(source: TerminalView, newCols: Int, newRows: Int) {
-        if boxed == nil { hub.resize(pane: pane, cols: newCols, rows: newRows) }
+        hub.resize(pane: pane, cols: newCols, rows: newRows)
     }
 
     func send(source: TerminalView, data: ArraySlice<UInt8>) {

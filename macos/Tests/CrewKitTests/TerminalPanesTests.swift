@@ -40,20 +40,31 @@ struct TerminalPanesTests {
         #expect(text == "\u{1b}c\u{1b}[?1049h\u{1b}[H" + "a\r\nb" + "\u{1b}[0m\u{1b}[1;1H")
     }
 
-    @Test func aPaneAtTheViewsSizeFillsAndAnotherSizeIsLetterboxedWithANote() {
-        #expect(Letterbox(paneCols: 120, paneRows: 40, viewCols: 120, viewRows: 40) == nil)
-        let box = Letterbox(paneCols: 100, paneRows: 30, viewCols: 120, viewRows: 40)
-        #expect(box?.cols == 100)
-        #expect(box?.rows == 30)
-        #expect(box?.note == "The TUI is showing this pane at 100×30")
+    @Test func noTUIClientMeansNoNoteAtAnySize() {
+        #expect(Letterbox(paneCols: 200, paneRows: 50, viewCols: 150, viewRows: 40, clients: []) == nil)
+        let tui = [TUIClient(tty: "/dev/ttys003", cols: 200, rows: 50)]
+        #expect(Letterbox(paneCols: 150, paneRows: 40, viewCols: 150, viewRows: 40, clients: tui) == nil)
     }
 
-    @Test func aLetterboxedPaneWiderThanTheViewShrinksTheFontToFitWholeColumns() {
-        let box = Letterbox(paneCols: 200, paneRows: 49, viewCols: 150, viewRows: 60)
-        #expect(box?.fontSize(base: 12, cellWidth: 7, cellHeight: 15, width: 1050, height: 900) == 9)
-        #expect(box?.fontSize(base: 12, cellWidth: 7, cellHeight: 15, width: 1400, height: 735) == 12)
-        #expect(box?.fontSize(base: 12, cellWidth: 7, cellHeight: 15, width: 1400, height: 368) == 6)
-        #expect(box?.fontSize(base: 12, cellWidth: 7, cellHeight: 15, width: 100, height: 100) == 5)
+    @Test func aTUIClientAtAnotherSizeGetsANoteThatNamesIt() {
+        let tui = [TUIClient(tty: "/dev/ttys003", cols: 100, rows: 31)]
+        let box = Letterbox(paneCols: 100, paneRows: 30, viewCols: 120, viewRows: 40, clients: tui)
+        #expect(box?.cols == 100)
+        #expect(box?.rows == 30)
+        #expect(box?.note == "The TUI on /dev/ttys003 is showing this pane at 100×30")
+    }
+
+    @Test func onlyClientsOutsideControlModeAreTUIClients() {
+        let lines = ["1 200x50 ", "0 100x31 /dev/ttys003", "junk"]
+        #expect(TUIClient.parse(lines) == [TUIClient(tty: "/dev/ttys003", cols: 100, rows: 31)])
+        #expect(ControlCommand.clients == "list-clients -F '#{client_control_mode} #{client_width}x#{client_height} #{client_tty}'")
+    }
+
+    @Test func theGridOfAViewIsItsSizeInWholeCellsWithNoSpaceForANote() {
+        #expect(PaneGrid(width: 1050, height: 600, cellWidth: 7, cellHeight: 15) == PaneGrid(cols: 150, rows: 40))
+        #expect(PaneGrid(width: 1054, height: 610, cellWidth: 7, cellHeight: 15) == PaneGrid(cols: 150, rows: 40))
+        #expect(PaneGrid(width: 3, height: 3, cellWidth: 7, cellHeight: 15) == PaneGrid(cols: 2, rows: 2))
+        #expect(PaneGrid(width: 100, height: 100, cellWidth: 0, cellHeight: 0) == nil)
     }
 
     @Test func layoutUpdatesSizesAndAClosedWindowForgetsItsPanes() {

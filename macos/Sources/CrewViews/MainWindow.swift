@@ -21,6 +21,7 @@ public struct WindowScene {
     public var message: String?
     public var servers: [ServerKind]
     public var browser: BrowserChrome?
+    public var fix: DaemonFixState?
 
     public init(
         state: ViewState?, connection: ConnectionStatus, selected: String? = nil, filter: String = "",
@@ -103,6 +104,7 @@ public struct WindowActions {
     public var toggleInspector: () -> Void = {}
     public var toggleEnded: () -> Void = {}
     public var reconnect: () -> Void = {}
+    public var fixDaemon: () -> Void = {}
     public var toggleReview: () -> Void = {}
     public var toggleSidebar: () -> Void = {}
     public var setScope: (ReviewScope) -> Void = { _ in }
@@ -150,8 +152,8 @@ public struct MainWindow: View {
         VStack(spacing: 0) {
             ToolbarStrip(scene: scene, actions: actions)
             Rectangle().fill(theme(.surface)).frame(height: 1)
-            if let banner = ConnectionBanner(scene.connection) {
-                BannerView(banner: banner, reconnect: actions.reconnect)
+            if let banner = ConnectionBanner(scene.connection, fix: scene.fix) {
+                BannerView(banner: banner, reconnect: banner.fixes ? actions.fixDaemon : actions.reconnect)
             }
             HStack(spacing: 0) {
                 if let review = scene.review {
@@ -200,11 +202,13 @@ struct ToolbarStrip: View {
         let theme = Theme(scheme)
         HStack(spacing: Metrics.gutter) {
             Image(systemName: "sidebar.left").foregroundStyle(theme(.subtext))
-            VStack(alignment: .leading, spacing: 1) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(scene.session?.name ?? "crew").font(.system(size: 13, weight: .semibold)).lineLimit(1)
-                Text(scene.session?.where ?? "").font(Metrics.mono).foregroundStyle(theme(.subtext)).lineLimit(1)
+                if let place = scene.session?.where, !place.isEmpty {
+                    Text(place).font(Metrics.mono).foregroundStyle(theme(.subtext)).lineLimit(1)
+                }
             }
-            .frame(minWidth: 160, alignment: .leading)
+            .frame(minWidth: 160, maxHeight: .infinity, alignment: .leading)
             HStack(spacing: 2) {
                 ForEach(Toolbar.views(session: scene.session != nil)) { tab in
                     let active = scene.session != nil && tab.title == (scene.review == nil ? scene.view.rawValue : MainView.review.rawValue)
