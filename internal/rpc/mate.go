@@ -16,10 +16,11 @@ const (
 type Mate = domain.Mate
 
 type MateList struct {
-	Mates    []Mate            `json:"mates"`
-	Problems []string          `json:"problems,omitempty"`
-	States   []MateState       `json:"states,omitempty"`
-	Limits   domain.MateLimits `json:"limits"`
+	Mates    []Mate                `json:"mates"`
+	Problems []string              `json:"problems,omitempty"`
+	States   []MateState           `json:"states,omitempty"`
+	Limits   domain.MateLimits     `json:"limits"`
+	Tones    []domain.MateToneAxis `json:"tones"`
 }
 
 type MateState = domain.MateStatus
@@ -93,4 +94,36 @@ type MateClaim struct {
 type ApprovalDecideParams struct {
 	ID      string `json:"id"`
 	Approve bool   `json:"approve"`
+}
+
+const (
+	MethodMateNew       = "mate.new"
+	MethodMateMemory    = "mate.memory"
+	MethodMateSetMemory = "mate.set_memory"
+)
+
+type MateNewParams struct {
+	Name   string `json:"name"`
+	Repo   string `json:"repo,omitempty"`
+	Prompt string `json:"prompt,omitempty"`
+}
+
+type MateMemory struct {
+	Name  string `json:"name"`
+	Path  string `json:"path"`
+	Text  string `json:"text"`
+	Limit int    `json:"limit"`
+}
+
+type MateSetMemoryParams struct {
+	Name string `json:"name"`
+	Text string `json:"text"`
+}
+
+const MethodMateFresh = "mate.fresh"
+
+type MateFreshParams struct {
+	Session      string `json:"session"`
+	SameWorktree bool   `json:"same_worktree,omitempty"`
+	Prompt       string `json:"prompt,omitempty"`
 }

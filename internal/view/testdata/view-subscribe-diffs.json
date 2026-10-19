@@ -56,13 +56,15 @@
               "state": "running",
               "ended": false
             }
-          ]
+          ],
+          "conversations": []
         },
         {
           "name": "webby",
           "state": "paused",
           "work": [],
-          "threads": []
+          "threads": [],
+          "conversations": []
         }
       ]
     }
@@ -401,13 +403,15 @@
               "state": "running",
               "ended": false
             }
-          ]
+          ],
+          "conversations": []
         },
         {
           "name": "webby",
           "state": "paused",
           "work": [],
-          "threads": []
+          "threads": [],
+          "conversations": []
         }
       ]
     }
@@ -448,14 +452,16 @@
               "state": "running",
               "ended": false
             }
-          ]
+          ],
+          "conversations": []
         },
         {
           "name": "webby",
           "state": "paused",
           "guard": "stopped",
           "work": [],
-          "threads": []
+          "threads": [],
+          "conversations": []
         }
       ]
     }
