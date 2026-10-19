@@ -129,3 +129,14 @@ func TestReviewDraftFromTheDaemonShowsItsCount(t *testing.T) {
 		t.Errorf("the restored draft's count shows:\n%s", out)
 	}
 }
+
+func TestReviewCommentTakesPastedText(t *testing.T) {
+	m, rv := reviewModel(t, 150, 40)
+	m = drive(m, keys("r", "j", "c")...)
+	drive(m, tea.PasteMsg{Content: "pasted note"}, key("enter"))
+	st, _ := reviewFixture()
+	want := []rpc.CommentParams{asked(st.Worktrees[0].ID, domain.CommentOn(st.Worktrees[0].Path, "src/graphql/public/resolvers.ts", resolversLines()[1:2], "pasted note"))}
+	if !reflect.DeepEqual(rv.comments, want) {
+		t.Fatalf("comments %+v\nwant %+v", rv.comments, want)
+	}
+}
