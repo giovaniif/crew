@@ -33,10 +33,11 @@ type MateThread struct {
 }
 
 type MateConversation struct {
-	ID      string            `json:"id"`
-	Session string            `json:"session"`
-	State   domain.AgentState `json:"state"`
-	Ended   bool              `json:"ended"`
+	Session   string            `json:"session"`
+	Name      string            `json:"name"`
+	State     domain.AgentState `json:"state"`
+	Ended     bool              `json:"ended"`
+	StartedAt time.Time         `json:"started_at"`
 }
 
 type Mate struct {
@@ -520,10 +521,14 @@ func (v *View) deriveMates() Mates {
 		}
 		return linkKey(a) < linkKey(b)
 	})
-	local := v.localMateSessions()
 	out := Mates{Stopped: v.board.Stopped, Mates: make([]Mate, 0, len(v.board.Mates))}
 	for _, st := range v.board.Mates {
-		m := Mate{MateStatus: st, Work: []string{}, Threads: []MateThread{}, Conversations: []MateConversation{}}
+		m := Mate{MateStatus: st, Work: []string{}, Threads: []MateThread{}, Conversations: v.mateConversations(st.Name)}
+		for _, c := range m.Conversations {
+			if !c.Ended && domain.MateWorking(c.State) {
+				m.Work = append(m.Work, c.Session)
+			}
+		}
 		for _, l := range links {
 			if l.Mate != st.Name {
 				continue
@@ -535,33 +540,24 @@ func (v *View) deriveMates() Mates {
 				m.Work = append(m.Work, l.SessionID)
 			}
 		}
-		for _, s := range local {
-			if s.Mate.Name != st.Name {
-				continue
-			}
-			m.Conversations = append(m.Conversations, MateConversation{ID: s.ID, Session: v.shown[s.ID].name, State: s.State, Ended: s.Ended})
-			if !s.Ended && domain.MateWorking(s.State) {
-				m.Work = append(m.Work, s.ID)
-			}
-		}
 		out.Mates = append(out.Mates, m)
 	}
 	return out
 }
 
-func (v *View) localMateSessions() []domain.Session {
-	var out []domain.Session
-	for _, s := range v.sessions {
-		if s.Mate != nil && s.Mate.Local {
-			out = append(out, s)
+func (v *View) mateConversations(name string) []MateConversation {
+	out := []MateConversation{}
+	for id, s := range v.sessions {
+		if s.Mate == nil || !s.Mate.Local || s.Mate.Name != name {
+			continue
 		}
+		out = append(out, MateConversation{Session: id, Name: v.shown[id].name, State: s.State, Ended: s.Ended, StartedAt: s.StartedAt})
 	}
 	sort.Slice(out, func(i, j int) bool {
-		a, b := out[i], out[j]
-		if !a.StartedAt.Equal(b.StartedAt) {
-			return a.StartedAt.After(b.StartedAt)
+		if !out[i].StartedAt.Equal(out[j].StartedAt) {
+			return out[i].StartedAt.After(out[j].StartedAt)
 		}
-		return a.ID > b.ID
+		return out[i].Session < out[j].Session
 	})
 	return out
 }

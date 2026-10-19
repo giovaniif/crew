@@ -15,11 +15,12 @@ depguard: from `internal/`, the package imports only `rpc` and `domain`. It neve
   - State: `seq`, `workspaces`, `projects`, `tasks`, `worktrees` (with `Ports`), `sessions`, `limits`, `sends`, `events`, `subagents`, `drafts`, `reclaimable` (`{"size","pending"}`). `reclaimable` is the disk space that the next cleanups free, from the last `disk.view`. It is zero until one `disk.view` ran. A diff sets it when it changes.
   - `mates` (also in the phone state): `{"stopped","mates":[...]}`. `stopped` is the kill switch. Each mate is the `domain.MateStatus` of the daemon (`name`, `state`, `error`, `guard`) and these fields:
     - `threads`: its Slack threads, newest first. Each is the `domain.MateLink` (with the Slack `url`) and `session` (the derived name), `state` and `ended` of the session.
-    - `work`: the IDs of its thread sessions and local conversations that are not ended and that run, wait or ask for permission (`domain.MateWorking`). This is the current work of the mate.
-    - `conversations`: its local conversations (sessions with `Mate.Local`, from `mate.new`), newest first. Each is `id`, `session` (the derived name), `state` and `ended`. It is `[]` when there are none.
+    - `work`: the IDs of its thread sessions that are not ended and that run, wait or ask for permission (`domain.MateWorking`). This is the current work of the mate.
     - A diff sets the whole `mates` when the board, a thread link or a thread session changes it. It comes after the other session diffs of the same `seq`, so the names are new.
   - A diff sets `seq` and one or more fields of the phone diff. It also sets `project`, `removed_project`, `event`, `subagent`, `draft` or `comment` as the daemon sent them. The phone stream does not include projects.
   - A session is the phone's (`name`, `where`, `banner`, `since`) plus `order` and `board`.
   - `order`: its index from the rule of `domain.Sidebar` over one flat list. Sessions that need you come first, then the others in the daemon's order. An ended session has `-1`.
   - `board`: the PRs on its worktrees, one for each number, in the shape of the `prs` of `crew pr --json` (ADR 0024). It is `[]` when there are none.
 - Some diffs change the derived fields of a different session: a PR that renames it, a state change that changes the list order, or a removed session. After such a diff, a `session` diff for that session follows with the same `seq`, in session ID order.
+
+- Each mate row has `avatar` and `color` from the board, and `conversations`: the local sessions of the mate (`session.Mate.Local`), live and ended, newest first, as `{"session","name","state","ended","started_at"}`. A live conversation that works is also in `work`. See [ADR 0056](../../docs/adr/0056-local-mates.md).
