@@ -18,6 +18,12 @@ go run ./scripts/verify iso seed --sessions 3
 go run ./scripts/verify iso crew --expect seed-1-api --expect "#100 OPEN failing" --expect seed-3-infra -- worktree list
 ```
 
+### seeded worktrees name their session (#450)
+
+```sh
+go run ./scripts/verify iso crew --expect seed-session-1 --absent unassigned -- worktree list
+```
+
 ### cleanup dry run keeps worktrees it cannot read
 
 ```sh
