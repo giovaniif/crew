@@ -1,7 +1,5 @@
 package domain
 
-import "strings"
-
 type FaceState string
 
 const (
@@ -102,36 +100,3 @@ func MateFaceState(st MateStatus, approvals int, sessions []AgentState) FaceStat
 }
 
 const MateHandoff = "Before we stop: add a short handoff to your memory file. Note what you did, what is left and what you learned."
-
-type ToneAxis struct {
-	Low   string
-	High  string
-	Steps [5]string
-}
-
-const ToneMiddle = 2
-
-var ToneAxes = []ToneAxis{
-	{"Terse", "Chatty", [5]string{"Answer in as few words as you can.", "Keep answers short. Use lists, not paragraphs.", "", "Explain your steps as you work.", "Talk freely and think out loud."}},
-	{"Cautious", "Bold", [5]string{"Ask before each change that is not small.", "Ask before you run a command that changes files or pushes.", "", "Make reasonable choices without asking.", "Act on your own judgment and move fast."}},
-	{"Formal", "Playful", [5]string{"Use a formal, professional tone.", "Keep a calm, neutral tone.", "", "Use a friendly, relaxed tone.", "Be playful and use humor."}},
-}
-
-func ToneSentences(steps []int) []string {
-	var out []string
-	for i, s := range steps {
-		if i >= len(ToneAxes) || s < 0 || s >= 5 || ToneAxes[i].Steps[s] == "" {
-			continue
-		}
-		out = append(out, ToneAxes[i].Steps[s])
-	}
-	return out
-}
-
-func WithTone(prompt string, steps []int) string {
-	tone := ToneSentences(steps)
-	if len(tone) == 0 {
-		return prompt
-	}
-	return strings.TrimRight(prompt, "\n") + "\n\n" + strings.Join(tone, " ")
-}
