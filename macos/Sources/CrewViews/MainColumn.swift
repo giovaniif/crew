@@ -26,7 +26,7 @@ struct MainColumn: View {
     @ViewBuilder
     private func main(_ session: Session, _ theme: Theme) -> some View {
         if scene.view == .chat {
-            ChatView(chat: scene.chat ?? ChatScene(rows: []), card: scene.card?.session == session.id ? scene.card : nil, actions: actions)
+            ChatView(chat: scene.chat ?? ChatScene(rows: []), card: scene.card?.session == session.id ? scene.card : nil, persona: ChatPersona.of(session: session, board: scene.state?.mates), actions: actions)
         } else if scene.view == .browser {
             BrowserPane(chrome: scene.browser ?? BrowserChrome(tabs: [], selected: "", device: .desktop, profile: BrowserProfile.standard.name, links: [], agentControl: false), act: actions.browser)
         } else {

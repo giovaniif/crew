@@ -157,6 +157,7 @@ struct SnapshotTests {
         #expect(pixels(rep, near: Palette.latte.hex(.blue)) > 200)
         _ = try shoot("chat-mocha", .seededChat(), dark: true)
         _ = try shoot("chat-fresh", .seededChat(fresh: true))
+        _ = try shoot("chat-mate", .seededChat(mate: true))
     }
 
     @Test func theInspectorCanBeHidden() throws {

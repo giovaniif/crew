@@ -21,6 +21,7 @@ public struct ChatScene {
 struct ChatView: View {
     let chat: ChatScene
     let card: PermissionCard?
+    let persona: ChatPersona
     let actions: WindowActions
     @Environment(\.colorScheme) private var scheme
 
@@ -50,7 +51,7 @@ struct ChatView: View {
                             approvalCard(item, theme)
                         }
                         if let card, !card.prompt.choices.isEmpty {
-                            permissionCard(InlineApproval(prompt: card.prompt, agent: ""), theme)
+                            permissionCard(InlineApproval(prompt: card.prompt, agent: persona.look == nil ? "" : persona.name), theme)
                         }
                         Color.clear.frame(height: 1).id("chat-end")
                     }
@@ -85,8 +86,7 @@ struct ChatView: View {
             }
         case let .agent(_, text):
             HStack(alignment: .bottom, spacing: 9) {
-                Circle().fill(theme(.surface)).frame(width: 28, height: 28)
-                    .overlay(Image(systemName: "sparkles").font(.system(size: 12)).foregroundStyle(theme(.subtext)))
+                avatar(theme)
                 Text(text)
                     .font(.system(size: 13.5))
                     .textSelection(.enabled)
@@ -175,9 +175,19 @@ struct ChatView: View {
         }
     }
 
+    @ViewBuilder
+    private func avatar(_ theme: Theme) -> some View {
+        if let look = persona.look {
+            MateFace(look: look, state: persona.state, size: 28)
+        } else {
+            Circle().fill(theme(.surface)).frame(width: 28, height: 28)
+                .overlay(Image(systemName: "sparkles").font(.system(size: 12)).foregroundStyle(theme(.subtext)))
+        }
+    }
+
     private func composer(_ theme: Theme) -> some View {
         HStack(spacing: 8) {
-            TextField("Message the agent…", text: Binding(get: { chat.draft }, set: actions.chatDraft))
+            TextField("Message " + (persona.look == nil ? "the agent" : persona.name) + "…", text: Binding(get: { chat.draft }, set: actions.chatDraft))
                 .textFieldStyle(.plain)
                 .font(.system(size: 13))
                 .padding(.horizontal, 14)
