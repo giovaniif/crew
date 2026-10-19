@@ -68,7 +68,7 @@ public struct WindowScene {
         ))
     }
 
-    public static func seededChat(fresh: Bool = false) -> WindowScene {
+    public static func seededChat(fresh: Bool = false, mate: Bool = false) -> WindowScene {
         let rows: [ChatRow] = fresh ? [
             .owner(id: "u0", text: "The login test fails on CI one time in five. Can you look?"),
             .agent(id: "a0", text: "Fixed and pushed. PR #88 is open."),
@@ -89,7 +89,7 @@ public struct WindowScene {
             PromptChoice(id: "2", label: "Yes, and don't ask again for git push commands"),
             PromptChoice(id: "3", label: "No, and tell Claude what to do differently"),
         ]))
-        var scene = WindowScene(state: Seed.window, connection: .live, selected: "s1", view: .chat, card: card)
+        var scene = WindowScene(state: mate ? Seed.mates : Seed.window, connection: .live, selected: mate ? "m3" : "s1", view: .chat, card: mate ? card.map { PermissionCard(session: "m3", prompt: $0.prompt) } : card)
         scene.chat = ChatScene(rows: rows, hasOlder: !fresh)
         return scene
     }

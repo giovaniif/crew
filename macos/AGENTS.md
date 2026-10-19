@@ -168,6 +168,7 @@ The dry run occurs on a pull request that touches `macos/`, `.goreleaser.yaml` o
     - When the `Transcript` path of the session changes (a resume, `/clear` or Start Fresh), `ChatLog` keeps the old rows and adds the divider "Earlier conversation ended · handoff saved to memory".
     - `ChatRow` gives the owner, agent, tool (`◐` running, `✓` done, `✗` failed) and note rows.
     - The inline approval card is the permission dialog of the session (`InlineApproval`: Deny, Always Allow, Allow through `session.answer`). Mate approvals show Deny and Allow through `approval.decide`. In the Chat view, the floating permission card does not show.
+    - `ChatPersona.of(session:board:)` gives the name, face and face state of a mate session: the `avatar` and `color` of its board row (`MateLook.of`), and the state paused (the mate is paused or all mates stopped) > needs you > working > idle. The agent rows, the approval card and the message box use them. A session without a mate is "The agent" with no face.
     - The message box sends with `session.send`. A failed send keeps the text and shows the error.
     - Test: `swift test --filter Chat`. Snapshots: `chat-latte`, `chat-mocha`, `chat-fresh`.
   - `Toolbar.views(session:)` gives the tabs. With no selected session, Review, Shell and nvim are grey and have a tooltip (`Toolbar.needsSession`). A click on one, or its shortcut, shows that text as the window message. Thus a click never does nothing.

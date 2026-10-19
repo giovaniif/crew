@@ -185,3 +185,23 @@ public final class ChatModel {
         }
     }
 }
+
+public struct ChatPersona: Sendable, Equatable {
+    public var name: String
+    public var look: MateLook?
+    public var state: FaceState
+
+    public static func of(session: Session, board: MateBoard?) -> ChatPersona {
+        let face = FaceState.of(state: session.state, ended: session.ended)
+        guard let mate = session.mate?.name, !mate.isEmpty else {
+            return ChatPersona(name: "The agent", look: nil, state: face)
+        }
+        let row = board?.mates.first { $0.name == mate }
+        let paused = board?.stopped == true || row?.paused == true
+        return ChatPersona(
+            name: mate.prefix(1).uppercased() + mate.dropFirst(),
+            look: MateLook.of(name: mate, avatar: row?.avatar, color: row?.color),
+            state: paused ? .paused : face
+        )
+    }
+}
