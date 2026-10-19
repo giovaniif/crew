@@ -42,7 +42,7 @@ public struct MatesScene {
     }
 
     var gallery: MateGallery {
-        var g = MateGallery(definitions: definitions, state: state)
+        var g = MateGallery(definitions: definitions, state: state, approvals: approvals)
         g.filter = filter
         g.search = search
         return g

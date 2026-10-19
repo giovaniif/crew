@@ -165,7 +165,7 @@ public struct MateCard: Sendable, Equatable, Identifiable {
         }
     }
 
-    init(definition d: MateDefinition, state: ViewState?) {
+    init(definition d: MateDefinition, state: ViewState?, approvals: [ApprovalItem] = []) {
         let conversations = state.map { MateConversations(state: $0, mate: d.name) }
         let live = conversations?.live ?? []
         name = d.name
@@ -177,8 +177,12 @@ public struct MateCard: Sendable, Equatable, Identifiable {
         repos = d.repos ?? []
         brains = ([Self.agentTitle(d.agent)] + [d.model, d.effort].compactMap { $0 }.filter { !$0.isEmpty }).joined(separator: " · ")
         self.live = live.count
-        if !d.enabled {
-            status = MateStatusLine(state: "idle", text: "Paused", face: .paused)
+        let row = state?.mates?.mates.first { $0.name == d.name }
+        let held = row?.hold.map { !$0.isEmpty } ?? false
+        if !d.enabled || row?.paused == true || held {
+            status = MateStatusLine(state: "idle", text: held ? "Held · " + (row?.hold ?? "").replacingOccurrences(of: "_", with: " ") : "Paused", face: .paused)
+        } else if approvals.contains(where: { $0.mate == d.name && $0.state == "pending" }) {
+            status = MateStatusLine(state: "permission", text: "Needs you", face: .needs)
         } else if let needs = live.first(where: { $0.face == .needs }) {
             status = MateStatusLine(state: needs.state, text: "Needs you", face: .needs)
         } else if let working = live.first(where: { $0.state == "running" }) {
@@ -202,8 +206,8 @@ public struct MateGallery: Sendable, Equatable {
     public var filter: MateFilter = .all
     public var search = ""
 
-    public init(definitions: [MateDefinition], state: ViewState?) {
-        cards = definitions.map { MateCard(definition: $0, state: state) }
+    public init(definitions: [MateDefinition], state: ViewState?, approvals: [ApprovalItem] = []) {
+        cards = definitions.map { MateCard(definition: $0, state: state, approvals: approvals) }
     }
 
     public func matches(_ card: MateCard, _ filter: MateFilter) -> Bool {

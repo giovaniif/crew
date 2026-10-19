@@ -154,9 +154,9 @@ public struct Face: Sendable, Equatable, Identifiable {
     }
 
     public static func fallback(for name: String) -> Face {
-        var hash: UInt32 = 5381
-        for byte in name.utf8 { hash = hash &* 33 &+ UInt32(byte) }
-        return all[Int(hash % UInt32(all.count))]
+        if let face = named(name) { return face }
+        let sum = name.utf8.reduce(0) { $0 + Int($1) }
+        return all[sum % all.count]
     }
 
     public func symbol(_ state: FaceState) -> String {

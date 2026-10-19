@@ -18,7 +18,7 @@ struct MateProfileView: View {
     }
 
     var body: some View {
-        let card = MateGallery(definitions: [definition], state: scene.state).cards[0]
+        let card = MateGallery(definitions: [definition], state: scene.state, approvals: scene.approvals).cards[0]
         let conversations = scene.state.map { MateConversations(state: $0, mate: definition.name) }
         let row = scene.row(definition.name)
         VStack(spacing: 0) {
