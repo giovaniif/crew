@@ -33,6 +33,7 @@ const (
 	MethodLaunch           = "session.launch"
 	MethodSessionMute      = "session.mute"
 	MethodSessionFocus     = "session.focus"
+	MethodSessionRead      = "session.read"
 	MethodWorktreeAssign   = "worktree.assign"
 	MethodNewSession       = "session.new"
 	MethodSessionResolve   = "session.resolve"

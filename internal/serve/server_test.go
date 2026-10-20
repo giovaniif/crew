@@ -336,6 +336,7 @@ func TestServeSessionActionsCallTheirDaemonMethod(t *testing.T) {
 		{"/api/v1/sessions/s1/resume", "", rpc.MethodResumeSession, `{"id":"s1"}`},
 		{"/api/v1/sessions/s1/mute", `{"muted":false}`, rpc.MethodSessionMute, `{"id":"s1","muted":false}`},
 		{"/api/v1/sessions/s1/rename", `{"name":"login fix"}`, rpc.MethodSessionRename, `{"id":"s1","name":"login fix"}`},
+		{"/api/v1/sessions/s1/read", "", rpc.MethodSessionRead, `{"id":"s1"}`},
 	}
 	for _, tc := range cases {
 		t.Run(tc.method, func(t *testing.T) {
