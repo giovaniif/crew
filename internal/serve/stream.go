@@ -181,24 +181,9 @@ func (s *Server) relay(ctx context.Context, v *view.View, in <-chan rpc.Diff) <-
 
 func (s *Server) authenticate(ctx context.Context, st *stream) (Daemon, rpc.Subscription, rpc.Device, websocket.StatusCode, string) {
 	var none rpc.Subscription
-	stopping := context.AfterFunc(ctx, func() {
-		_ = st.conn.Close(closeFor(context.Cause(ctx)))
-	})
-	lateReason := "no token within " + s.cfg.AuthTimeout.String()
-	late := time.AfterFunc(s.cfg.AuthTimeout, func() {
-		_ = st.conn.Close(CloseBadHandshake, lateReason)
-	})
-	_, data, err := st.conn.Read(st.readCtx)
-	serving := stopping()
-	if !late.Stop() {
-		return nil, none, rpc.Device{}, CloseBadHandshake, lateReason
-	}
-	if !serving {
-		code, reason := closeFor(context.Cause(ctx))
+	data, code, reason := s.readFirst(ctx, st.readCtx, st.conn)
+	if data == nil {
 		return nil, none, rpc.Device{}, code, reason
-	}
-	if err != nil {
-		return nil, none, rpc.Device{}, websocket.StatusNormalClosure, errClientGone.Error()
 	}
 	var first clientFrame
 	if json.Unmarshal(data, &first) != nil || first.Token == "" {
