@@ -38,6 +38,12 @@ go run ./scripts/verify tui drive --restart --out-dir /tmp/crew-verify-map/disk 
 go run ./scripts/verify tui drive --restart --size 80x30 --out-dir /tmp/crew-verify-map/disk --steps '[{"expect":"seeded change 2","timeout":8000},{"keys":"w"},{"expect":"WORKTREES & DISK","timeout":5000},{"expect":"seed-3-infra","timeout":5000},{"absent":"PORT"}]'
 ```
 
+### a 60-column terminal keeps the SIZE column
+
+```sh
+go run ./scripts/verify tui drive --restart --size 60x20 --out-dir /tmp/crew-verify-map/disk --steps '[{"expect":"seeded change 2","timeout":8000},{"keys":"w"},{"expect":"WORKTREES & DISK","timeout":5000},{"expect":"SIZE","timeout":5000},{"expect":"KB","timeout":8000}]'
+```
+
 ### disk view keys k, o and g (manual: they act on real worktree folders)
 
 ## Cleanup
