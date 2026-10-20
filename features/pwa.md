@@ -30,6 +30,12 @@ go run ./scripts/verify web drive / --viewport mobile --out-dir /tmp/crew-verify
 go run ./scripts/verify web drive / --viewport both --out-dir /tmp/crew-verify-map/pwa --steps '[{"click":{"role":"link","name":"New session"}},{"expect":{"text":"claude","exact":false}},{"shot":"new.png"}]'
 ```
 
+### new mate takes its name from the chosen face
+
+```sh
+go run ./scripts/verify web drive '/#/mates/new' --viewport both --out-dir /tmp/crew-verify-map/pwa --steps '[{"click":{"role":"button","name":"Quill"}},{"eval":"(() => { if (document.querySelector(\"label.field input\").value !== \"quill\") throw new Error(\"name not filled\"); return 1 })()"},{"shot":"new-mate.png"}]'
+```
+
 ### pairing screen in the installed app with the fake API
 
 ```sh
