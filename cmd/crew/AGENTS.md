@@ -57,6 +57,7 @@ Hooks call `crew hook`. It writes one message to the socket and exits. It never 
   - `crew setup bridge [--remote-bin path] [--remove] <ssh host>` keeps the bridge running as a launchd agent.
   - Tests: `go test ./... -run 'NotifyStream|NotifyRelay|NotifyBridge|Launchd|SetupBridge'`. They use a temp dir and a fake `launchctl`, never `~/Library/LaunchAgents`. See [ADR 0016](../../docs/adr/0016-notifications-and-attention.md).
 - `crew remote pair [--name n] [--url u]` asks the daemon for a pairing code. It prints a QR code, the URL `https://<url>/#pair=<code>` and the expiry.
+  - `--json` prints only `{"code","expires_at"}` and needs no URL. The desktop app uses it to pair with its own `crew serve` (see [desktop/](../../desktop/AGENTS.md)).
   - The QR code uses half blocks with explicit 256-colour black on white, with the quiet zone. Thus it does not depend on the terminal theme.
   - When stdout is not a terminal or `NO_COLOR` is set, it uses plain half blocks and draws the light modules.
   - When the terminal is narrower than the code, it does not draw the code and writes a warning on stderr. The width comes from the terminal or `COLUMNS`.

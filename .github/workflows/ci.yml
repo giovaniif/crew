@@ -83,8 +83,12 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: web/package-lock.json
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
       - run: npm ci
         working-directory: web
+      - run: make web
       - run: cargo install tauri-driver --locked
       - run: cargo build --locked --manifest-path desktop/src-tauri/Cargo.toml
       - run: cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml

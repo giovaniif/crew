@@ -47,6 +47,16 @@ describe("in a browser tab", () => {
   });
 });
 
+describe("in the desktop app", () => {
+  it("uses the login of the app and skips the install and pair screens", async () => {
+    const { storage, env } = setup({ installed: false, hash: "", desktopAuth: { token: "desk", device } });
+    render(<App env={env} />);
+    expect(await screen.findByRole("heading", { name: "Sessions" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Add crew to your Home Screen" })).not.toBeInTheDocument();
+    expect(loadAuth(storage)).toBeNull();
+  });
+});
+
 describe("in the installed app", () => {
   it("prefills the code from the URL and shows the server and its API version", async () => {
     const { env } = setup();
