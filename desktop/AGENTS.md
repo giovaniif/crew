@@ -12,6 +12,12 @@ The Tauri 2 app for desktop and mobile ([ADR 0057](../docs/adr/0057-tauri-apps.m
     3. It uses the token in `auth.json` in the app data directory (600) if the token works. Else it gets a code from `crew remote pair --json --name desktop`, pairs with `POST /api/v1/pair` and writes `auth.json`.
     4. It gives the login to the page as `window.__CREW_DESKTOP_AUTH__` (an initialization script). The web app uses it as `AppEnv.desktopAuth` and does not write it to `localStorage`. Thus the app shows no Install or Pair screen.
     5. It stops `crew serve` when it quits. On Linux, `crew serve` also gets `SIGTERM` when the app process stops (`PR_SET_PDEATHSIG`).
+- Attention (`src/attention.rs`, the same behavior as the Mac app):
+  - The web app finds `window.__TAURI_INTERNALS__` and calls two commands. `crew_notify {banner}` posts a banner with the notification plugin. `crew_attention {menu}` makes the tray menu again and sets the badge.
+  - The tray menu shows Needs you, Done · unread, Working, the quota meters, New session…, Open crew and Quit crew. A session item opens `#/sessions/<id>` in the window.
+  - The badge is the number of sessions that need you (`set_badge_count`: the macOS Dock and Linux Unity launchers). At 0 there is no badge.
+  - `build.rs` declares the two commands (`AppManifest`). `capabilities/default.json` allows them for the remote origins `http://127.0.0.1:*` and `http://localhost:*`. A different `CREW_URL` origin gets no tray or banners.
+  - The rules (which banners, the settings, the menu rows) are in `web/src/desktopAttention.ts` (see [web/](../web/AGENTS.md)). `tests/attention.rs` tests the menu entries, their actions and the badge.
   - If there is no `crew` or `crew serve` does not start, the window loads `http://127.0.0.1:7420/`.
   - `cargo test --manifest-path desktop/src-tauri/Cargo.toml` runs `tests/local.rs`: the port choice, the `crew` lookup and the `serve` arguments.
   - On mobile, the window loads the bundled connect page (`build.frontendDist` is `../connect`). `tests/start.rs` tests that mobile opens the bundled page. The user types the address of a remote `crew serve`. The page keeps it and opens it. Then the pairing of the PWA starts ([ADR 0046](../docs/adr/0046-remote-app.md)).
@@ -32,7 +38,7 @@ The Tauri 2 app for desktop and mobile ([ADR 0057](../docs/adr/0057-tauri-apps.m
 - `npm ci` in `desktop/`, then `npx tauri build` makes the packages.
 - `xvfb-run -a desktop/e2e/run` runs the e2e tests on Linux. It needs `npm ci` in `web/` and the debug build.
   - It builds `crew` from this checkout into a temporary `PATH` directory. Run `make web` first, so that `crew serve` has the UI.
-  - `session-list.test.mjs` uses the fake API of `web/` (`CREW_FAKE_API=1`) on `127.0.0.1:5179` (`CREW_E2E_PORT`) through `CREW_URL`.
+  - `session-list.test.mjs` uses the fake API of `web/` (`CREW_FAKE_API=1`) on `127.0.0.1:5179` (`CREW_E2E_PORT`) through `CREW_URL`. It also calls `crew_attention` and `crew_notify` from the page.
   - `local-serve.test.mjs` runs without `CREW_URL`. The app starts and pairs its own `crew serve`. After the test, `run` checks that no `crew serve` continues to run.
   - Each test file gets its own `tauri-driver` on port 4444, because the app gets its environment from `tauri-driver`.
   - `CREW_E2E_SHOTS=<dir>` writes a screenshot of the local session list to `<dir>/local-serve.png`.
