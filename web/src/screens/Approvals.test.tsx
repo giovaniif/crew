@@ -1,6 +1,6 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { App, type AppEnv } from "../App";
 import { FakeServer, MemoryStorage } from "../test/fake-server";
 import { FakeSockets } from "../test/fake-socket";
@@ -40,6 +40,10 @@ function setup(list: unknown[] = pending) {
 }
 
 describe("Approvals", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("is a tab next to the session list", () => {
     const { env } = setup();
     render(<App env={{ ...env, hash: "" }} />);
@@ -89,5 +93,41 @@ describe("Approvals", () => {
     const { env } = setup([]);
     render(<App env={env} />);
     expect(await screen.findByText("No approvals wait for you.")).toBeInTheDocument();
+  });
+
+  it("loads the list again when the page is shown again, so the approval of a tapped push shows", async () => {
+    const { server, env } = setup([]);
+    const page = { visible: false };
+    const listeners = new Set<() => void>();
+    const visibility = {
+      visible: () => page.visible,
+      onChange: (listener: () => void) => {
+        listeners.add(listener);
+        return () => {
+          listeners.delete(listener);
+        };
+      },
+    };
+    render(<App env={{ ...env, visibility }} />);
+    expect(await screen.findByText("No approvals wait for you.")).toBeInTheDocument();
+    server.on("GET", "/api/v1/approvals", { status: 200, body: pending });
+    page.visible = true;
+    act(() => listeners.forEach((l) => l()));
+    expect(await screen.findByRole("listitem", { name: "helper: create pr" })).toBeInTheDocument();
+    expect(screen.queryByText("No approvals wait for you.")).toBeNull();
+  });
+
+  it("loads the list again on the clock tick, so an approval decided elsewhere goes", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(Date.parse("2026-10-03T12:00:00Z"));
+    const { server, env } = setup();
+    render(<App env={{ ...env, now: () => Date.now() }} />);
+    expect(await screen.findByRole("listitem", { name: "helper: create pr" })).toBeInTheDocument();
+    server.on("GET", "/api/v1/approvals", { status: 200, body: [] });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30000);
+    });
+    expect(await screen.findByText("No approvals wait for you.")).toBeInTheDocument();
+    expect(screen.queryByRole("listitem", { name: "helper: create pr" })).toBeNull();
   });
 });
