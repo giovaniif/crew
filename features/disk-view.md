@@ -32,6 +32,12 @@ Expect: after the first refresh, no row shows `…` and the worktree total has n
 go run ./scripts/verify tui drive --restart --out-dir /tmp/crew-verify-map/disk --steps '[{"expect":"seeded change 2","timeout":8000},{"keys":"w"},{"expect":"WORKTREES & DISK","timeout":5000},{"keys":"Escape"},{"absent":"WORKTREES & DISK","timeout":5000}]'
 ```
 
+### an 80-column terminal shows the full branch and no empty PORT column
+
+```sh
+go run ./scripts/verify tui drive --restart --size 80x30 --out-dir /tmp/crew-verify-map/disk --steps '[{"expect":"seeded change 2","timeout":8000},{"keys":"w"},{"expect":"WORKTREES & DISK","timeout":5000},{"expect":"seed-3-infra","timeout":5000},{"absent":"PORT"}]'
+```
+
 ### disk view keys k, o and g (manual: they act on real worktree folders)
 
 ## Cleanup
@@ -43,4 +49,4 @@ go run ./scripts/verify iso down
 ## Gotchas
 
 - Never press `d` or `b` here on real repos.
-- Product bug [#417](https://github.com/giovaniif/crew/issues/417): the seeded worktrees do not exist on disk, and their sizes stay `…` forever. "sizes finish measuring" fails until #417 is fixed. Do not remove or weaken it.
+- The seeded worktrees do not exist on disk, so their sizes show `missing` ([#417](https://github.com/giovaniif/crew/issues/417), fixed).

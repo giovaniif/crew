@@ -79,7 +79,12 @@ public struct LiveMatesWindow: View {
             Button("Start Fresh") {
                 guard let id = fresh else { return }
                 fresh = nil
-                Task { await startFresh(id) }
+                Task { await startFresh(id, sameWorktree: true) }
+            }
+            Button("Start Fresh in a New Worktree") {
+                guard let id = fresh else { return }
+                fresh = nil
+                Task { await startFresh(id, sameWorktree: false) }
             }
         } message: {
             Text(fresh.flatMap(mateOf).map(StartFresh.detail) ?? "")
@@ -121,9 +126,9 @@ public struct LiveMatesWindow: View {
         if let id = await model?.newConversation(name) { open(id) }
     }
 
-    private func startFresh(_ id: String) async {
-        guard let state = store.state, let session = state.sessions.first(where: { $0.id == id }) else { return }
-        if let next = await model?.startFresh(session, state: state) { open(next) }
+    private func startFresh(_ id: String, sameWorktree: Bool) async {
+        guard let session = store.state?.sessions.first(where: { $0.id == id }) else { return }
+        if let next = await model?.startFresh(session, sameWorktree: sameWorktree) { open(next) }
     }
 
     private func begin(_ name: String) async {

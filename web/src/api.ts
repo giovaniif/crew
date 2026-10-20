@@ -402,9 +402,6 @@ export function setMateMemory(a: Authed, name: string, text: string): Promise<Ma
   return authedRequest<MateMemory>(a, matePath(name, "memory"), "POST", { text });
 }
 
-export const handoffText = "Before we stop: add a short handoff to your memory file. Note what you did, what is left and what you learned.";
-
-export async function startFresh(a: Authed, session: string, mate: string): Promise<{ ID: string }> {
-  await sendMessage(a, session, handoffText);
-  return newMateConversation(a, mate);
+export function startFresh(a: Authed, session: string, sameWorktree: boolean): Promise<{ ID: string }> {
+  return authedRequest<{ ID: string }>(a, sessionPath(session, "/fresh"), "POST", { same_worktree: sameWorktree });
 }
