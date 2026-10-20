@@ -41,6 +41,18 @@ go run ./scripts/verify web drive / --viewport mobile --out-dir /tmp/crew-verify
 go run ./scripts/verify web drive "/#pair=ABCD2345" --viewport both --installed --out-dir /tmp/crew-verify-map/remote --steps '[{"click":{"role":"link","name":"Settings"}},{"click":{"role":"button","name":"Sign out"}},{"expect":{"role":"heading","name":"Pair this device"}},{"eval":"if (document.querySelector(\"input.code-input\").value !== \"\") throw new Error(\"stale pair code\")"}]'
 ```
 
+### hello answers with the API version and no token
+
+```sh
+sh -c 'curl -fsS "$(jq -r .serve_url "${VERIFY_HOME:-/tmp/crew-verify-$(id -u)}/iso.json")/api/v1/hello" | jq -e ".api == \"v1\""'
+```
+
+### stream refuses a request with no token
+
+```sh
+sh -c 'test "$(curl -s -o /dev/null -w "%{http_code}" "$(jq -r .serve_url "${VERIFY_HOME:-/tmp/crew-verify-$(id -u)}/iso.json")/api/v1/stream")" = 403'
+```
+
 ### scan the QR code with a phone camera (manual: no camera on the server)
 
 ## Cleanup
