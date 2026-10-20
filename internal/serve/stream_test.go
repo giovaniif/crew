@@ -336,6 +336,37 @@ func TestServeStreamReportsThePagesVisibilityOnItsOwnDaemonConnection(t *testing
 	}
 }
 
+func TestServeStreamReportsTheSessionInViewOnItsOwnDaemonConnection(t *testing.T) {
+	f := newFakeDaemon()
+	f.devices[goodToken] = phone
+	_, ts := startServer(t, f, serve.Config{URL: publicURL})
+	c := openStream(t, ts, goodToken)
+	next(t, c)
+	send(t, c, map[string]any{"viewing": map[string]any{"session": "s1", "front": true}})
+	send(t, c, map[string]any{"viewing": map[string]any{"session": "", "front": false}})
+	want := []string{`{"session":"s1","front":true}`, `{"session":"","front":false}`}
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		got := f.paramsOf(rpc.MethodClientViewing)
+		if len(got) == len(want) {
+			for i := range want {
+				if string(got[i]) != want[i] {
+					t.Fatalf("client.viewing params %s, want %s", got, want)
+				}
+			}
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("client.viewing params %s, want %s", got, want)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	checked, viewed := f.connOf(rpc.MethodDeviceCheck), f.connOf(rpc.MethodClientViewing)
+	if len(checked) != 1 || viewed[0] != checked[0] || viewed[1] != checked[0] {
+		t.Fatal("client.viewing went over another connection than the stream's own")
+	}
+}
+
 func TestServeStreamReleasesItsDaemonConnectionWhenTheClientLeaves(t *testing.T) {
 	f := newFakeDaemon()
 	f.devices[goodToken] = phone

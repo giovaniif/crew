@@ -1,3 +1,4 @@
+pub mod attention;
 pub mod local;
 
 use std::path::PathBuf;
@@ -5,18 +6,37 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 use std::time::Duration;
 
-use tauri::{AppHandle, Manager, RunEvent, WebviewUrl, WebviewWindowBuilder};
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+use tauri::tray::TrayIconBuilder;
+use tauri::{AppHandle, Manager, RunEvent, Runtime, WebviewUrl, WebviewWindowBuilder};
+use tauri_plugin_notification::NotificationExt;
 use url::Url;
 
+use attention::{Action, Banner, Entry};
 use local::LocalServe;
 
+const TRAY: &str = "crew";
+
 pub const DEFAULT_URL: &str = "http://127.0.0.1:7420/";
+
+#[derive(Debug, PartialEq)]
+pub enum Start {
+    Bundled,
+    Remote(Url),
+}
 
 pub fn start_url(configured: Option<String>) -> Result<Url, url::ParseError> {
     match configured.as_deref().map(str::trim) {
         Some(value) if !value.is_empty() => Url::parse(value),
         _ => Url::parse(DEFAULT_URL),
     }
+}
+
+pub fn start_page(mobile: bool, configured: Option<String>) -> Result<Start, url::ParseError> {
+    if mobile {
+        return Ok(Start::Bundled);
+    }
+    start_url(configured).map(Start::Remote)
 }
 
 struct Started {
@@ -105,15 +125,15 @@ fn open_window(app: &AppHandle, started: Started) -> tauri::Result<()> {
     };
     let url = match started.url {
         Some(url) => WebviewUrl::External(url),
-        None if app.asset_resolver().get("app.html".into()).is_some() => {
-            WebviewUrl::App("app.html".into())
-        }
         None => WebviewUrl::App("index.html".into()),
     };
-    let mut window = WebviewWindowBuilder::new(app, &label, url)
+    let window = WebviewWindowBuilder::new(app, &label, url);
+    #[cfg(desktop)]
+    let window = window
         .title("crew")
         .inner_size(1280.0, 800.0)
         .min_inner_size(900.0, 600.0);
+    let mut window = window;
     if let Some(auth) = started.auth {
         window = window.initialization_script(format!("window.__CREW_DESKTOP_AUTH__ = {auth};"));
     }
@@ -171,12 +191,109 @@ async fn fix_daemon(app: AppHandle) -> Result<(), String> {
         .map_err(|e| e.to_string())?
 }
 
+fn build_menu<R: Runtime>(app: &AppHandle<R>, model: &attention::Menu) -> tauri::Result<Menu<R>> {
+    let menu = Menu::new(app)?;
+    for entry in attention::entries(model) {
+        match entry {
+            Entry::Separator => menu.append(&PredefinedMenuItem::separator(app)?)?,
+            Entry::Item { id, text, enabled } => {
+                let id = if id.is_empty() {
+                    format!("label:{text}")
+                } else {
+                    id
+                };
+                menu.append(&MenuItem::with_id(app, id, text, enabled, None::<&str>)?)?
+            }
+        }
+    }
+    Ok(menu)
+}
+
+fn main_window<R: Runtime>(app: &AppHandle<R>) -> Option<tauri::WebviewWindow<R>> {
+    app.webview_windows().into_values().next()
+}
+
+fn on_menu<R: Runtime>(app: &AppHandle<R>, id: &str) {
+    match attention::action(id) {
+        Some(Action::Quit) => app.exit(0),
+        Some(Action::Show(hash)) => {
+            if let Some(window) = main_window(app) {
+                let _ = window.unminimize();
+                let _ = window.show();
+                let _ = window.set_focus();
+                if let Some(hash) = hash {
+                    let _ = window.eval(format!(
+                        "window.location.hash = {};",
+                        serde_json::Value::String(hash)
+                    ));
+                }
+            }
+        }
+        None => {}
+    }
+}
+
+#[tauri::command]
+fn crew_notify<R: Runtime>(app: AppHandle<R>, banner: Banner) {
+    let mut builder = app
+        .notification()
+        .builder()
+        .title(&banner.title)
+        .body(&banner.body);
+    if banner.sound {
+        builder = builder.sound("default");
+    }
+    if let Err(err) = builder.show() {
+        eprintln!("crew-desktop: notification for {} failed: {err}", banner.id);
+    }
+}
+
+#[tauri::command]
+fn crew_attention<R: Runtime>(app: AppHandle<R>, menu: attention::Menu) -> Result<(), String> {
+    if let Some(tray) = app.tray_by_id(TRAY) {
+        let built = build_menu(&app, &menu).map_err(|e| e.to_string())?;
+        tray.set_menu(Some(built)).map_err(|e| e.to_string())?;
+        let tip = match attention::badge(&menu) {
+            Some(n) => format!("crew: {n} need you"),
+            None => "crew".to_string(),
+        };
+        let _ = tray.set_tooltip(Some(tip));
+    }
+    if let Some(window) = main_window(&app) {
+        let _ = window.set_badge_count(attention::badge(&menu));
+    }
+    Ok(())
+}
+
+fn add_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
+    let menu = build_menu(app, &attention::Menu::default())?;
+    let mut tray = TrayIconBuilder::with_id(TRAY)
+        .tooltip("crew")
+        .menu(&menu)
+        .on_menu_event(|app, event| on_menu(app, event.id().as_ref()));
+    if let Some(icon) = app.default_window_icon() {
+        tray = tray.icon(icon.clone());
+    }
+    tray.build(app)?;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let app = tauri::Builder::default()
+        .plugin(tauri_plugin_notification::init())
+        .invoke_handler(tauri::generate_handler![
+            crew_notify,
+            crew_attention,
+            fix_daemon
+        ])
         .manage(Mutex::new(None::<LocalServe>))
-        .invoke_handler(tauri::generate_handler![fix_daemon])
         .setup(|app| {
+            if start_page(cfg!(mobile), None) == Ok(Start::Bundled) {
+                WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
+                    .build()?;
+                return Ok(());
+            }
             let handle = app.handle().clone();
             let started = match configured_url() {
                 Some(value) => Started {
@@ -194,6 +311,9 @@ pub fn run() {
                 }
             };
             open_window(&handle, started)?;
+            if let Err(err) = add_tray(app.handle()) {
+                eprintln!("crew-desktop: no tray: {err}");
+            }
             Ok(())
         })
         .build(tauri::generate_context!())
@@ -210,4 +330,32 @@ pub fn run() {
             }
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mobile_opens_the_bundled_connect_page() {
+        assert_eq!(
+            start_page(true, Some("https://crew.example.ts.net/".into())),
+            Ok(Start::Bundled)
+        );
+        assert_eq!(start_page(true, None), Ok(Start::Bundled));
+    }
+
+    #[test]
+    fn desktop_opens_the_configured_url() {
+        assert_eq!(
+            start_page(false, Some("https://crew.example.ts.net/".into())),
+            Ok(Start::Remote(
+                Url::parse("https://crew.example.ts.net/").unwrap()
+            ))
+        );
+        assert_eq!(
+            start_page(false, None),
+            Ok(Start::Remote(Url::parse(DEFAULT_URL).unwrap()))
+        );
+    }
 }

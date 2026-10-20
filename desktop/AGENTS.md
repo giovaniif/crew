@@ -12,13 +12,21 @@ The Tauri 2 app for desktop and mobile ([ADR 0057](../docs/adr/0057-tauri-apps.m
     3. It uses the token in `auth.json` in the app data directory (600) if the token works. Else it gets a code from `crew remote pair --json --name desktop`, pairs with `POST /api/v1/pair` and writes `auth.json`.
     4. It gives the login to the page as `window.__CREW_DESKTOP_AUTH__` (an initialization script). The web app uses it as `AppEnv.desktopAuth` and does not write it to `localStorage`. Thus the app shows no Install or Pair screen.
     5. It stops `crew serve` when it quits. On Linux, `crew serve` also gets `SIGTERM` when the app process stops (`PR_SET_PDEATHSIG`).
-  - If there is no `crew` or `crew serve` does not start, the window loads the bundled UI (`app.html` of `frontendDist`, else the placeholder) with `window.__CREW_DESKTOP_PROBLEM__` (the reason). The web app then shows "crew is not running" with Fix, not the pairing screen.
-  - Fix is the Tauri command `fix_daemon` (the web app calls it through `__TAURI_INTERNALS__.invoke`). It runs `crew setup daemon`, then `crew setup daemon --check` (`local::fix_daemon`). A failed setup or a `failing` check returns the `reason` of the check, else the error output of the setup. Then it starts `crew serve` again if it is not alive (on the same port), or, after a failed start, starts and pairs a new one and opens a new window (`main-<n>`).
-  - `capabilities/default.json` lets the pages of `http://127.0.0.1:*` call the commands (`remote`).
+- Attention (`src/attention.rs`, the same behavior as the Mac app):
+  - The web app finds `window.__TAURI_INTERNALS__` and calls two commands. `crew_notify {banner}` posts a banner with the notification plugin. `crew_attention {menu}` makes the tray menu again and sets the badge.
+  - The tray menu shows Needs you, Done · unread, Working, the quota meters, New session…, Open crew and Quit crew. A session item opens `#/sessions/<id>` in the window.
+  - The badge is the number of sessions that need you (`set_badge_count`: the macOS Dock and Linux Unity launchers). At 0 there is no badge.
+  - `build.rs` declares the two commands (`AppManifest`). `capabilities/default.json` allows them for the remote origins `http://127.0.0.1:*` and `http://localhost:*`. A different `CREW_URL` origin gets no tray or banners.
+  - The rules (which banners, the settings, the menu rows) are in `web/src/desktopAttention.ts` (see [web/](../web/AGENTS.md)). `tests/attention.rs` tests the menu entries, their actions and the badge.
+  - If there is no `crew` or `crew serve` does not start, the window loads the bundled page (`connect/index.html`) with `window.__CREW_DESKTOP_PROBLEM__` (the reason). The page then shows "crew did not start", the reason and Fix, not the connect form.
+  - Fix is the Tauri command `fix_daemon` (declared in `build.rs`, allowed in `capabilities/default.json`). It runs `crew setup daemon`, then `crew setup daemon --check` (`local::fix_daemon`). A failed setup or a `failing` check returns the `reason` of the check, else the error output of the setup. Then it starts `crew serve` again if it is not alive (on the same port), or, after a failed start, starts and pairs a new one and opens a new window (`main-<n>`). The web app calls it from the connection banner (see [web/](../web/AGENTS.md)).
   - With `CREW_URL`, Fix runs only `crew setup daemon` on this computer. The app has no list of remote servers yet, so it cannot run the SSH setup.
   - `cargo test --manifest-path desktop/src-tauri/Cargo.toml` runs `tests/local.rs` (the port choice, the `crew` lookup and the `serve` arguments) and `tests/fix.rs` (Fix with a fake `crew` script, Unix only).
-  - `build.frontendDist` points at `internal/serve/dist`. The window does not use it yet.
+  - On mobile, the window loads the bundled connect page (`build.frontendDist` is `../connect`). The user types the address of a remote `crew serve`. The page keeps it and opens it. Then the pairing of the PWA starts ([ADR 0046](../docs/adr/0046-remote-app.md)).
+  - `Info.ios.plist` sets `ITSAppUsesNonExemptEncryption` to `false`. Thus TestFlight does not stop the build for export compliance.
+  - `gen/apple/` is the Xcode project from `npx tauri ios init`. Its app icons come from `npx tauri icon ../macos/AppIcon.png --ios-color '#ffffff'`. App Store Connect refuses an icon with an alpha channel, so the icons have a white background and no alpha.
   - The icons come from `macos/AppIcon.png`. Run `npx tauri icon ../macos/AppIcon.png -o src-tauri/icons` to make them again. Keep only the desktop files.
+- `connect/`: the connect page (`index.html`, `server.js`) and its test (`node --test desktop/connect/server.test.mjs`).
 - `package.json`: the Tauri CLI (`npx tauri`).
 - `e2e/`: the WebDriver tests (`*.test.mjs`, `node --test`) and `e2e/run`.
 
@@ -30,7 +38,7 @@ The Tauri 2 app for desktop and mobile ([ADR 0057](../docs/adr/0057-tauri-apps.m
 - `npm ci` in `desktop/`, then `npx tauri build` makes the packages.
 - `xvfb-run -a desktop/e2e/run` runs the e2e tests on Linux. It needs `npm ci` in `web/` and the debug build.
   - It builds `crew` from this checkout into a temporary `PATH` directory. Run `make web` first, so that `crew serve` has the UI.
-  - `session-list.test.mjs` uses the fake API of `web/` (`CREW_FAKE_API=1`) on `127.0.0.1:5179` (`CREW_E2E_PORT`) through `CREW_URL`.
+  - `session-list.test.mjs` uses the fake API of `web/` (`CREW_FAKE_API=1`) on `127.0.0.1:5179` (`CREW_E2E_PORT`) through `CREW_URL`. It also calls `crew_attention` and `crew_notify` from the page.
   - `local-serve.test.mjs` runs without `CREW_URL`. The app starts and pairs its own `crew serve`. After the test, `run` checks that no `crew serve` continues to run.
   - Each test file gets its own `tauri-driver` on port 4444, because the app gets its environment from `tauri-driver`.
   - `CREW_E2E_SHOTS=<dir>` writes a screenshot of the local session list to `<dir>/local-serve.png`.
@@ -41,6 +49,15 @@ The Tauri 2 app for desktop and mobile ([ADR 0057](../docs/adr/0057-tauri-apps.m
 ## CI
 
 The `desktop` job (`ubuntu-latest`) builds the app and runs `desktop/e2e/run`. The `desktop-macos` job (`macos-15`) builds the app only.
+
+The `ios` workflow (`.github/workflows/ios.yml`, `macos-15`) builds the iOS app:
+
+- On a pull request, it makes a simulator build with no signature: `npx tauri ios build --debug --target aarch64-sim` (in `desktop/`, macOS). It needs no secrets.
+- It selects the latest stable Xcode, because App Store Connect needs the iOS 26 SDK.
+- On a push to `main` and on `workflow_dispatch`, it makes a signed App Store build and sends it to TestFlight with `xcrun altool --upload-app`.
+  - Signing is automatic. It uses the App Store Connect API key in the repo secrets `APPLE_API_KEY`, `APPLE_API_ISSUER`, `APPLE_API_KEY_P8` and `APPLE_TEAM_ID`.
+  - The build number is the run number of the workflow. Thus each upload has a larger number.
+- Each run makes sure that the built app has `ITSAppUsesNonExemptEncryption` set to `false`.
 
 The `desktop` job of `release.yml` makes the packages for each tag, on `workflow_dispatch` (a dry run) and on a pull request that changes `desktop/`:
 

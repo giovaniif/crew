@@ -11,6 +11,7 @@ import { App } from "./App";
 import { buildOfWorker, checkBuild, workerURL } from "./build";
 import { desktopAuth } from "./auth";
 import { desktopFix, desktopProblem } from "./desktop-host";
+import { tauriBridge } from "./desktopBridge";
 import { isInstalled } from "./display";
 import { browserPush } from "./push";
 
@@ -128,6 +129,7 @@ if (root) {
           push: browserPush(window),
           visibility,
           wide,
+          desktop: tauriBridge(window),
           desktopAuth: desktopAuth((window as { __CREW_DESKTOP_AUTH__?: unknown }).__CREW_DESKTOP_AUTH__),
           desktopProblem: desktopProblem(window),
           desktopFix: desktopFix(window),

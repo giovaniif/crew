@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type R
 import { tokenRefused, unpairDevice, type Fetch } from "./api";
 import { clearAuth, loadAuth, saveAuth, type Auth, type KeyValue } from "./auth";
 import { pairCodeFromHash } from "./display";
+import { DesktopAlerts, useDesktopAttention, type DesktopBridge } from "./desktopBridge";
 import { disablePush, noPush, type PushEnv } from "./push";
 import { parseRoute } from "./route";
 import { Approvals } from "./screens/Approvals";
@@ -33,6 +34,7 @@ export type AppEnv = {
   desktopAuth?: Auth | null;
   desktopProblem?: string | null;
   desktopFix?: () => Promise<void>;
+  desktop?: DesktopBridge;
 };
 
 export type Width = {
@@ -113,6 +115,7 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
   const api = useMemo(() => ({ fetch, token: auth.token }), [fetch, auth.token]);
 
   useEffect(() => onHashChange(setHash), [onHashChange]);
+  useDesktopAttention(env.desktop, client, snapshot, hash, env.storage, visibility, now);
 
   useEffect(() => visibility?.onChange(() => client.visibilityChanged()), [visibility, client]);
 
@@ -202,14 +205,17 @@ function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut }:
   if (hash === "#/settings") {
     return {
       screen: (
-        <Settings
-          auth={auth}
-          host={env.host}
-          installed={env.installed}
-          fetch={env.fetch}
-          push={env.push ?? noPush}
-          onSignOut={onSignOut}
-        />
+        <>
+          <Settings
+            auth={auth}
+            host={env.host}
+            installed={env.installed}
+            fetch={env.fetch}
+            push={env.push ?? noPush}
+            onSignOut={onSignOut}
+          />
+          {env.desktop && <DesktopAlerts storage={env.storage} />}
+        </>
       ),
       tab: "settings",
     };
