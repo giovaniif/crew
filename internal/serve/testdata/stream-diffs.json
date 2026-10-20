@@ -38,7 +38,8 @@
         "name": "fix the login redirect",
         "where": "api@login",
         "banner": "needs permission: Bash: make test",
-        "since": "2026-10-03T12:01:00Z"
+        "since": "2026-10-03T12:01:00Z",
+        "order": 0
       },
       "limits": [
         {
@@ -118,7 +119,8 @@
         "name": "fix the login redirect",
         "where": "api@login-v2",
         "banner": "needs permission: Bash: make test",
-        "since": "2026-10-03T12:01:00Z"
+        "since": "2026-10-03T12:01:00Z",
+        "order": 0
       }
     }
   },
@@ -200,7 +202,8 @@
         "name": "login fix",
         "where": "api@login-v2",
         "banner": "needs permission: Bash: make test",
-        "since": "2026-10-03T12:01:00Z"
+        "since": "2026-10-03T12:01:00Z",
+        "order": 0
       }
     }
   }
