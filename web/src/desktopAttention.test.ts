@@ -110,7 +110,7 @@ describe("Attention banners", () => {
   it("applies the alert of each state and the muted setting", () => {
     const prefs: AlertPrefs = { ...defaultAlertPrefs, done: { banner: false, sound: false }, limitOrError: { banner: true, sound: true } };
     expect(bannerStep({}, [session({ ID: "a", State: "done", banner: "finished" })], prefs, away).posts).toEqual([]);
-    expect(bannerStep({}, [session({ ID: "a", State: "limit", banner: "hit a limit" })], prefs, away).posts[0].sound).toBe(true);
+    expect(bannerStep({}, [session({ ID: "a", State: "idle", banner: "hit a limit" })], prefs, away).posts[0].sound).toBe(true);
     const muted = [session({ ID: "a", State: "waiting", Muted: true, banner: "waits" })];
     expect(bannerStep({}, muted, defaultAlertPrefs, away).posts).toEqual([]);
     expect(bannerStep({}, muted, { ...defaultAlertPrefs, notifyMuted: true }, away).posts).toHaveLength(1);
