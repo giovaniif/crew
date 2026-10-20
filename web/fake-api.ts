@@ -83,7 +83,7 @@ export function fakeStreamState(now = Date.now()) {
       fakeSession("s3", { State: "running", name: "add retries", where: "api@retries", since: ago(8) }),
       fakeSession("s4", { State: "done", Unread: true, name: "update the docs", where: "docs@setup", banner: "Rewrote the setup section. (6m40s)", since: ago(20) }),
       fakeSession("s5", { Harness: "codex", State: "done", name: "bump deps", where: "web@deps", banner: "Bumped vite and vitest; the tests pass. (3m2s)", since: ago(125) }),
-      fakeSession("s6", { State: "running", name: "explore the auth flow", where: "api@main", since: ago(4), Mate: { Name: "pip", Local: true } }),
+      fakeSession("s6", { State: "running", name: "explore the auth flow", where: "api@main", since: ago(4), Mate: { Name: "pip", Local: true, FreshFrom: "s5" } }),
     ],
     limits: [quota("claude", "five_hour", "5h", 38, 130), quota("claude", "seven_day", "7d", 19, 3 * 24 * 60), quota("codex", "five_hour", "5h", 77, 200)],
     sends: [
@@ -123,6 +123,16 @@ function fakeMessage(id: string, cursor: number, role: string, text: string, at:
 
 export function fakeMessages(older: boolean, now = Date.now(), session = "") {
   const at = new Date(now - 5 * minute).toISOString();
+  if (session === "s6" && !older) {
+    return {
+      messages: [
+        fakeMessage("f1", 100, "user", "look at the auth flow and list the weak spots", at),
+        fakeMessage("f2", 200, "assistant", "I read the handoff. I'll start with the token refresh path.", at),
+        fakeMessage("f3", 300, "tool", "", at, { name: "Read", summary: "Read internal/auth/refresh.go", status: "running" }),
+      ],
+      before: 0,
+    };
+  }
   if (older) {
     return {
       messages: [
