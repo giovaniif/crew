@@ -82,6 +82,8 @@ Unknown paths under `/api/` answer `not_found`.
 | `POST /api/v1/mates/{name}/new` | yes | `mate.new` | `{"repo","prompt"}` (both optional, the body can be empty) → the new session |
 | `GET /api/v1/mates/{name}/memory` | yes | `mate.memory` | → `{"name","path","text","limit"}` |
 | `POST /api/v1/mates/{name}/memory` | yes | `mate.set_memory` | `{"text"}` → the same; an empty text clears the memory |
+| `POST /api/v1/sessions/{id}/shell` | yes | `shell.focus` | `{"worktree"}` (optional, the body can be empty) → `{"pane","dir","shown"}`; open `pane` with the terminal route |
+| `POST /api/v1/sessions/{id}/nvim` | yes | `nvim.toggle` | `{"worktree"}` (optional, the body can be empty) → `{"pane","socket","shown"}`; open `pane` with the terminal route |
 | `POST /api/v1/sessions/{id}/fresh` | yes | `mate.fresh` | `{"same_worktree","prompt"}` (optional, the body can be empty) → the new session; "Start fresh" on a mate session |
 
 - Auth is `Authorization: Bearer <token>`. Before the method runs, serve checks it with `device.check` on the connection of the request. Then it checks it against the set of revoked device IDs.
@@ -155,3 +157,21 @@ The `/` fallback: `Handler(fallback)` mounts `fallback` at `/`. `Handler(nil)` s
   - That diff, or the diff on the `Start` connection, cancels all open streams of that device (4401 immediately). It also records the ID, so REST checks that answered immediately before it still fail.
   - The stream does not depend on the `Start` connection, which can be connecting again after a daemon restart.
   - The stream reads its subscription in its own goroutine and queues the diffs for the writer. Thus a phone that stops reading (a write blocked for up to 10 s) still sees its revocation immediately. The canceled write closes the socket, with 4401 if the transport is still open.
+
+## Terminal (`GET /api/v1/terminal/{pane}`, WebSocket)
+
+The xterm.js tabs of the app show a tmux pane through this route (ADR 0057). `{pane}` is a tmux pane id, for example `%5` (URL-encoded `%255`). Get the pane of the agent from `session.Pane`, the shell from `POST /sessions/{id}/shell` and nvim from `POST /sessions/{id}/nvim`.
+
+- The `Origin` check and the close codes 4400, 4401, 1001 and 1000 are the same as for the stream. A revoked device closes with 4401.
+- The first client frame is `{"token","cols","rows"}`. A size below 1 gives 80x24.
+- serve calls `client.native` with the size. This makes a native tmux session on the `crew` server, as for the Mac app. Then serve runs its `argv` (`tmux -C attach-session`) through `Config.Control`. serve does not import `os/exec`, so `cmd/crew` gives `Control` (`startControl`). Without `Control`, the route closes with 1013.
+- serve sends these control-mode commands: `refresh-client -C <window>:<cols>x<rows>`, `display-message` (window, size and cursor) and `capture-pane -p -e`. It matches the replies by the `%begin` blocks that have flag 1.
+- Server frames:
+  - First, one text frame `{"screen":{"pane","window","cols","rows","cursor":{"x","y","visible"},"data"}}`. `data` clears the screen, draws the captured lines and moves the cursor. Write it to xterm.js as it is.
+  - Then one binary frame for each `%output` or `%extended-output` of the pane: the raw bytes. serve drops output that comes before the capture.
+  - `{"error":{"code","message"}}` for a bad client frame. The socket stays open.
+- Client frames after the first:
+  - A binary frame is keys. serve sends them with `send-keys -H` in chunks of 256 bytes.
+  - `{"size":{"cols","rows"}}` (both 1 or more) sizes the window of the pane.
+- Close codes: 4404 `CloseNoPane` when the pane is not in the native session or is gone; 1013 when the daemon or tmux cannot start, or tmux control mode ends.
+- Tests: `go test ./internal/serve -run Terminal` (a fake control process in `terminal_fake_test.go`) and `go test -tags integration ./internal/serve -run Terminal` (a real tmux server on its own socket).
