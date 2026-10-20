@@ -38,6 +38,7 @@ type Config struct {
 	AuthTimeout time.Duration
 	Log         io.Writer
 	Now         func() time.Time
+	Control     func(ctx context.Context, argv []string) (io.ReadWriteCloser, error)
 }
 
 type Server struct {
@@ -99,6 +100,8 @@ func (s *Server) routes() []route {
 		{"POST /api/v1/sessions/{id}/interrupt", sessionAction(rpc.MethodSessionInterrupt, targetParams)},
 		{"GET /api/v1/sessions/{id}/prompt", sessionAction(rpc.MethodSessionPrompt, promptParams)},
 		{"POST /api/v1/sessions/{id}/answer", sessionAction(rpc.MethodSessionAnswer, answerParams)},
+		{"POST /api/v1/sessions/{id}/shell", sessionAction(rpc.MethodShellFocus, shellParams)},
+		{"POST /api/v1/sessions/{id}/nvim", sessionAction(rpc.MethodNvimToggle, nvimParams)},
 		{"GET /api/v1/push/key", pushKey},
 		{"POST /api/v1/push/subscribe", pushSubscribe},
 		{"POST /api/v1/push/unsubscribe", pushUnsubscribe},
@@ -126,6 +129,7 @@ func (s *Server) Handler(fallback http.Handler) http.Handler {
 	mux.HandleFunc("GET /api/v1/hello", s.hello)
 	mux.HandleFunc("POST /api/v1/pair", s.pair)
 	mux.HandleFunc("GET /api/v1/stream", s.stream)
+	mux.HandleFunc("GET /api/v1/terminal/{pane}", s.terminal)
 	for _, rt := range s.routes() {
 		mux.Handle(rt.pattern, s.authed(rt.handle))
 	}
