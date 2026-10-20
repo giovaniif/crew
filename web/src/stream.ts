@@ -84,7 +84,7 @@ export type Session = {
   LimitsAt: string;
   Switches: Switch[] | null;
   SwitchWarning: boolean;
-  Mate?: { Name: string; Local?: boolean };
+  Mate?: { Name: string; Local?: boolean; FreshFrom?: string };
   name: string;
   where: string;
   banner: string;
