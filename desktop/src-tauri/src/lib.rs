@@ -5,15 +5,20 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use std::time::Duration;
 
+#[cfg(desktop)]
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+#[cfg(desktop)]
 use tauri::tray::TrayIconBuilder;
 use tauri::{AppHandle, Manager, RunEvent, Runtime, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_notification::NotificationExt;
 use url::Url;
 
-use attention::{Action, Banner, Entry};
+use attention::Banner;
+#[cfg(desktop)]
+use attention::{Action, Entry};
 use local::LocalServe;
 
+#[cfg(desktop)]
 const TRAY: &str = "crew";
 
 pub const DEFAULT_URL: &str = "http://127.0.0.1:7420/";
@@ -101,6 +106,7 @@ fn start_local(app: &tauri::App, slot: &Mutex<Option<LocalServe>>) -> Result<Sta
     Ok(Started { url, auth })
 }
 
+#[cfg(desktop)]
 fn build_menu<R: Runtime>(app: &AppHandle<R>, model: &attention::Menu) -> tauri::Result<Menu<R>> {
     let menu = Menu::new(app)?;
     for entry in attention::entries(model) {
@@ -119,6 +125,7 @@ fn build_menu<R: Runtime>(app: &AppHandle<R>, model: &attention::Menu) -> tauri:
     Ok(menu)
 }
 
+#[cfg(desktop)]
 fn on_menu<R: Runtime>(app: &AppHandle<R>, id: &str) {
     match attention::action(id) {
         Some(Action::Quit) => app.exit(0),
@@ -156,6 +163,9 @@ fn crew_notify<R: Runtime>(app: AppHandle<R>, banner: Banner) {
 
 #[tauri::command]
 fn crew_attention<R: Runtime>(app: AppHandle<R>, menu: attention::Menu) -> Result<(), String> {
+    #[cfg(mobile)]
+    let _ = (&app, &menu);
+    #[cfg(desktop)]
     if let Some(tray) = app.tray_by_id(TRAY) {
         let built = build_menu(&app, &menu).map_err(|e| e.to_string())?;
         tray.set_menu(Some(built)).map_err(|e| e.to_string())?;
@@ -165,12 +175,14 @@ fn crew_attention<R: Runtime>(app: AppHandle<R>, menu: attention::Menu) -> Resul
         };
         let _ = tray.set_tooltip(Some(tip));
     }
+    #[cfg(desktop)]
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.set_badge_count(attention::badge(&menu));
     }
     Ok(())
 }
 
+#[cfg(desktop)]
 fn add_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     let menu = build_menu(app, &attention::Menu::default())?;
     let mut tray = TrayIconBuilder::with_id(TRAY)
@@ -223,6 +235,7 @@ pub fn run() {
                     window.initialization_script(format!("window.__CREW_DESKTOP_AUTH__ = {auth};"));
             }
             window.build()?;
+            #[cfg(desktop)]
             if let Err(err) = add_tray(app.handle()) {
                 eprintln!("crew-desktop: no tray: {err}");
             }
