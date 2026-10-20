@@ -92,6 +92,7 @@ func (s *Server) routes() []route {
 		{"POST /api/v1/sessions/{id}/end", sessionAction(rpc.MethodEndSession, refParams)},
 		{"POST /api/v1/sessions/{id}/resume", sessionAction(rpc.MethodResumeSession, refParams)},
 		{"POST /api/v1/sessions/{id}/mute", sessionAction(rpc.MethodSessionMute, muteParams)},
+		{"POST /api/v1/sessions/{id}/read", sessionAction(rpc.MethodSessionRead, refParams)},
 		{"POST /api/v1/sessions/{id}/rename", sessionAction(rpc.MethodSessionRename, renameParams)},
 		{"POST /api/v1/sessions/{id}/messages", sessionAction(rpc.MethodSessionSend, sendParams)},
 		{"DELETE /api/v1/sessions/{id}/sends/{send}", sessionAction(rpc.MethodSessionUnsend, unsendParams)},

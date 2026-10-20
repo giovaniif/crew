@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import Markdown from "react-markdown";
-import { ApiError, answerPrompt, getPrompt, interrupt, messagesPage, sendMessage, startFresh, unsend, type Authed, type Prompt } from "../api";
+import { ApiError, answerPrompt, getPrompt, interrupt, markRead, messagesPage, sendMessage, startFresh, unsend, type Authed, type Prompt } from "../api";
 import { faceState, stateWords, type FaceState } from "../faces";
 import { MateFace, useMateDefs } from "./Mates";
 import { timeInState } from "../sessions";
@@ -621,6 +621,11 @@ export function SessionScreen({
 }) {
   const [confirming, setConfirming] = useState(false);
   const session = snapshot.state?.sessions.find((s) => s.ID === id);
+  const unread = session?.Unread ?? false;
+  const { fetch, token } = api;
+  useEffect(() => {
+    if (unread) markRead({ fetch, token }, id).catch(() => {});
+  }, [fetch, token, id, unread]);
   if (!session) {
     return (
       <main className="screen">
