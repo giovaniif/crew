@@ -50,11 +50,12 @@ type TranscriptFrame struct {
 }
 
 type clientFrame struct {
-	Token   string  `json:"token"`
-	Watch   *string `json:"watch"`
-	After   int64   `json:"after"`
-	Unwatch *string `json:"unwatch"`
-	Visible *bool   `json:"visible"`
+	Token   string                   `json:"token"`
+	Watch   *string                  `json:"watch"`
+	After   int64                    `json:"after"`
+	Unwatch *string                  `json:"unwatch"`
+	Visible *bool                    `json:"visible"`
+	Viewing *rpc.ClientViewingParams `json:"viewing"`
 }
 
 type stream struct {
@@ -236,8 +237,11 @@ func (st *stream) handle(ctx context.Context, data []byte) error {
 	case f.Visible != nil:
 		st.viewing(ctx, *f.Visible)
 		return nil
+	case f.Viewing != nil:
+		_ = st.d.Call(ctx, rpc.MethodClientViewing, *f.Viewing, nil)
+		return nil
 	}
-	return st.write(ctx, Frame{Error: &rpc.Error{Code: rpc.CodeBadRequest, Message: `send {"watch": "<session>", "after": <cursor>}, {"unwatch": "<session>"} or {"visible": <bool>}`}})
+	return st.write(ctx, Frame{Error: &rpc.Error{Code: rpc.CodeBadRequest, Message: `send {"watch": "<session>", "after": <cursor>}, {"unwatch": "<session>"}, {"visible": <bool>} or {"viewing": {"session", "front"}}`}})
 }
 
 func (st *stream) viewing(ctx context.Context, visible bool) {
