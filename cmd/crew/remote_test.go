@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"net"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/giovaniif/crew/internal/daemon"
 	"github.com/giovaniif/crew/internal/rpc"
@@ -69,6 +71,28 @@ func TestRemotePairPrintsTheURLAQRCodeAndTheExpiry(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got.Device.Name != "phone" {
+		t.Fatalf("device %+v", got.Device)
+	}
+}
+
+func TestRemotePairJSONPrintsTheCodeWithoutAURL(t *testing.T) {
+	_, c := startRemoteDaemon(t)
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"remote", "pair", "--json", "--name", "desktop"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("exit %d, stderr %q", code, stderr.String())
+	}
+	var printed struct {
+		Code      string    `json:"code"`
+		ExpiresAt time.Time `json:"expires_at"`
+	}
+	if err := json.Unmarshal(stdout.Bytes(), &printed); err != nil || printed.Code == "" || printed.ExpiresAt.IsZero() {
+		t.Fatalf("stdout %q: %v", stdout.String(), err)
+	}
+	var got rpc.PairRedeemed
+	if err := c.Call(context.Background(), rpc.MethodPairRedeem, rpc.PairRedeemParams{Code: printed.Code, Addr: "127.0.0.1"}, &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Device.Name != "desktop" {
 		t.Fatalf("device %+v", got.Device)
 	}
 }

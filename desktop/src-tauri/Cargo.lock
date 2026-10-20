@@ -410,6 +410,8 @@ dependencies = [
 name = "crew-desktop"
 version = "0.0.0"
 dependencies = [
+ "libc",
+ "serde_json",
  "tauri",
  "tauri-build",
  "url",

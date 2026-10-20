@@ -9,6 +9,7 @@ import { createRoot } from "react-dom/client";
 import { hello } from "./api";
 import { App } from "./App";
 import { buildOfWorker, checkBuild, workerURL } from "./build";
+import { desktopAuth } from "./auth";
 import { isInstalled } from "./display";
 import { browserPush } from "./push";
 
@@ -126,6 +127,7 @@ if (root) {
           push: browserPush(window),
           visibility,
           wide,
+          desktopAuth: desktopAuth((window as { __CREW_DESKTOP_AUTH__?: unknown }).__CREW_DESKTOP_AUTH__),
         }}
       />
     </StrictMode>,
