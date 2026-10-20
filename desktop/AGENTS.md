@@ -5,7 +5,10 @@ The Tauri 2 app for desktop and mobile ([ADR 0057](../docs/adr/0057-tauri-apps.m
 ## Layout
 
 - `src-tauri/`: the Rust crate `crew-desktop` (`Cargo.toml`, `tauri.conf.json`, `capabilities/`, `icons/`).
-  - `src/lib.rs` opens the `main` window. The window loads the URL in `CREW_URL`, else `http://127.0.0.1:7420/` (a local `crew serve`). Thus the UI and `/api/v1` have the same origin.
+  - `src/lib.rs` opens the `main` window. On desktop, the window loads the URL in `CREW_URL`, else `http://127.0.0.1:7420/` (a local `crew serve`). Thus the UI and `/api/v1` have the same origin.
+  - On mobile, the window loads the bundled web UI (`index.html` from `build.frontendDist`). The UI shows the pairing screen, not the desktop connection. `tests/start.rs` tests this rule.
+  - `tauri.android.conf.json` sets `version` to `0.0.1`, because Android does not accept `0.0.0`.
+  - `gen/android/` is the output of `npx tauri android init`, with the comments removed. The bundle id is `sh.giovani.crew`.
   - `build.frontendDist` points at `internal/serve/dist`. The window does not use it yet.
   - The icons come from `macos/AppIcon.png`. Run `npx tauri icon ../macos/AppIcon.png -o src-tauri/icons` to make them again. Keep only the desktop files.
 - `package.json`: the Tauri CLI (`npx tauri`).
@@ -23,6 +26,18 @@ The Tauri 2 app for desktop and mobile ([ADR 0057](../docs/adr/0057-tauri-apps.m
   - `CREW_E2E_APP` selects a different app binary.
 - `tauri-driver` has no macOS driver. CI builds the app on macOS, but runs the e2e tests only on Linux.
 
+## Android
+
+- The build needs a full JDK 17 or 21 (a JRE is not sufficient, because Gradle compiles Java), the Android SDK (`platform-tools`, a platform, `build-tools`), the NDK and the four Rust Android targets. You can install all of them in your home directory. You do not need root.
+  - Get the command-line tools from developer.android.com into `~/Android/Sdk/cmdline-tools/latest`.
+  - Run `sdkmanager --licenses`, then `sdkmanager` with the packages `platform-tools`, `platforms;android-34`, `build-tools;34.0.0` and `ndk;27.0.12077973`. Gradle downloads a newer platform when the project needs it.
+  - Run `rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android`.
+  - You can extract a Temurin JDK into `~/.local/jdk` and set `JAVA_HOME` to it.
+  - Set `ANDROID_HOME=~/Android/Sdk` and `NDK_HOME=~/Android/Sdk/ndk/27.0.12077973`.
+- `make web`, then `npm ci` and `npx tauri android build --debug --apk` in `desktop/` make `src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk`.
+- `desktop/android-smoke [apk]` installs the APK on the device or emulator that `adb` sees, starts the app and makes sure that it does not stop. An x86_64 emulator needs KVM: your user must be able to open `/dev/kvm` (the `kvm` group).
+- `cargo test --manifest-path desktop/src-tauri/Cargo.toml` runs the Rust tests.
+
 ## CI
 
-The `desktop` job (`ubuntu-latest`) builds the app and runs `desktop/e2e/run`. The `desktop-macos` job (`macos-15`) builds the app only.
+The `desktop` job (`ubuntu-latest`) builds the app, runs the Rust tests and runs `desktop/e2e/run`. The `android` job (`ubuntu-latest`) builds the debug APK, uploads it as the `crew-android-debug` artifact and runs `desktop/android-smoke` on an API 34 emulator. The `desktop-macos` job (`macos-15`) builds the app only.
