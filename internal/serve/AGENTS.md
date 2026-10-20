@@ -126,6 +126,7 @@ The `/` fallback: `Handler(fallback)` mounts `fallback` at `/`. `Handler(nil)` s
   - `where`: `domain.WorktreeLabel`, `repo@branch +N`.
   - `banner`: the body of `domain.BannerFor` for its state, also for a muted session. It is empty while the session is running or idle.
   - `since`: `domain.StateSince`, the time when the replayed events last changed its state. It is `null` when the events do not explain the state.
+  - `order`: the index of the session in the sidebar of the daemon (see [internal/view/](../view/AGENTS.md)). An ended session has `-1`. The desktop sidebar uses it.
 
   The phone shows these fields and never calculates them again. If a task or worktree diff changes the derived fields of a different session, a `session` diff with the same `seq` follows it.
 - `limits` is `domain.Quotas` of the sessions as `StreamQuota`: the Go fields and `label` (`domain.WindowLabel`), `low` and `stale_at` (`ReportedAt` + `domain.StaleQuotaAfter`).
