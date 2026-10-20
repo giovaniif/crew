@@ -233,3 +233,14 @@ func TestViewForThePhoneHasTheKillSwitch(t *testing.T) {
 		t.Fatal("the phone got no stopped mates diff")
 	}
 }
+
+func TestViewWhereNamesTheLaunchDirOfASessionWithNoWorktree(t *testing.T) {
+	st := nativeFixture()
+	st.Sessions[2].Dir = "/w/api"
+	_, state := view.New(st)
+	for _, s := range state.Sessions {
+		if s.ID == "s3" && s.Where != "api" {
+			t.Fatalf("where %q, want api", s.Where)
+		}
+	}
+}
