@@ -543,8 +543,20 @@ const presets: [string, string][] = [
   ["Blank", ""],
 ];
 
+const mateHandle = /^[a-z0-9][a-z0-9_-]*$/;
+
+function nameProblemOf(name: string, defs: Mate[]): string {
+  if (name === "") {
+    return "";
+  }
+  if (name.length > 32 || !mateHandle.test(name)) {
+    return "Use up to 32 letters, digits, - and _.";
+  }
+  return defs.some((d) => d.name === name) ? "A mate named " + name + " exists." : "";
+}
+
 export function NewMate({ api }: { api: Authed }) {
-  const { tones } = useMateDefs(api);
+  const { defs, tones } = useMateDefs(api);
   const [step, setStep] = useState(0);
   const [face, setFace] = useState(FACES[0].id);
   const [color, setColor] = useState("");
@@ -554,6 +566,7 @@ export function NewMate({ api }: { api: Authed }) {
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
   const chosen = faceOf(mate.name, face);
+  const nameProblem = nameProblemOf(mate.name, defs);
 
   async function create() {
     setBusy(true);
@@ -619,8 +632,9 @@ export function NewMate({ api }: { api: Authed }) {
             Name
             <input value={mate.name} onChange={(e) => setMate({ ...mate, name: e.target.value.trim().toLowerCase() })} />
           </label>
+          {nameProblem && <p className="mate-error">{nameProblem}</p>}
           <p className="muted">Slack is optional. Connect it later from the profile.</p>
-          <button type="button" className="primary" disabled={mate.name === ""} onClick={() => setStep(1)}>
+          <button type="button" className="primary" disabled={mate.name === "" || nameProblem !== ""} onClick={() => setStep(1)}>
             Next: personality
           </button>
         </>

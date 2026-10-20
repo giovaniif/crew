@@ -41,6 +41,15 @@ go run ./scripts/verify tui drive --restart --out-dir /tmp/crew-verify-map/mates
 go run ./scripts/verify web drive / --viewport both --out-dir /tmp/crew-verify-map/mates --steps '[{"click":{"role":"link","name":"Mates"}},{"expect":{"role":"link","name":"Mates"}},{"shot":"mates.png"}]'
 ```
 
+### PWA New mate refuses the name of a mate that exists
+
+```sh
+go run ./scripts/verify iso crew -- mate set test-taken --agent claude --prompt "TEST original prompt"
+go run ./scripts/verify web drive /#/mates/new --viewport both --out-dir /tmp/crew-verify-map/mates --steps '[{"fill":{"label":"Name"},"value":"test-taken"},{"expect":{"text":"A mate named test-taken exists."}},{"shot":"new-mate-taken.png"}]'
+go run ./scripts/verify iso crew --expect "TEST original prompt" -- mate show test-taken
+go run ./scripts/verify iso crew -- mate remove test-taken
+```
+
 ## Cleanup
 
 ```sh
