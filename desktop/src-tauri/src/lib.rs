@@ -25,3 +25,23 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("the crew app failed to start");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mobile_opens_the_bundled_connect_page() {
+        assert_eq!(start_page(true, Some("https://crew.example.ts.net/".into())), Ok(Start::Bundled));
+        assert_eq!(start_page(true, None), Ok(Start::Bundled));
+    }
+
+    #[test]
+    fn desktop_opens_the_configured_url() {
+        assert_eq!(
+            start_page(false, Some("https://crew.example.ts.net/".into())),
+            Ok(Start::Remote(Url::parse("https://crew.example.ts.net/").unwrap()))
+        );
+        assert_eq!(start_page(false, None), Ok(Start::Remote(Url::parse(DEFAULT_URL).unwrap())));
+    }
+}
