@@ -145,3 +145,20 @@ func TestEveryProblemHasAHint(t *testing.T) {
 		}
 	}
 }
+
+func TestEachCheckoutGetsItsOwnDefaultStateDir(t *testing.T) {
+	a := defaultStateDir(1000, "/home/u/crew")
+	b := defaultStateDir(1000, "/home/u/work/crew-patrol")
+	if a == b {
+		t.Fatalf("two checkouts share the state dir %s", a)
+	}
+	if a != defaultStateDir(1000, "/home/u/crew") {
+		t.Fatalf("the state dir of one checkout is not stable")
+	}
+	if !strings.HasPrefix(a, "/tmp/crew-verify-1000-") {
+		t.Fatalf("state dir %s is not under /tmp/crew-verify-<uid>-", a)
+	}
+	if len(a) > 40 {
+		t.Fatalf("state dir %s is too long for Unix sockets", a)
+	}
+}

@@ -224,7 +224,8 @@ func main() {
 	}
 	state := os.Getenv("VERIFY_HOME")
 	if state == "" {
-		state = fmt.Sprintf("/tmp/crew-verify-%d", os.Getuid())
+		state = defaultStateDir(os.Getuid(), repo)
+		_ = os.Setenv("VERIFY_HOME", state)
 	}
 	if err := privateState(state); err != nil {
 		r := newResult()
@@ -232,6 +233,11 @@ func main() {
 		os.Exit(emit(os.Stdout, r))
 	}
 	os.Exit(run(os.Args[1:], &env{out: os.Stdout, sys: realSys{}, repo: repo, state: state, now: time.Now}))
+}
+
+func defaultStateDir(uid int, repo string) string {
+	sum := sha256.Sum256([]byte(repo))
+	return fmt.Sprintf("/tmp/crew-verify-%d-%x", uid, sum[:4])
 }
 
 func privateState(state string) error {
