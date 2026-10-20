@@ -335,6 +335,18 @@ func TestReviewShowsTheAgentColumnBesideTheDiff(t *testing.T) {
 	}
 }
 
+func TestReviewDraftCardWrapsSoAnOpenDraftNeverReadsAsSent(t *testing.T) {
+	out := screen(agentColumnModel(t, 160))
+	if !strings.Contains(out, "one prompt") {
+		t.Errorf("the draft card cuts its hint:\n%s", out)
+	}
+	for _, line := range strings.Split(out, "\n") {
+		if strings.HasSuffix(strings.TrimRight(line, " │"), "· sent") {
+			t.Fatalf("an open draft reads as sent:\n%s", out)
+		}
+	}
+}
+
 func TestReviewLeavesTheAgentColumnOutWhenNarrow(t *testing.T) {
 	if out := screen(agentColumnModel(t, 110)); strings.Contains(out, "Draft review") {
 		t.Fatalf("the agent column is drawn at 110 columns:\n%s", out)
