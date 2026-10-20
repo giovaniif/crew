@@ -68,6 +68,22 @@ describe("Automations", () => {
     expect(within(screen.getByRole("listitem", { name: "deps" })).getByText("never run")).toBeInTheDocument();
   });
 
+  it("shows the start of a run in the local time of the device", async () => {
+    const tz = process.env.TZ;
+    process.env.TZ = "America/Sao_Paulo";
+    try {
+      const { env } = setup("#/automations");
+      render(<App env={env} />);
+      await screen.findByText("last run failed: agent exited");
+      await userEvent.click(screen.getByRole("button", { name: "History of fix-ci" }));
+      const history = screen.getByRole("list", { name: "Runs of fix-ci" });
+      expect(history).toHaveTextContent("2026-10-03 08:00");
+      expect(history).not.toHaveTextContent("UTC");
+    } finally {
+      process.env.TZ = tz;
+    }
+  });
+
   it("shows the run history with a link to the session of a run", async () => {
     const { env } = setup("#/automations");
     render(<App env={env} />);
