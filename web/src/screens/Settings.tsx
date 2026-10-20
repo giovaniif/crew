@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Fetch } from "../api";
-import type { Auth } from "../auth";
+import type { Auth, KeyValue } from "../auth";
+import { confirmEnd, setConfirmEnd } from "../commands";
 import { disablePush, enablePush, type PushEnv } from "../push";
 import { Brand } from "./Brand";
 
@@ -10,12 +11,14 @@ export type SettingsProps = {
   auth: Auth;
   host: string;
   installed: boolean;
+  storage?: KeyValue;
   fetch: Fetch;
   push: PushEnv;
   onSignOut: () => void | Promise<void>;
 };
 
-export function Settings({ auth, host, installed, fetch, push, onSignOut }: SettingsProps) {
+export function Settings({ auth, host, installed, storage, fetch, push, onSignOut }: SettingsProps) {
+  const [askEnd, setAskEnd] = useState(() => (storage ? confirmEnd(storage) : true));
   const [notify, setNotify] = useState<Notify>(() => {
     if (!push.supported) {
       return { state: "idle" };
@@ -80,6 +83,22 @@ export function Settings({ auth, host, installed, fetch, push, onSignOut }: Sett
           <dd>{auth.device.id}</dd>
         </dl>
       </section>
+      {storage ? (
+        <section className="card" aria-label="Sessions">
+          <h2>Sessions</h2>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={askEnd}
+              onChange={(e) => {
+                setAskEnd(e.target.checked);
+                setConfirmEnd(storage, e.target.checked);
+              }}
+            />
+            <span>Ask before I end a session</span>
+          </label>
+        </section>
+      ) : null}
       <section className="card" aria-label="Notifications">
         <h2>Notifications</h2>
         {!installed && (
