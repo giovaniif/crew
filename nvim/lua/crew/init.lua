@@ -138,6 +138,10 @@ function M.comment(line1, line2, body)
     fail("this buffer has no file to comment on")
     return
   end
+  if name:match("^%a[%w+.-]*://") then
+    fail("this buffer is not a file on disk; comment on the working-tree side of the diff")
+    return
+  end
   local file = real(name)
   line1, line2 = math.min(line1, line2), math.max(line1, line2)
   if body and vim.trim(body) ~= "" then
