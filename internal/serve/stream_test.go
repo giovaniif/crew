@@ -273,6 +273,20 @@ func TestServeStreamClosesWhenTheDaemonGoesAway(t *testing.T) {
 	}
 }
 
+func TestServeStreamClosesWithBuildMismatchWhenTheDaemonRunsAnotherBuild(t *testing.T) {
+	f := newFakeDaemon()
+	f.devices[goodToken] = phone
+	_, ts := startServer(t, f, serve.Config{URL: publicURL})
+	f.mu.Lock()
+	f.dialErr = &rpc.Error{Code: rpc.CodeVersionMismatch, Message: "daemon runs crew v0.13.0 but this client is v0.12.0"}
+	f.mu.Unlock()
+	c := openStream(t, ts, goodToken)
+	code, reason := closedWith(t, c, time.Second)
+	if code != serve.CloseBuildMismatch || !strings.Contains(reason, "v0.13.0") {
+		t.Fatalf("closed with %d %q", code, reason)
+	}
+}
+
 func TestServeStreamAnswersAnUnknownFrameWithAnError(t *testing.T) {
 	f := newFakeDaemon()
 	f.devices[goodToken] = phone
