@@ -159,7 +159,10 @@ func (m Model) harnessLines() []string {
 	out = append(out, m.line(false, []piece{bar, {s.sub, "Changes "}, {s.bold, setup.File}}, nil))
 	out = append(out, m.para(bar, s.text, text.change)...)
 	backup := setup.Backup
-	if backup == "" {
+	switch {
+	case backup == "" && setup.Installed:
+		backup = "none needed: crew made the file"
+	case backup == "":
 		backup = "none needed: the file does not exist yet"
 	}
 	out = append(out, m.line(false, []piece{bar, {s.sub, "Backup  "}, {s.text, backup}}, nil))
