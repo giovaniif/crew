@@ -92,6 +92,7 @@ jobs:
       - run: cargo install tauri-driver --locked
       - run: cargo build --locked --manifest-path desktop/src-tauri/Cargo.toml
       - run: cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml
+      - run: node --test desktop/connect/server.test.mjs
       - run: xvfb-run -a desktop/e2e/run
 
   android:
