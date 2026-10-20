@@ -123,6 +123,11 @@ func (s Session) Focus() Session {
 	return s
 }
 
+func (s Session) MarkRead() Session {
+	s.Unread = false
+	return s
+}
+
 func (s Session) Blur() Session {
 	s.Focused = false
 	return s

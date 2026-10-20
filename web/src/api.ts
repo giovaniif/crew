@@ -119,6 +119,10 @@ export async function unsend(a: Authed, session: string, id: string): Promise<vo
   await authedRequest<unknown>(a, sessionPath(session, "/sends/" + encodeURIComponent(id)), "DELETE");
 }
 
+export async function markRead(a: Authed, session: string): Promise<void> {
+  await authedRequest<unknown>(a, sessionPath(session, "/read"), "POST");
+}
+
 export async function interrupt(a: Authed, session: string): Promise<void> {
   await authedRequest<unknown>(a, sessionPath(session, "/interrupt"), "POST");
 }
