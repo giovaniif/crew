@@ -40,12 +40,16 @@ func BuildSessionCard(task Task, session Session, worktrees []Worktree, events [
 
 func pullRequests(worktrees []Worktree) []PullRequest {
 	var prs []PullRequest
-	seen := map[int]bool{}
+	type key struct {
+		repo   string
+		number int
+	}
+	seen := map[key]bool{}
 	for _, w := range worktrees {
-		if w.PR == nil || seen[w.PR.Number] {
+		if w.PR == nil || seen[key{w.Repo, w.PR.Number}] {
 			continue
 		}
-		seen[w.PR.Number] = true
+		seen[key{w.Repo, w.PR.Number}] = true
 		prs = append(prs, *w.PR)
 	}
 	return prs

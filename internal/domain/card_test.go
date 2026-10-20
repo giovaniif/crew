@@ -210,3 +210,16 @@ func TestSessionCardCarriesWhatTheAgentLastSaid(t *testing.T) {
 		t.Fatal("a session that has not stopped yet said something")
 	}
 }
+
+func TestSessionCardKeepsPullRequestsWithTheSameNumberInDifferentRepos(t *testing.T) {
+	worktrees := []Worktree{
+		{ID: "w1", Repo: "api", PR: &PullRequest{Number: 7, Title: "api change"}},
+		{ID: "w2", Repo: "web", PR: &PullRequest{Number: 7, Title: "web change"}},
+		{ID: "w3", Repo: "web", PR: &PullRequest{Number: 7, Title: "web change"}},
+	}
+	card := BuildSessionCard(cardTask, Session{ID: "s1"}, worktrees, nil)
+	want := []PullRequest{{Number: 7, Title: "api change"}, {Number: 7, Title: "web change"}}
+	if !reflect.DeepEqual(card.PRs, want) {
+		t.Fatalf("PRs = %v, want %v", card.PRs, want)
+	}
+}
