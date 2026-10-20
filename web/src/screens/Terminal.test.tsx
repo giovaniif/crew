@@ -51,8 +51,12 @@ describe("the Terminal tab", () => {
     expect(socket.keys).toEqual(["ls\r", "\u0003", "\u001b"]);
     expect(term.passes({ key: "c", ctrlKey: true })).toBe(true);
     expect(term.passes({ key: "Escape" })).toBe(true);
-    expect(term.passes({ key: "e", ctrlKey: true, metaKey: false })).toBe(false);
-    expect(term.passes({ key: "2", metaKey: true })).toBe(false);
+    expect(term.passes({ key: "t", code: "KeyT", ctrlKey: true })).toBe(true);
+    expect(term.passes({ key: "e", code: "KeyE", ctrlKey: true })).toBe(true);
+    expect(term.passes({ key: "n", code: "KeyN", ctrlKey: true })).toBe(true);
+    expect(term.passes({ key: " ", code: "Space", ctrlKey: true })).toBe(true);
+    expect(term.passes({ key: "T", code: "KeyT", ctrlKey: true, shiftKey: true })).toBe(false);
+    expect(term.passes({ key: "@", code: "Digit2", ctrlKey: true, shiftKey: true })).toBe(false);
     expect(term.passes({ key: "v", metaKey: true })).toBe(false);
   });
 
@@ -136,11 +140,13 @@ describe("the Shell and nvim tabs", () => {
     expect(posts(d, "/api/v1/sessions/s2/shell")).toBe(1);
   });
 
-  it("opens Shell with Ctrl+T and nvim with Ctrl+E", async () => {
+  it("opens Shell with Ctrl+Shift+T and nvim with Ctrl+Shift+E", async () => {
     open();
     await userEvent.keyboard("{Control>}t{/Control}");
+    expect(tab("Chat")).toHaveAttribute("aria-selected", "true");
+    await userEvent.keyboard("{Control>}{Shift>}t{/Shift}{/Control}");
     expect(tab("Shell")).toHaveAttribute("aria-selected", "true");
-    await userEvent.keyboard("{Control>}e{/Control}");
+    await userEvent.keyboard("{Control>}{Shift>}e{/Shift}{/Control}");
     expect(tab("nvim")).toHaveAttribute("aria-selected", "true");
   });
 });
