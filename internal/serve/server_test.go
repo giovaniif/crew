@@ -41,7 +41,7 @@ var (
 		rpc.MethodSessionPrompt, rpc.MethodSessionAnswer, rpc.MethodDeviceViewing,
 		rpc.MethodSessionOptions, rpc.MethodWorkspaceAdd, rpc.MethodWorkspaceRemove, rpc.MethodAutomationRuns,
 		rpc.MethodApprovalList, rpc.MethodApprovalDecide,
-		rpc.MethodClientNative, rpc.MethodShellFocus, rpc.MethodNvimToggle,
+		rpc.MethodClientNative, rpc.MethodShellFocus, rpc.MethodNvimToggle, rpc.MethodAutomationSave,
 	}
 )
 
@@ -49,7 +49,7 @@ type authedEndpoint struct {
 	method, path, body string
 }
 
-var authedEndpoints = []authedEndpoint{
+var authedEndpoints = append([]authedEndpoint{
 	{"GET", "/api/v1/workspaces", ""},
 	{"GET", "/api/v1/session-options", ""},
 	{"GET", "/api/v1/automations", ""},
@@ -78,7 +78,7 @@ var authedEndpoints = []authedEndpoint{
 	{"POST", "/api/v1/approvals/a1/deny", ""},
 	{"POST", "/api/v1/sessions/s1/shell", ""},
 	{"POST", "/api/v1/sessions/s1/nvim", ""},
-}
+}, automationOwnerEndpoints...)
 
 func startServer(t *testing.T, f *fakeDaemon, cfg serve.Config) (*serve.Server, *httptest.Server) {
 	t.Helper()
