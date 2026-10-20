@@ -65,7 +65,7 @@ func TestNotifyEnterMarksTheSessionSeen(t *testing.T) {
 
 func TestNotifyHelpListsMute(t *testing.T) {
 	st := fixture(1, 0)
-	if out := screen(press(newModel(&st, nil), "?")); !strings.Contains(out, "mute session") {
+	if out := screen(press(newModel(&st, nil), "?")); !strings.Contains(out, "mute / unmute session") {
 		t.Fatalf("help missing mute:\n%s", out)
 	}
 }
