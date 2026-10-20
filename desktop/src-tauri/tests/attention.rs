@@ -72,7 +72,10 @@ fn an_empty_tray_says_that_nothing_needs_you() {
 
 #[test]
 fn a_menu_item_opens_its_session_or_the_new_session_form() {
-    assert_eq!(action("session:a/b"), Some(Action::Show(Some("#/sessions/a%2Fb".into()))));
+    assert_eq!(
+        action("session:a/b"),
+        Some(Action::Show(Some("#/sessions/a%2Fb".into())))
+    );
     assert_eq!(action("new"), Some(Action::Show(Some("#/new".into()))));
     assert_eq!(action("open"), Some(Action::Show(None)));
     assert_eq!(action("quit"), Some(Action::Quit));
@@ -84,7 +87,9 @@ fn a_menu_item_opens_its_session_or_the_new_session_form() {
 fn the_badge_counts_the_sessions_that_need_you_and_is_gone_at_zero() {
     assert_eq!(badge(&menu(FULL)), Some(2));
     assert_eq!(
-        badge(&menu(r#"{"needsYou":[],"doneUnread":[],"working":[],"meters":[],"badge":0}"#)),
+        badge(&menu(
+            r#"{"needsYou":[],"doneUnread":[],"working":[],"meters":[],"badge":0}"#
+        )),
         None
     );
 }
