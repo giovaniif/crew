@@ -367,3 +367,48 @@ func TestInstallAlsoTeachesClaudeAndCodexTheBrowserCommands(t *testing.T) {
 		}
 	}
 }
+
+func TestReopeningAfterInstallNamesOnlyABackupThatExists(t *testing.T) {
+	w := newWorld(t, false)
+	ctx := context.Background()
+	for _, h := range []domain.Harness{domain.HarnessClaude, domain.HarnessCodex} {
+		if s, err := w.probe.Install(ctx, h); err != nil || !s.Installed {
+			t.Fatalf("install %s = %+v, %v", h, s, err)
+		}
+	}
+	got, err := w.probe.Onboarding(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, h := range []domain.Harness{domain.HarnessClaude, domain.HarnessCodex} {
+		backup := got.Harnesses[h].Backup
+		if backup == "" {
+			continue
+		}
+		if _, err := os.Stat(backup); err != nil {
+			t.Errorf("%s names backup %q that crew never wrote: %v", h, backup, err)
+		}
+	}
+}
+
+func TestReopeningAfterInstallNamesTheBackupOfAnExistingFile(t *testing.T) {
+	w := newWorld(t, false)
+	write(t, w.probe.ClaudeSettings, `{"theme":"dark"}`)
+	write(t, filepath.Join(w.probe.CodexHome, "hooks.json"), `{"hooks":{}}`)
+	ctx := context.Background()
+	for _, h := range []domain.Harness{domain.HarnessClaude, domain.HarnessCodex} {
+		if s, err := w.probe.Install(ctx, h); err != nil || !s.Installed {
+			t.Fatalf("install %s = %+v, %v", h, s, err)
+		}
+	}
+	got, err := w.probe.Onboarding(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, h := range []domain.Harness{domain.HarnessClaude, domain.HarnessCodex} {
+		backup := got.Harnesses[h].Backup
+		if _, err := os.Stat(backup); backup == "" || err != nil {
+			t.Errorf("%s backup = %q, %v; want the backup that install wrote", h, backup, err)
+		}
+	}
+}
