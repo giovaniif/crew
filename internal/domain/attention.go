@@ -96,7 +96,7 @@ func bannerDetail(state AgentState, events []SessionEvent, now time.Time) string
 		return bannerLine("needs permission: ", need, "")
 	case StateWaiting:
 		if q := lastQuestion(turn); q != "" {
-			return bannerLine("asks: ", q, "")
+			return bannerLine("asks: ", plainMarkdown(q), "")
 		}
 		if ev, ok := latest(turn, EventWaitingForInput); ok {
 			return bannerLine("waiting: ", ev.Text, "")
@@ -111,7 +111,7 @@ func doneDetail(events, turn []SessionEvent, now time.Time) string {
 	took := elapsed(events, now)
 	var said string
 	if ev, ok := latest(turn, EventStop); ok {
-		said = firstLine(strings.TrimSpace(ev.Text))
+		said = plainMarkdown(firstLine(strings.TrimSpace(ev.Text)))
 	}
 	switch {
 	case said == "" && took == "":
@@ -126,6 +126,13 @@ func doneDetail(events, turn []SessionEvent, now time.Time) string {
 		return bannerLine("", said, "")
 	}
 	return bannerLine("", said, " ("+took+")")
+}
+
+var markdownLead = regexp.MustCompile(`^(?:#{1,6}|[-*+])\s+`)
+
+func plainMarkdown(s string) string {
+	s = markdownLead.ReplaceAllString(strings.TrimSpace(s), "")
+	return strings.NewReplacer("**", "", "`", "").Replace(s)
 }
 
 func isLimitMessage(s string) bool {
