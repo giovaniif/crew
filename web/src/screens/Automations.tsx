@@ -24,7 +24,11 @@ function when(start: string | undefined): string {
     return "";
   }
   const at = new Date(start);
-  return Number.isNaN(at.getTime()) ? "" : at.toISOString().slice(0, 16).replace("T", " ") + " UTC";
+  if (Number.isNaN(at.getTime())) {
+    return "";
+  }
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())} ${pad(at.getHours())}:${pad(at.getMinutes())}`;
 }
 
 function History({ name, runs }: { name: string; runs: AutomationRun[] }) {
