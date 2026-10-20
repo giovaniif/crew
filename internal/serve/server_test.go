@@ -42,6 +42,9 @@ var (
 		rpc.MethodSessionOptions, rpc.MethodWorkspaceAdd, rpc.MethodWorkspaceRemove, rpc.MethodAutomationRuns,
 		rpc.MethodApprovalList, rpc.MethodApprovalDecide,
 		rpc.MethodClientNative, rpc.MethodShellFocus, rpc.MethodNvimToggle,
+		rpc.MethodConfigGet, rpc.MethodConfigSet, rpc.MethodOnboarding, rpc.MethodOnboardingInstall,
+		rpc.MethodOnboardingRemove, rpc.MethodOnboardingNvim, rpc.MethodOnboardingFinish, rpc.MethodWorkspaceDirs,
+		rpc.MethodDeviceList, rpc.MethodPairCode,
 	}
 )
 
@@ -49,7 +52,7 @@ type authedEndpoint struct {
 	method, path, body string
 }
 
-var authedEndpoints = []authedEndpoint{
+var authedEndpoints = append([]authedEndpoint{
 	{"GET", "/api/v1/workspaces", ""},
 	{"GET", "/api/v1/session-options", ""},
 	{"GET", "/api/v1/automations", ""},
@@ -78,7 +81,7 @@ var authedEndpoints = []authedEndpoint{
 	{"POST", "/api/v1/approvals/a1/deny", ""},
 	{"POST", "/api/v1/sessions/s1/shell", ""},
 	{"POST", "/api/v1/sessions/s1/nvim", ""},
-}
+}, settingsEndpoints...)
 
 func startServer(t *testing.T, f *fakeDaemon, cfg serve.Config) (*serve.Server, *httptest.Server) {
 	t.Helper()
@@ -299,7 +302,6 @@ func TestServeReachesOnlyAllowlistedDaemonMethods(t *testing.T) {
 		{"GET", "/api/v1/review", ""},
 		{"POST", "/api/v1/review/send", `{}`},
 		{"POST", "/api/v1/rpc", `{"method":"ports.kill"}`},
-		{"POST", "/api/v1/devices/k3m9p2qx/revoke", ""},
 		{"GET", "/api/v1/sessions/s1/../../disk", ""},
 		{"DELETE", "/api/v1/workspaces", ""},
 	}
