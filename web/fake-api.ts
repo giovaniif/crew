@@ -413,11 +413,19 @@ export function fakeApi(build = "v0.12.0+demo"): Plugin {
         if (req.method === "GET" && path === "/api/v1/session-options") {
           send(res, 200, {
             harnesses: [
-              { harness: "claude", default_model: "opus", default_effort: "high" },
-              { harness: "codex", default_model: "gpt-6.1-sol", default_effort: "medium" },
+              { harness: "claude", models: ["opus", "sonnet", "haiku"], efforts: ["low", "medium", "high", "xhigh"], default_model: "opus", default_effort: "high" },
+              { harness: "codex", models: ["gpt-6.1-sol", "gpt-6.1-mini"], efforts: ["low", "medium", "high"], default_model: "gpt-6.1-sol", default_effort: "medium" },
             ],
             home: "/home/me",
           });
+          return;
+        }
+        if (req.method === "POST" && /^\/api\/v1\/sessions\/[^/]+\/kill-dev-servers$/.test(path)) {
+          send(res, 200, { killed: [4211] });
+          return;
+        }
+        if (req.method === "POST" && /^\/api\/v1\/sessions\/[^/]+\/(switch|rename|mute|end|resume)$/.test(path)) {
+          send(res, 200, {});
           return;
         }
         if (req.method === "GET" && path === "/api/v1/work-items/resolve") {
