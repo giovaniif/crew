@@ -64,11 +64,21 @@ func (m Model) draftBox(width int) []string {
 	for _, c := range d.Comments {
 		trees[c.Worktree] = true
 	}
-	return []string{
-		p.cell(width, "", seg{text: " Draft review → this session", fg: t.Blue, bold: true}),
-		p.cell(width, "", seg{text: " " + count(len(d.Comments), "comment") + " · " + count(len(trees), "worktree") + " · sent as one prompt", fg: t.Subtext}),
-		p.cell(width, ""),
+	out := []string{p.cell(width, "", seg{text: " Draft review → this session", fg: t.Blue, bold: true})}
+	line := ""
+	for _, part := range []string{count(len(d.Comments), "comment"), count(len(trees), "worktree"), "sent as one prompt"} {
+		switch {
+		case line == "":
+			line = part
+		case ansi.StringWidth(line+" · "+part) <= width-1:
+			line += " · " + part
+		default:
+			out = append(out, p.cell(width, "", seg{text: " " + line + " ·", fg: t.Subtext}))
+			line = part
+		}
 	}
+	out = append(out, p.cell(width, "", seg{text: " " + line, fg: t.Subtext}))
+	return append(out, p.cell(width, ""))
 }
 
 func agentStateMark(st domain.AgentState) string {
