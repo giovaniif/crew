@@ -1,7 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { tokenRefused, unpairDevice, type Fetch } from "./api";
-import { clearAuth, loadAuth, saveAuth, type Auth, type KeyValue } from "./auth";
+import {
+  clearAuth,
+  loadAuth,
+  saveAuth,
+  type Auth,
+  type KeyValue,
+} from "./auth";
 import { pairCodeFromHash } from "./display";
+import {
+  DesktopAlerts,
+  useDesktopAttention,
+  type DesktopBridge,
+} from "./desktop";
 import { disablePush, noPush, type PushEnv } from "./push";
 import { parseRoute } from "./route";
 import { Approvals } from "./screens/Approvals";
@@ -29,6 +40,7 @@ export type AppEnv = {
   push?: PushEnv;
   visibility?: PageVisibility;
   desktopAuth?: Auth | null;
+  desktop?: DesktopBridge;
 };
 
 export type PageVisibility = {
@@ -79,11 +91,19 @@ function useNow(now: () => number, every: number): number {
   return value;
 }
 
-type ConnectedProps = { env: AppEnv; auth: Auth; onUnauthorized: () => void; onSignOut: () => Promise<void> };
+type ConnectedProps = {
+  env: AppEnv;
+  auth: Auth;
+  onUnauthorized: () => void;
+  onSignOut: () => Promise<void>;
+};
 
 function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
   const { onHashChange, fetch, visibility } = env;
-  const confirmRefused = useCallback(() => tokenRefused(fetch, auth.token), [fetch, auth.token]);
+  const confirmRefused = useCallback(
+    () => tokenRefused(fetch, auth.token),
+    [fetch, auth.token],
+  );
   const client = useStreamClient({
     open: env.openStream,
     token: auth.token,
@@ -95,11 +115,26 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
   const snapshot = useStream(client);
   const [hash, setHash] = useState(env.hash);
   const now = useNow(env.now, snapshot.status === "offline" ? 1000 : 30000);
-  const api = useMemo(() => ({ fetch, token: auth.token }), [fetch, auth.token]);
+  const api = useMemo(
+    () => ({ fetch, token: auth.token }),
+    [fetch, auth.token],
+  );
 
   useEffect(() => onHashChange(setHash), [onHashChange]);
+  useDesktopAttention(
+    env.desktop,
+    client,
+    snapshot,
+    hash,
+    env.storage,
+    visibility,
+    now,
+  );
 
-  useEffect(() => visibility?.onChange(() => client.visibilityChanged()), [visibility, client]);
+  useEffect(
+    () => visibility?.onChange(() => client.visibilityChanged()),
+    [visibility, client],
+  );
 
   useEffect(() => {
     if (snapshot.status === "unauthorized") {
@@ -113,7 +148,17 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
     return <NewSession env={env} token={auth.token} />;
   }
   if (route.screen === "session") {
-    return <SessionScreen key={route.id} id={route.id} snapshot={snapshot} now={now} onRetry={retry} client={client} api={api} />;
+    return (
+      <SessionScreen
+        key={route.id}
+        id={route.id}
+        snapshot={snapshot}
+        now={now}
+        onRetry={retry}
+        client={client}
+        api={api}
+      />
+    );
   }
   if (hash === "#/automations") {
     return (
@@ -135,7 +180,15 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
     const name = hash.slice("#/mates/".length);
     return (
       <>
-        {name === "new" ? <NewMate api={api} /> : <MateProfile api={api} name={safeDecode(name)} board={snapshot.state?.mates} />}
+        {name === "new" ? (
+          <NewMate api={api} />
+        ) : (
+          <MateProfile
+            api={api}
+            name={safeDecode(name)}
+            board={snapshot.state?.mates}
+          />
+        )}
         <Tabs current="mates" />
       </>
     );
@@ -159,6 +212,7 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
           push={env.push ?? noPush}
           onSignOut={onSignOut}
         />
+        {env.desktop && <DesktopAlerts storage={env.storage} />}
         <Tabs current="settings" />
       </>
     );
@@ -170,7 +224,12 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
           All mates are stopped
         </a>
       )}
-      <SessionList host={env.host} snapshot={snapshot} now={now} onRetry={retry} />
+      <SessionList
+        host={env.host}
+        snapshot={snapshot}
+        now={now}
+        onRetry={retry}
+      />
       <Tabs current="sessions" />
     </>
   );
@@ -180,9 +239,13 @@ const refusedNotice =
   "This device was removed from crew, or the server rejected its login. Pair it again with a new code from crew remote pair.";
 
 export function App({ env }: { env: AppEnv }) {
-  const [auth, setAuth] = useState<Auth | null>(() => env.desktopAuth ?? loadAuth(env.storage));
+  const [auth, setAuth] = useState<Auth | null>(
+    () => env.desktopAuth ?? loadAuth(env.storage),
+  );
   const [notice, setNotice] = useState("");
-  const [code, setCode] = useState(() => (auth ? "" : pairCodeFromHash(env.hash)));
+  const [code, setCode] = useState(() =>
+    auth ? "" : pairCodeFromHash(env.hash),
+  );
   const { storage } = env;
   const unpair = useCallback(() => {
     clearAuth(storage);
@@ -199,7 +262,14 @@ export function App({ env }: { env: AppEnv }) {
       unpair();
       await unpairDevice(env.fetch, auth.token).catch(() => undefined);
     };
-    return <Connected env={env} auth={auth} onUnauthorized={refused} onSignOut={signOut} />;
+    return (
+      <Connected
+        env={env}
+        auth={auth}
+        onUnauthorized={refused}
+        onSignOut={signOut}
+      />
+    );
   }
   if (!env.installed) {
     return <Install code={code} host={env.host} />;

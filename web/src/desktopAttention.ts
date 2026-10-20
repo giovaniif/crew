@@ -112,7 +112,7 @@ function row(s: Session): AttentionRow {
   return { id: s.ID, name: s.name, where: s.where, permission: s.State === "permission" };
 }
 
-export function attentionMenu(state: StreamState | undefined, now: number): AttentionMenu {
+export function attentionMenu(state: StreamState | null | undefined, now: number): AttentionMenu {
   if (!state) {
     return { needsYou: [], doneUnread: [], working: [], meters: [], badge: 0 };
   }

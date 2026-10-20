@@ -79,7 +79,11 @@ export type Session = {
   ResumeID: string;
   Transcript: string;
   Dir: string;
-  Usage: { ContextLeftPercent: number; HasContext: boolean; LimitUsedPercent: number };
+  Usage: {
+    ContextLeftPercent: number;
+    HasContext: boolean;
+    LimitUsedPercent: number;
+  };
   Limits: RateLimit[] | null;
   LimitsAt: string;
   Switches: Switch[] | null;
@@ -121,11 +125,24 @@ export type MateThread = {
   ended: boolean;
 };
 
-export type MateConversation = { session: string; name: string; state: AgentState; ended: boolean; started_at: string };
+export type MateConversation = {
+  session: string;
+  name: string;
+  state: AgentState;
+  ended: boolean;
+  started_at: string;
+};
 
 export type MateRow = {
   name: string;
-  state: "connecting" | "connected" | "error" | "paused" | "no_tokens" | "ready" | (string & {});
+  state:
+    | "connecting"
+    | "connected"
+    | "error"
+    | "paused"
+    | "no_tokens"
+    | "ready"
+    | (string & {});
   error?: string;
   guard?: string;
   avatar?: string;
@@ -168,7 +185,11 @@ export type Message = {
   turn?: string;
   role: "user" | "assistant" | "tool" | "system" | (string & {});
   text?: string;
-  tool?: { name: string; summary?: string; status: "running" | "done" | "failed" | (string & {}) };
+  tool?: {
+    name: string;
+    summary?: string;
+    status: "running" | "done" | "failed" | (string & {});
+  };
   at: string;
 };
 
@@ -187,7 +208,11 @@ export type Frame = {
   watch?: string;
 };
 
-export type ClientFrame = { watch: string; after: number } | { unwatch: string } | { visible: boolean };
+export type ClientFrame =
+  | { watch: string; after: number }
+  | { unwatch: string }
+  | { visible: boolean }
+  | { viewing: { session: string; front: boolean } };
 
 export type SocketLike = {
   send(data: string): void;
@@ -227,7 +252,11 @@ function upsert<T>(list: T[], item: T, key: (x: T) => string): T[] {
   return next;
 }
 
-function remove<T>(list: T[], id: string | undefined, key: (x: T) => string): T[] {
+function remove<T>(
+  list: T[],
+  id: string | undefined,
+  key: (x: T) => string,
+): T[] {
   return id ? list.filter((x) => key(x) !== id) : list;
 }
 
@@ -278,7 +307,12 @@ export class StreamClient {
   private attempt = 0;
   private running = false;
   private generation = 0;
-  private current: StreamSnapshot = { status: "connecting", state: null, retryAt: null, reason: "" };
+  private current: StreamSnapshot = {
+    status: "connecting",
+    state: null,
+    retryAt: null,
+    reason: "",
+  };
   private readonly listeners = new Set<() => void>();
   private readonly frameListeners = new Set<(frame: Frame) => void>();
 
@@ -346,7 +380,8 @@ export class StreamClient {
     this.update({ status: "connecting", retryAt: null });
     const socket = this.opts.open();
     this.socket = socket;
-    socket.onopen = () => socket.send(JSON.stringify({ token: this.opts.token }));
+    socket.onopen = () =>
+      socket.send(JSON.stringify({ token: this.opts.token }));
     socket.onmessage = (ev) => this.receive(ev.data);
     socket.onclose = (ev) => this.closed(socket, ev.code, ev.reason);
     socket.onerror = () => undefined;
@@ -471,9 +506,19 @@ export class StreamClient {
 }
 
 export function useStreamClient(opts: StreamOptions): StreamClient {
-  const { open, token, retryDelay, now, visible, heartbeat, confirmRefused } = opts;
+  const { open, token, retryDelay, now, visible, heartbeat, confirmRefused } =
+    opts;
   const client = useMemo(
-    () => new StreamClient({ open, token, retryDelay, now, visible, heartbeat, confirmRefused }),
+    () =>
+      new StreamClient({
+        open,
+        token,
+        retryDelay,
+        now,
+        visible,
+        heartbeat,
+        confirmRefused,
+      }),
     [open, token, retryDelay, now, visible, heartbeat, confirmRefused],
   );
   useEffect(() => {
@@ -484,5 +529,9 @@ export function useStreamClient(opts: StreamOptions): StreamClient {
 }
 
 export function useStream(client: StreamClient): StreamSnapshot {
-  return useSyncExternalStore(client.subscribe, client.snapshot, client.snapshot);
+  return useSyncExternalStore(
+    client.subscribe,
+    client.snapshot,
+    client.snapshot,
+  );
 }
