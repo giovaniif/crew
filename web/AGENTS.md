@@ -71,7 +71,7 @@ The phone app: a PWA that `crew serve` embeds and serves at `/` (ADR [0046](../d
   - The `push` handler of the worker shows `{"title","body"}`, tagged by session. It never pushes silently: if a field is missing, it uses `crew` / `needs you`.
   - `notificationclick` focuses an open window of the app and navigates it to the `url` of the push (`/#/sessions/<id>`, same-origin paths only). If no window is open, it opens one.
   - Settings also shows static text: pushes are held while the owner types at the terminal, and are not sent while the app is on screen.
-  - Sign out first calls `POST /api/v1/push/unsubscribe` and unsubscribes the browser (best effort). Then it forgets the token.
+  - Sign out first calls `POST /api/v1/push/unsubscribe` and unsubscribes the browser, then calls `POST /api/v1/unpair` (both best effort). Then it forgets the token.
 
   Tests: `npm test -- Push` and `npm test -- Settings`.
 - `#/automations` (`screens/Automations.tsx`) lists the automations with agent, trigger and state. Run… opens a form with a multi-line context and an optional work item, then posts `/api/v1/automations/<name>/run`. A started run opens its session. A skipped or failed run shows its reason. Tests: `npm test -- Automations`.

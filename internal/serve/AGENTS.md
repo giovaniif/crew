@@ -68,6 +68,7 @@ Unknown paths under `/api/` answer `not_found`.
 | `GET /api/v1/push/key` | yes | `push.key` | → `{"public_key"}`, the VAPID public key (base64url), for `pushManager.subscribe` |
 | `POST /api/v1/push/subscribe` | yes | `push.subscribe` | the browser's `PushSubscription.toJSON()` (`{"endpoint","keys":{"p256dh","auth"}}`) → `{}`; stored with the calling device |
 | `POST /api/v1/push/unsubscribe` | yes | `push.unsubscribe` | → `{}`; drops the calling device's subscription (the app's sign out) |
+| `POST /api/v1/unpair` | yes | `device.revoke` | → `{}`; revokes the calling device (the app's sign out) |
 | `GET /api/v1/approvals` | yes | `approval.list` | → `[Approval]`, the pending approvals of mates, oldest first (`[]` when none) |
 | `POST /api/v1/approvals/{id}/approve` | yes | `approval.decide` | → the granted `Approval`; `stale` (409) when it is decided or expired, `not_found` for an unknown ID |
 | `POST /api/v1/approvals/{id}/deny` | yes | `approval.decide` | → the denied `Approval`; the same errors |
