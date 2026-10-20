@@ -139,6 +139,16 @@ test("a comment on a buffer with no file is refused", function()
   eq(has_note(notes, vim.log.levels.ERROR, "no file"), true, "an error naming the problem")
 end)
 
+test("a comment on the old side of a diff is refused before the CLI runs", function()
+  local dir, notes = fresh()
+  vim.cmd.enew()
+  vim.api.nvim_buf_set_lines(0, 0, -1, false, { "old" })
+  vim.api.nvim_buf_set_name(0, "diffview://" .. dir .. "/.git/abc1234/src/a.lua")
+  vim.cmd("1CrewComment hi")
+  eq(calls(dir), {}, "crew calls")
+  eq(has_note(notes, vim.log.levels.ERROR, "working-tree side"), true, "an error naming the problem")
+end)
+
 test("a comment without a session says where the session comes from", function()
   local dir, notes = fresh()
   vim.env.CREW_SESSION = nil
