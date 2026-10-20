@@ -219,9 +219,21 @@ describe("Sign out", () => {
     expect(push.unsubscribed).toBe(1);
   });
 
+  it("unpairs this device on the server so its token stops working", async () => {
+    const { server, env } = setup();
+    render(<App env={env} />);
+    await userEvent.click(screen.getByRole("button", { name: "Sign out" }));
+    expect(await screen.findByRole("heading", { name: "Pair this device" })).toBeInTheDocument();
+    const i = server.calls.findIndex((c) => c.path === "/api/v1/unpair");
+    expect(server.calls[i]?.method).toBe("POST");
+    expect(server.headers[i].authorization).toBe("Bearer t0k");
+    expect(i).toBeGreaterThan(server.calls.findIndex((c) => c.path === "/api/v1/push/unsubscribe"));
+  });
+
   it("still signs out when the server cannot be reached", async () => {
     const { server, env } = setup();
     server.on("POST", "/api/v1/push/unsubscribe", new TypeError("Failed to fetch"));
+    server.on("POST", "/api/v1/unpair", new TypeError("Failed to fetch"));
     render(<App env={env} />);
     await userEvent.click(screen.getByRole("button", { name: "Sign out" }));
     expect(await screen.findByRole("heading", { name: "Pair this device" })).toBeInTheDocument();

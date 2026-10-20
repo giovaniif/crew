@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { tokenRefused, type Fetch } from "./api";
+import { tokenRefused, unpairDevice, type Fetch } from "./api";
 import { clearAuth, loadAuth, saveAuth, type Auth, type KeyValue } from "./auth";
 import { pairCodeFromHash } from "./display";
 import { disablePush, noPush, type PushEnv } from "./push";
@@ -196,6 +196,7 @@ export function App({ env }: { env: AppEnv }) {
       await disablePush(env.push ?? noPush, env.fetch, auth.token);
       setNotice("");
       unpair();
+      await unpairDevice(env.fetch, auth.token).catch(() => undefined);
     };
     return <Connected env={env} auth={auth} onUnauthorized={refused} onSignOut={signOut} />;
   }
