@@ -2,6 +2,7 @@ package tui_test
 
 import (
 	"errors"
+	"github.com/charmbracelet/x/ansi"
 	"reflect"
 	"strings"
 	"testing"
@@ -460,4 +461,27 @@ func TestWorktreesWithoutDevServersHideThePortColumnAndGiveItsRoomToTheBranch(t 
 		t.Errorf("header %q shows PORT with no dev servers", header)
 	}
 	rowOf(t, out, "feat-long-"+st.Worktrees[0].ID)
+}
+
+func TestWorktreesInANarrowTerminalKeepTheSizeColumnInsideTheWidth(t *testing.T) {
+	for _, width := range []int{60, 50} {
+		r := diskModel()
+		st := fixture(2, 2)
+		for i := range st.Worktrees {
+			st.Worktrees[i].Path = "/wt/" + st.Worktrees[i].ID
+			st.Worktrees[i].Ports = nil
+		}
+		r.m = update(r.m, tea.WindowSizeMsg{Width: width, Height: 30})
+		r.m = update(r.m, tui.StateMsg(st))
+		out := screen(r.open().m)
+		header := lineWith(t, out, "STATE")
+		if !strings.Contains(header, "SIZE") {
+			t.Errorf("width %d: header %q has no SIZE column", width, header)
+		}
+		for _, l := range strings.Split(out, "\n") {
+			if w := ansi.StringWidth(l); w > width {
+				t.Errorf("width %d: line %q is %d columns wide", width, l, w)
+			}
+		}
+	}
 }

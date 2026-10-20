@@ -389,7 +389,7 @@ func (m Model) diskScreenLines() (lines, owners []string) {
 	return lines, owners
 }
 
-type diskColumns struct{ task, branch, port int }
+type diskColumns struct{ task, branch, pr, session, port int }
 
 const (
 	colState   = 16
@@ -408,10 +408,19 @@ func (m Model) diskColumns() diskColumns {
 			break
 		}
 	}
-	fixed := 1 + colState + colRepo + colPR + colSession + port + colSize + 2
-	flex := max(m.width-fixed, 16)
+	pr, session := colPR, colSession
+	fixed := 1 + colState + colRepo + pr + session + port + colSize + 2
+	if m.width-fixed < 16 {
+		fixed -= session
+		session = 0
+	}
+	if m.width-fixed < 16 {
+		fixed -= pr
+		pr = 0
+	}
+	flex := max(m.width-fixed, 8)
 	task := flex * 2 / 5
-	return diskColumns{task: task, branch: flex - task, port: port}
+	return diskColumns{task: task, branch: flex - task, pr: pr, session: session, port: port}
 }
 
 func cell(s string, width int) string {
@@ -444,7 +453,7 @@ func (m Model) diskTable() ([]string, []string) {
 	cols := m.diskColumns()
 	head := []piece{
 		{s.dim, " "}, {s.header, cell("STATE", colState)}, {s.header, cell("TASK", cols.task)}, {s.header, cell("REPO", colRepo)},
-		{s.header, cell("BRANCH", cols.branch)}, {s.header, cell("PR", colPR)}, {s.header, cell("SESSION", colSession)},
+		{s.header, cell("BRANCH", cols.branch)}, {s.header, cell("PR", cols.pr)}, {s.header, cell("SESSION", cols.session)},
 		{s.header, cell("PORT", cols.port)}, {s.header, rightCell("SIZE", colSize)},
 	}
 	out := []string{m.line(false, head, nil)}
@@ -523,7 +532,7 @@ func (m Model) diskRowLine(r domain.DiskRow, w domain.Worktree, cols diskColumns
 	}
 	return m.line(sel, []piece{
 		bar, state, {s.text, cell(m.taskOf(w), cols.task)}, {s.sub, cell(repoName(w), colRepo)},
-		{s.bold, cell(w.Branch, cols.branch)}, {s.blue, cell(pr, colPR)}, {s.text, cell(m.sessionNumber(w.SessionID), colSession)},
+		{s.bold, cell(w.Branch, cols.branch)}, {s.blue, cell(pr, cols.pr)}, {s.text, cell(m.sessionNumber(w.SessionID), cols.session)},
 		{s.teal, cell(ports, cols.port)}, {sizeStyle, rightCell(sizeText(r.Size), colSize)},
 	}, nil)
 }
