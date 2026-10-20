@@ -11,11 +11,24 @@ use local::LocalServe;
 
 pub const DEFAULT_URL: &str = "http://127.0.0.1:7420/";
 
+#[derive(Debug, PartialEq)]
+pub enum Start {
+    Bundled,
+    Remote(Url),
+}
+
 pub fn start_url(configured: Option<String>) -> Result<Url, url::ParseError> {
     match configured.as_deref().map(str::trim) {
         Some(value) if !value.is_empty() => Url::parse(value),
         _ => Url::parse(DEFAULT_URL),
     }
+}
+
+pub fn start_page(mobile: bool, configured: Option<String>) -> Result<Start, url::ParseError> {
+    if mobile {
+        return Ok(Start::Bundled);
+    }
+    start_url(configured).map(Start::Remote)
 }
 
 struct Started {
@@ -86,6 +99,10 @@ pub fn run() {
     let app = tauri::Builder::default()
         .manage(Mutex::new(None::<LocalServe>))
         .setup(|app| {
+            if start_page(cfg!(mobile), None) == Ok(Start::Bundled) {
+                WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into())).build()?;
+                return Ok(());
+            }
             let started = match configured_url() {
                 Some(value) => Started {
                     url: start_url(Some(value))?,
@@ -102,11 +119,13 @@ pub fn run() {
                     })
                 }
             };
-            let mut window =
-                WebviewWindowBuilder::new(app, "main", WebviewUrl::External(started.url))
-                    .title("crew")
-                    .inner_size(1280.0, 800.0)
-                    .min_inner_size(900.0, 600.0);
+            let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::External(started.url));
+            #[cfg(desktop)]
+            let window = window
+                .title("crew")
+                .inner_size(1280.0, 800.0)
+                .min_inner_size(900.0, 600.0);
+            let mut window = window;
             if let Some(auth) = started.auth {
                 window =
                     window.initialization_script(format!("window.__CREW_DESKTOP_AUTH__ = {auth};"));
@@ -128,4 +147,24 @@ pub fn run() {
             }
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mobile_opens_the_bundled_connect_page() {
+        assert_eq!(start_page(true, Some("https://crew.example.ts.net/".into())), Ok(Start::Bundled));
+        assert_eq!(start_page(true, None), Ok(Start::Bundled));
+    }
+
+    #[test]
+    fn desktop_opens_the_configured_url() {
+        assert_eq!(
+            start_page(false, Some("https://crew.example.ts.net/".into())),
+            Ok(Start::Remote(Url::parse("https://crew.example.ts.net/").unwrap()))
+        );
+        assert_eq!(start_page(false, None), Ok(Start::Remote(Url::parse(DEFAULT_URL).unwrap())));
+    }
 }
