@@ -17,6 +17,12 @@ go run ./scripts/verify iso up
 go run ./scripts/verify tui drive --restart --out-dir /tmp/crew-verify-map/setup --steps '[{"expect":"crew","timeout":8000},{"keys":"S"},{"expect":"Set up crew","timeout":5000},{"expect":"Claude Code"},{"expect":"Codex"},{"expect":"Oh My Pi"},{"shot":"setup.png"},{"keys":"Escape"}]'
 ```
 
+### install on a fresh file says crew made the file (#482)
+
+```sh
+go run ./scripts/verify tui drive --restart --out-dir /tmp/crew-verify-map/setup-backup --steps '[{"expect":"crew","timeout":8000},{"keys":"S"},{"expect":"Set up crew","timeout":5000},{"keys":"Enter"},{"expect":"does not exist yet","timeout":5000},{"keys":"Enter"},{"expect":"crew made the file","timeout":5000},{"absent":"does not exist yet"},{"keys":"Escape"}]'
+```
+
 ### first-run walkthrough (manual: iso up marks the home onboarded; remove $CREW_HOME/onboarded in the isolated home and restart the TUI to see it)
 
 ### version --build prints the build version
