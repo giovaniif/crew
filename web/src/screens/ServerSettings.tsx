@@ -443,7 +443,7 @@ export function ServerAppearanceGroup({ api }: { api: Authed }) {
               <span className="swatch" style={{ background: colors[k] || "transparent" }} aria-hidden="true" />
               <label>
                 {k}
-                <input type="text" value={colors[k] ?? ""} placeholder="#1e66f5" onChange={(e) => setColors({ ...colors, [k]: e.target.value })} />
+                <input type="text" value={colors[k] ?? ""} placeholder="#rrggbb" onChange={(e) => setColors({ ...colors, [k]: e.target.value })} />
               </label>
               <button type="button" aria-label={"Save " + k} onClick={() => run(async () => "Saved theme." + k + " in " + (await setConfig(api, "theme." + k, colors[k] ?? "")).path)}>
                 Save
