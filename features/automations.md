@@ -32,6 +32,16 @@ go run ./scripts/verify web drive /#/automations --viewport both --out-dir /tmp/
 
 Expect: the empty state, no console errors, no failed API calls.
 
+### PWA run history shows the local start time
+
+```sh
+printf '\n[[automation]]\nname = "TEST-run"\nagent = "claude"\ntarget = "workspace"\nprompt = "TEST prompt"\n' >> "$(jq -r .home "${VERIFY_HOME:-/tmp/crew-verify-$(id -u)}/iso.json")/config.toml"
+go run ./scripts/verify iso crew -- automation run TEST-run TEST-context
+go run ./scripts/verify web drive /#/automations --viewport both --out-dir /tmp/crew-verify-map/automations --steps '[{"click":{"role":"button","name":"History of TEST-run"}},{"expect":{"role":"list","name":"Runs of TEST-run"}},{"shot":"history.png"}]'
+```
+
+Expect: the start time has no `UTC` suffix and matches `crew automation runs` (#467).
+
 ### run an automation from config (manual: needs an [[automation]] table in the isolated config.toml and a harness that runs turns; the fake claude does not)
 
 ## Cleanup
