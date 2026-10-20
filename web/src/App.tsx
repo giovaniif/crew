@@ -207,6 +207,8 @@ function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut }:
           fetch={env.fetch}
           push={env.push ?? noPush}
           onSignOut={onSignOut}
+          storage={env.storage}
+          userAgent={env.userAgent}
         />
       ),
       tab: "settings",
