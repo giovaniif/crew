@@ -39,3 +39,4 @@ go run ./scripts/verify iso down
 ## Gotchas
 
 - The PR data comes from the seed, not from GitHub. The fake `gh` on `PATH` answers `gh api` with `$CREW_E2E/prs.json`.
+- The seed gives each repo of a session its own PR numbers, and the fake `gh` cannot make a fork PR. Thus the map cannot show two repos with the same PR number (#497) or a fork PR that has the name of a local branch (#499). Unit tests cover them.
