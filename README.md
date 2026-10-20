@@ -149,6 +149,20 @@ xattr -dr com.apple.quarantine /Applications/crew.app
 
 Or open the app, then go to System Settings › Privacy & Security › Open Anyway.
 
+### Desktop app
+
+Each release also has the desktop app (Tauri). Each package holds the matching `crew` binary, and the app starts its own `crew serve`. You do not need to install the CLI first.
+
+| OS | File | Install |
+|---|---|---|
+| macOS (Apple silicon) | `crew_<version>_aarch64.dmg` | Open it and drag `crew.app` to Applications. The app is signed and notarized. |
+| macOS (Intel) | `crew_<version>_x64.dmg` | The same as Apple silicon. |
+| Linux (amd64) | `crew_<version>_amd64.deb` | `sudo apt install ./crew_<version>_amd64.deb`. Then start `crew-desktop`. |
+| Linux (amd64) | `crew_<version>_amd64.AppImage` | `chmod +x crew_<version>_amd64.AppImage`, then run it. |
+| Windows (x64) | `crew_<version>_x64_en-US.msi` or `crew_<version>_x64-setup.exe` | Run the installer. The installer is not signed, so Windows SmartScreen shows a warning. Select More info › Run anyway. |
+
+The Windows package has no `crew` binary, because `crew` does not build for Windows. The Windows app uses a `crew` on `PATH`, else it opens `http://127.0.0.1:7420/`.
+
 ### Upgrade
 
 `crew version` prints the installed version. At most one time each day, it also checks GitHub for a newer release. To stop this check, set `CREW_NO_UPDATE_CHECK=1`. crew never updates itself. To upgrade, run the install script again. Then stop the old daemon, so that the new binary starts its own daemon:
