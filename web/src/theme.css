@@ -814,6 +814,23 @@ code {
   gap: 12px;
 }
 
+.chat-handoff {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+  color: var(--subtext);
+  font-size: 12px;
+  text-align: center;
+}
+
+.chat-handoff::before,
+.chat-handoff::after {
+  content: "";
+  flex: 1;
+  border-top: 1px dashed var(--overlay);
+}
+
 .chat-empty {
   text-align: center;
 }
