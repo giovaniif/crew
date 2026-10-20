@@ -168,7 +168,41 @@ export function usesBrowser(messages: Message[]): boolean {
   return messages.some((m) => m.role === "tool" && browserCommand.test(m.tool?.summary ?? ""));
 }
 
-function Chat({ id, client, api, status, persona, children }: { id: string; client: StreamClient; api: Authed; status: StreamStatus; persona?: Persona; children?: ReactNode }) {
+function useEarlier(api: Authed, freshFrom?: string): Message[] {
+  const [earlier, setEarlier] = useState<Message[]>([]);
+  const { fetch, token } = api;
+  useEffect(() => {
+    setEarlier([]);
+    if (!freshFrom) {
+      return;
+    }
+    let alive = true;
+    messagesPage({ fetch, token }, freshFrom).then(
+      (page) => {
+        if (alive) {
+          setEarlier([...page.messages].sort((a, b) => a.cursor - b.cursor));
+        }
+      },
+      () => {},
+    );
+    return () => {
+      alive = false;
+    };
+  }, [fetch, token, freshFrom]);
+  return earlier;
+}
+
+function Handoff() {
+  const label = "Earlier conversation ended · handoff saved to memory";
+  return (
+    <div className="chat-handoff" role="separator" aria-label={label}>
+      <span>{label}</span>
+    </div>
+  );
+}
+
+function Chat({ id, client, api, status, persona, freshFrom, children }: { id: string; client: StreamClient; api: Authed; status: StreamStatus; persona?: Persona; freshFrom?: string; children?: ReactNode }) {
+  const earlier = useEarlier(api, freshFrom);
   const [t, setT] = useState<Transcript>(emptyTranscript);
   const [loadError, setLoadError] = useState("");
   const [older, setOlder] = useState<"idle" | "loading" | "failed">("idle");
@@ -299,6 +333,10 @@ function Chat({ id, client, api, status, persona, children }: { id: string; clie
           </button>
         </div>
       ) : null}
+      {earlier.map((m) => (
+        <MessageLine key={"earlier-" + m.id} message={m} persona={persona} />
+      ))}
+      {freshFrom ? <Handoff /> : null}
       {t.loaded && t.messages.length === 0 ? <p className="muted chat-empty">No messages yet</p> : null}
       {t.messages.map((m) => (
         <MessageLine key={m.id} message={m} persona={persona} />
@@ -647,7 +685,7 @@ export function SessionScreen({
       <Header session={session} now={now} onInterrupt={() => setConfirming(true)} />
       <Connection snapshot={snapshot} now={now} onRetry={onRetry} />
       <main className="chat-main">
-        <Chat id={id} client={client} api={api} status={snapshot.status} persona={persona}>
+        <Chat id={id} client={client} api={api} status={snapshot.status} persona={persona} freshFrom={session.Mate?.FreshFrom || undefined}>
           <PermissionCard api={api} session={session} />
         </Chat>
       </main>
