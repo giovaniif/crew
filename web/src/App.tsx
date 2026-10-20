@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { tokenRefused, unpairDevice, type Fetch } from "./api";
 import { clearAuth, loadAuth, saveAuth, type Auth, type KeyValue } from "./auth";
 import { pairCodeFromHash } from "./display";
@@ -6,6 +6,7 @@ import { disablePush, noPush, type PushEnv } from "./push";
 import { parseRoute } from "./route";
 import { Approvals } from "./screens/Approvals";
 import { Automations } from "./screens/Automations";
+import { Desktop } from "./screens/Desktop";
 import { MateProfile, Mates, NewMate } from "./screens/Mates";
 import { Install } from "./screens/Install";
 import { NewSession } from "./screens/NewSession";
@@ -28,7 +29,19 @@ export type AppEnv = {
   onHashChange: (listener: (hash: string) => void) => () => void;
   push?: PushEnv;
   visibility?: PageVisibility;
+  wide?: Width;
 };
+
+export type Width = {
+  matches: () => boolean;
+  onChange: (listener: () => void) => () => void;
+};
+
+const narrow: Width = { matches: () => false, onChange: () => () => {} };
+
+function useWide(width: Width = narrow): boolean {
+  return useSyncExternalStore(width.onChange, width.matches);
+}
 
 export type PageVisibility = {
   visible: () => boolean;
@@ -106,59 +119,41 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
     }
   }, [snapshot.status, onUnauthorized]);
 
+  const go = useCallback((next: string) => {
+    window.location.hash = next;
+    setHash(next);
+  }, []);
+  const wide = useWide(env.wide);
   const route = parseRoute(hash);
   const retry = () => client.retryNow();
+  const other = otherScreen(hash, { env, auth, api, now, snapshot, onSignOut });
+  if (wide) {
+    return (
+      <Desktop
+        env={env}
+        token={auth.token}
+        hash={hash}
+        go={go}
+        snapshot={snapshot}
+        now={now}
+        onRetry={retry}
+        client={client}
+        api={api}
+        other={other?.screen ?? null}
+      />
+    );
+  }
   if (route.screen === "new") {
     return <NewSession env={env} token={auth.token} />;
   }
   if (route.screen === "session") {
     return <SessionScreen key={route.id} id={route.id} snapshot={snapshot} now={now} onRetry={retry} client={client} api={api} />;
   }
-  if (hash === "#/automations") {
+  if (other) {
     return (
       <>
-        <Automations api={api} />
-        <Tabs current="automations" />
-      </>
-    );
-  }
-  if (hash === "#/mates") {
-    return (
-      <>
-        <Mates api={api} now={now} board={snapshot.state?.mates} />
-        <Tabs current="mates" />
-      </>
-    );
-  }
-  if (hash.startsWith("#/mates/")) {
-    const name = hash.slice("#/mates/".length);
-    return (
-      <>
-        {name === "new" ? <NewMate api={api} /> : <MateProfile api={api} name={safeDecode(name)} board={snapshot.state?.mates} />}
-        <Tabs current="mates" />
-      </>
-    );
-  }
-  if (hash === "#/approvals") {
-    return (
-      <>
-        <Approvals api={api} now={now} visibility={visibility} />
-        <Tabs current="approvals" />
-      </>
-    );
-  }
-  if (hash === "#/settings") {
-    return (
-      <>
-        <Settings
-          auth={auth}
-          host={env.host}
-          installed={env.installed}
-          fetch={env.fetch}
-          push={env.push ?? noPush}
-          onSignOut={onSignOut}
-        />
-        <Tabs current="settings" />
+        {other.screen}
+        <Tabs current={other.tab} />
       </>
     );
   }
@@ -173,6 +168,50 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
       <Tabs current="sessions" />
     </>
   );
+}
+
+type OtherInputs = {
+  env: AppEnv;
+  auth: Auth;
+  api: { fetch: Fetch; token: string };
+  now: number;
+  snapshot: ReturnType<typeof useStream>;
+  onSignOut: () => Promise<void>;
+};
+
+function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut }: OtherInputs): { screen: ReactNode; tab: Tab } | null {
+  if (hash === "#/automations") {
+    return { screen: <Automations api={api} />, tab: "automations" };
+  }
+  if (hash === "#/mates") {
+    return { screen: <Mates api={api} now={now} board={snapshot.state?.mates} />, tab: "mates" };
+  }
+  if (hash.startsWith("#/mates/")) {
+    const name = hash.slice("#/mates/".length);
+    return {
+      screen: name === "new" ? <NewMate api={api} /> : <MateProfile api={api} name={safeDecode(name)} board={snapshot.state?.mates} />,
+      tab: "mates",
+    };
+  }
+  if (hash === "#/approvals") {
+    return { screen: <Approvals api={api} now={now} visibility={env.visibility} />, tab: "approvals" };
+  }
+  if (hash === "#/settings") {
+    return {
+      screen: (
+        <Settings
+          auth={auth}
+          host={env.host}
+          installed={env.installed}
+          fetch={env.fetch}
+          push={env.push ?? noPush}
+          onSignOut={onSignOut}
+        />
+      ),
+      tab: "settings",
+    };
+  }
+  return null;
 }
 
 const refusedNotice =
