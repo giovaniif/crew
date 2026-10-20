@@ -50,7 +50,7 @@ function History({ name, runs }: { name: string; runs: AutomationRun[] }) {
   );
 }
 
-function RunForm({ api, automation, onDone }: { api: Authed; automation: Automation; onDone: () => void }) {
+function RunForm({ api, automation, onDone, onRan }: { api: Authed; automation: Automation; onDone: () => void; onRan: (run: AutomationRun) => void }) {
   const [context, setContext] = useState("");
   const [workItem, setWorkItem] = useState("");
   const [busy, setBusy] = useState(false);
@@ -62,6 +62,7 @@ function RunForm({ api, automation, onDone }: { api: Authed; automation: Automat
     setNote("");
     try {
       const out = await runAutomation(api, automation.name, { context, work_item: workItem });
+      onRan(out.run);
       if (out.run.session_id) {
         window.location.hash = "#/sessions/" + encodeURIComponent(out.run.session_id);
         return;
@@ -144,7 +145,7 @@ export function Automations({ api }: { api: Authed }) {
               </button>
             </div>
             {open === a.name && <History name={a.name} runs={runsOf(a.name)} />}
-            {running === a.name && <RunForm api={api} automation={a} onDone={() => setRunning("")} />}
+            {running === a.name && <RunForm api={api} automation={a} onDone={() => setRunning("")} onRan={(run) => setRuns((prev) => [run, ...prev.filter((r) => r.id !== run.id)])} />}
           </li>
         ))}
       </ul>
