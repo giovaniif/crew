@@ -201,6 +201,11 @@ test("CrewDiff opens diffview on the worktree the buffer is in, from the scope's
   eq(seen, { { "def456", "--untracked-files=true", "-C" .. real(dir) .. "/web" } }, "DiffviewOpen args")
 end)
 
+test("CrewDiff completes only the scopes that start with the typed text", function()
+  eq(vim.fn.getcompletion("CrewDiff b", "cmdline"), { "branch" }, "completion of b")
+  eq(vim.fn.getcompletion("CrewDiff ", "cmdline"), { "last_turn", "uncommitted", "branch" }, "completion of nothing")
+end)
+
 test("CrewDiff passes the scope it is given", function()
   local dir = fresh()
   vim.fn.mkdir(dir .. "/api", "p")
