@@ -36,3 +36,14 @@ export function saveAuth(storage: KeyValue, paired: Paired): Auth {
   storage.setItem(authKey, JSON.stringify(auth));
   return auth;
 }
+
+export function desktopAuth(value: unknown): Auth | null {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+  const { token, device } = value as Partial<Auth>;
+  if (typeof token !== "string" || !token || typeof device !== "object" || !device) {
+    return null;
+  }
+  return { token, device };
+}
