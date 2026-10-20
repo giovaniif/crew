@@ -389,7 +389,7 @@ func (m Model) diskScreenLines() (lines, owners []string) {
 	return lines, owners
 }
 
-type diskColumns struct{ task, branch int }
+type diskColumns struct{ task, branch, port int }
 
 const (
 	colState   = 16
@@ -401,10 +401,17 @@ const (
 )
 
 func (m Model) diskColumns() diskColumns {
-	fixed := 1 + colState + colRepo + colPR + colSession + colPort + colSize + 2
+	port := 0
+	for _, w := range m.worktrees {
+		if len(w.Ports) > 0 {
+			port = colPort
+			break
+		}
+	}
+	fixed := 1 + colState + colRepo + colPR + colSession + port + colSize + 2
 	flex := max(m.width-fixed, 16)
 	task := flex * 2 / 5
-	return diskColumns{task: task, branch: flex - task}
+	return diskColumns{task: task, branch: flex - task, port: port}
 }
 
 func cell(s string, width int) string {
@@ -438,7 +445,7 @@ func (m Model) diskTable() ([]string, []string) {
 	head := []piece{
 		{s.dim, " "}, {s.header, cell("STATE", colState)}, {s.header, cell("TASK", cols.task)}, {s.header, cell("REPO", colRepo)},
 		{s.header, cell("BRANCH", cols.branch)}, {s.header, cell("PR", colPR)}, {s.header, cell("SESSION", colSession)},
-		{s.header, cell("PORT", colPort)}, {s.header, rightCell("SIZE", colSize)},
+		{s.header, cell("PORT", cols.port)}, {s.header, rightCell("SIZE", colSize)},
 	}
 	out := []string{m.line(false, head, nil)}
 	rows := m.diskRows()
@@ -517,7 +524,7 @@ func (m Model) diskRowLine(r domain.DiskRow, w domain.Worktree, cols diskColumns
 	return m.line(sel, []piece{
 		bar, state, {s.text, cell(m.taskOf(w), cols.task)}, {s.sub, cell(repoName(w), colRepo)},
 		{s.bold, cell(w.Branch, cols.branch)}, {s.blue, cell(pr, colPR)}, {s.text, cell(m.sessionNumber(w.SessionID), colSession)},
-		{s.teal, cell(ports, colPort)}, {sizeStyle, rightCell(sizeText(r.Size), colSize)},
+		{s.teal, cell(ports, cols.port)}, {sizeStyle, rightCell(sizeText(r.Size), colSize)},
 	}, nil)
 }
 

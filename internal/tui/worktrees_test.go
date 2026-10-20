@@ -443,3 +443,21 @@ func TestWorktreesAMissingFolderShowsMissingInsteadOfAPendingSize(t *testing.T) 
 		t.Errorf("row = %q, want a final missing size, not a pending one", row)
 	}
 }
+
+func TestWorktreesWithoutDevServersHideThePortColumnAndGiveItsRoomToTheBranch(t *testing.T) {
+	r := diskModel()
+	st := fixture(2, 2)
+	for i := range st.Worktrees {
+		st.Worktrees[i].Path = "/wt/" + st.Worktrees[i].ID
+		st.Worktrees[i].Branch = "feat-long-" + st.Worktrees[i].ID
+		st.Worktrees[i].SessionID = "s" + st.Worktrees[i].ID[1:3]
+		st.Worktrees[i].Ports = nil
+	}
+	r.m = update(r.m, tea.WindowSizeMsg{Width: 80, Height: 30})
+	r.m = update(r.m, tui.StateMsg(st))
+	out := screen(r.open().m)
+	if header := lineWith(t, out, "STATE"); strings.Contains(header, "PORT") {
+		t.Errorf("header %q shows PORT with no dev servers", header)
+	}
+	rowOf(t, out, "feat-long-"+st.Worktrees[0].ID)
+}
