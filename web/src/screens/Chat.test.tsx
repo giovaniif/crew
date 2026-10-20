@@ -408,3 +408,33 @@ describe("reading a session", () => {
     expect(server.calls.some((c) => c.path.endsWith("/read"))).toBe(false);
   });
 });
+
+describe("a Start Fresh handoff", () => {
+  const old = "/api/v1/sessions/s0/messages?limit=50";
+
+  it("shows the earlier conversation once, above the handoff divider", async () => {
+    const server = new FakeServer()
+      .on("GET", old, page([msg("o1", 10, { role: "user", text: "the old question" }), msg("o2", 11, { text: "the old answer" })]))
+      .on("GET", newest, page([msg("n1", 5, { role: "user", text: "the new question" })]));
+    const sockets = setup(server);
+    live(sockets, withSession(goldenState(), "s1", { Mate: { Name: "iris", Local: true, FreshFrom: "s0" } }));
+    const log = within(screen.getByRole("log", { name: "Messages" }));
+    const divider = await log.findByRole("separator", { name: "Earlier conversation ended · handoff saved to memory" });
+    const before = await log.findByText("the old answer");
+    const after = await log.findByText("the new question");
+    expect(before.compareDocumentPosition(divider) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(divider.compareDocumentPosition(after) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    sockets.last.push({ state: withSession(goldenState(), "s1", { Mate: { Name: "iris", Local: true, FreshFrom: "s0" }, State: "idle" }) });
+    await waitFor(() => expect(server.calls.filter((c) => c.path === old)).toHaveLength(1));
+  });
+
+  it("shows no divider and loads no other session without FreshFrom", async () => {
+    const server = new FakeServer().on("GET", newest, page([msg("n1", 5, { role: "user", text: "the new question" })]));
+    const sockets = setup(server);
+    live(sockets, withSession(goldenState(), "s1", { Mate: { Name: "iris", Local: true } }));
+    const log = within(screen.getByRole("log", { name: "Messages" }));
+    await log.findByText("the new question");
+    expect(log.queryByRole("separator")).toBeNull();
+    expect(server.calls.some((c) => c.path.includes("/sessions/s0/"))).toBe(false);
+  });
+});
