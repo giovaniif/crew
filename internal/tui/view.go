@@ -368,7 +368,7 @@ func (m Model) helpLines() []string {
 		{"tab", "last session"},
 		{"j / k", "move"},
 		{"o", "show / hide subagents"},
-		{"m", "mute session"},
+		{"m", "mute / unmute session"},
 		{"R", "rename and pin the name"},
 		{"A", "unpin (name is automatic)"},
 		{"K", "kill the session's dev servers"},
