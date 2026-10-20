@@ -42,6 +42,15 @@ go run ./scripts/verify web drive /#/automations --viewport both --out-dir /tmp/
 
 Expect: the start time has no `UTC` suffix and matches `crew automation runs` (#467).
 
+### PWA a skipped run shows in last run and History
+
+```sh
+printf '\n[[automation]]\nname = "TEST-skip"\nagent = "claude"\ntarget = "workspace"\nprecheck = "exit 3"\nprompt = "TEST prompt"\n' >> "$(jq -r .home "${VERIFY_HOME:-/tmp/crew-verify-$(id -u)}/iso.json")/config.toml"
+go run ./scripts/verify web drive /#/automations --viewport both --out-dir /tmp/crew-verify-map/automations --steps '[{"click":{"role":"button","name":"Run TEST-skip"}},{"click":{"role":"button","name":"Run","exact":true}},{"expect":{"text":"last run skipped","exact":false},"timeout":10000},{"click":{"role":"button","name":"History of TEST-skip"}},{"expect":{"role":"list","name":"Runs of TEST-skip"}},{"shot":"skipped.png"}]'
+```
+
+Expect: the card and History show the skipped run with no reload (#503).
+
 ### run an automation from config (manual: needs an [[automation]] table in the isolated config.toml and a harness that runs turns; the fake claude does not)
 
 ## Cleanup
