@@ -1,6 +1,7 @@
 package view
 
 import (
+	"path"
 	"reflect"
 	"slices"
 	"sort"
@@ -436,6 +437,9 @@ func (v *View) derive(s domain.Session, orders map[string]int) derived {
 		where:  domain.WorktreeLabel(worktrees),
 		banner: banner.Body,
 		since:  since,
+	}
+	if out.where == "" && s.Dir != "" {
+		out.where = path.Base(s.Dir)
 	}
 	if v.native {
 		out.order = -1
