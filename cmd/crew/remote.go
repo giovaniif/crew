@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -22,7 +23,7 @@ import (
 	"github.com/giovaniif/crew/internal/rpc"
 )
 
-const remoteUsage = "usage: crew remote pair [--name n] [--url u] | devices | revoke <id>"
+const remoteUsage = "usage: crew remote pair [--name n] [--url u] [--json] | devices | revoke <id>"
 
 const qrQuietZone = 4
 
@@ -68,12 +69,16 @@ func remotePair(args []string, stdout, stderr io.Writer) error {
 	fs.SetOutput(stderr)
 	name := fs.String("name", "", "name for the device (default: the name the app sends)")
 	url := fs.String("url", "", "public URL of crew serve (default: [serve] url in config.toml)")
+	asJSON := fs.Bool("json", false, "print only the code and its expiry as JSON, for the desktop app")
 	if err := fs.Parse(args); err != nil || fs.NArg() > 0 {
 		return errRemoteUsage
 	}
 	home, err := rpc.Home()
 	if err != nil {
 		return err
+	}
+	if *asJSON {
+		return remotePairJSON(home, *name, stdout)
 	}
 	base := *url
 	if base == "" {
@@ -106,6 +111,23 @@ func remotePair(args []string, stdout, stderr io.Writer) error {
 	}
 	fmt.Fprintf(stdout, "\nScan the code with your phone, or open:\n\n  %s\n\nCode %s, single use, expires at %s.\n", link, code.Code, code.ExpiresAt.Local().Format(time.Kitchen))
 	return nil
+}
+
+func remotePairJSON(home, name string, stdout io.Writer) error {
+	ctx := context.Background()
+	c, err := connect(ctx, home)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = c.Close() }()
+	var code rpc.PairCode
+	if err := c.Call(ctx, rpc.MethodPairCode, rpc.PairCodeParams{Name: name}, &code); err != nil {
+		return err
+	}
+	return json.NewEncoder(stdout).Encode(struct {
+		Code      string    `json:"code"`
+		ExpiresAt time.Time `json:"expires_at"`
+	}{code.Code, code.ExpiresAt})
 }
 
 func remoteDevices(stdout io.Writer) error {
