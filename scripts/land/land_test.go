@@ -61,9 +61,9 @@ func TestCheckBlockers(t *testing.T) {
 		{"changes requested", func(g *fakeGH) {
 			g.api["graphql"] = strings.Replace(g.api["graphql"], `"reviewDecision":""`, `"reviewDecision":"CHANGES_REQUESTED"`, 1)
 		}, "changes requested"},
-		{"not clean", func(g *fakeGH) {
-			g.api["repos/giovaniif/crew/pulls/7"] = strings.Replace(g.api["repos/giovaniif/crew/pulls/7"], `"clean"`, `"behind"`, 1)
-		}, "behind"},
+		{"conflict", func(g *fakeGH) {
+			g.api["repos/giovaniif/crew/pulls/7"] = strings.Replace(g.api["repos/giovaniif/crew/pulls/7"], `"clean"`, `"dirty"`, 1)
+		}, "dirty"},
 		{"no patch", func(g *fakeGH) {
 			g.api["repos/giovaniif/crew/pulls/7/files"] = `[{"filename":"internal/daemon/big.go","status":"modified"}]`
 		}, "no patch"},
@@ -101,7 +101,7 @@ func TestCheckBlockers(t *testing.T) {
 			g.api["repos/giovaniif/crew/pulls/7/files"] = `[{"filename":"internal/adapters/sqlite/migrations/0001_init.sql","status":"removed","patch":"-x"}]`
 		}, "irreversible"},
 	}
-	readiness := map[string]bool{"draft": true, "red check": true, "missing check": true, "unreadable protection": true, "open thread": true, "thread state unknown": true, "changes requested": true, "not clean": true}
+	readiness := map[string]bool{"draft": true, "red check": true, "missing check": true, "unreadable protection": true, "open thread": true, "thread state unknown": true, "changes requested": true, "conflict": true}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := greenPR()
@@ -201,11 +201,23 @@ func TestMergeInShadowOnlyWritesTheLedger(t *testing.T) {
 	}
 }
 
-func TestMergeLivePinsTheHeadAndUsesAMergeCommit(t *testing.T) {
+func TestMergeLiveAddsTheQueueLabelAndNeverMerges(t *testing.T) {
 	g := greenPR()
-	runJSON(t, testEnv(t, g, "live"), "merge", "7")
-	if len(g.merged) != 1 || !strings.Contains(g.merged[0], "--merge") || !strings.Contains(g.merged[0], "--match-head-commit "+headSHA) {
-		t.Errorf("merged %v", g.merged)
+	got, code := runJSON(t, testEnv(t, g, "live"), "merge", "7")
+	if code != 0 || got["action"] != "queued" || len(g.merged) != 0 {
+		t.Fatalf("exit %d action %v merged %v", code, got["action"], g.merged)
+	}
+	if len(g.queued) != 1 || !strings.Contains(g.queued[0], "repos/giovaniif/crew/issues/7/labels") || !strings.Contains(g.queued[0], "labels[]=queue") {
+		t.Errorf("queued %v", g.queued)
+	}
+}
+
+func TestMergeQueuesABranchThatIsBehindMain(t *testing.T) {
+	g := greenPR()
+	g.api["repos/giovaniif/crew/pulls/7"] = strings.Replace(g.api["repos/giovaniif/crew/pulls/7"], `"clean"`, `"behind"`, 1)
+	got, code := runJSON(t, testEnv(t, g, "live"), "merge", "7")
+	if code != 0 || got["action"] != "queued" || len(g.queued) != 1 {
+		t.Errorf("exit %d action %v queued %v:\n%s", code, got["action"], g.queued, blockers(got))
 	}
 }
 
@@ -213,7 +225,7 @@ func TestMergeBlockedNeverMerges(t *testing.T) {
 	g := greenPR()
 	g.api["graphql"] = strings.Replace(g.api["graphql"], `"isResolved":true`, `"isResolved":false`, 1)
 	got, code := runJSON(t, testEnv(t, g, "live"), "merge", "7")
-	if code != 1 || len(g.merged) != 0 || got["action"] != "blocked" || len(g.ledger) != 1 {
+	if code != 1 || len(g.merged) != 0 || len(g.queued) != 0 || got["action"] != "blocked" || len(g.ledger) != 1 {
 		t.Errorf("exit %d merged %v action %v ledger %v", code, g.merged, got["action"], g.ledger)
 	}
 }
@@ -249,8 +261,8 @@ func TestMergeLiveRecordsFlagsForTheDailyReview(t *testing.T) {
 	g := greenPR()
 	g.api["repos/giovaniif/crew/pulls/7/files"] = `[{"filename":".goreleaser.yaml","status":"modified","patch":"+x"}]`
 	runJSON(t, testEnv(t, g, "live"), "merge", "7")
-	if len(g.merged) != 1 || len(g.ledger) != 1 || !strings.Contains(g.ledger[0], "goreleaser") {
-		t.Errorf("merged %v ledger %v", g.merged, g.ledger)
+	if len(g.queued) != 1 || len(g.ledger) != 1 || !strings.Contains(g.ledger[0], "goreleaser") {
+		t.Errorf("queued %v ledger %v", g.queued, g.ledger)
 	}
 }
 

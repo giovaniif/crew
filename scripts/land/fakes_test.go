@@ -12,6 +12,7 @@ type fakeGH struct {
 	calls    [][]string
 	posted   []string
 	merged   []string
+	queued   []string
 	ledger   []string
 	verifyOK bool
 }
@@ -29,6 +30,9 @@ func (f *fakeGH) exec(c cmd) (string, string, int) {
 	}
 	j := strings.Join(c.args, " ")
 	switch {
+	case strings.Contains(j, "/labels"):
+		f.queued = append(f.queued, j)
+		return "[]", "", 0
 	case strings.HasPrefix(j, "pr merge"):
 		f.merged = append(f.merged, j)
 		return "", "", 0
