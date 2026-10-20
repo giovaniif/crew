@@ -130,4 +130,20 @@ describe("Automations", () => {
     await userEvent.click(screen.getByRole("button", { name: "Run" }));
     expect(await screen.findByRole("status")).toHaveTextContent("skipped: precheck failed");
   });
+
+  it("shows a skipped run in the last run and the history at once", async () => {
+    const { server, env } = setup("#/automations");
+    server.on("POST", "/api/v1/automations/deps/run", {
+      status: 200,
+      body: { run: { id: "r3", automation: "deps", trigger: "manual", outcome: "skipped", reason: "precheck failed" }, session: { ID: "" } },
+    });
+    render(<App env={env} />);
+    const deps = await screen.findByRole("listitem", { name: "deps" });
+    await userEvent.click(within(deps).getByRole("button", { name: "Run deps" }));
+    await userEvent.click(within(deps).getByRole("button", { name: "Run" }));
+    await within(deps).findByRole("status");
+    expect(within(deps).getByText("last run skipped: precheck failed")).toBeInTheDocument();
+    await userEvent.click(within(deps).getByRole("button", { name: "History of deps" }));
+    expect(within(within(deps).getByRole("list", { name: "Runs of deps" })).getByText("skipped")).toBeInTheDocument();
+  });
 });
