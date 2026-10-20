@@ -35,6 +35,12 @@ sh -c '! go run ./scripts/verify iso crew -- remote pair --url http://iso.invali
 go run ./scripts/verify web drive / --viewport mobile --out-dir /tmp/crew-verify-map/remote --steps '[{"expect":{"role":"link","name":"New session"}},{"shot":"signed-in.png"}]'
 ```
 
+### sign out does not keep the code of a pair link
+
+```sh
+go run ./scripts/verify web drive "/#pair=ABCD2345" --viewport both --installed --out-dir /tmp/crew-verify-map/remote --steps '[{"click":{"role":"link","name":"Settings"}},{"click":{"role":"button","name":"Sign out"}},{"expect":{"role":"heading","name":"Pair this device"}},{"eval":"if (document.querySelector(\"input.code-input\").value !== \"\") throw new Error(\"stale pair code\")"}]'
+```
+
 ### scan the QR code with a phone camera (manual: no camera on the server)
 
 ## Cleanup
