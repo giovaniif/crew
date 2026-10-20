@@ -72,9 +72,9 @@ func greenPR() *fakeGH {
 		"head":                               headSHA,
 		"repos/giovaniif/crew/pulls/7/files": `[{"filename":"internal/tui/view.go","status":"modified","patch":"@@ -1 +1 @@\n-a\n+b"}]`,
 		"repos/giovaniif/crew/pulls/7":       `{"number":7,"draft":false,"mergeable_state":"clean","head":{"sha":"` + headSHA + `"},"base":{"ref":"main"},"merged":false}`,
-		"repos/giovaniif/crew/branches/main/protection":           `{"required_status_checks":{"contexts":["build","tdd","mutate","CodeRabbit"]}}`,
+		"repos/giovaniif/crew/branches/main/protection":           `{"required_status_checks":{"contexts":["build","tdd","mutate"]}}`,
 		"repos/giovaniif/crew/commits/" + headSHA + "/check-runs": `{"check_runs":[{"name":"build","status":"completed","conclusion":"success"},{"name":"tdd","status":"completed","conclusion":"success"},{"name":"mutate","status":"completed","conclusion":"success"}]}`,
-		"repos/giovaniif/crew/commits/" + headSHA + "/status":     `{"statuses":[{"context":"CodeRabbit","state":"success"}]}`,
+		"repos/giovaniif/crew/commits/" + headSHA + "/status":     `{"statuses":[]}`,
 		"repos/giovaniif/crew/issues/7/comments":                  `[{"body":"looks good\n<!-- land:verdict v=1 sha=` + headSHA + ` verdict=PASS -->","user":{"login":"bot"}}]`,
 		"graphql":                                                 `{"data":{"repository":{"pullRequest":{"reviewDecision":"","reviewThreads":{"pageInfo":{"hasNextPage":false},"nodes":[{"isResolved":true}]}}}}}`,
 	}, verifyOK: true}

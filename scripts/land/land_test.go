@@ -50,8 +50,9 @@ func TestCheckBlockers(t *testing.T) {
 			g.api[k] = strings.Replace(g.api[k], `"name":"tdd","status":"completed","conclusion":"success"`, `"name":"tdd","status":"completed","conclusion":"failure"`, 1)
 		}, "tdd"},
 		{"missing check", func(g *fakeGH) {
-			g.api["repos/giovaniif/crew/commits/"+headSHA+"/status"] = `{"statuses":[]}`
-		}, "CodeRabbit"},
+			k := "repos/giovaniif/crew/commits/" + headSHA + "/check-runs"
+			g.api[k] = strings.Replace(g.api[k], `,{"name":"mutate","status":"completed","conclusion":"success"}`, ``, 1)
+		}, "mutate"},
 		{"unreadable protection", func(g *fakeGH) { delete(g.api, "repos/giovaniif/crew/branches/main/protection") }, "required checks"},
 		{"open thread", func(g *fakeGH) {
 			g.api["graphql"] = strings.Replace(g.api["graphql"], `"isResolved":true`, `"isResolved":false`, 1)
