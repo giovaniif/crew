@@ -259,7 +259,7 @@ describe("the composer", () => {
     await userEvent.type(box, "now add a test");
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
     await waitFor(() => expect(box).toHaveValue(""));
-    const post = server.calls.findIndex((c) => c.method === "POST");
+    const post = server.calls.findIndex((c) => c.method === "POST" && c.path === "/api/v1/sessions/s2/messages");
     expect(server.calls[post]?.body).toEqual({ text: "now add a test" });
     expect(server.headers[post].authorization).toBe("Bearer t0k");
   });
@@ -387,5 +387,24 @@ describe("interrupt", () => {
     const sockets = setup(server, "#/sessions/s2");
     live(sockets);
     expect(screen.queryByRole("button", { name: "Interrupt" })).not.toBeInTheDocument();
+  });
+});
+
+describe("reading a session", () => {
+  it("marks a done unread session read when it opens", async () => {
+    const server = new FakeServer()
+      .on("GET", "/api/v1/sessions/s2/messages?limit=50", page([]))
+      .on("POST", "/api/v1/sessions/s2/read", { status: 200, body: {} });
+    const sockets = setup(server, "#/sessions/s2");
+    live(sockets);
+    await waitFor(() => expect(server.calls.some((c) => c.method === "POST" && c.path === "/api/v1/sessions/s2/read")).toBe(true));
+  });
+
+  it("does not mark a session that is not unread", async () => {
+    const server = new FakeServer().on("GET", newest, page([]));
+    const sockets = setup(server);
+    live(sockets);
+    await screen.findByText("No messages yet");
+    expect(server.calls.some((c) => c.path.endsWith("/read"))).toBe(false);
   });
 });
