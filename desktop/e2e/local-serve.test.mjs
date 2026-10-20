@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { after, before, test } from "node:test";
 
 const driver = process.env.CREW_E2E_DRIVER ?? "http://127.0.0.1:4444";
@@ -56,4 +58,8 @@ test("the app starts its own crew serve, pairs and shows the session list", asyn
   assert.equal(await run("return localStorage.getItem('crew.auth')"), null);
   const hello = await run("return fetch('/api/v1/hello').then((r) => r.json())");
   assert.equal(hello.api, "v1");
+  if (process.env.CREW_E2E_SHOTS) {
+    const png = await call("GET", "/session/" + session + "/screenshot");
+    await writeFile(join(process.env.CREW_E2E_SHOTS, "local-serve.png"), Buffer.from(png, "base64"));
+  }
 });

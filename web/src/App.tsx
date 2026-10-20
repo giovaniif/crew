@@ -28,6 +28,7 @@ export type AppEnv = {
   onHashChange: (listener: (hash: string) => void) => () => void;
   push?: PushEnv;
   visibility?: PageVisibility;
+  desktopAuth?: Auth | null;
 };
 
 export type PageVisibility = {
@@ -179,7 +180,7 @@ const refusedNotice =
   "This device was removed from crew, or the server rejected its login. Pair it again with a new code from crew remote pair.";
 
 export function App({ env }: { env: AppEnv }) {
-  const [auth, setAuth] = useState<Auth | null>(() => loadAuth(env.storage));
+  const [auth, setAuth] = useState<Auth | null>(() => env.desktopAuth ?? loadAuth(env.storage));
   const [notice, setNotice] = useState("");
   const [code, setCode] = useState(() => (auth ? "" : pairCodeFromHash(env.hash)));
   const { storage } = env;

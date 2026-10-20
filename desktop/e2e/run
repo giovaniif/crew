@@ -8,11 +8,13 @@ tmp=$(mktemp -d /tmp/crew-e2e.XXXXXX)
 pids=()
 cleanup() {
   for pid in "${pids[@]}"; do kill "$pid" 2>/dev/null || true; done
-  tmux -S "$CREW_TMUX_SOCKET" kill-server 2>/dev/null || true
+  tmux -S "${CREW_TMUX_SOCKET:-$tmp/tmux}" kill-server 2>/dev/null || true
   pkill -f "$tmp/bin/crew" 2>/dev/null || true
   rm -rf "$tmp"
 }
 trap cleanup EXIT
+mkdir -p "$tmp/bin"
+(cd "$root" && go build -o "$tmp/bin/crew" ./cmd/crew)
 
 export CREW_HOME="$tmp/home"
 export CREW_TMUX_SOCKET="$tmp/tmux"
@@ -20,7 +22,6 @@ export HOME="$tmp/user"
 export XDG_DATA_HOME="$tmp/user/data"
 mkdir -p "$CREW_HOME" "$HOME" "$XDG_DATA_HOME" "$tmp/bin"
 
-(cd "$root" && go build -o "$tmp/bin/crew" ./cmd/crew)
 export PATH="$tmp/bin:$PATH"
 
 (cd "$root/web" && CREW_FAKE_API=1 exec npx vite --host 127.0.0.1 --port "$port" --strictPort) >"$tmp/vite.log" 2>&1 &
@@ -31,16 +32,28 @@ for _ in $(seq 1 60); do
 done
 curl -fsS "http://127.0.0.1:$port/" >/dev/null || { cat "$tmp/vite.log"; exit 1; }
 
-tauri-driver >"$tmp/driver.log" 2>&1 &
-pids+=($!)
-for _ in $(seq 1 40); do
-  curl -fsS http://127.0.0.1:4444/status >/dev/null 2>&1 && break
-  sleep 0.25
-done
+driver() {
+  "$@" tauri-driver >>"$tmp/driver.log" 2>&1 &
+  driver_pid=$!
+  pids+=("$driver_pid")
+  for _ in $(seq 1 40); do
+    curl -fsS http://127.0.0.1:4444/status >/dev/null 2>&1 && return 0
+    sleep 0.25
+  done
+}
+
+stop_driver() {
+  kill "$driver_pid" 2>/dev/null || true
+  wait "$driver_pid" 2>/dev/null || true
+}
 
 status=0
-CREW_URL="http://127.0.0.1:$port/" CREW_E2E_APP="$app" node --test "$here/session-list.test.mjs" || status=$?
+driver env CREW_URL="http://127.0.0.1:$port/"
+CREW_E2E_APP="$app" node --test "$here/session-list.test.mjs" || status=$?
+stop_driver
+driver env -u CREW_URL
 CREW_E2E_APP="$app" node --test "$here/local-serve.test.mjs" || status=$?
+stop_driver
 for _ in $(seq 1 20); do
   pgrep -f "$tmp/bin/crew serve" >/dev/null || break
   sleep 0.25

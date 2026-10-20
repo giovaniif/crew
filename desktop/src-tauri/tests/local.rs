@@ -71,6 +71,12 @@ fn a_directory_named_crew_is_not_the_binary() {
 fn serve_listens_on_loopback_with_the_same_public_url() {
     assert_eq!(
         serve_args(51234),
-        vec!["serve", "--addr", "127.0.0.1:51234", "--url", "http://127.0.0.1:51234"]
+        vec![
+            "serve",
+            "--addr",
+            "127.0.0.1:51234",
+            "--url",
+            "http://127.0.0.1:51234"
+        ]
     );
 }
