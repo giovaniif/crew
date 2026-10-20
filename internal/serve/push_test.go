@@ -76,3 +76,16 @@ func TestServePushUnsubscribeDropsTheCallingDevicesSubscription(t *testing.T) {
 		t.Fatalf("push.unsubscribe params %s", got)
 	}
 }
+
+func TestServeUnpairRevokesTheCallingDevice(t *testing.T) {
+	f := newFakeDaemon()
+	f.devices[goodToken] = phone
+	_, ts := startServer(t, f, serve.Config{URL: publicURL})
+	status, body := do(t, ts, "POST", "/api/v1/unpair", goodToken, "")
+	if status != http.StatusOK || strings.TrimSpace(string(body)) != "{}" {
+		t.Fatalf("status %d %s", status, body)
+	}
+	if got := f.paramsOf(rpc.MethodDeviceRevoke); len(got) != 1 || string(got[0]) != `{"id":"k3m9p2qx"}` {
+		t.Fatalf("device.revoke params %s", got)
+	}
+}

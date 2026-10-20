@@ -45,3 +45,10 @@ func pushUnsubscribe(r *http.Request, d Daemon) (any, error) {
 	}
 	return struct{}{}, nil
 }
+
+func unpair(r *http.Request, d Daemon) (any, error) {
+	if err := d.Call(r.Context(), rpc.MethodDeviceRevoke, rpc.DeviceRevokeParams{ID: deviceOf(r).ID}, nil); err != nil {
+		return nil, err
+	}
+	return struct{}{}, nil
+}
