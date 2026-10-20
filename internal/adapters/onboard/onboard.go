@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/giovaniif/crew/internal/adapters/claude"
@@ -133,6 +134,9 @@ func (p Probe) claudeSetup() domain.HarnessSetup {
 	if err != nil {
 		s.Err = err.Error()
 	}
+	if ok && !exists(s.Backup) {
+		s.Backup = ""
+	}
 	return s
 }
 
@@ -151,7 +155,21 @@ func (p Probe) codexSetup() domain.HarnessSetup {
 	if err != nil {
 		s.Err = err.Error()
 	}
+	if ok {
+		s.Backup = latestBackup(file + ".crew-*.bak")
+	}
 	return s
+}
+
+func latestBackup(pattern string) string {
+	matches, _ := filepath.Glob(pattern)
+	latest := ""
+	for _, m := range matches {
+		if !strings.Contains(m, ".crew-removed-") && m > latest {
+			latest = m
+		}
+	}
+	return latest
 }
 
 func (p Probe) ompConfig() omp.SetupConfig {
