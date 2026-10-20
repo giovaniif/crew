@@ -129,3 +129,10 @@ describe("the chat layout", () => {
     expect(queued["overflow-y"]).toBe("auto");
   });
 });
+
+describe("the session state chip", () => {
+  it("colors waiting peach and permission red like the list glyphs and the Mac app", () => {
+    expect(rule(".chip-waiting::before").background).toBe("var(--peach)");
+    expect(rule(".chip-permission::before").background).toBe("var(--red)");
+  });
+});
