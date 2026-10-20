@@ -25,6 +25,18 @@ go run ./scripts/verify tui drive --restart --out-dir /tmp/crew-verify-map/setup
 go run ./scripts/verify iso crew --expect dev -- version --build
 ```
 
+### version prints the version and the commit
+
+```sh
+go run ./scripts/verify iso crew --expect "crew dev (commit" -- version
+```
+
+### crew setup <agent> merges the agent config (manual: the S view drives the same setup; a recipe must not run it twice in one home)
+
+### crew hook handles an agent hook event (manual: the agent calls it with a JSON event on stdin; iso crew does not pass stdin)
+
+### crew rpc pipes JSON-RPC to the daemon (manual: it reads requests on stdin; iso crew does not pass stdin)
+
 ### crew daemon runs in the foreground (manual: iso up starts the daemon; a second one would conflict)
 
 ## Cleanup
