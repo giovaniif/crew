@@ -141,6 +141,9 @@ The `/` fallback: `Handler(fallback)` mounts `fallback` at `/`. `Handler(nil)` s
   - serve passes it to `device.viewing` on the daemon connection of the stream, so it ends with the stream.
   - While a device is visible, the daemon sends no pushes to it (see "Web Push" in [internal/daemon/](../daemon/AGENTS.md)).
   - There is no reply. serve ignores a failed call. The only result is that the device still gets pushes.
+- `{"viewing":{"session":"<id>","front":bool}}` tells which session the desktop app shows, and if the app is in front.
+  - serve passes it to `client.viewing` on the daemon connection of the stream, as the Mac app does. The daemon forgets it when the stream closes.
+  - There is no reply.
 - A failed watch gets `{"error":{"code","message"},"watch":"<session>"}`.
 - An unknown client frame gets `{"error":{"code":"bad_request","message"}}`, and the stream stays open.
 - Close codes:

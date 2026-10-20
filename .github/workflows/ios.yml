@@ -1,0 +1,84 @@
+name: ios
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  ios:
+    runs-on: macos-15
+    env:
+      UPLOAD: ${{ github.event_name != 'pull_request' }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios,aarch64-apple-ios-sim
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci
+        working-directory: desktop
+      - name: simulator build
+        if: env.UPLOAD != 'true'
+        working-directory: desktop
+        run: npx tauri ios build --debug --target aarch64-sim --ci
+      - name: signed build
+        if: env.UPLOAD == 'true'
+        working-directory: desktop
+        env:
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_TEAM_ID }}
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          key_path=~/.appstoreconnect/private_keys/AuthKey_${APPLE_API_KEY}.p8
+          printf '%s' "$APPLE_API_KEY_P8" > "$key_path"
+          export APPLE_API_KEY_PATH="$key_path"
+          npx tauri ios build --export-method app-store-connect --ci --config "{\"version\":\"0.1.0\",\"bundle\":{\"iOS\":{\"bundleVersion\":\"$BUILD_NUMBER\"}}}"
+      - name: check
+        working-directory: desktop/src-tauri/gen/apple/build
+        run: |
+          find . -maxdepth 4 \( -name '*.ipa' -o -name '*.app' \) -print
+          ipa=$(find . -name '*.ipa' | head -n 1)
+          if [ -n "$ipa" ]; then
+            unzip -q -o "$ipa" -d "$RUNNER_TEMP/ipa"
+            app=$(find "$RUNNER_TEMP/ipa/Payload" -maxdepth 1 -name '*.app' | head -n 1)
+          else
+            app=$(find . -name '*.app' | head -n 1)
+          fi
+          [ "$(plutil -extract ITSAppUsesNonExemptEncryption raw "$app/Info.plist")" = false ]
+          plutil -extract CFBundleVersion raw "$app/Info.plist"
+      - name: upload to TestFlight
+        if: env.UPLOAD == 'true'
+        env:
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        run: |
+          ipa=$(find desktop/src-tauri/gen/apple/build -name '*.ipa' | head -n 1)
+          xcrun altool --upload-app --type ios --file "$ipa" --apiKey "$APPLE_API_KEY" --apiIssuer "$APPLE_API_ISSUER"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-build
+          path: |
+            desktop/src-tauri/gen/apple/build/**/*.ipa
+            desktop/src-tauri/gen/apple/build/**/*.app
