@@ -31,6 +31,7 @@ Claude Code and Codex load an `AGENTS.md` from each directory they work in. Here
 | [nvim/](nvim/AGENTS.md) | the Lua plugin |
 | [scripts/](scripts/AGENTS.md) | `lint-comments`, `lint-agents`, `tdd-check`, `mutate`, `bench-hook.sh`, `dev`, `screenshot`, `web-screenshot`, `install.sh` |
 | [web/](web/AGENTS.md) | the PWA: toolchain, `make web`, the service worker, pairing |
+| [desktop/](desktop/AGENTS.md) | the Tauri 2 app: the `crew-desktop` crate, its window, the `tauri-driver` e2e tests |
 | [macos/](macos/AGENTS.md) | the Mac app: the `CrewKit` package, the app target, `swift test`, `build-app` |
 | [test/e2e/](test/e2e/AGENTS.md) | the core e2e suite and its fakes |
 | [test/integration/](test/integration/AGENTS.md) | daemon-with-real-adapters integration tests |
