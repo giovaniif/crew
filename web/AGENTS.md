@@ -100,6 +100,11 @@ The phone app: a PWA that `crew serve` embeds and serves at `/` (ADR [0046](../d
   - To fill a tab, replace its entry in `panes` in `Desktop.tsx`. It gets the session, the snapshot, the client and the API.
   - Keys: Cmd/Ctrl+1 to 9 select a session, Ctrl+Space goes to the next session that needs you, Cmd/Ctrl+N opens New session as a sheet (`#/new`).
   - The main column is white (`--paper`) in Latte. Tests: `npm test -- Layout Sidebar`.
+- **Review tab** (issue #518). `screens/Review.tsx` is the same review as the Mac app and the TUI. It uses the `review` routes of `crew serve` (see [internal/serve/](../internal/serve/AGENTS.md)).
+  - `src/review.ts` holds the pure rules: `decodeReview` (Go nulls become empty lists), `reviewTree` (files by worktree, viewed when the blob did not change), `worktreeMenu`, `splitRows`, `segments` (the spans use byte offsets), `commentAnchor`, `commentedLines`, `draftRows` (`repo · path:lines`), `canSend` and `hunkOnly`.
+  - Click `+` next to a line number to comment. Shift-click a second line to select a range.
+  - Stage and revert send only the hunk. When git refuses the patch, the hunk shows the message of git and the review does not open again.
+  - Tests: `npm test -- Review review`. They read the serve goldens `review-*.json`. One test decodes and renders a review of 50 files in less than 300 ms.
 - `src/screens/`: one component for each screen. `src/theme.css`: the Latte palette as CSS variables, and Mocha under `prefers-color-scheme: dark`, and IBM Plex Sans and JetBrains Mono from `@fontsource`.
 - `src/test/`: test helpers (`FakeServer`, `MemoryStorage`, the Vitest setup). tdd-check treats them as port fakes.
 

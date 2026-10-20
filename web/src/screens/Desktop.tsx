@@ -7,6 +7,7 @@ import { sessionMeta, stateStyle } from "../sessions";
 import type { Session, StreamClient, StreamSnapshot } from "../stream";
 import { Brand } from "./Brand";
 import { NewSession } from "./NewSession";
+import { ReviewPane } from "./Review";
 import { SessionScreen } from "./Session";
 import { Connection, Limits, sessionHref, sessionTitle } from "./SessionList";
 
@@ -31,7 +32,7 @@ function Placeholder({ title }: { title: string }) {
 export const panes: Record<MainTab, (props: PaneProps) => ReactNode> = {
   chat: (p) => <SessionScreen key={p.session.ID} id={p.session.ID} snapshot={p.snapshot} now={p.now} onRetry={p.onRetry} client={p.client} api={p.api} />,
   terminal: () => <Placeholder title="Terminal" />,
-  review: () => <Placeholder title="Review" />,
+  review: (p) => <ReviewPane key={p.session.ID} session={p.session.ID} sessionState={p.session.State} api={p.api} />,
   shell: () => <Placeholder title="Shell" />,
   nvim: () => <Placeholder title="nvim" />,
 };
