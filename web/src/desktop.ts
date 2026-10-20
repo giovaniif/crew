@@ -63,7 +63,7 @@ export function modifierKeys(userAgent: string): Keys {
   return /Macintosh/.test(userAgent) ? { label: "⌘", aria: "Meta" } : { label: "Ctrl+", aria: "Control" };
 }
 
-export type KeyAction = { kind: "select"; index: number } | { kind: "next" } | { kind: "new" } | null;
+export type KeyAction = { kind: "select"; index: number } | { kind: "next" } | { kind: "new" } | { kind: "tab"; tab: MainTab } | null;
 
 export function keyAction(e: { key: string; code?: string; metaKey: boolean; ctrlKey: boolean; altKey: boolean; shiftKey: boolean }): KeyAction {
   if (e.altKey) {
@@ -78,8 +78,15 @@ export function keyAction(e: { key: string; code?: string; metaKey: boolean; ctr
   if (/^[1-9]$/.test(e.key)) {
     return { kind: "select", index: Number(e.key) - 1 };
   }
-  if (e.key.toLowerCase() === "n") {
+  const key = e.key.toLowerCase();
+  if (key === "n") {
     return { kind: "new" };
+  }
+  if (key === "t") {
+    return { kind: "tab", tab: "shell" };
+  }
+  if (key === "e") {
+    return { kind: "tab", tab: "nvim" };
   }
   return null;
 }

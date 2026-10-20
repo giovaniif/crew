@@ -100,6 +100,13 @@ The phone app: a PWA that `crew serve` embeds and serves at `/` (ADR [0046](../d
   - To fill a tab, replace its entry in `panes` in `Desktop.tsx`. It gets the session, the snapshot, the client and the API.
   - Keys: Cmd/Ctrl+1 to 9 select a session, Ctrl+Space goes to the next session that needs you, Cmd/Ctrl+N opens New session as a sheet (`#/new`).
   - The main column is white (`--paper`) in Latte. Tests: `npm test -- Layout Sidebar`.
+- **Terminal, Shell and nvim** (issue #517). `src/terminal.ts` has `TerminalStore`. `screens/Terminal.tsx` shows one of its terminals in a pane. `src/xterm.ts` is the xterm.js adapter (`AppEnv.terminal`; tests use `FakeTerminals` in `src/test/fake-terminal.ts`).
+  - The store keeps one terminal and one socket for each session and kind (`agent`, `shell`, `nvim`). A change of tab or session moves the terminal element and does not close the socket. Thus the scrollback stays. The store removes the terminals of sessions that the stream does not show.
+  - Terminal uses `session.Pane`. Shell and nvim call `POST …/shell` or `…/nvim` one time for each session, because `nvim.toggle` hides nvim on a second call. After a close with 4404, the next try calls it again.
+  - The terminal fits its pane (`FitAddon` and a `ResizeObserver`) and sends `{"size"}` on each resize. Keys go to the pane, except keys with Cmd and the app shortcuts of `keyAction` (Cmd/Ctrl+T opens Shell, Cmd/Ctrl+E opens nvim).
+  - The colors are the `--term-*` tokens (Mocha in both schemes).
+  - On a phone, a session has the tabs Chat, Terminal, Shell and nvim (`screens/PhoneSession.tsx`).
+  - `npm run fake` gives each session a demo pane. Tests: `npm test -- Terminal`.
 - `src/screens/`: one component for each screen. `src/theme.css`: the Latte palette as CSS variables, and Mocha under `prefers-color-scheme: dark`, and IBM Plex Sans and JetBrains Mono from `@fontsource`.
 - `src/test/`: test helpers (`FakeServer`, `MemoryStorage`, the Vitest setup). tdd-check treats them as port fakes.
 

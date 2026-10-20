@@ -8,6 +8,8 @@ import type { Session, StreamClient, StreamSnapshot } from "../stream";
 import { Brand } from "./Brand";
 import { NewSession } from "./NewSession";
 import { SessionScreen } from "./Session";
+import { TerminalPane } from "./Terminal";
+import type { TerminalStore } from "../terminal";
 import { Connection, Limits, sessionHref, sessionTitle } from "./SessionList";
 
 export type PaneProps = {
@@ -17,6 +19,7 @@ export type PaneProps = {
   onRetry: () => void;
   client: StreamClient;
   api: Authed;
+  terminals: TerminalStore | null;
 };
 
 function Placeholder({ title }: { title: string }) {
@@ -30,10 +33,10 @@ function Placeholder({ title }: { title: string }) {
 
 export const panes: Record<MainTab, (props: PaneProps) => ReactNode> = {
   chat: (p) => <SessionScreen key={p.session.ID} id={p.session.ID} snapshot={p.snapshot} now={p.now} onRetry={p.onRetry} client={p.client} api={p.api} />,
-  terminal: () => <Placeholder title="Terminal" />,
+  terminal: (p) => <TerminalPane store={p.terminals} session={p.session} kind="agent" />,
   review: () => <Placeholder title="Review" />,
-  shell: () => <Placeholder title="Shell" />,
-  nvim: () => <Placeholder title="nvim" />,
+  shell: (p) => <TerminalPane store={p.terminals} session={p.session} kind="shell" />,
+  nvim: (p) => <TerminalPane store={p.terminals} session={p.session} kind="nvim" />,
 };
 
 function Row({ session, current, shortcut, keys }: { session: Session; current: boolean; shortcut: number | null; keys: Keys }) {
@@ -198,10 +201,11 @@ export type DesktopProps = {
   onRetry: () => void;
   client: StreamClient;
   api: Authed;
+  terminals?: TerminalStore | null;
   other: ReactNode;
 };
 
-export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, api, other }: DesktopProps) {
+export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, api, terminals = null, other }: DesktopProps) {
   const [tab, setTab] = useState<MainTab>("chat");
   const keys = modifierKeys(env.userAgent);
   const route = parseRoute(hash);
@@ -230,6 +234,10 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
         go("#/new");
         return;
       }
+      if (action.kind === "tab") {
+        setTab(action.tab);
+        return;
+      }
       const next = nextNeeding(rows.live, selectedId);
       if (next) {
         go(sessionHref(next.ID));
@@ -247,7 +255,7 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
       <>
         <Toolbar tab={tab} hasSession={session !== null} onTab={setTab} />
         <section className={"pane pane-" + tab} role="tabpanel" id={"pane-" + tab} aria-labelledby={"tab-" + tab}>
-          {session ? panes[tab]({ session, snapshot, now, onRetry, client, api }) : <Placeholder title="Terminal" />}
+          {session ? panes[tab]({ session, snapshot, now, onRetry, client, api, terminals }) : <Placeholder title="Terminal" />}
         </section>
       </>
     );
