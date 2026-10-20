@@ -103,9 +103,9 @@ Write all prose docs and new ADRs in ASD-STE100 Simplified Technical English. Us
 5. Open one PR per issue with `Closes #<n>` in it. Start its title with a conventional prefix (`feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`). Use `test:` only for a test-only change (no production code). It skips the "must fail on base" rule.
    If a PR changes what the TUI draws, show screenshots of the new behavior in its body. Make them with `scripts/screenshot` from a neutral demo folder, never a real home or project. Push them to the `pr-assets` branch under `<issue-number>/`. Embed them by their `raw.githubusercontent.com` URL (see [scripts/](scripts/AGENTS.md)).
 6. If a criterion is wrong or impossible, do not quietly drop it. Say so in the PR and on the issue.
-7. main is protected. Merge only through a PR with build, tdd and mutate green and the branch up to date with main.
+7. main is protected. It needs build, tdd and mutate green and the branch up to date with main. A merge queue on the dev box merges the PRs (ADR [0058](docs/adr/0058-label-merge-queue.md)). Do not merge a PR yourself, and do not update its branch.
 8. The PR review is our own validation: CI (build, tdd, mutate), the evidence of `scripts/verify` and the land gate. CodeRabbit is not part of the process.
-9. Merge your own PR when it is ready. Ready means: build, tdd and mutate are green and the branch is up to date with main. Do not wait for the owner to approve. Merge with `gh pr merge --merge --match-head-commit <sha>`. The owner examines the merged PRs in a daily review.
+9. When build, tdd and mutate are green on your PR, add the `queue` label: `gh api repos/giovaniif/crew/issues/<n>/labels -f 'labels[]=queue'`. A branch that is behind main is fine. Do not wait for the owner to approve. Then wait. The queue updates the branch, waits for the checks and merges with a merge commit. If the queue removes the label, it comments why. Fix the cause and add the label again. The owner examines the merged PRs in a daily review.
 
 ## Repo hygiene
 
