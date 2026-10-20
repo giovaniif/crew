@@ -10,7 +10,9 @@ cleanup() {
   for pid in "${pids[@]}"; do kill "$pid" 2>/dev/null || true; done
   tmux -S "${CREW_TMUX_SOCKET:-$tmp/tmux}" kill-server 2>/dev/null || true
   pkill -f "$tmp/bin/crew" 2>/dev/null || true
-  rm -rf "$tmp"
+  sleep 0.5
+  chmod -R u+w "$tmp" 2>/dev/null || true
+  rm -rf "$tmp" 2>/dev/null || true
 }
 trap cleanup EXIT
 mkdir -p "$tmp/bin"
