@@ -1,13 +1,20 @@
+pub mod attention;
 pub mod local;
 
 use std::path::PathBuf;
 use std::sync::Mutex;
 use std::time::Duration;
 
-use tauri::{Manager, RunEvent, WebviewUrl, WebviewWindowBuilder};
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+use tauri::tray::TrayIconBuilder;
+use tauri::{AppHandle, Manager, RunEvent, Runtime, WebviewUrl, WebviewWindowBuilder};
+use tauri_plugin_notification::NotificationExt;
 use url::Url;
 
+use attention::{Action, Banner, Entry};
 use local::LocalServe;
+
+const TRAY: &str = "crew";
 
 pub const DEFAULT_URL: &str = "http://127.0.0.1:7420/";
 
@@ -81,9 +88,94 @@ fn start_local(app: &tauri::App, slot: &Mutex<Option<LocalServe>>) -> Result<Sta
     Ok(Started { url, auth })
 }
 
+fn build_menu<R: Runtime>(app: &AppHandle<R>, model: &attention::Menu) -> tauri::Result<Menu<R>> {
+    let menu = Menu::new(app)?;
+    for entry in attention::entries(model) {
+        match entry {
+            Entry::Separator => menu.append(&PredefinedMenuItem::separator(app)?)?,
+            Entry::Item { id, text, enabled } => {
+                let id = if id.is_empty() {
+                    format!("label:{text}")
+                } else {
+                    id
+                };
+                menu.append(&MenuItem::with_id(app, id, text, enabled, None::<&str>)?)?
+            }
+        }
+    }
+    Ok(menu)
+}
+
+fn on_menu<R: Runtime>(app: &AppHandle<R>, id: &str) {
+    match attention::action(id) {
+        Some(Action::Quit) => app.exit(0),
+        Some(Action::Show(hash)) => {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.unminimize();
+                let _ = window.show();
+                let _ = window.set_focus();
+                if let Some(hash) = hash {
+                    let _ = window.eval(format!(
+                        "window.location.hash = {};",
+                        serde_json::Value::String(hash)
+                    ));
+                }
+            }
+        }
+        None => {}
+    }
+}
+
+#[tauri::command]
+fn crew_notify<R: Runtime>(app: AppHandle<R>, banner: Banner) {
+    let mut builder = app
+        .notification()
+        .builder()
+        .title(&banner.title)
+        .body(&banner.body);
+    if banner.sound {
+        builder = builder.sound("default");
+    }
+    if let Err(err) = builder.show() {
+        eprintln!("crew-desktop: notification for {} failed: {err}", banner.id);
+    }
+}
+
+#[tauri::command]
+fn crew_attention<R: Runtime>(app: AppHandle<R>, menu: attention::Menu) -> Result<(), String> {
+    if let Some(tray) = app.tray_by_id(TRAY) {
+        let built = build_menu(&app, &menu).map_err(|e| e.to_string())?;
+        tray.set_menu(Some(built)).map_err(|e| e.to_string())?;
+        let tip = match attention::badge(&menu) {
+            Some(n) => format!("crew: {n} need you"),
+            None => "crew".to_string(),
+        };
+        let _ = tray.set_tooltip(Some(tip));
+    }
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.set_badge_count(attention::badge(&menu));
+    }
+    Ok(())
+}
+
+fn add_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
+    let menu = build_menu(app, &attention::Menu::default())?;
+    let mut tray = TrayIconBuilder::with_id(TRAY)
+        .tooltip("crew")
+        .menu(&menu)
+        .on_menu_event(|app, event| on_menu(app, event.id().as_ref()));
+    if let Some(icon) = app.default_window_icon() {
+        tray = tray.icon(icon.clone());
+    }
+    tray.build(app)?;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let app = tauri::Builder::default()
+        .plugin(tauri_plugin_notification::init())
+        .invoke_handler(tauri::generate_handler![crew_notify, crew_attention])
         .manage(Mutex::new(None::<LocalServe>))
         .setup(|app| {
             let started = match configured_url() {
@@ -112,6 +204,9 @@ pub fn run() {
                     window.initialization_script(format!("window.__CREW_DESKTOP_AUTH__ = {auth};"));
             }
             window.build()?;
+            if let Err(err) = add_tray(app.handle()) {
+                eprintln!("crew-desktop: no tray: {err}");
+            }
             Ok(())
         })
         .build(tauri::generate_context!())
