@@ -1,4 +1,4 @@
-import { keyAction } from "./desktop";
+import { keyAction, type KeyInput } from "./desktop";
 import type { Session } from "./stream";
 
 export type TermSize = { cols: number; rows: number };
@@ -45,8 +45,8 @@ export type TermStatus =
 
 export type ResolvePane = (session: string, kind: "shell" | "nvim") => Promise<string>;
 
-export function keyForPane(e: { key: string; code?: string; metaKey: boolean; ctrlKey: boolean; altKey: boolean; shiftKey: boolean }): boolean {
-  return !e.metaKey && keyAction(e) === null;
+export function keyForPane(e: KeyInput, mac: boolean): boolean {
+  return !e.metaKey && keyAction(e, mac) === null;
 }
 
 export const closeNoPane = 4404;
@@ -68,12 +68,13 @@ export class TerminalEntry {
     private readonly resolve: ResolvePane,
     private session: Session,
     readonly kind: PaneKind,
+    mac: boolean,
   ) {
     this.term = env.create();
     this.host = document.createElement("div");
     this.host.className = "term-host";
     this.term.open(this.host);
-    this.term.keyFilter((e) => keyForPane(e));
+    this.term.keyFilter((e) => keyForPane(e, mac));
     this.term.onData((data) => {
       if (this.status.kind === "live") {
         this.socket?.send(encoder.encode(data));
@@ -213,13 +214,14 @@ export class TerminalStore {
     private readonly env: TerminalEnv,
     private readonly token: string,
     private readonly resolve: ResolvePane,
+    private readonly mac = false,
   ) {}
 
   entry(session: Session, kind: PaneKind): TerminalEntry {
     const key = session.ID + "\u0000" + kind;
     let entry = this.entries.get(key);
     if (!entry) {
-      entry = new TerminalEntry(this.env, this.token, this.resolve, session, kind);
+      entry = new TerminalEntry(this.env, this.token, this.resolve, session, kind, this.mac);
       this.entries.set(key, entry);
     } else {
       entry.update(session);

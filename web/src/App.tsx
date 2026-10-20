@@ -3,6 +3,7 @@ import { sessionPane, tokenRefused, unpairDevice, type Fetch } from "./api";
 import { clearAuth, loadAuth, saveAuth, type Auth, type KeyValue } from "./auth";
 import { pairCodeFromHash } from "./display";
 import { disablePush, noPush, type PushEnv } from "./push";
+import { modifierKeys } from "./desktop";
 import { parseRoute } from "./route";
 import { Approvals } from "./screens/Approvals";
 import { Automations } from "./screens/Automations";
@@ -95,8 +96,8 @@ function useNow(now: () => number, every: number): number {
   return value;
 }
 
-function useTerminals(env: TerminalEnv | undefined, api: { fetch: Fetch; token: string }): TerminalStore | null {
-  const store = useMemo(() => (env ? new TerminalStore(env, api.token, (session, kind) => sessionPane(api, session, kind)) : null), [env, api]);
+function useTerminals(env: TerminalEnv | undefined, api: { fetch: Fetch; token: string }, mac: boolean): TerminalStore | null {
+  const store = useMemo(() => (env ? new TerminalStore(env, api.token, (session, kind) => sessionPane(api, session, kind), mac) : null), [env, api, mac]);
   useEffect(() => () => store?.dispose(), [store]);
   return store;
 }
@@ -118,7 +119,7 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
   const [hash, setHash] = useState(env.hash);
   const now = useNow(env.now, snapshot.status === "offline" ? 1000 : 30000);
   const api = useMemo(() => ({ fetch, token: auth.token }), [fetch, auth.token]);
-  const terminals = useTerminals(env.terminal, api);
+  const terminals = useTerminals(env.terminal, api, modifierKeys(env.userAgent).mac);
   const sessionIds = snapshot.state ? snapshot.state.sessions.map((s) => s.ID).join("\n") : null;
 
   useEffect(() => {

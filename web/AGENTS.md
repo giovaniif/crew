@@ -98,12 +98,14 @@ The phone app: a PWA that `crew serve` embeds and serves at `/` (ADR [0046](../d
   - `screens/Desktop.tsx` has the sidebar (sessions in the daemon order, `order` when the stream has it, else the sessions that need you first; an Ended group; Mates, Approvals, Automations, Settings; the limits), the toolbar (the tabs Chat, Terminal, Review, Shell and nvim) and the main column.
   - `src/desktop.ts` holds the pure rules: `mainTabs` (a tab with `needs` is disabled with no session and tells why), `sidebarRows`, `nextNeeding`, `emptyMain` and `keyAction`.
   - To fill a tab, replace its entry in `panes` in `Desktop.tsx`. It gets the session, the snapshot, the client and the API.
-  - Keys: Cmd/Ctrl+1 to 9 select a session, Ctrl+Space goes to the next session that needs you, Cmd/Ctrl+N opens New session as a sheet (`#/new`).
+  - Keys: the app shortcuts use Cmd on a Mac and Ctrl+Shift on Linux and Windows (`keyAction(e, mac)`, `modifierKeys`). Thus all plain Ctrl keys go to the terminal. The sidebar hints show the same keys. `keyAction` reads `e.code`, because Shift changes `e.key`.
+    - Cmd or Ctrl+Shift with 1 to 9 selects a session, with N opens New session as a sheet (`#/new`), with T opens Shell and with E opens nvim.
+    - Ctrl+Space on a Mac (Ctrl+Shift+Space on Linux and Windows) goes to the next session that needs you.
   - The main column is white (`--paper`) in Latte. Tests: `npm test -- Layout Sidebar`.
 - **Terminal, Shell and nvim** (issue #517). `src/terminal.ts` has `TerminalStore`. `screens/Terminal.tsx` shows one of its terminals in a pane. `src/xterm.ts` is the xterm.js adapter (`AppEnv.terminal`; tests use `FakeTerminals` in `src/test/fake-terminal.ts`).
   - The store keeps one terminal and one socket for each session and kind (`agent`, `shell`, `nvim`). A change of tab or session moves the terminal element and does not close the socket. Thus the scrollback stays. The store removes the terminals of sessions that the stream does not show.
   - Terminal uses `session.Pane`. Shell and nvim call `POST …/shell` or `…/nvim` one time for each session, because `nvim.toggle` hides nvim on a second call. After a close with 4404, the next try calls it again.
-  - The terminal fits its pane (`FitAddon` and a `ResizeObserver`) and sends `{"size"}` on each resize. Keys go to the pane, except keys with Cmd and the app shortcuts of `keyAction` (Cmd/Ctrl+T opens Shell, Cmd/Ctrl+E opens nvim).
+  - The terminal fits its pane (`FitAddon` and a `ResizeObserver`) and sends `{"size"}` on each resize. Keys go to the pane, except keys with Cmd and the app shortcuts of `keyAction`. Ctrl+C, Ctrl+T, Ctrl+E, Ctrl+N, Ctrl+Space and Esc go to the pane.
   - The colors are the `--term-*` tokens (Mocha in both schemes).
   - On a phone, a session has the tabs Chat, Terminal, Shell and nvim (`screens/PhoneSession.tsx`).
   - `npm run fake` gives each session a demo pane. Tests: `npm test -- Terminal`.

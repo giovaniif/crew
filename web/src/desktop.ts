@@ -57,28 +57,46 @@ export function emptyMain(state: StreamState | null, live: number, shortcut: str
   };
 }
 
-export type Keys = { label: string; aria: string };
+export type Keys = { label: string; aria: string; mac: boolean };
 
 export function modifierKeys(userAgent: string): Keys {
-  return /Macintosh/.test(userAgent) ? { label: "⌘", aria: "Meta" } : { label: "Ctrl+", aria: "Control" };
+  return /Macintosh/.test(userAgent) ? { label: "⌘", aria: "Meta", mac: true } : { label: "Ctrl+Shift+", aria: "Control+Shift", mac: false };
 }
 
 export type KeyAction = { kind: "select"; index: number } | { kind: "next" } | { kind: "new" } | { kind: "tab"; tab: MainTab } | null;
 
-export function keyAction(e: { key: string; code?: string; metaKey: boolean; ctrlKey: boolean; altKey: boolean; shiftKey: boolean }): KeyAction {
+export type KeyInput = { key: string; code?: string; metaKey: boolean; ctrlKey: boolean; altKey: boolean; shiftKey: boolean };
+
+function keyName(e: KeyInput): string {
+  const code = e.code ?? "";
+  if (/^Digit[0-9]$/.test(code)) {
+    return code.slice(5);
+  }
+  if (/^Key[A-Z]$/.test(code)) {
+    return code.slice(3).toLowerCase();
+  }
+  if (code === "Space") {
+    return " ";
+  }
+  return e.key.toLowerCase();
+}
+
+export function keyAction(e: KeyInput, mac: boolean): KeyAction {
   if (e.altKey) {
     return null;
   }
-  if (e.ctrlKey && !e.metaKey && (e.key === " " || e.code === "Space")) {
-    return { kind: "next" };
+  const key = keyName(e);
+  if (key === " ") {
+    const next = mac ? e.ctrlKey && !e.metaKey && !e.shiftKey : e.ctrlKey && e.shiftKey && !e.metaKey;
+    return next ? { kind: "next" } : null;
   }
-  if (!(e.metaKey || e.ctrlKey) || e.shiftKey) {
+  const held = mac ? e.metaKey && !e.ctrlKey && !e.shiftKey : e.ctrlKey && e.shiftKey && !e.metaKey;
+  if (!held) {
     return null;
   }
-  if (/^[1-9]$/.test(e.key)) {
-    return { kind: "select", index: Number(e.key) - 1 };
+  if (/^[1-9]$/.test(key)) {
+    return { kind: "select", index: Number(key) - 1 };
   }
-  const key = e.key.toLowerCase();
   if (key === "n") {
     return { kind: "new" };
   }

@@ -216,7 +216,7 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const action = keyAction(e);
+      const action = keyAction(e, keys.mac);
       if (!action) {
         return;
       }
@@ -245,7 +245,7 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [rows.live, selectedId, go]);
+  }, [rows.live, selectedId, go, keys.mac]);
 
   let main: ReactNode;
   if (other) {
