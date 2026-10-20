@@ -27,6 +27,14 @@ const visibility = {
     return () => document.removeEventListener("visibilitychange", listener);
   },
 };
+const wideQuery = window.matchMedia("(min-width: 56.25em)");
+const wide = {
+  matches: () => wideQuery.matches,
+  onChange: (listener: () => void) => {
+    wideQuery.addEventListener("change", listener);
+    return () => wideQuery.removeEventListener("change", listener);
+  },
+};
 const onHashChange = (listener: (hash: string) => void) => {
   const changed = () => listener(window.location.hash);
   window.addEventListener("hashchange", changed);
@@ -118,6 +126,7 @@ if (root) {
           onHashChange,
           push: browserPush(window),
           visibility,
+          wide,
           desktopAuth: desktopAuth((window as { __CREW_DESKTOP_AUTH__?: unknown }).__CREW_DESKTOP_AUTH__),
         }}
       />
