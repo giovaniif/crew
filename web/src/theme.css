@@ -1302,6 +1302,14 @@ button.danger {
   word-break: break-all;
 }
 
+.open-session {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  min-height: 44px;
+  color: var(--link);
+}
+
 .approval-actions {
   display: flex;
   justify-content: flex-end;
