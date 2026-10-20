@@ -67,6 +67,40 @@ jobs:
       - run: test -f macos/build/crew.app/Contents/Resources/AppIcon.icns
       - run: '[ "$(plutil -extract CFBundleIconFile raw macos/build/crew.app/Contents/Info.plist)" = AppIcon ]'
 
+  desktop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev webkit2gtk-driver xvfb
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+        working-directory: web
+      - run: cargo install tauri-driver --locked
+      - run: cargo build --locked --manifest-path desktop/src-tauri/Cargo.toml
+      - run: xvfb-run -a desktop/e2e/run
+
+  desktop-macos:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri
+      - run: cargo build --locked --manifest-path desktop/src-tauri/Cargo.toml
+
   tdd:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
