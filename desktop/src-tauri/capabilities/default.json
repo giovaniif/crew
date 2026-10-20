@@ -4,5 +4,5 @@
   "remote": {
     "urls": ["http://127.0.0.1:*", "http://localhost:*"]
   },
-  "permissions": ["core:default", "notification:default"]
+  "permissions": ["core:default", "allow-crew-notify", "allow-crew-attention"]
 }
