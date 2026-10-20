@@ -748,9 +748,12 @@ code {
   animation: pulse 1.4s ease-in-out infinite;
 }
 
-.chip-permission::before,
-.chip-waiting::before {
+.chip-permission::before {
   background: var(--red);
+}
+
+.chip-waiting::before {
+  background: var(--peach);
 }
 
 .chip-done::before {
