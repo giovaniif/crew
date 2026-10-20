@@ -236,6 +236,7 @@ describe("New mate", () => {
     await user.click(await screen.findByRole("button", { name: "Quill" }));
     expect(screen.getByRole("button", { name: "Quill" })).toHaveAttribute("aria-pressed", "true");
     await user.click(screen.getByRole("button", { name: "Color #209fb5" }));
+    await user.clear(screen.getByLabelText("Name"));
     await user.type(screen.getByLabelText("Name"), "scout");
     await user.click(screen.getByRole("button", { name: "Next: personality" }));
     await user.type(screen.getByLabelText("Prompt"), "Scout the repo.");
@@ -266,6 +267,20 @@ describe("New mate", () => {
       }),
     );
     await waitFor(() => expect(window.location.hash).toBe("#/mates/scout"));
+  });
+
+  it("takes the name of the chosen face until the user types a name, as the Mac app does", async () => {
+    setup("#/mates/new");
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Quill" }));
+    expect(screen.getByLabelText("Name")).toHaveValue("quill");
+    expect(screen.getByRole("button", { name: "Next: personality" })).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: "Owl" }));
+    expect(screen.getByLabelText("Name")).toHaveValue("owl");
+    await user.clear(screen.getByLabelText("Name"));
+    await user.type(screen.getByLabelText("Name"), "scout");
+    await user.click(screen.getByRole("button", { name: "Bolt" }));
+    expect(screen.getByLabelText("Name")).toHaveValue("scout");
   });
 
   it("goes back a step and keeps the choices", async () => {
