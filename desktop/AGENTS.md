@@ -12,8 +12,11 @@ The Tauri 2 app for desktop and mobile ([ADR 0057](../docs/adr/0057-tauri-apps.m
     3. It uses the token in `auth.json` in the app data directory (600) if the token works. Else it gets a code from `crew remote pair --json --name desktop`, pairs with `POST /api/v1/pair` and writes `auth.json`.
     4. It gives the login to the page as `window.__CREW_DESKTOP_AUTH__` (an initialization script). The web app uses it as `AppEnv.desktopAuth` and does not write it to `localStorage`. Thus the app shows no Install or Pair screen.
     5. It stops `crew serve` when it quits. On Linux, `crew serve` also gets `SIGTERM` when the app process stops (`PR_SET_PDEATHSIG`).
-  - If there is no `crew` or `crew serve` does not start, the window loads `http://127.0.0.1:7420/`.
-  - `cargo test --manifest-path desktop/src-tauri/Cargo.toml` runs `tests/local.rs`: the port choice, the `crew` lookup and the `serve` arguments.
+  - If there is no `crew` or `crew serve` does not start, the window loads the bundled UI (`app.html` of `frontendDist`, else the placeholder) with `window.__CREW_DESKTOP_PROBLEM__` (the reason). The web app then shows "crew is not running" with Fix, not the pairing screen.
+  - Fix is the Tauri command `fix_daemon` (the web app calls it through `__TAURI_INTERNALS__.invoke`). It runs `crew setup daemon`, then `crew setup daemon --check` (`local::fix_daemon`). A failed setup or a `failing` check returns the `reason` of the check, else the error output of the setup. Then it starts `crew serve` again if it is not alive (on the same port), or, after a failed start, starts and pairs a new one and opens a new window (`main-<n>`).
+  - `capabilities/default.json` lets the pages of `http://127.0.0.1:*` call the commands (`remote`).
+  - With `CREW_URL`, Fix runs only `crew setup daemon` on this computer. The app has no list of remote servers yet, so it cannot run the SSH setup.
+  - `cargo test --manifest-path desktop/src-tauri/Cargo.toml` runs `tests/local.rs` (the port choice, the `crew` lookup and the `serve` arguments) and `tests/fix.rs` (Fix with a fake `crew` script, Unix only).
   - `build.frontendDist` points at `internal/serve/dist`. The window does not use it yet.
   - The icons come from `macos/AppIcon.png`. Run `npx tauri icon ../macos/AppIcon.png -o src-tauri/icons` to make them again. Keep only the desktop files.
 - `package.json`: the Tauri CLI (`npx tauri`).

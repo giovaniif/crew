@@ -80,6 +80,14 @@ impl LocalServe {
         false
     }
 
+    pub fn alive(&mut self) -> bool {
+        matches!(self.child.try_wait(), Ok(None))
+            && matches!(
+                request(self.port, "GET", "/api/v1/hello", None, None),
+                Ok((200, _))
+            )
+    }
+
     pub fn stop(&mut self) {
         let _ = self.child.kill();
         let _ = self.child.wait();
