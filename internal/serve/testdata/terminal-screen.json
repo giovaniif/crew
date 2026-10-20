@@ -1,0 +1,14 @@
+{
+  "screen": {
+    "pane": "%5",
+    "window": "@3",
+    "cols": 80,
+    "rows": 3,
+    "cursor": {
+      "x": 2,
+      "y": 1,
+      "visible": true
+    },
+    "data": "\u001b[0m\u001b[H\u001b[2J$ ls\r\n\u001b[32mmain.go\u001b[0m\r\n\u001b[2;3H\u001b[?25h"
+  }
+}
