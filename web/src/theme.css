@@ -1,5 +1,8 @@
 :root {
   --text: #4c4f69;
+  --shadow-soft: rgba(0, 0, 0, 0.08);
+  --shadow-deep: rgba(0, 0, 0, 0.18);
+  --scrim: rgba(17, 17, 27, 0.35);
   --subtext: #5c5f77;
   --overlay: #9ca0b0;
   --surface: #ccd0da;
@@ -2091,7 +2094,7 @@ button.danger {
 .view-tabs button[aria-selected="true"]:not(:disabled) {
   background: var(--paper);
   color: var(--text);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 2px var(--shadow-soft);
 }
 
 .view-tabs button:disabled {
@@ -2163,7 +2166,7 @@ button.danger {
   justify-content: center;
   align-items: flex-start;
   padding: 48px 16px;
-  background: rgba(17, 17, 27, 0.35);
+  background: var(--scrim);
   overflow-y: auto;
   z-index: 10;
 }
@@ -2173,5 +2176,5 @@ button.danger {
   background: var(--paper);
   border: 1px solid var(--surface);
   border-radius: var(--radius);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 12px 40px var(--shadow-deep);
 }

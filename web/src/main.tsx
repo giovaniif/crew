@@ -27,7 +27,7 @@ const visibility = {
     return () => document.removeEventListener("visibilitychange", listener);
   },
 };
-const wideQuery = window.matchMedia("(min-width: 900px)");
+const wideQuery = window.matchMedia("(min-width: 56.25em)");
 const wide = {
   matches: () => wideQuery.matches,
   onChange: (listener: () => void) => {
