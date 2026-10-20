@@ -74,6 +74,12 @@ The phone app: a PWA that `crew serve` embeds and serves at `/` (ADR [0046](../d
   - Sign out first calls `POST /api/v1/push/unsubscribe` and unsubscribes the browser, then calls `POST /api/v1/unpair` (both best effort). Then it forgets the token.
 
   Tests: `npm test -- Push` and `npm test -- Settings`.
+- `src/desktop.tsx` and `src/desktopAttention.ts`: the desktop app (see [desktop/](../desktop/AGENTS.md)). `AppEnv.desktop` is set only in the Tauri window.
+  - `bannerStep` posts one banner for each new `banner` of a session. It posts nothing for the banners that were there when the stream connected. A newer banner of the same session replaces the older one.
+  - It skips muted sessions, the events that the settings turn off, and the session in view while the window is in front. The settings are in `crew.alerts` in `localStorage`. Their defaults are the defaults of the Mac app. Settings shows them in the desktop app only.
+  - The app sends `{"viewing":{"session","front"}}` on the stream when the route, the focus or the visibility changes. serve passes it to `client.viewing`.
+  - `attentionMenu` gives the tray rows and the badge.
+  - Tests: `npm test -- Attention`.
 - `#/automations` (`screens/Automations.tsx`) lists the automations with agent, trigger and state. Run… opens a form with a multi-line context and an optional work item, then posts `/api/v1/automations/<name>/run`. A started run opens its session. A skipped or failed run shows its reason. Tests: `npm test -- Automations`.
 - **Faces.** `src/faces.ts` has the 12 faces of the design (`FACES`: id, name, accent for light and dark, the SVG parts and the 2-line TUI glyph), `faceSvg` and `faceGlyph`. The TUI and the Mac app use the same rules:
   - The face of a mate is its `avatar` (from the stream row, else from `GET /api/v1/mates`) if that is a face id. Else it is the face with the id of the mate name. Else it is `FACES[sum of the UTF-8 bytes of the name % 12]`. The color is the `color` of the mate, else the accent of the face.
