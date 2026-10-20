@@ -142,7 +142,7 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
   if (hash === "#/approvals") {
     return (
       <>
-        <Approvals api={api} now={now} />
+        <Approvals api={api} now={now} visibility={visibility} />
         <Tabs current="approvals" />
       </>
     );
