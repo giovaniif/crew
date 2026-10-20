@@ -11,7 +11,7 @@ Golden responses are in `testdata/`. To make them again, run `go test ./internal
 
 ## Layers
 
-- depguard: from `internal/`, `internal/serve` imports only `rpc` and `domain`. It also imports the standard library and `github.com/coder/websocket`. It does not import `os/exec`. `cmd/crew/serve.go` parses the flags and reads `[serve] url`. It passes a `Dial` that starts the daemon as the TUI does (`rpc.Connect` with `spawn`).
+- depguard: from `internal/`, `internal/serve` imports only `rpc`, `domain`, `view` and `syntax`. It also imports the standard library and `github.com/coder/websocket`. It does not import `os/exec`. `cmd/crew/serve.go` parses the flags and reads `[serve] url`. It passes a `Dial` that starts the daemon as the TUI does (`rpc.Connect` with `spawn`).
 - `serve.Daemon` is the part of `*rpc.Client` that serve uses (`Call`, `Subscribe`, `WatchTranscript`, `Close`). Each HTTP request dials its own connection and closes it. Each stream has its own connection. Thus a slow phone never stops the reader of a different client.
 
 ## Listening
