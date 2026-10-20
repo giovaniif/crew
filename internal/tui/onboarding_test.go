@@ -123,6 +123,20 @@ func TestSetupInstallsOnlyThePickedHarnessesOnConfirmation(t *testing.T) {
 	}
 }
 
+func TestSetupBackupLineSaysCrewMadeTheFileAfterAnInstallOnAFreshFile(t *testing.T) {
+	o := freshMachine()
+	o.Harnesses[domain.HarnessClaude] = domain.HarnessSetup{File: "/Users/me/.claude/settings.json"}
+	m, _ := setupModel(t, o)
+	m = pressCmd(m, keyEnter)
+	mustShow(t, screen(m), "the file does not exist yet")
+	m = pressCmd(m, keyEnter)
+	out := screen(m)
+	mustShow(t, out, "✓ set up", "crew made the file")
+	if strings.Contains(out, "does not exist yet") {
+		t.Fatalf("the file exists after the install:\n%s", out)
+	}
+}
+
 func TestSetupCodexStepShowsTheTrustStep(t *testing.T) {
 	m, f := setupModel(t, freshMachine())
 	m = pressCmd(pressCmd(pressCmd(pressCmd(m, keySpace), keyDown), keySpace), keyEnter)
