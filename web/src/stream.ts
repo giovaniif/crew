@@ -89,6 +89,7 @@ export type Session = {
   where: string;
   banner: string;
   since: string | null;
+  order?: number;
 };
 
 export type Quota = {

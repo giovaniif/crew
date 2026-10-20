@@ -12,7 +12,7 @@ export function sessionTitle(s: Session): string {
 
 const harnessNames: Record<string, string> = { claude: "Claude", codex: "Codex" };
 
-function Limits({ snapshot, now }: { snapshot: StreamSnapshot; now: number }) {
+export function Limits({ snapshot, now }: { snapshot: StreamSnapshot; now: number }) {
   const rows = limitRows(snapshot.state?.limits ?? [], now);
   if (rows.length === 0) {
     return null;
