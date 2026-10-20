@@ -7,8 +7,10 @@ vim.api.nvim_create_user_command("CrewDiff", function(o)
   require("crew").diff(o.args)
 end, {
   nargs = "?",
-  complete = function()
-    return { "last_turn", "uncommitted", "branch" }
+  complete = function(lead)
+    return vim.tbl_filter(function(scope)
+      return vim.startswith(scope, lead)
+    end, { "last_turn", "uncommitted", "branch" })
   end,
   desc = "crew: open the session's review scope in diffview",
 })
