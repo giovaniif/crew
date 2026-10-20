@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { type Approval, type Authed, ApiError, decideApproval, listApprovals } from "../api";
+import type { PageVisibility } from "../App";
 
 const ttlMs = 24 * 60 * 60 * 1000;
 
@@ -63,19 +64,35 @@ function Card({ api, approval, now }: { api: Authed; approval: Approval; now: nu
   );
 }
 
-export function ApprovalList({ api, now }: { api: Authed; now: number }) {
+export function ApprovalList({ api, now, visibility }: { api: Authed; now: number; visibility?: PageVisibility }) {
   const [list, setList] = useState<Approval[] | null>(null);
   const [error, setError] = useState("");
+  const [shown, setShown] = useState(0);
+
+  useEffect(
+    () =>
+      visibility?.onChange(() => {
+        if (visibility.visible()) {
+          setShown((n) => n + 1);
+        }
+      }),
+    [visibility],
+  );
 
   useEffect(() => {
     let live = true;
     listApprovals(api)
-      .then((out) => live && setList(out))
+      .then((out) => {
+        if (live) {
+          setList(out);
+          setError("");
+        }
+      })
       .catch((err) => live && setError(err instanceof Error ? err.message : String(err)));
     return () => {
       live = false;
     };
-  }, [api]);
+  }, [api, now, shown]);
 
   return (
     <>
@@ -91,12 +108,12 @@ export function ApprovalList({ api, now }: { api: Authed; now: number }) {
   );
 }
 
-export function Approvals({ api, now }: { api: Authed; now: number }) {
+export function Approvals({ api, now, visibility }: { api: Authed; now: number; visibility?: PageVisibility }) {
   return (
     <main className="screen approvals">
       <h1>Approvals</h1>
       <p className="muted">A mate asks here before a dangerous action that a person who is not the owner started.</p>
-      <ApprovalList api={api} now={now} />
+      <ApprovalList api={api} now={now} visibility={visibility} />
     </main>
   );
 }
