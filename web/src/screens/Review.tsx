@@ -208,13 +208,13 @@ function DiffView(p: DiffProps) {
                 ? h.Lines.map((l, li) => (
                     <Fragment key={li}>
                       <tr className={rowClass(l)}>
-                        <td className="ln">{l.Old > 0 && l.Kind !== LineAdded ? l.Old : ""}</td>
-                        <td className="ln">
+                        <td className="diff-ln">{l.Old > 0 && l.Kind !== LineAdded ? l.Old : ""}</td>
+                        <td className="diff-ln">
                           {l.New > 0 && l.Kind !== LineDeleted ? l.New : ""}
                           <CommentButton line={l} onPick={p.onPick} />
                         </td>
-                        <td className="sign">{sign(l)}</td>
-                        <td className="code">
+                        <td className="diff-sign">{sign(l)}</td>
+                        <td className="diff-text">
                           <Code line={l} />
                         </td>
                       </tr>
@@ -224,16 +224,16 @@ function DiffView(p: DiffProps) {
                 : splitRows(h).map((r, ri) => (
                     <Fragment key={ri}>
                       <tr className={rowClass(r.right ?? r.left)}>
-                        <td className={"ln " + tone(r.left)}>
+                        <td className={"diff-ln " + tone(r.left)}>
                           {r.left ? r.left.Old : ""}
                           {r.left && r.left.Kind === LineDeleted ? <CommentButton line={r.left} onPick={p.onPick} /> : null}
                         </td>
-                        <td className={"code " + tone(r.left)}>{r.left ? <Code line={r.left} /> : null}</td>
-                        <td className={"ln " + tone(r.right)}>
+                        <td className={"diff-text " + tone(r.left)}>{r.left ? <Code line={r.left} /> : null}</td>
+                        <td className={"diff-ln " + tone(r.right)}>
                           {r.right ? r.right.New : ""}
                           {r.right ? <CommentButton line={r.right} onPick={p.onPick} /> : null}
                         </td>
-                        <td className={"code " + tone(r.right)}>{r.right ? <Code line={r.right} /> : null}</td>
+                        <td className={"diff-text " + tone(r.right)}>{r.right ? <Code line={r.right} /> : null}</td>
                       </tr>
                       {composerAfter(r.right) ?? composerAfter(r.left)}
                     </Fragment>

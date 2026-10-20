@@ -1328,7 +1328,7 @@ button.danger {
   font-family: "JetBrains Mono", monospace;
   font-size: 13px;
   white-space: pre-wrap;
-  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 .open-session {
@@ -2201,6 +2201,36 @@ button.danger {
   font-size: 13px;
 }
 
+.review-pane code {
+  font-size: inherit;
+  background: none;
+  border-radius: 0;
+  padding: 0;
+}
+
+.review-pane label {
+  font-weight: 400;
+}
+
+.review-pane input[type="checkbox"] {
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.review-pane button,
+.review-pane select,
+.review-pane textarea {
+  min-height: 0;
+}
+
+.viewed-toggle {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--sans);
+}
+
 .review-bar .spacer {
   flex: 1;
 }
@@ -2374,13 +2404,14 @@ button.danger {
   font-family: var(--mono);
   font-size: 12px;
   line-height: 1.5;
+  tab-size: 4;
 }
 
 .diff-split {
   table-layout: fixed;
 }
 
-.diff-split td.code {
+.diff-split td.diff-text {
   width: 50%;
 }
 
@@ -2389,7 +2420,7 @@ button.danger {
   vertical-align: top;
 }
 
-.diff-table td.ln {
+.diff-table td.diff-ln {
   width: 4.5em;
   text-align: right;
   color: var(--overlay);
@@ -2398,12 +2429,12 @@ button.danger {
   position: relative;
 }
 
-.diff-table td.code {
+.diff-table td.diff-text {
   white-space: pre-wrap;
-  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
-.diff-table td.sign {
+.diff-table td.diff-sign {
   width: 1em;
   color: var(--overlay);
 }
@@ -2418,8 +2449,8 @@ td.line-deleted {
   background: var(--deleted-bg);
 }
 
-tr.commented td.ln,
-tr.picked td.ln {
+tr.commented td.diff-ln,
+tr.picked td.diff-ln {
   box-shadow: inset 3px 0 0 var(--peach);
   background: var(--comment-bg);
 }
@@ -2456,6 +2487,7 @@ tr.picked td.ln {
 }
 
 .hunk-actions {
+  white-space: nowrap;
   display: inline-flex;
   align-items: center;
   gap: 6px;
