@@ -2,7 +2,7 @@ import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { App, type AppEnv } from "./App";
-import type { DesktopBridge } from "./desktop";
+import type { DesktopBridge } from "./desktopBridge";
 import type { Session } from "./stream";
 import { FakeServer, MemoryStorage } from "./test/fake-server";
 import { FakeSockets } from "./test/fake-socket";

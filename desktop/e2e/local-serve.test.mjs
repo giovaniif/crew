@@ -53,7 +53,10 @@ after(async () => {
 
 test("the app starts its own crew serve, pairs and shows the session list", async () => {
   await waitFor(() => run("return location.hostname === '127.0.0.1' && location.port !== '7420'"), "the page of the local crew serve");
-  await waitFor(() => run("const h = document.querySelector('h1'); return h !== null && h.textContent === 'Sessions'"), "the Sessions heading");
+  await waitFor(
+    () => run("return [...document.querySelectorAll('h1, nav[aria-label=Sidebar] h2 span')].some((h) => h.textContent === 'Sessions')"),
+    "the Sessions heading",
+  );
   assert.equal(await run("return document.body.innerText.includes('Add crew to your Home Screen')"), false);
   assert.equal(await run("return localStorage.getItem('crew.auth')"), null);
   const hello = await run("return fetch('/api/v1/hello').then((r) => r.json())");

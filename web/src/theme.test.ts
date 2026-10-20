@@ -51,6 +51,10 @@ describe("the Latte palette", () => {
     expect(contrast("#000000", "#ffffff")).toBeCloseTo(21);
   });
 
+  it("makes the main column white", () => {
+    expect(palette.paper).toBe("#ffffff");
+  });
+
   it.each([
     ["text", "base"],
     ["text", "mantle"],
@@ -62,6 +66,9 @@ describe("the Latte palette", () => {
     ["link", "base"],
     ["link", "mantle"],
     ["on-accent", "blue"],
+    ["text", "paper"],
+    ["subtext", "paper"],
+    ["link", "paper"],
   ])("%s text on %s meets 4.5:1", (fg, bg) => {
     expect(palette[fg], fg).toBeDefined();
     expect(palette[bg], bg).toBeDefined();
@@ -93,6 +100,9 @@ describe("the Mocha palette", () => {
     ["link", "base"],
     ["link", "mantle"],
     ["on-accent", "blue"],
+    ["text", "paper"],
+    ["subtext", "paper"],
+    ["link", "paper"],
   ])("%s text on %s meets 4.5:1", (fg, bg) => {
     expect(palette[fg], fg).toBeDefined();
     expect(palette[bg], bg).toBeDefined();

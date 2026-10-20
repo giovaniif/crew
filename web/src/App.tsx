@@ -1,22 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { tokenRefused, unpairDevice, type Fetch } from "./api";
-import {
-  clearAuth,
-  loadAuth,
-  saveAuth,
-  type Auth,
-  type KeyValue,
-} from "./auth";
+import { clearAuth, loadAuth, saveAuth, type Auth, type KeyValue } from "./auth";
 import { pairCodeFromHash } from "./display";
-import {
-  DesktopAlerts,
-  useDesktopAttention,
-  type DesktopBridge,
-} from "./desktop";
+import { DesktopAlerts, useDesktopAttention, type DesktopBridge } from "./desktopBridge";
 import { disablePush, noPush, type PushEnv } from "./push";
 import { parseRoute } from "./route";
 import { Approvals } from "./screens/Approvals";
 import { Automations } from "./screens/Automations";
+import { Desktop } from "./screens/Desktop";
 import { MateProfile, Mates, NewMate } from "./screens/Mates";
 import { Install } from "./screens/Install";
 import { NewSession } from "./screens/NewSession";
@@ -39,9 +30,21 @@ export type AppEnv = {
   onHashChange: (listener: (hash: string) => void) => () => void;
   push?: PushEnv;
   visibility?: PageVisibility;
+  wide?: Width;
   desktopAuth?: Auth | null;
   desktop?: DesktopBridge;
 };
+
+export type Width = {
+  matches: () => boolean;
+  onChange: (listener: () => void) => () => void;
+};
+
+const narrow: Width = { matches: () => false, onChange: () => () => {} };
+
+function useWide(width: Width = narrow): boolean {
+  return useSyncExternalStore(width.onChange, width.matches);
+}
 
 export type PageVisibility = {
   visible: () => boolean;
@@ -91,19 +94,11 @@ function useNow(now: () => number, every: number): number {
   return value;
 }
 
-type ConnectedProps = {
-  env: AppEnv;
-  auth: Auth;
-  onUnauthorized: () => void;
-  onSignOut: () => Promise<void>;
-};
+type ConnectedProps = { env: AppEnv; auth: Auth; onUnauthorized: () => void; onSignOut: () => Promise<void> };
 
 function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
   const { onHashChange, fetch, visibility } = env;
-  const confirmRefused = useCallback(
-    () => tokenRefused(fetch, auth.token),
-    [fetch, auth.token],
-  );
+  const confirmRefused = useCallback(() => tokenRefused(fetch, auth.token), [fetch, auth.token]);
   const client = useStreamClient({
     open: env.openStream,
     token: auth.token,
@@ -115,26 +110,12 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
   const snapshot = useStream(client);
   const [hash, setHash] = useState(env.hash);
   const now = useNow(env.now, snapshot.status === "offline" ? 1000 : 30000);
-  const api = useMemo(
-    () => ({ fetch, token: auth.token }),
-    [fetch, auth.token],
-  );
+  const api = useMemo(() => ({ fetch, token: auth.token }), [fetch, auth.token]);
 
   useEffect(() => onHashChange(setHash), [onHashChange]);
-  useDesktopAttention(
-    env.desktop,
-    client,
-    snapshot,
-    hash,
-    env.storage,
-    visibility,
-    now,
-  );
+  useDesktopAttention(env.desktop, client, snapshot, hash, env.storage, visibility, now);
 
-  useEffect(
-    () => visibility?.onChange(() => client.visibilityChanged()),
-    [visibility, client],
-  );
+  useEffect(() => visibility?.onChange(() => client.visibilityChanged()), [visibility, client]);
 
   useEffect(() => {
     if (snapshot.status === "unauthorized") {
@@ -142,78 +123,41 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
     }
   }, [snapshot.status, onUnauthorized]);
 
+  const go = useCallback((next: string) => {
+    window.location.hash = next;
+    setHash(next);
+  }, []);
+  const wide = useWide(env.wide);
   const route = parseRoute(hash);
   const retry = () => client.retryNow();
-  if (route.screen === "new") {
-    return <NewSession env={env} token={auth.token} />;
-  }
-  if (route.screen === "session") {
+  const other = otherScreen(hash, { env, auth, api, now, snapshot, onSignOut });
+  if (wide) {
     return (
-      <SessionScreen
-        key={route.id}
-        id={route.id}
+      <Desktop
+        env={env}
+        token={auth.token}
+        hash={hash}
+        go={go}
         snapshot={snapshot}
         now={now}
         onRetry={retry}
         client={client}
         api={api}
+        other={other?.screen ?? null}
       />
     );
   }
-  if (hash === "#/automations") {
-    return (
-      <>
-        <Automations api={api} />
-        <Tabs current="automations" />
-      </>
-    );
+  if (route.screen === "new") {
+    return <NewSession env={env} token={auth.token} />;
   }
-  if (hash === "#/mates") {
-    return (
-      <>
-        <Mates api={api} now={now} board={snapshot.state?.mates} />
-        <Tabs current="mates" />
-      </>
-    );
+  if (route.screen === "session") {
+    return <SessionScreen key={route.id} id={route.id} snapshot={snapshot} now={now} onRetry={retry} client={client} api={api} />;
   }
-  if (hash.startsWith("#/mates/")) {
-    const name = hash.slice("#/mates/".length);
+  if (other) {
     return (
       <>
-        {name === "new" ? (
-          <NewMate api={api} />
-        ) : (
-          <MateProfile
-            api={api}
-            name={safeDecode(name)}
-            board={snapshot.state?.mates}
-          />
-        )}
-        <Tabs current="mates" />
-      </>
-    );
-  }
-  if (hash === "#/approvals") {
-    return (
-      <>
-        <Approvals api={api} now={now} visibility={visibility} />
-        <Tabs current="approvals" />
-      </>
-    );
-  }
-  if (hash === "#/settings") {
-    return (
-      <>
-        <Settings
-          auth={auth}
-          host={env.host}
-          installed={env.installed}
-          fetch={env.fetch}
-          push={env.push ?? noPush}
-          onSignOut={onSignOut}
-        />
-        {env.desktop && <DesktopAlerts storage={env.storage} />}
-        <Tabs current="settings" />
+        {other.screen}
+        <Tabs current={other.tab} />
       </>
     );
   }
@@ -224,28 +168,66 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
           All mates are stopped
         </a>
       )}
-      <SessionList
-        host={env.host}
-        snapshot={snapshot}
-        now={now}
-        onRetry={retry}
-      />
+      <SessionList host={env.host} snapshot={snapshot} now={now} onRetry={retry} />
       <Tabs current="sessions" />
     </>
   );
+}
+
+type OtherInputs = {
+  env: AppEnv;
+  auth: Auth;
+  api: { fetch: Fetch; token: string };
+  now: number;
+  snapshot: ReturnType<typeof useStream>;
+  onSignOut: () => Promise<void>;
+};
+
+function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut }: OtherInputs): { screen: ReactNode; tab: Tab } | null {
+  if (hash === "#/automations") {
+    return { screen: <Automations api={api} />, tab: "automations" };
+  }
+  if (hash === "#/mates") {
+    return { screen: <Mates api={api} now={now} board={snapshot.state?.mates} />, tab: "mates" };
+  }
+  if (hash.startsWith("#/mates/")) {
+    const name = hash.slice("#/mates/".length);
+    return {
+      screen: name === "new" ? <NewMate api={api} /> : <MateProfile api={api} name={safeDecode(name)} board={snapshot.state?.mates} />,
+      tab: "mates",
+    };
+  }
+  if (hash === "#/approvals") {
+    return { screen: <Approvals api={api} now={now} visibility={env.visibility} />, tab: "approvals" };
+  }
+  if (hash === "#/settings") {
+    return {
+      screen: (
+        <>
+          <Settings
+            auth={auth}
+            host={env.host}
+            installed={env.installed}
+            fetch={env.fetch}
+            push={env.push ?? noPush}
+            onSignOut={onSignOut}
+          />
+          {env.desktop && <DesktopAlerts storage={env.storage} />}
+        </>
+      ),
+      tab: "settings",
+    };
+  }
+  return null;
 }
 
 const refusedNotice =
   "This device was removed from crew, or the server rejected its login. Pair it again with a new code from crew remote pair.";
 
 export function App({ env }: { env: AppEnv }) {
-  const [auth, setAuth] = useState<Auth | null>(
-    () => env.desktopAuth ?? loadAuth(env.storage),
-  );
+  const [auth, setAuth] = useState<Auth | null>(() => env.desktopAuth ?? loadAuth(env.storage));
   const [notice, setNotice] = useState("");
-  const [code, setCode] = useState(() =>
-    auth ? "" : pairCodeFromHash(env.hash),
-  );
+  const [code, setCode] = useState(() => (auth ? "" : pairCodeFromHash(env.hash)));
   const { storage } = env;
   const unpair = useCallback(() => {
     clearAuth(storage);
@@ -262,14 +244,7 @@ export function App({ env }: { env: AppEnv }) {
       unpair();
       await unpairDevice(env.fetch, auth.token).catch(() => undefined);
     };
-    return (
-      <Connected
-        env={env}
-        auth={auth}
-        onUnauthorized={refused}
-        onSignOut={signOut}
-      />
-    );
+    return <Connected env={env} auth={auth} onUnauthorized={refused} onSignOut={signOut} />;
   }
   if (!env.installed) {
     return <Install code={code} host={env.host} />;

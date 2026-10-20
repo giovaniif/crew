@@ -1,14 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { KeyValue } from "./auth";
-import {
-  attentionMenu,
-  bannerStep,
-  loadAlertPrefs,
-  saveAlertPrefs,
-  viewFor,
-  type AlertPrefs,
-  type EventAlert,
-} from "./desktopAttention";
+import { attentionMenu, bannerStep, loadAlertPrefs, saveAlertPrefs, viewFor, type AlertPrefs, type EventAlert } from "./desktopAttention";
 import type { StreamClient, StreamSnapshot } from "./stream";
 
 export type DesktopBridge = {
@@ -22,8 +14,7 @@ type TauriInternals = {
 };
 
 export function tauriBridge(win: Window): DesktopBridge | undefined {
-  const internals = (win as unknown as { __TAURI_INTERNALS__?: TauriInternals })
-    .__TAURI_INTERNALS__;
+  const internals = (win as unknown as { __TAURI_INTERNALS__?: TauriInternals }).__TAURI_INTERNALS__;
   if (!internals || typeof internals.invoke !== "function") {
     return undefined;
   }
@@ -58,9 +49,7 @@ export function useDesktopAttention(
   const shown = useRef<Record<string, string> | null>(null);
   const menuSent = useRef("");
   const [focus, setFocus] = useState(0);
-  const view = desktop
-    ? viewFor(hash, visibility ? visibility.visible() : true, desktop.focused())
-    : null;
+  const view = desktop ? viewFor(hash, visibility ? visibility.visible() : true, desktop.focused()) : null;
   const viewKey = view ? view.session + "\u0000" + view.front : "";
 
   useEffect(() => {
@@ -90,12 +79,7 @@ export function useDesktopAttention(
       shown.current = null;
       return;
     }
-    const step = bannerStep(
-      shown.current,
-      snapshot.state.sessions,
-      loadAlertPrefs(storage),
-      view,
-    );
+    const step = bannerStep(shown.current, snapshot.state.sessions, loadAlertPrefs(storage), view);
     shown.current = step.shown;
     for (const banner of step.posts) {
       void desktop.invoke("crew_notify", { banner }).catch(() => undefined);
@@ -132,8 +116,7 @@ export function DesktopAlerts({ storage }: { storage: KeyValue }) {
     saveAlertPrefs(storage, next);
     setPrefs(next);
   };
-  const setAlert = (key: (typeof events)[number]["key"], alert: EventAlert) =>
-    change({ ...prefs, [key]: alert });
+  const setAlert = (key: (typeof events)[number]["key"], alert: EventAlert) => change({ ...prefs, [key]: alert });
   return (
     <main className="screen">
       <section className="card" aria-label="Desktop notifications">
@@ -144,9 +127,7 @@ export function DesktopAlerts({ storage }: { storage: KeyValue }) {
               <input
                 type="checkbox"
                 checked={prefs[key].banner}
-                onChange={(e) =>
-                  setAlert(key, { ...prefs[key], banner: e.target.checked })
-                }
+                onChange={(e) => setAlert(key, { ...prefs[key], banner: e.target.checked })}
               />{" "}
               Banner when a session {label}
             </label>{" "}
@@ -155,9 +136,7 @@ export function DesktopAlerts({ storage }: { storage: KeyValue }) {
                 type="checkbox"
                 aria-label={"Sound when a session " + label}
                 checked={prefs[key].sound}
-                onChange={(e) =>
-                  setAlert(key, { ...prefs[key], sound: e.target.checked })
-                }
+                onChange={(e) => setAlert(key, { ...prefs[key], sound: e.target.checked })}
               />{" "}
               Sound
             </label>
@@ -168,22 +147,14 @@ export function DesktopAlerts({ storage }: { storage: KeyValue }) {
             <input
               type="checkbox"
               checked={prefs.skipSessionInView}
-              onChange={(e) =>
-                change({ ...prefs, skipSessionInView: e.target.checked })
-              }
+              onChange={(e) => change({ ...prefs, skipSessionInView: e.target.checked })}
             />{" "}
             No banner for the session on screen
           </label>
         </p>
         <p>
           <label>
-            <input
-              type="checkbox"
-              checked={prefs.notifyMuted}
-              onChange={(e) =>
-                change({ ...prefs, notifyMuted: e.target.checked })
-              }
-            />{" "}
+            <input type="checkbox" checked={prefs.notifyMuted} onChange={(e) => change({ ...prefs, notifyMuted: e.target.checked })} />{" "}
             Banners for muted sessions
           </label>
         </p>

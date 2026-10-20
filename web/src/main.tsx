@@ -10,18 +10,15 @@ import { hello } from "./api";
 import { App } from "./App";
 import { buildOfWorker, checkBuild, workerURL } from "./build";
 import { desktopAuth } from "./auth";
+import { tauriBridge } from "./desktopBridge";
 import { isInstalled } from "./display";
 import { browserPush } from "./push";
-import { tauriBridge } from "./desktop";
 
 const checkEvery = 5 * 60 * 1000;
 const installTimeout = 15 * 1000;
 const reloadedKey = "crew.reloaded-for";
 const apiFetch = (input: string, init?: RequestInit) => fetch(input, init);
-const streamURL =
-  (window.location.protocol === "https:" ? "wss://" : "ws://") +
-  window.location.host +
-  "/api/v1/stream";
+const streamURL = (window.location.protocol === "https:" ? "wss://" : "ws://") + window.location.host + "/api/v1/stream";
 const openStream = () => new WebSocket(streamURL);
 const now = () => Date.now();
 const visibility = {
@@ -29,6 +26,14 @@ const visibility = {
   onChange: (listener: () => void) => {
     document.addEventListener("visibilitychange", listener);
     return () => document.removeEventListener("visibilitychange", listener);
+  },
+};
+const wideQuery = window.matchMedia("(min-width: 56.25em)");
+const wide = {
+  matches: () => wideQuery.matches,
+  onChange: (listener: () => void) => {
+    wideQuery.addEventListener("change", listener);
+    return () => wideQuery.removeEventListener("change", listener);
   },
 };
 const onHashChange = (listener: (hash: string) => void) => {
@@ -53,21 +58,13 @@ async function installWorker(build: string): Promise<void> {
   if (!("serviceWorker" in navigator)) {
     return;
   }
-  const registration = await navigator.serviceWorker.register(
-    workerURL(build),
-    { scope: "/" },
-  );
-  const ready = () =>
-    registration.active?.state === "activated" &&
-    buildOfWorker(registration.active.scriptURL) === build;
+  const registration = await navigator.serviceWorker.register(workerURL(build), { scope: "/" });
+  const ready = () => registration.active?.state === "activated" && buildOfWorker(registration.active.scriptURL) === build;
   if (ready()) {
     return;
   }
   await new Promise<void>((resolve, reject) => {
-    const timer = window.setTimeout(
-      () => reject(new Error("the worker for " + build + " did not activate")),
-      installTimeout,
-    );
+    const timer = window.setTimeout(() => reject(new Error("the worker for " + build + " did not activate")), installTimeout);
     const watch = (worker: ServiceWorker | null) =>
       worker?.addEventListener("statechange", () => {
         if (ready()) {
@@ -75,16 +72,10 @@ async function installWorker(build: string): Promise<void> {
           resolve();
         }
       });
-    for (const worker of [
-      registration.installing,
-      registration.waiting,
-      registration.active,
-    ]) {
+    for (const worker of [registration.installing, registration.waiting, registration.active]) {
       watch(worker);
     }
-    registration.addEventListener("updatefound", () =>
-      watch(registration.installing),
-    );
+    registration.addEventListener("updatefound", () => watch(registration.installing));
   });
 }
 
@@ -96,8 +87,7 @@ function watchBuild() {
   const check = () => {
     running ??= checkBuild({
       hello: () => hello(apiFetch),
-      servedBuild: () =>
-        buildOfWorker(navigator.serviceWorker?.controller?.scriptURL),
+      servedBuild: () => buildOfWorker(navigator.serviceWorker?.controller?.scriptURL),
       install: installWorker,
       reload: reloadOnceFor,
     })
@@ -137,11 +127,9 @@ if (root) {
           onHashChange,
           push: browserPush(window),
           visibility,
+          wide,
           desktop: tauriBridge(window),
-          desktopAuth: desktopAuth(
-            (window as { __CREW_DESKTOP_AUTH__?: unknown })
-              .__CREW_DESKTOP_AUTH__,
-          ),
+          desktopAuth: desktopAuth((window as { __CREW_DESKTOP_AUTH__?: unknown }).__CREW_DESKTOP_AUTH__),
         }}
       />
     </StrictMode>,
