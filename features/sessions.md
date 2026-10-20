@@ -52,6 +52,15 @@ go run ./scripts/verify web drive / --viewport mobile --out-dir /tmp/crew-verify
 go run ./scripts/verify iso crew --expect seed-1-api --expect "#100 OPEN failing" -- worktree list
 ```
 
+### PWA clears unread when the session is viewed
+
+```sh
+go run ./scripts/verify iso seed --sessions 3
+go run ./scripts/verify web drive / --viewport mobile --out-dir /tmp/crew-verify-map/sessions --steps '[{"expect":{"text":"unread","exact":true}},{"click":{"text":"seeded change 3"}},{"expect":{"text":"No messages yet"}},{"wait":1500},{"click":{"text":"Sessions","exact":false}},{"expect":{"text":"seeded change 2"}},{"wait":1500},{"eval":"if ([...document.querySelectorAll(\".badge\")].some((b) => b.textContent === \"unread\")) throw new Error(\"unread after view\")"},{"shot":"read.png"}]'
+```
+
+Expect: the `unread` badge of `seeded change 3` is gone after the chat opens. See #488.
+
 ### new session dialog with a real harness (manual: the fake claude holds the pane but does not run turns; use make dev FAKES=1 to try it)
 
 ### workspace add, list and remove a TEST repo
