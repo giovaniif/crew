@@ -53,6 +53,8 @@ Unknown paths under `/api/` answer `not_found`.
 | `GET /api/v1/automations` | yes | `automation.list` | → `{"automations":[Automation],"problems"}` |
 | `GET /api/v1/automations/runs?name=&limit=` | yes | `automation.runs` | → `{"runs":[AutomationRun]}`, newest first; both query values optional |
 | `POST /api/v1/automations/{name}/run` | yes | `automation.run` | `{"context","work_item"}` (both optional, no other keys: a phone cannot rerun or pick a repo) → `{"run","session"}` |
+| `POST /api/v1/automations` | owner | `automation.save` | `{"automation"}` (a name that is not blank, no other keys) → the saved `Automation`; it writes `config.toml` |
+| `POST /api/v1/automations/runs/{id}/rerun` | owner | `automation.run` | → `{"run","session"}`; runs again with the context, work item and repo of run `id` |
 | `POST /api/v1/sessions` | yes | `session.new` | `{"workspace","work_item","harness","model","effort","prompt"}` (`harness` required; the rest optional. An empty `work_item` starts a session that is named from its first prompt) → the new `Session`; a setup recipe failure is `failed` with its output in `message` |
 | `GET /api/v1/work-items/resolve?workspace=&item=` | yes | `session.resolve` | → `{"source","ref","title","worktree","workspace"}`; `bad_request` for an empty item or an unsupported link, `not_found` for an unknown workspace or an item the tracker does not know |
 | `GET /api/v1/sessions/{id}/messages?before=&limit=` | yes | `transcript.page` | → `{"messages":[Message],"before"}`; both query values optional integers |
@@ -87,6 +89,7 @@ Unknown paths under `/api/` answer `not_found`.
 | `POST /api/v1/sessions/{id}/nvim` | yes | `nvim.toggle` | `{"worktree"}` (optional, the body can be empty) → `{"pane","socket","shown"}`; open `pane` with the terminal route |
 | `POST /api/v1/sessions/{id}/fresh` | yes | `mate.fresh` | `{"same_worktree","prompt"}` (optional, the body can be empty) → the new session; "Start fresh" on a mate session |
 
+- An "owner" route also needs the owner device. The owner device is the app on the computer that runs crew: the request comes from a loopback address. serve uses the address rule of `pair` (`clientAddr`). Thus a phone through a proxy is not the owner device. Other devices get 403 `forbidden`, and serve does not call the daemon.
 - Auth is `Authorization: Bearer <token>`. Before the method runs, serve checks it with `device.check` on the connection of the request. Then it checks it against the set of revoked device IDs.
 - `pair` passes the address of the caller as `addr`. This is `RemoteAddr`. If the peer is a loopback or private address (the location of a proxy in front of serve), it is the last `X-Forwarded-For` entry, else `X-Real-IP`. serve ignores a forged header from a direct client.
 - Domain structs (`Workspace`, `Session`, ...) encode with their Go field names, as in the socket protocol. The goldens lock them. A `Message` is `rpc.Message`: `{"id","cursor","turn","role","text","tool":{"name","summary","status"},"at"}`. Keep messages by `id` and replace by `id` (see [internal/rpc/](../rpc/AGENTS.md)).
