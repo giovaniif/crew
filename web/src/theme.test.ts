@@ -100,6 +100,16 @@ describe("the Mocha palette", () => {
   });
 });
 
+describe("the mate card", () => {
+  it("clamps a long prompt tagline to 2 lines like the Mac app", () => {
+    const tag = rule(".mate-card .mate-tag");
+    expect(tag["-webkit-line-clamp"]).toBe("2");
+    expect(tag["display"]).toBe("-webkit-box");
+    expect(tag["-webkit-box-orient"]).toBe("vertical");
+    expect(tag["overflow"]).toBe("hidden");
+  });
+});
+
 describe("touch targets", () => {
   it.each([".session-card", ".back", ".retry", ".new-session", ".choice", ".interrupt", ".queued-action", ".permission-choice", ".load-older", ".tool summary", ".automation-row button", ".run-actions button", ".approval-actions button", ".kill-actions button", ".mate-actions button", ".mate-threads a"])("%s is at least 44px tall", (selector) => {
     expect(parseInt(rule(selector)["min-height"] ?? "0", 10)).toBeGreaterThanOrEqual(44);
