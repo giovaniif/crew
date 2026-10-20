@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEve
 import Markdown from "react-markdown";
 import { ApiError, answerPrompt, getPrompt, interrupt, markRead, messagesPage, sendMessage, startFresh, unsend, type Authed, type Prompt } from "../api";
 import { faceState, stateWords, type FaceState } from "../faces";
-import { MateFace, useMateDefs } from "./Mates";
+import { Confirm, MateFace, useMateDefs } from "./Mates";
 import { timeInState } from "../sessions";
 import type { Message, QueuedSend, Session, StreamClient, StreamSnapshot, StreamStatus } from "../stream";
 import { emptyTranscript, newestCursor, toolRow, withFrame, withPage, type Transcript } from "../transcript";
@@ -41,14 +41,15 @@ function Back() {
   );
 }
 
-function Header({ session, now, onInterrupt }: { session: Session; now: number; onInterrupt: () => void }) {
+function Header({ session, now, onInterrupt, mate }: { session: Session; now: number; onInterrupt: () => void; mate?: ReactNode }) {
   const age = timeInState(session.since, now);
   const state = stateOf(session);
   const meta = [session.where, [session.Harness, session.Model].filter(Boolean).join(" ")].filter(Boolean).join(" · ");
   return (
     <header className="chat-top">
-      <div className="chat-bar">
+      <div className="chat-bar" role="toolbar" aria-label="Session">
         <Back />
+        {mate}
         {busy(session) && !session.Ended ? (
           <button type="button" className="interrupt" onClick={onInterrupt}>
             Interrupt
@@ -599,20 +600,23 @@ function ConfirmInterrupt({ api, session, onClose }: { api: Authed; session: str
   );
 }
 
-function MateBar({ api, session, mate, snapshot }: { api: Authed; session: Session; mate: string; snapshot: StreamSnapshot }) {
+function MateTools({ api, session, mate, snapshot }: { api: Authed; session: Session; mate: string; snapshot: StreamSnapshot }) {
   const { defs } = useMateDefs(api);
+  const [asking, setAsking] = useState(false);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
   const [keep, setKeep] = useState(true);
   const def = defs.find((d) => d.name === mate);
   const row = snapshot.state?.mates?.mates.find((m) => m.name === mate);
   const state = row ? faceState(row, []) : "idle";
+  const shown = shownName(mate);
 
   async function fresh() {
     setBusy(true);
     setNote("");
     try {
       const out = await startFresh(api, session.ID, keep);
+      setAsking(false);
       window.location.hash = "#/sessions/" + encodeURIComponent(out.ID);
     } catch (err) {
       setNote(errorText(err));
@@ -622,23 +626,37 @@ function MateBar({ api, session, mate, snapshot }: { api: Authed; session: Sessi
   }
 
   return (
-    <div className="mate-bar">
-      <a href={"#/mates/" + encodeURIComponent(mate)} className="mate-bar-who">
-        <MateFace name={mate} avatar={row?.avatar || def?.avatar} color={row?.color || def?.color} state={state} px={44} />
-        <span>
-          <strong>{mate}</strong>
-          <span className="face-state">{stateWords[state]}</span>
-        </span>
+    <>
+      <a href={"#/mates/" + encodeURIComponent(mate)} className="mate-bar-who" aria-label={mate + ", " + stateWords[state]} title={"Profile of " + shown}>
+        <MateFace name={mate} avatar={row?.avatar || def?.avatar} color={row?.color || def?.color} state={state} px={28} />
+        <strong>{mate}</strong>
       </a>
-      <label className="mate-bar-keep">
-        <input type="checkbox" checked={keep} onChange={(e) => setKeep(e.target.checked)} />
-        Keep this worktree
-      </label>
-      <button type="button" className="mtag" disabled={busy} onClick={fresh}>
-        Start fresh
-      </button>
-      {note ? <p role="alert">{note}</p> : null}
-    </div>
+      {session.Ended ? null : (
+        <button type="button" className="mtag fresh" onClick={() => setAsking(true)}>
+          Start fresh
+        </button>
+      )}
+      {asking ? (
+        <Confirm
+          id="start-fresh"
+          title={"Start fresh with " + shown + "?"}
+          body={
+            shown +
+            " writes a handoff to memory, then a new conversation opens in the same worktree. Personality and memory stay. This conversation stays until you end it."
+          }
+          action="Start fresh"
+          busy={busy}
+          note={note}
+          onCancel={() => setAsking(false)}
+          onConfirm={() => void fresh()}
+        >
+          <label className="mate-bar-keep">
+            <input type="checkbox" checked={keep} onChange={(e) => setKeep(e.target.checked)} />
+            Keep this worktree
+          </label>
+        </Confirm>
+      ) : null}
+    </>
   );
 }
 
@@ -681,8 +699,12 @@ export function SessionScreen({
   const persona = personaOf(session, snapshot);
   return (
     <div className="chat-screen">
-      {session.Mate?.Name ? <MateBar api={api} session={session} mate={session.Mate.Name} snapshot={snapshot} /> : null}
-      <Header session={session} now={now} onInterrupt={() => setConfirming(true)} />
+      <Header
+        session={session}
+        now={now}
+        onInterrupt={() => setConfirming(true)}
+        mate={session.Mate?.Name ? <MateTools api={api} session={session} mate={session.Mate.Name} snapshot={snapshot} /> : undefined}
+      />
       <Connection snapshot={snapshot} now={now} onRetry={onRetry} />
       <main className="chat-main">
         <Chat id={id} client={client} api={api} status={snapshot.status} persona={persona} freshFrom={session.Mate?.FreshFrom || undefined}>
