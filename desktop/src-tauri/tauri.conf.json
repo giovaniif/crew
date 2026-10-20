@@ -3,6 +3,7 @@
   "productName": "crew",
   "version": "0.0.0",
   "identifier": "sh.giovani.crew",
+  "mainBinaryName": "crew-desktop",
   "build": {
     "frontendDist": "../connect"
   },

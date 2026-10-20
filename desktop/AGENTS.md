@@ -50,3 +50,11 @@ The `ios` workflow (`.github/workflows/ios.yml`, `macos-15`) builds the iOS app:
   - Signing is automatic. It uses the App Store Connect API key in the repo secrets `APPLE_API_KEY`, `APPLE_API_ISSUER`, `APPLE_API_KEY_P8` and `APPLE_TEAM_ID`.
   - The build number is the run number of the workflow. Thus each upload has a larger number.
 - Each run makes sure that the built app has `ITSAppUsesNonExemptEncryption` set to `false`.
+
+The `desktop` job of `release.yml` makes the packages for each tag, on `workflow_dispatch` (a dry run) and on a pull request that changes `desktop/`:
+
+- macOS arm64 and amd64 (`.dmg`), Linux amd64 (`.deb`, `.AppImage`) and Windows x64 (`.msi`, `.exe`).
+- It puts the goreleaser `crew` of the platform in the bundle as a Tauri `externalBin` (`binaries/crew-<target>`). Thus `crew` is next to the app binary. `mainBinaryName` is `crew-desktop`, so that the two names are different. Windows has no `crew` build.
+- It sets the version from the tag with `--config`.
+- On macOS, it signs and notarizes the app when the `APPLE_*` secrets exist. It writes `APPLE_API_KEY_P8` to a temporary `AuthKey.p8` for `APPLE_API_KEY_PATH`. Without the secrets, the build is not signed.
+- It runs `crew version` from each macOS and Linux package and compares the tag. It uploads the packages to the release only for a tag.

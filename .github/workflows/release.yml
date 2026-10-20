@@ -8,6 +8,7 @@ on:
       - .github/workflows/release.yml
       - .goreleaser.yaml
       - macos/**
+      - desktop/**
   workflow_dispatch:
 
 permissions:
@@ -102,6 +103,159 @@ jobs:
           path: macos/build/*.dmg
       - if: startsWith(github.ref, 'refs/tags/v')
         run: gh release upload "$VERSION" "macos/build/crew_${VERSION}.dmg" --repo "$GITHUB_REPOSITORY"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.goreleaser.outputs.version }}
+
+  desktop:
+    needs: goreleaser
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            target: aarch64-apple-darwin
+            crew: darwin_arm64
+            bundles: app,dmg
+          - runner: macos-15-intel
+            target: x86_64-apple-darwin
+            crew: darwin_amd64
+            bundles: app,dmg
+          - runner: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            crew: linux_amd64
+            bundles: deb,appimage
+          - runner: windows-latest
+            target: x86_64-pc-windows-msvc
+            crew: ""
+            bundles: msi,nsis
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri
+          key: ${{ matrix.target }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci
+        working-directory: desktop
+      - if: matrix.crew != ''
+        uses: actions/download-artifact@v5
+        with:
+          name: archives
+          path: archives
+      - name: Prepare the build config
+        run: |
+          version="${VERSION#v}"
+          if [ "$RUNNER_OS" = Windows ]; then version="${version%%-*}"; fi
+          if [ -n "$CREW" ]; then
+            mkdir -p desktop/src-tauri/binaries
+            tar -xzf "archives/crew_$CREW.tar.gz" -C desktop/src-tauri/binaries crew
+            mv desktop/src-tauri/binaries/crew "desktop/src-tauri/binaries/crew-$TARGET"
+            jq -n --arg v "$version" '{version: $v, bundle: {externalBin: ["binaries/crew"]}}' > "$RUNNER_TEMP/release.json"
+          else
+            jq -n --arg v "$version" '{version: $v}' > "$RUNNER_TEMP/release.json"
+          fi
+        env:
+          VERSION: ${{ needs.goreleaser.outputs.version }}
+          CREW: ${{ matrix.crew }}
+          TARGET: ${{ matrix.target }}
+      - name: Set up signing
+        if: runner.os == 'macOS'
+        run: |
+          if [ -z "$APPLE_CERTIFICATE" ] || [ -z "$APPLE_API_KEY_P8" ]; then
+            echo "No signing secrets. The build is not signed."
+            exit 0
+          fi
+          key="$RUNNER_TEMP/AuthKey.p8"
+          printf '%s\n' "$APPLE_API_KEY_P8" > "$key"
+          {
+            echo "APPLE_CERTIFICATE=$(printf '%s' "$APPLE_CERTIFICATE" | tr -d '\r\n ')"
+            echo "APPLE_CERTIFICATE_PASSWORD=$APPLE_CERTIFICATE_PASSWORD"
+            echo "APPLE_SIGNING_IDENTITY=Developer ID Application"
+            echo "APPLE_API_ISSUER=$APPLE_API_ISSUER"
+            echo "APPLE_API_KEY=$APPLE_API_KEY"
+            echo "APPLE_API_KEY_PATH=$key"
+            echo "APPLE_TEAM_ID=$APPLE_TEAM_ID"
+            echo "CREW_SIGNED=1"
+          } >> "$GITHUB_ENV"
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      - run: npx tauri build --ci --target "$TARGET" --bundles "$BUNDLES" --config "$RUNNER_TEMP/release.json"
+        working-directory: desktop
+        env:
+          TARGET: ${{ matrix.target }}
+          BUNDLES: ${{ matrix.bundles }}
+      - name: Check the packages
+        run: |
+          out="$PWD/desktop/src-tauri/target/$TARGET/release/bundle"
+          check() { [ "$("$1" version | awk '{print $2}')" = "$VERSION" ]; }
+          case "$RUNNER_OS" in
+            macOS)
+              app="$out/macos/crew.app"
+              test -x "$app/Contents/MacOS/crew-desktop"
+              check "$app/Contents/MacOS/crew"
+              ls "$out"/dmg/*.dmg
+              if [ "${CREW_SIGNED:-}" = 1 ]; then
+                codesign --verify --deep --strict --verbose=2 "$app"
+                spctl --assess --type execute --verbose=2 "$app"
+                xcrun stapler validate "$app"
+              fi
+              ;;
+            Linux)
+              dpkg-deb -x "$(ls "$out"/deb/*.deb)" "$RUNNER_TEMP/deb"
+              test -x "$RUNNER_TEMP/deb/usr/bin/crew-desktop"
+              check "$RUNNER_TEMP/deb/usr/bin/crew"
+              appimage="$(ls "$out"/appimage/*.AppImage)"
+              chmod +x "$appimage"
+              cd "$RUNNER_TEMP"
+              "$appimage" --appimage-extract >/dev/null
+              check "$RUNNER_TEMP/squashfs-root/usr/bin/crew"
+              ;;
+            Windows)
+              ls "$out"/msi/*.msi "$out"/nsis/*.exe
+              ;;
+          esac
+        env:
+          CREW_NO_UPDATE_CHECK: "1"
+          TARGET: ${{ matrix.target }}
+          VERSION: ${{ needs.goreleaser.outputs.version }}
+      - name: Collect the packages
+        run: |
+          out="desktop/src-tauri/target/$TARGET/release/bundle"
+          mkdir -p packages
+          for f in "$out"/dmg/*.dmg "$out"/deb/*.deb "$out"/appimage/*.AppImage "$out"/msi/*.msi "$out"/nsis/*.exe; do
+            if [ -f "$f" ]; then cp "$f" packages/; fi
+          done
+          ls packages
+          test -n "$(ls packages)"
+        env:
+          TARGET: ${{ matrix.target }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.target }}
+          path: packages/*
+      - if: startsWith(github.ref, 'refs/tags/v')
+        run: gh release upload "$VERSION" packages/* --repo "$GITHUB_REPOSITORY"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ needs.goreleaser.outputs.version }}
