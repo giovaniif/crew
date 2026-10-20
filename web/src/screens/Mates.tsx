@@ -568,6 +568,15 @@ export function NewMate({ api }: { api: Authed }) {
   const chosen = faceOf(mate.name, face);
   const nameProblem = nameProblemOf(mate.name, defs);
 
+  function pickFace(id: string) {
+    const previous = FACES.find((f) => f.id === face)?.name.toLowerCase();
+    const next = FACES.find((f) => f.id === id);
+    if (next && (mate.name === "" || mate.name === previous)) {
+      setMate({ ...mate, name: next.name.toLowerCase() });
+    }
+    setFace(id);
+  }
+
   async function create() {
     setBusy(true);
     setNote("");
@@ -611,7 +620,7 @@ export function NewMate({ api }: { api: Authed }) {
           <h2>1 · Face</h2>
           <div className="face-pick">
             {FACES.map((f) => (
-              <button key={f.id} type="button" aria-label={f.name} aria-pressed={f.id === face} className={f.id === face ? "on" : ""} onClick={() => setFace(f.id)}>
+              <button key={f.id} type="button" aria-label={f.name} aria-pressed={f.id === face} className={f.id === face ? "on" : ""} onClick={() => pickFace(f.id)}>
                 <MateFace name={f.id} state="idle" color={f.id === face ? color : undefined} px={40} />
               </button>
             ))}

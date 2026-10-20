@@ -1,0 +1,16 @@
+[package]
+name = "crew-desktop"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "crew_desktop"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+url = "2"
