@@ -60,6 +60,8 @@ Unknown paths under `/api/` answer `not_found`.
 | `POST /api/v1/sessions/{id}/resume` | yes | `session.resume` | → the resumed `Session` |
 | `POST /api/v1/sessions/{id}/mute` | yes | `session.mute` | `{"muted":bool}` (required) → `{}` |
 | `POST /api/v1/sessions/{id}/rename` | yes | `session.rename` | `{"name"}` → `{}` |
+| `POST /api/v1/sessions/{id}/switch` | yes | `session.switch` | `{"kind","value"}` (`kind` is `model` or `effort`, `value` not blank, no other keys) → the `Session` |
+| `POST /api/v1/sessions/{id}/kill-dev-servers` | yes | `subscribe`, `ports.kill` | → `{"killed":[pgid]}`; serve reads the ports of the worktrees of the session from the daemon state and kills their process groups. With no ports, it calls nothing and answers `{"killed":[]}`. The phone never sends process groups |
 | `POST /api/v1/sessions/{id}/messages` | yes | `session.send` | `{"text"}` (not blank) → `{"id","queued"}`; a queued send shows in the stream's `sends` until it is pasted |
 | `DELETE /api/v1/sessions/{id}/sends/{send}` | yes | `session.unsend` | → `{}`; `not_found` once the send has gone out (it left `sends`) |
 | `POST /api/v1/sessions/{id}/interrupt` | yes | `session.interrupt` | → `{}` |
