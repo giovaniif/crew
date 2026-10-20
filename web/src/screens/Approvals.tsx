@@ -46,7 +46,7 @@ function Card({ api, approval, now }: { api: Authed; approval: Approval; now: nu
         Asked by {approval.Requester || "someone"} with {approval.Action.Tool}
       </p>
       <pre className="approval-input">{approval.Action.Input}</pre>
-      <a href={"#/sessions/" + encodeURIComponent(approval.SessionID)}>Open session</a>
+      <a className="open-session" href={"#/sessions/" + encodeURIComponent(approval.SessionID)}>Open session</a>
       {done ? (
         <p role="status">{done}</p>
       ) : (

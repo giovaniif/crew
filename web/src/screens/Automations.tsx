@@ -43,7 +43,7 @@ function History({ name, runs }: { name: string; runs: AutomationRun[] }) {
           {r.trigger ? <span>{r.trigger}</span> : null}
           {when(r.start) ? <span>{when(r.start)}</span> : null}
           {r.reason ? <span>{r.reason}</span> : null}
-          {r.session_id ? <a href={"#/sessions/" + encodeURIComponent(r.session_id)}>Open session</a> : null}
+          {r.session_id ? <a className="open-session" href={"#/sessions/" + encodeURIComponent(r.session_id)}>Open session</a> : null}
         </li>
       ))}
     </ul>
