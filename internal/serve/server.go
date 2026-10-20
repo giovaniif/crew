@@ -79,7 +79,7 @@ func New(cfg Config) (*Server, error) {
 }
 
 func (s *Server) routes() []route {
-	return []route{
+	return append([]route{
 		{"GET /api/v1/workspaces", s.workspaces},
 		{"GET /api/v1/session-options", sessionOptions},
 		{"GET /api/v1/automations", listAutomations},
@@ -121,7 +121,7 @@ func (s *Server) routes() []route {
 		{"POST /api/v1/sessions/{id}/fresh", freshMateConversation},
 		{"GET /api/v1/mates/{name}/memory", mateMemory},
 		{"POST /api/v1/mates/{name}/memory", setMateMemory},
-	}
+	}, settingsRoutes()...)
 }
 
 func (s *Server) Handler(fallback http.Handler) http.Handler {
