@@ -14,7 +14,7 @@ jobs:
   ios:
     runs-on: macos-15
     env:
-      UPLOAD: ${{ github.event_name != 'pull_request' }}
+      UPLOAD: ${{ github.event_name != 'pull_request' || github.head_ref == '528-ios-testflight' }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -32,19 +32,6 @@ jobs:
           cache-dependency-path: desktop/package-lock.json
       - run: npm ci
         working-directory: desktop
-      - run: npx tauri ios build --help
-        working-directory: desktop
-      - name: init
-        working-directory: desktop
-        run: |
-          if [ ! -d src-tauri/gen/apple ]; then
-            npx tauri ios init --ci
-            npx tauri icon ../macos/AppIcon.png --ios-color '#ffffff'
-          fi
-      - uses: actions/upload-artifact@v4
-        with:
-          name: gen-apple
-          path: desktop/src-tauri/gen/apple
       - name: simulator build
         if: env.UPLOAD != 'true'
         working-directory: desktop
@@ -63,13 +50,20 @@ jobs:
           key_path=~/.appstoreconnect/private_keys/AuthKey_${APPLE_API_KEY}.p8
           printf '%s' "$APPLE_API_KEY_P8" > "$key_path"
           export APPLE_API_KEY_PATH="$key_path"
-          npx tauri ios build --export-method app-store-connect --build-number "$BUILD_NUMBER" --ci
+          npx tauri ios build --export-method app-store-connect --ci --config "{\"version\":\"0.1.0\",\"bundle\":{\"iOS\":{\"bundleVersion\":\"$BUILD_NUMBER\"}}}"
       - name: check
         working-directory: desktop/src-tauri/gen/apple/build
         run: |
           find . -maxdepth 4 \( -name '*.ipa' -o -name '*.app' \) -print
-          app=$(find . -name '*.app' -path '*arm64*' -o -name '*.app' | head -n 1)
+          ipa=$(find . -name '*.ipa' | head -n 1)
+          if [ -n "$ipa" ]; then
+            unzip -q -o "$ipa" -d "$RUNNER_TEMP/ipa"
+            app=$(find "$RUNNER_TEMP/ipa/Payload" -maxdepth 1 -name '*.app' | head -n 1)
+          else
+            app=$(find . -name '*.app' | head -n 1)
+          fi
           [ "$(plutil -extract ITSAppUsesNonExemptEncryption raw "$app/Info.plist")" = false ]
+          plutil -extract CFBundleVersion raw "$app/Info.plist"
       - name: upload to TestFlight
         if: env.UPLOAD == 'true'
         env:
