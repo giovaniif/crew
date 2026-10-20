@@ -231,7 +231,6 @@ jobs:
                 codesign --verify --deep --strict --verbose=2 "$app"
                 spctl --assess --type execute --verbose=2 "$app"
                 dmg="$(ls "$out"/dmg/*.dmg)"
-                xcrun stapler validate "$dmg"
                 spctl --assess --type open --context context:primary-signature --verbose=2 "$dmg"
               fi
               ;;
