@@ -283,3 +283,27 @@ func TestNotifyFocusFromBeforeARestartDoesNotSuppressBanners(t *testing.T) {
 		t.Fatalf("banner %+v", got)
 	}
 }
+
+func TestReadClearsUnreadWithoutFocus(t *testing.T) {
+	r := newRig(t, &memStore{}, nil)
+	r.addRunning(t, "a", domain.HarnessClaude, "%1")
+	if diff := r.hook(t, "claude", "Stop", "%1", ""); diff.Session == nil || !diff.Session.Unread {
+		t.Fatalf("stop diff %+v", diff.Session)
+	}
+	if err := r.c.Call(context.Background(), rpc.MethodSessionRead, rpc.SessionFocusParams{ID: "a"}, nil); err != nil {
+		t.Fatal(err)
+	}
+	diff := next(t, r.sub.Diffs)
+	if diff.Session == nil || diff.Session.Unread || diff.Session.Focused {
+		t.Fatalf("read diff %+v", diff.Session)
+	}
+}
+
+func TestReadUnknownSessionIsNotFound(t *testing.T) {
+	r := newRig(t, &memStore{}, nil)
+	err := r.c.Call(context.Background(), rpc.MethodSessionRead, rpc.SessionFocusParams{ID: "nope"}, nil)
+	var rerr *rpc.Error
+	if !errors.As(err, &rerr) || rerr.Code != rpc.CodeNotFound {
+		t.Fatalf("err %v", err)
+	}
+}

@@ -286,7 +286,8 @@ describe("Mate conversation", () => {
     expect(await screen.findByRole("checkbox", { name: "Keep this worktree" })).toBeChecked();
     await user.click(screen.getByRole("button", { name: "Start fresh" }));
     await waitFor(() => expect(window.location.hash).toBe("#/sessions/s8"));
-    expect(calls(server).filter((c) => c.startsWith("POST"))).toEqual(["POST /api/v1/sessions/s2/fresh"]);
+    expect(calls(server).filter((c) => c.startsWith("POST") && !c.endsWith("/read"))).toEqual(["POST /api/v1/sessions/s2/fresh"]);
+    expect(calls(server)).toContain("POST /api/v1/sessions/s2/read");
     expect(server.calls.find((c) => c.path === "/api/v1/sessions/s2/fresh")?.body).toEqual({ same_worktree: true });
   });
 

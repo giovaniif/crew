@@ -198,3 +198,16 @@ func TestLastCreatedSessionIgnoresOnesWithoutAStartTime(t *testing.T) {
 		t.Fatal("a session without StartedAt counted as created")
 	}
 }
+
+func TestMarkReadClearsUnreadAndLeavesFocus(t *testing.T) {
+	s, _ := Session{State: StateRunning}.Apply(HarnessEvent{Kind: EventStop})
+	s = s.MarkRead()
+	if s.Unread || s.Focused || s.State != StateDone {
+		t.Errorf("after read: unread=%v focused=%v state=%s", s.Unread, s.Focused, s.State)
+	}
+	s, _ = s.Apply(HarnessEvent{Kind: EventUserPromptSubmit})
+	s, _ = s.Apply(HarnessEvent{Kind: EventStop})
+	if !s.Unread {
+		t.Error("a later done session is not unread")
+	}
+}

@@ -589,7 +589,7 @@ func (d *Daemon) dispatch(c *conn, line []byte) (*rpc.Response, bool) {
 		return result(req.ID, struct{}{}), ok
 	case rpc.MethodLaunch:
 		return d.launch(req)
-	case rpc.MethodSessionMute:
+	case rpc.MethodSessionMute, rpc.MethodSessionRead:
 		return d.dispatchAttention(req)
 	case rpc.MethodSessionFocus:
 		return d.focusSession(req)

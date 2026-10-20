@@ -207,6 +207,13 @@ func (d *Daemon) dispatchAttention(req rpc.Request) (*rpc.Response, bool) {
 		}
 		id = p.ID
 		apply = func(s *state, session domain.Session) { s.emit(SessionChanged{Session: session.SetMuted(p.Muted)}) }
+	case rpc.MethodSessionRead:
+		var p rpc.SessionFocusParams
+		if err := json.Unmarshal(req.Params, &p); err != nil {
+			return errorResponse(req.ID, rpc.CodeBadRequest, "session.read params: "+err.Error()), true
+		}
+		id = p.ID
+		apply = func(s *state, session domain.Session) { s.emit(SessionChanged{Session: session.MarkRead()}) }
 	default:
 		var p rpc.SessionFocusParams
 		if err := json.Unmarshal(req.Params, &p); err != nil {
