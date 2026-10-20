@@ -181,7 +181,7 @@ const refusedNotice =
 export function App({ env }: { env: AppEnv }) {
   const [auth, setAuth] = useState<Auth | null>(() => loadAuth(env.storage));
   const [notice, setNotice] = useState("");
-  const code = useMemo(() => pairCodeFromHash(env.hash), [env.hash]);
+  const [code, setCode] = useState(() => (auth ? "" : pairCodeFromHash(env.hash)));
   const { storage } = env;
   const unpair = useCallback(() => {
     clearAuth(storage);
@@ -209,6 +209,7 @@ export function App({ env }: { env: AppEnv }) {
       notice={notice}
       onPaired={(paired) => {
         setNotice("");
+        setCode("");
         setAuth(saveAuth(env.storage, paired));
       }}
     />

@@ -69,6 +69,26 @@ describe("in the installed app", () => {
     expect(server.calls.find((c) => c.path === "/api/v1/pair")?.body).toEqual({ code: "ABCD2345", name: "iPhone" });
   });
 
+  it("forgets the spent code of the link after it pairs, so signing out shows an empty code", async () => {
+    let navigate: (hash: string) => void = () => undefined;
+    const { server, env } = setup({
+      onHashChange: (listener) => {
+        navigate = listener;
+        return () => undefined;
+      },
+    });
+    server.on("POST", "/api/v1/pair", { status: 200, body: { device, token: "t0k" } });
+    server.on("POST", "/api/v1/push/unsubscribe", { status: 200, body: {} });
+    render(<App env={env} />);
+    await userEvent.click(screen.getByRole("button", { name: "Pair" }));
+    await screen.findByRole("heading", { name: "Sessions" });
+    act(() => navigate("#/settings"));
+    await userEvent.click(await screen.findByRole("button", { name: "Sign out" }));
+    expect(await screen.findByRole("heading", { name: "Pair this device" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Pairing code" })).toHaveValue("");
+    expect(screen.getByRole("button", { name: "Pair" })).toBeDisabled();
+  });
+
   it("sends a typed code normalized, with the device name the user chose", async () => {
     const { server, env } = setup({ hash: "" });
     server.on("POST", "/api/v1/pair", { status: 200, body: { device, token: "t0k" } });
