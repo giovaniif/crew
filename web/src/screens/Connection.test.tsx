@@ -50,12 +50,12 @@ describe("the connection banner", () => {
     expect(within(banner()).queryByRole("button", { name: "Fix" })).not.toBeInTheDocument();
   });
 
-  it("offers Fix in the desktop app while it retries and while it reconnects", () => {
-    const fixes: number[] = [];
-    const { live, sockets } = desktop("", true, undefined, { ...slow, desktopFix: async () => void fixes.push(1) });
+  it("offers Fix in the desktop app while it retries and while it reconnects", async () => {
+    const { live, sockets } = desktop("", true, undefined, { retryDelay: (n) => (n === 0 ? 5 : 60000), desktopFix: async () => undefined });
     live();
     sockets.last.drop(1013, "the crew daemon went away");
     expect(within(banner()).getByRole("button", { name: "Fix" })).toBeInTheDocument();
+    await waitFor(() => expect(sockets.opened).toHaveLength(2));
     sockets.last.drop(1006);
     expect(banner()).toHaveTextContent("Reconnecting in");
     expect(within(banner()).getByRole("button", { name: "Fix" })).toBeInTheDocument();
