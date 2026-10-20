@@ -79,9 +79,10 @@ func parseServe(args []string, home string, stderr io.Writer) (serveFlags, error
 
 func serveIn(ctx context.Context, home string, f serveFlags, stdout, stderr io.Writer) error {
 	srv, err := serve.New(serve.Config{
-		Build: version.String(),
-		URL:   f.url,
-		Log:   stdout,
+		Build:   version.String(),
+		URL:     f.url,
+		Log:     stdout,
+		Control: startControl,
 		Dial: func(ctx context.Context) (serve.Daemon, error) {
 			return connect(ctx, home)
 		},

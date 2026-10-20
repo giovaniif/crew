@@ -276,6 +276,23 @@ describe("New mate", () => {
     await user.click(screen.getByRole("button", { name: "Back" }));
     expect(screen.getByLabelText("Name")).toHaveValue("scout");
   });
+
+  it("refuses the name of a mate that exists, so Create cannot replace it", async () => {
+    setup("#/mates/new");
+    const user = userEvent.setup();
+    await screen.findByRole("button", { name: "Quill" });
+    await user.type(screen.getByLabelText("Name"), "helper");
+    expect(await screen.findByText("A mate named helper exists.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next: personality" })).toBeDisabled();
+  });
+
+  it("refuses a name that is not a mate handle", async () => {
+    setup("#/mates/new");
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText("Name"), "scout.dev");
+    expect(screen.getByText("Use up to 32 letters, digits, - and _.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next: personality" })).toBeDisabled();
+  });
 });
 
 describe("Mate conversation", () => {

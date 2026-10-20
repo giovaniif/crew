@@ -34,4 +34,4 @@ go run ./scripts/verify iso down
 
 ## Gotchas
 
-- none yet
+- The stream carries no approvals. The PWA list loads again when the page is shown and on the 30 s clock tick ([#533](https://github.com/giovaniif/crew/issues/533)). Only `npm test -- Approvals` proves it, because no local session can make a pending approval.

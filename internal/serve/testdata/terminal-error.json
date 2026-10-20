@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "bad_request",
+    "message": "send keys as binary frames, or {\"size\": {\"cols\": \u003cn\u003e, \"rows\": \u003cn\u003e}} with both at least 1"
+  }
+}
