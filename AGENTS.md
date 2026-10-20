@@ -69,7 +69,7 @@ Write all prose docs and new ADRs in ASD-STE100 Simplified Technical English. Us
 - **Shell out, do not reimplement:** use the `git`, `gh` and `tmux` CLIs. Do not use a Go git library.
 - **Never destroy user work:** cleanup code backs up uncommitted changes before it removes anything. It never deletes branches. It never touches a worktree that a process uses. Each change to cleanup needs tests for these cases.
 - **Do not change the user's setup:** the tmux adapter uses only the `crew` tmux server. Setup commands merge into the `~/.claude` and `~/.codex` config idempotently. They back up the file first, and you can undo them. Tests never touch the real `~/.claude`, `~/.codex` or `~/.config/nvim`.
-- **The Mac app is the primary UI:** the Mac app is the default surface and the most important one. The PWA and the TUI are also important, but they come second. For a UI change, design the Mac app first and use it as the reference. Use a light, native macOS look: white content, a light grey sidebar, SF Pro, the native toolbar, sheets and segmented controls. Then make the PWA and the TUI agree with it. Mac CI screenshots are the first evidence for a UI change (see [macos/](macos/AGENTS.md)).
+- **Mac is the first target platform:** the app is one Tauri 2 app with the React UI of `web/` ([ADR 0057](docs/adr/0057-tauri-apps.md)). Design a UI change for the app on macOS first. Then Linux, Windows, iOS and Android. Use a white, light theme. Do not copy the native macOS look. The TUI also stays. The SwiftUI app in `macos/` gets only bug fixes until its removal.
 
 ## Tests: TDD, enforced by CI
 
