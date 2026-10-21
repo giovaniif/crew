@@ -239,11 +239,11 @@ func TestMateStopPostsTheResultAndUpdatesTheStatus(t *testing.T) {
 	r := startMateRig(t, &memStore{})
 	m := r.connect(t, "helper")
 	r.hub.send(m, mention(mateGuest, "<@U0BOT0001> please look", "1700.0001"))
-	waitFor(t, func() bool { return len(r.posts()) == 1 && len(r.store.mateThreads()) == 1 })
+	waitFor(t, func() bool {
+		th := r.store.mateThreads()
+		return len(r.posts()) == 1 && len(th) == 1 && th[0].Status != ""
+	})
 	status := r.store.mateThreads()[0].Status
-	if status == "" {
-		t.Fatal("no status message")
-	}
 	hookMatePane(t, r.c, "UserPromptSubmit", `{"prompt":"x"}`)
 	hookMatePane(t, r.c, "Stop", `{"last_assistant_message":"The query has no index. I added one."}`)
 	waitFor(t, func() bool { return len(r.posts()) == 2 })
