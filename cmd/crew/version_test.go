@@ -55,7 +55,9 @@ func TestBundledCrewIsNextToTheDesktopApp(t *testing.T) {
 		if !inAppBundle(exe) {
 			t.Errorf("crew next to %s is not bundled", name)
 		}
-		os.Remove(app)
+		if err := os.Remove(app); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 
