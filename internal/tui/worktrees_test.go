@@ -517,7 +517,7 @@ func TestWorktreesWithShortBranchesGiveTheSpareRoomToTheTask(t *testing.T) {
 }
 
 func TestWorktreesShortTerminalKeepsTheFooterAndTheSelectedRowOnScreen(t *testing.T) {
-	for _, size := range []tea.WindowSizeMsg{{Width: 150, Height: 17}, {Width: 80, Height: 24}} {
+	for _, size := range []tea.WindowSizeMsg{{Width: 150, Height: 17}, {Width: 100, Height: 19}, {Width: 80, Height: 24}} {
 		r := diskModel().open()
 		r.m = update(r.m, size)
 		r.press("j", "j", "j")
