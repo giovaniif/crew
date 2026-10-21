@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-crew-server-fix"
+description = "Enables the crew_server_fix command without any pre-configured scope."
+commands.allow = ["crew_server_fix"]
+
+[[permission]]
+identifier = "deny-crew-server-fix"
+description = "Denies the crew_server_fix command without any pre-configured scope."
+commands.deny = ["crew_server_fix"]

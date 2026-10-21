@@ -4,5 +4,17 @@
   "remote": {
     "urls": ["http://127.0.0.1:*", "http://localhost:*"]
   },
-  "permissions": ["core:default", "allow-crew-notify", "allow-crew-attention"]
+  "permissions": [
+    "core:default",
+    "allow-crew-notify",
+    "allow-crew-attention",
+    "allow-crew-servers",
+    "allow-crew-ssh-hosts",
+    "allow-crew-server-add",
+    "allow-crew-server-open",
+    "allow-crew-server-remove",
+    "allow-crew-server-fix",
+    "allow-crew-server-workspace",
+    "allow-crew-server-auth"
+  ]
 }
