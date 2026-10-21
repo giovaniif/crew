@@ -64,9 +64,12 @@ func seed(n int, codex bool) []Event {
 				SubtaskSlug: fmt.Sprintf("part-%d", w+1),
 			}
 			if w == 0 {
-				wt.PR = &domain.PullRequest{Number: 100 + i, Title: fmt.Sprintf("seeded change %d", i+1)}
+				wt.PR = &domain.PullRequest{
+					Number: 100 + i, Title: fmt.Sprintf("seeded change %d", i+1),
+					URL: fmt.Sprintf("https://example.com/pull/%d", 100+i), State: domain.PROpen,
+				}
 				if i == 0 {
-					wt.PR.State, wt.PR.Checks = domain.PROpen, domain.CheckFailing
+					wt.PR.Checks = domain.CheckFailing
 					wt.PR.ReviewDecision, wt.PR.UnresolvedThreads, wt.PR.BotComments = domain.ReviewChangesRequested, 2, 3
 					wt.PR.Failing = []domain.FailingCheck{{Name: "unit tests", URL: "https://example.com/runs/1"}}
 				}
