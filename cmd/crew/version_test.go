@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -13,7 +15,7 @@ import (
 func TestVersionTellsAboutNewerRelease(t *testing.T) {
 	var out bytes.Buffer
 	latest := func(context.Context) (string, error) { return "v0.1.0-alpha.3", nil }
-	if code := runVersion("v0.1.0-alpha.2", "abc", latest, &out); code != 0 {
+	if code := runVersion("v0.1.0-alpha.2", "abc", latest, false, &out); code != 0 {
 		t.Fatalf("exit %d", code)
 	}
 	got := out.String()
@@ -21,6 +23,39 @@ func TestVersionTellsAboutNewerRelease(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Errorf("output %q lacks %q", got, want)
 		}
+	}
+}
+
+func TestVersionInTheAppBundleSendsTheUpgradeToTheApp(t *testing.T) {
+	var out bytes.Buffer
+	latest := func(context.Context) (string, error) { return "v0.1.0-beta.2", nil }
+	runVersion("v0.1.0-beta.1", "abc", latest, true, &out)
+	got := out.String()
+	for _, want := range []string{"v0.1.0-beta.2 is available", "the crew app"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("output %q lacks %q", got, want)
+		}
+	}
+	if strings.Contains(got, "README") {
+		t.Errorf("output %q tells a bundled crew to use the install script", got)
+	}
+}
+
+func TestBundledCrewIsNextToTheDesktopApp(t *testing.T) {
+	dir := t.TempDir()
+	exe := filepath.Join(dir, "crew")
+	if inAppBundle(exe) {
+		t.Fatal("a crew without crew-desktop is not bundled")
+	}
+	for _, name := range []string{"crew-desktop", "crew-desktop.exe"} {
+		app := filepath.Join(dir, name)
+		if err := os.WriteFile(app, nil, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if !inAppBundle(exe) {
+			t.Errorf("crew next to %s is not bundled", name)
+		}
+		os.Remove(app)
 	}
 }
 
@@ -38,7 +73,7 @@ func TestVersionQuietWhenCurrentOrCheckFails(t *testing.T) {
 		func(context.Context) (string, error) { return "", errors.New("offline") },
 	} {
 		var out bytes.Buffer
-		runVersion("v0.1.0-alpha.2", "abc", latest, &out)
+		runVersion("v0.1.0-alpha.2", "abc", latest, false, &out)
 		if got := out.String(); got != "crew v0.1.0-alpha.2 (commit abc)\n" {
 			t.Errorf("output = %q", got)
 		}
