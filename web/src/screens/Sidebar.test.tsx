@@ -64,6 +64,14 @@ describe("the desktop sidebar", () => {
     expect(sidebar.getByLabelText("Codex limits")).toHaveTextContent(/5h\s*10%/);
   });
 
+  it("marks a muted session so the user can tell that it sends no banners", () => {
+    const { live } = desktop();
+    live({ ...goldenState(), sessions: [session("a", "alpha", { Muted: true }), session("b", "beta")] });
+    const rows = within(screen.getByRole("region", { name: "Sessions" }));
+    expect(rows.getByRole("link", { name: /alpha/ })).toHaveTextContent("muted");
+    expect(rows.getByRole("link", { name: /beta/ })).not.toHaveTextContent("muted");
+  });
+
   it("marks the selected session", () => {
     const { live } = desktop("#/sessions/s2");
     live();
