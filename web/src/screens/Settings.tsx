@@ -13,9 +13,10 @@ export type SettingsProps = {
   fetch: Fetch;
   push: PushEnv;
   onSignOut: () => void | Promise<void>;
+  connectUrl?: string;
 };
 
-export function Settings({ auth, host, installed, fetch, push, onSignOut }: SettingsProps) {
+export function Settings({ auth, host, installed, fetch, push, onSignOut, connectUrl }: SettingsProps) {
   const [notify, setNotify] = useState<Notify>(() => {
     if (!push.supported) {
       return { state: "idle" };
@@ -70,6 +71,11 @@ export function Settings({ auth, host, installed, fetch, push, onSignOut }: Sett
           <dt>Address</dt>
           <dd>{host}</dd>
         </dl>
+        {connectUrl ? (
+          <a className="change-server" href={connectUrl}>
+            Change server
+          </a>
+        ) : null}
       </section>
       <section className="card" aria-label="This device">
         <h2>This device</h2>

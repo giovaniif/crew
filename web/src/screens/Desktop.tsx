@@ -5,7 +5,10 @@ import { emptyMain, keyAction, mainTabs, modifierKeys, nextNeeding, sidebarRows,
 import { parseRoute } from "../route";
 import { sessionMeta, stateStyle } from "../sessions";
 import type { Session, StreamClient, StreamSnapshot } from "../stream";
+import type { Servers } from "../servers";
 import { Brand } from "./Brand";
+import { FirstRun } from "./FirstRun";
+import { ServerChip, useServerListing } from "./Servers";
 import { NewSession } from "./NewSession";
 import { SessionScreen } from "./Session";
 import { Connection, Limits, sessionHref, sessionTitle } from "./SessionList";
@@ -77,13 +80,16 @@ function Group({ title, sessions, selected, keys, numbered }: { title: string; s
   );
 }
 
-function Sidebar({ env, snapshot, now, onRetry, selected, hash, keys }: { env: AppEnv; snapshot: StreamSnapshot; now: number; onRetry: () => void; selected: string | null; hash: string; keys: Keys }) {
+type SidebarProps = { env: AppEnv; snapshot: StreamSnapshot; now: number; onRetry: () => void; selected: string | null; hash: string; keys: Keys; chip: ReactNode };
+
+function Sidebar({ env, snapshot, now, onRetry, selected, hash, keys, chip }: SidebarProps) {
   const rows = sidebarRows(snapshot.state?.sessions ?? []);
   const mark = (prefix: string) => (hash === prefix || hash.startsWith(prefix + "/") ? "page" : undefined);
   return (
     <nav className="sidebar" aria-label="Sidebar">
       <div className="side-head">
         <Brand host={env.host} />
+        {chip}
         <a className="new-session" href="#/new" aria-keyshortcuts={keys.aria + "+N"}>
           New session
         </a>
@@ -169,7 +175,7 @@ function Empty({ snapshot, live, keys }: { snapshot: StreamSnapshot; live: numbe
   );
 }
 
-function Sheet({ children, onClose }: { children: ReactNode; onClose: () => void }) {
+function Sheet({ children, onClose, label = "New session" }: { children: ReactNode; onClose: () => void; label?: string }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -181,7 +187,7 @@ function Sheet({ children, onClose }: { children: ReactNode; onClose: () => void
   }, [onClose]);
   return (
     <div className="sheet-backdrop">
-      <div className="sheet" role="dialog" aria-modal="true" aria-label="New session">
+      <div className="sheet" role="dialog" aria-modal="true" aria-label={label}>
         {children}
       </div>
     </div>
@@ -199,10 +205,18 @@ export type DesktopProps = {
   client: StreamClient;
   api: Authed;
   other: ReactNode;
+  servers?: Servers;
 };
 
-export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, api, other }: DesktopProps) {
+export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, api, other, servers }: DesktopProps) {
   const [tab, setTab] = useState<MainTab>("chat");
+  const [listing] = useServerListing(servers);
+  const [firstRun, setFirstRun] = useState(false);
+  useEffect(() => {
+    if (listing?.first_run) {
+      setFirstRun(true);
+    }
+  }, [listing]);
   const keys = modifierKeys(env.userAgent);
   const route = parseRoute(hash);
   const selectedId = route.screen === "session" ? route.id : null;
@@ -262,11 +276,42 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
 
   return (
     <div className="desktop">
-      <Sidebar env={env} snapshot={snapshot} now={now} onRetry={onRetry} selected={selectedId} hash={hash} keys={keys} />
+      <Sidebar
+        env={env}
+        snapshot={snapshot}
+        now={now}
+        onRetry={onRetry}
+        selected={selectedId}
+        hash={hash}
+        keys={keys}
+        chip={servers ? <ServerChip servers={servers} listing={listing} go={go} /> : null}
+      />
       <main className="main-column">{main}</main>
       {route.screen === "new" ? (
         <Sheet onClose={() => go("#/")}>
           <NewSession env={env} token={token} />
+        </Sheet>
+      ) : null}
+      {servers && (firstRun || hash === "#/servers/add") ? (
+        <Sheet
+          label="Add a server"
+          onClose={() => {
+            setFirstRun(false);
+            if (hash === "#/servers/add") {
+              go("#/servers");
+            }
+          }}
+        >
+          <FirstRun
+            servers={servers}
+            welcome={firstRun}
+            onClose={() => {
+              setFirstRun(false);
+              if (hash === "#/servers/add") {
+                go("#/servers");
+              }
+            }}
+          />
         </Sheet>
       ) : null}
     </div>

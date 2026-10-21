@@ -14,7 +14,10 @@ import { NewSession } from "./screens/NewSession";
 import { Pair } from "./screens/Pair";
 import { SessionScreen } from "./screens/Session";
 import { SessionList } from "./screens/SessionList";
+import { FirstRun } from "./screens/FirstRun";
+import { ServersScreen } from "./screens/Servers";
 import { Settings } from "./screens/Settings";
+import { Servers } from "./servers";
 import { useStream, useStreamClient, type OpenSocket } from "./stream";
 
 export type AppEnv = {
@@ -33,6 +36,7 @@ export type AppEnv = {
   wide?: Width;
   desktopAuth?: Auth | null;
   desktop?: DesktopBridge;
+  connectUrl?: string;
 };
 
 export type Width = {
@@ -111,6 +115,7 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
   const [hash, setHash] = useState(env.hash);
   const now = useNow(env.now, snapshot.status === "offline" ? 1000 : 30000);
   const api = useMemo(() => ({ fetch, token: auth.token }), [fetch, auth.token]);
+  const servers = useMemo(() => (env.desktop ? new Servers(env.desktop) : undefined), [env.desktop]);
 
   useEffect(() => onHashChange(setHash), [onHashChange]);
   useDesktopAttention(env.desktop, client, snapshot, hash, env.storage, visibility, now);
@@ -130,10 +135,11 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
   const wide = useWide(env.wide);
   const route = parseRoute(hash);
   const retry = () => client.retryNow();
-  const other = otherScreen(hash, { env, auth, api, now, snapshot, onSignOut });
+  const other = otherScreen(hash, { env, auth, api, now, snapshot, onSignOut, servers });
   if (wide) {
     return (
       <Desktop
+        servers={servers}
         env={env}
         token={auth.token}
         hash={hash}
@@ -149,6 +155,13 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
   }
   if (route.screen === "new") {
     return <NewSession env={env} token={auth.token} />;
+  }
+  if (hash === "#/servers/add" && servers) {
+    return (
+      <main className="screen">
+        <FirstRun servers={servers} welcome={false} onClose={() => go("#/servers")} />
+      </main>
+    );
   }
   if (route.screen === "session") {
     return <SessionScreen key={route.id} id={route.id} snapshot={snapshot} now={now} onRetry={retry} client={client} api={api} />;
@@ -181,9 +194,13 @@ type OtherInputs = {
   now: number;
   snapshot: ReturnType<typeof useStream>;
   onSignOut: () => Promise<void>;
+  servers?: Servers;
 };
 
-function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut }: OtherInputs): { screen: ReactNode; tab: Tab } | null {
+function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, servers }: OtherInputs): { screen: ReactNode; tab: Tab } | null {
+  if (hash === "#/servers" && servers) {
+    return { screen: <ServersScreen servers={servers} />, tab: "settings" };
+  }
   if (hash === "#/automations") {
     return { screen: <Automations api={api} />, tab: "automations" };
   }
@@ -211,6 +228,7 @@ function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut }:
             fetch={env.fetch}
             push={env.push ?? noPush}
             onSignOut={onSignOut}
+            connectUrl={env.connectUrl}
           />
           {env.desktop && <DesktopAlerts storage={env.storage} />}
         </>

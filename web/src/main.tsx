@@ -111,7 +111,14 @@ function watchBuild() {
 }
 
 const root = document.getElementById("root");
-if (root) {
+const desktop = tauriBridge(window);
+const injected = (window as { __CREW_DESKTOP_AUTH__?: unknown }).__CREW_DESKTOP_AUTH__;
+const connectUrl = (window as { __CREW_CONNECT_URL__?: unknown }).__CREW_CONNECT_URL__;
+const login: Promise<unknown> = injected || !desktop ? Promise.resolve(injected) : desktop.invoke("crew_server_auth").catch(() => null);
+void login.then((auth) => {
+  if (!root) {
+    return;
+  }
   createRoot(root).render(
     <StrictMode>
       <App
@@ -128,11 +135,12 @@ if (root) {
           push: browserPush(window),
           visibility,
           wide,
-          desktop: tauriBridge(window),
-          desktopAuth: desktopAuth((window as { __CREW_DESKTOP_AUTH__?: unknown }).__CREW_DESKTOP_AUTH__),
+          desktop,
+          desktopAuth: desktopAuth(auth),
+          connectUrl: typeof connectUrl === "string" ? connectUrl : undefined,
         }}
       />
     </StrictMode>,
   );
-}
+});
 watchBuild();
