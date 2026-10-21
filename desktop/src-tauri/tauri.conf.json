@@ -16,10 +16,27 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
     "iOS": {
       "developmentTeam": "827UMZ89C2",
       "minimumSystemVersion": "15.0"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDY1MTUwNUJCNDQxODRCNDYKUldSR1N4aEV1d1VWWlZ5NlJFVUJ2WGZUOVVVNGg0ZC9ucDhGQkJYY1NwTTJtVTJZK0NReUxhd0EK",
+      "endpoints": [
+        "https://raw.githubusercontent.com/giovaniif/crew/updater/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
     }
   }
 }
