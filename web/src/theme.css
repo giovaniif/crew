@@ -3819,6 +3819,46 @@ tr.picked td.diff-ln {
   background: #ffffff;
 }
 
+.browser-headless {
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  overflow: auto;
+}
+
+.browser-headless p {
+  margin: 0;
+  font-size: 12px;
+}
+
+.browser-headless img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+.browser-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+
+.browser-foot p {
+  margin: 0;
+}
+
+.browser-cookies {
+  font-size: 12px;
+  color: var(--subtext);
+}
+
+.browser-cookies input {
+  margin-left: 6px;
+  font: inherit;
+}
+
 .browser-empty {
   margin: auto;
   padding: 16px;

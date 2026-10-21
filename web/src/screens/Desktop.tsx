@@ -45,7 +45,7 @@ export const panes: Record<MainTab, (props: PaneProps) => ReactNode> = {
   review: (p) => <ReviewPane key={p.session.ID} session={p.session.ID} sessionState={p.session.State} api={p.api} />,
   shell: (p) => <TerminalPane store={p.terminals} session={p.session} kind="shell" />,
   nvim: (p) => <TerminalPane store={p.terminals} session={p.session} kind="nvim" />,
-  browser: (p) => <BrowserPane key={p.session.ID} session={p.session.ID} worktrees={p.snapshot.state?.worktrees ?? []} host={p.host} store={p.browsers} />,
+  browser: (p) => <BrowserPane key={p.session.ID} session={p.session.ID} worktrees={p.snapshot.state?.worktrees ?? []} host={p.host} store={p.browsers} api={p.api} />,
 };
 
 type OnMenu = (id: string, x: number, y: number) => void;
