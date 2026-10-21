@@ -55,6 +55,14 @@ go run ./scripts/verify iso up
 go run ./scripts/verify web drive "/#pair=ABCD2345" --viewport desktop --installed --out-dir /tmp/crew-verify-map/remote --steps '[{"click":{"role":"link","name":"Settings"}},{"click":{"role":"button","name":"Sign out"}},{"expect":{"role":"heading","name":"Pair this device"}},{"eval":"if (document.querySelector(\"input.code-input\").value !== \"\") throw new Error(\"stale pair code\")"}]'
 ```
 
+### Settings opens after a sign out and a new pair
+
+```sh
+go run ./scripts/verify iso down
+go run ./scripts/verify iso up
+sh -c 'C="$(go run ./scripts/verify iso crew -- remote pair --name TEST-again --url https://iso.invalid 2>&1 | grep -oE "\b[A-Z0-9]{8}\b" | head -1)"; go run ./scripts/verify web drive / --viewport mobile --installed --out-dir /tmp/crew-verify-map/remote --steps "[{\"click\":{\"role\":\"link\",\"name\":\"Settings\"}},{\"click\":{\"role\":\"button\",\"name\":\"Sign out\"}},{\"fill\":{\"label\":\"Pairing code\"},\"value\":\"$C\"},{\"click\":{\"role\":\"button\",\"name\":\"Pair\"}},{\"wait\":2000},{\"click\":{\"role\":\"link\",\"name\":\"Settings\"}},{\"expect\":{\"role\":\"heading\",\"name\":\"Settings\"}}]"'
+```
+
 ### hello answers with the API version and no token
 
 ```sh
@@ -114,6 +122,14 @@ sh -c 'U="$(jq -r .serve_url "$VERIFY_HOME/iso.json")"; C="$(go run ./scripts/ve
 ```
 
 Expect: a single-use code and its expiry.
+
+### a wrong push delay shows its error under Save delay
+
+```sh
+sh -c 'go run ./scripts/verify web drive /#/settings --viewport mobile --out-dir /tmp/crew-verify-map/remote --steps "[{\"expect\":{\"role\":\"heading\",\"name\":\"Settings\"}},{\"eval\":\"document.querySelectorAll(\\\"ul.settings-nav\\\")[1].querySelectorAll(\\\"button\\\")[2].click()\"},{\"expect\":{\"text\":\"Devices\"}},{\"fill\":{\"label\":\"Push after I am away for\"},\"value\":\"TEST-bad\"},{\"click\":{\"role\":\"button\",\"name\":\"Save delay\"}},{\"eval\":\"const a=document.querySelector(\\\"[role=alert]\\\"); const h=[...document.querySelectorAll(\\\"h3\\\")].find(e=>e.textContent===\\\"Devices\\\"); if (!a || !(a.compareDocumentPosition(h) & 4)) throw new Error(\\\"error not under Save delay\\\")\"}]" | jq -e "[.problems[].msg | test(\"400\")] | all"'
+```
+
+Expect: only the 400 of `POST /api/v1/config` is a problem. The error shows above the Devices heading.
 
 ### push subscribe and unsubscribe (manual: needs a real browser push subscription)
 
