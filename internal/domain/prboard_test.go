@@ -24,6 +24,7 @@ func TestPRBoardBlockers(t *testing.T) {
 		{"pending checks", func(p *PullRequest) { p.Checks = CheckPending }, []string{"checks pending"}},
 		{"changes requested", func(p *PullRequest) { p.ReviewDecision = ReviewChangesRequested }, []string{"changes requested"}},
 		{"review required", func(p *PullRequest) { p.ReviewDecision = ReviewRequired }, []string{"review required"}},
+		{"draft", func(p *PullRequest) { p.Draft = true }, []string{"draft"}},
 		{"conflicts", func(p *PullRequest) { p.Mergeable = MergeConflicting }, []string{"merge conflicts"}},
 		{"unknown mergeability is not a blocker", func(p *PullRequest) { p.Mergeable = MergeUnknown }, nil},
 		{"one thread", func(p *PullRequest) { p.UnresolvedThreads = 1 }, []string{"1 unresolved thread"}},
@@ -34,6 +35,10 @@ func TestPRBoardBlockers(t *testing.T) {
 		{"merged is never blocked", func(p *PullRequest) {
 			p.State, p.Checks, p.UnresolvedThreads = PRMerged, CheckFailing, 4
 		}, nil},
+		{"draft comes first", func(p *PullRequest) {
+			p.Draft, p.Checks = true, CheckFailing
+		}, []string{"draft", "checks failing"}},
+		{"merged draft is never blocked", func(p *PullRequest) { p.State, p.Draft = PRMerged, true }, nil},
 		{"closed is never blocked", func(p *PullRequest) { p.State, p.Mergeable = PRClosed, MergeConflicting }, nil},
 	}
 	for _, tc := range tests {

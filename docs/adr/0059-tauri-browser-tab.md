@@ -45,10 +45,16 @@ The Tauri app shows the UI of `web/` in one webview. That webview loads `crew se
 - The app adds this capability only for an `http` origin on `127.0.0.1` or `localhost` with a port. A different `CREW_URL` origin gets no IPC, as before.
 - Thus a dev server on a different port gets no IPC in an iframe or in a different window. `tests/ipc.rs` tests these rules.
 
-### Not available yet
+### The headless browser and cookies (issue #578)
 
-- Profiles, cookie import and "Send cookies to the server" need a webview that the app controls. The tab shows a note that they are not available yet.
-- Agent control through `browser.attach` and the headless frames of the server need routes in `crew serve`. `crew serve` does not have them yet. The tab shows a note. Until then, an agent uses the headless browser of the server.
+- `GET /api/v1/sessions/{id}/browser` gives the last screenshot of the headless tab of the session (`browser.headless.view`). Each second, the Browser tab gets it. While it is live, the tab strip shows Server browser. It shows the screenshot as an image. You cannot click or type in it.
+- "Send cookies to the server" takes a cookie file: Netscape `cookies.txt`, a JSON cookie list or a Playwright `storageState`. Export the file from a different browser. The tab posts its text to `POST /api/v1/browser/cookies`. `crew serve` parses it with `domain.ParseCookieFile` and calls `browser.cookies.import`. Only the owner device can do this, because the cookies are logins.
+- The app does not read the cookies of the iframe or of the system browser. The page in the iframe has a different origin, so the UI cannot read its cookies. Thus the file is the only source of cookies.
+
+### Not available
+
+- Profiles need a webview that the app controls. The iframe uses the cookie store of the app webview.
+- `crew serve` has no route for `browser.attach`. Agent control needs the app to run the commands of ADR 0051 (snapshot, click, type) in the page. The UI cannot run scripts in a cross-origin iframe. Thus an agent uses the headless browser of the server, and the Browser tab shows it.
 
 ### The phone
 
@@ -60,4 +66,4 @@ The Tauri app shows the UI of `web/` in one webview. That webview loads `crew se
 - The Browser tab works in the Tauri app and in the PWA with the same code.
 - Some pages do not show in the iframe. "Open in browser" is the alternative.
 - A page in the Browser tab cannot call the Tauri commands.
-- Profiles, cookies, agent control and the headless view need more work in `crew serve` and in the app.
+- The tab shows the headless browser of the server read-only and sends a cookie file to it. Profiles and agent control of the tab need a webview that the app controls.

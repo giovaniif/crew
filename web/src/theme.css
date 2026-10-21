@@ -3838,6 +3838,60 @@ tr.picked td.diff-ln {
   background: #ffffff;
 }
 
+.browser-headless {
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  overflow: auto;
+}
+
+.browser-headless p {
+  margin: 0;
+  font-size: 12px;
+}
+
+.browser-headless img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+.browser-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+
+.browser-foot p {
+  margin: 0;
+}
+
+.browser-cookies {
+  position: relative;
+  font-size: 12px;
+  padding: 3px 10px;
+  border: 1px solid var(--surface);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.browser-cookies:focus-within {
+  outline: 2px solid var(--link);
+  outline-offset: 2px;
+}
+
+.browser-cookies input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .browser-empty {
   margin: auto;
   padding: 16px;

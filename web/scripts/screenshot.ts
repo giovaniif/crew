@@ -69,6 +69,9 @@ async function step(state: State, line: string) {
     case "click":
       await (await open(state)).getByRole("button", { name: rest, exact: true }).click();
       return;
+    case "tab":
+      await (await open(state)).getByRole("tab", { name: rest, exact: true }).first().click();
+      return;
     case "see":
       await (await open(state)).getByText(rest).first().waitFor();
       return;

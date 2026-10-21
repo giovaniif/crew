@@ -389,6 +389,20 @@ describe("New mate", () => {
     expect(screen.getByText("Use up to 32 letters, digits, - and _.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Next: personality" })).toBeDisabled();
   });
+
+  it("needs a prompt before brains, even with a tone set", async () => {
+    setup("#/mates/new");
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText("Name"), "scout");
+    await user.click(screen.getByRole("button", { name: "Next: personality" }));
+    const slider = (await screen.findAllByRole("slider"))[0];
+    fireEvent.change(slider, { target: { value: "0" } });
+    expect(screen.getByText("Write a personality prompt or pick a preset.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next: brains" })).toBeDisabled();
+    await user.type(screen.getByLabelText("Prompt"), "Pair programmer.");
+    expect(screen.queryByText("Write a personality prompt or pick a preset.")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next: brains" })).toBeEnabled();
+  });
 });
 
 describe("Mate conversation", () => {
