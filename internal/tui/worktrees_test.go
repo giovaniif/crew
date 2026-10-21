@@ -195,6 +195,18 @@ func TestWorktreesRecentlyCleanedComesFromTheAuditLog(t *testing.T) {
 	}
 }
 
+func TestWorktreesRecentlyCleanedShowsTheDateOfAnOlderCleanup(t *testing.T) {
+	v := diskView(diskRows()...)
+	v.Recent = append(v.Recent, rpc.RecentCleanup{At: time.Date(2026, 9, 24, 8, 15, 0, 0, time.UTC), Path: "/wt/last-week", Action: domain.CleanupRemove, Outcome: "removed"})
+	out := screen(diskModel(v).open().m)
+	if line := lineWith(t, out, "last-week"); !strings.Contains(line, "Sep 24 08:15") {
+		t.Errorf("older entry = %q, want its date", line)
+	}
+	if line := lineWith(t, out, "old-merged"); strings.Contains(line, "Sep") {
+		t.Errorf("entry of today = %q, want only the time", line)
+	}
+}
+
 func TestWorktreesRemoveAsksThenCallsTheEngineAndTheRowGoesOnTheNextFetch(t *testing.T) {
 	after := diskView(diskRows()[1:]...)
 	r := diskModel(diskView(diskRows()...), after).open()
