@@ -67,6 +67,64 @@ sh -c 'curl -fsS "$(jq -r .serve_url "${VERIFY_HOME:-/tmp/crew-verify-$(id -u)}/
 sh -c 'test "$(curl -s -o /dev/null -w "%{http_code}" "$(jq -r .serve_url "${VERIFY_HOME:-/tmp/crew-verify-$(id -u)}/iso.json")/api/v1/stream")" = 403'
 ```
 
+### session options list the harnesses
+
+```sh
+sh -c 'U="$(jq -r .serve_url "$VERIFY_HOME/iso.json")"; C="$(go run ./scripts/verify iso crew -- remote pair --name TEST-curl --url https://iso.invalid 2>&1 | grep -oE "\b[A-Z0-9]{8}\b" | head -1)"; T="$(curl -fsS -X POST -d "{\"code\":\"$C\",\"name\":\"TEST-curl\"}" "$U/api/v1/pair" | jq -r .token)"; curl -fsS -H "Authorization: Bearer $T" "$U/api/v1/session-options" | jq -e ".harnesses | length > 0"'
+```
+
+Expect: the JSON lists Claude Code with its models and efforts.
+
+### workspace dirs list a folder
+
+```sh
+sh -c 'U="$(jq -r .serve_url "$VERIFY_HOME/iso.json")"; C="$(go run ./scripts/verify iso crew -- remote pair --name TEST-curl --url https://iso.invalid 2>&1 | grep -oE "\b[A-Z0-9]{8}\b" | head -1)"; T="$(curl -fsS -X POST -d "{\"code\":\"$C\",\"name\":\"TEST-curl\"}" "$U/api/v1/pair" | jq -r .token)"; curl -fsS -H "Authorization: Bearer $T" "$U/api/v1/workspaces/dirs?path=/tmp" | jq -e ".dirs | type == \"array\""'
+```
+
+Expect: the JSON lists the folders in `/tmp`.
+
+### push key gives a VAPID public key
+
+```sh
+sh -c 'U="$(jq -r .serve_url "$VERIFY_HOME/iso.json")"; C="$(go run ./scripts/verify iso crew -- remote pair --name TEST-curl --url https://iso.invalid 2>&1 | grep -oE "\b[A-Z0-9]{8}\b" | head -1)"; T="$(curl -fsS -X POST -d "{\"code\":\"$C\",\"name\":\"TEST-curl\"}" "$U/api/v1/pair" | jq -r .token)"; curl -fsS -H "Authorization: Bearer $T" "$U/api/v1/push/key" | jq -e ".public_key | length > 40"'
+```
+
+Expect: a key that the PWA uses for push subscribe.
+
+### automation runs answer with a list
+
+```sh
+sh -c 'U="$(jq -r .serve_url "$VERIFY_HOME/iso.json")"; C="$(go run ./scripts/verify iso crew -- remote pair --name TEST-curl --url https://iso.invalid 2>&1 | grep -oE "\b[A-Z0-9]{8}\b" | head -1)"; T="$(curl -fsS -X POST -d "{\"code\":\"$C\",\"name\":\"TEST-curl\"}" "$U/api/v1/pair" | jq -r .token)"; curl -fsS -H "Authorization: Bearer $T" "$U/api/v1/automations/runs" | jq -e ".runs | type == \"array\""'
+```
+
+Expect: an empty list on a new isolated crew.
+
+### work item resolve refuses an empty item
+
+```sh
+sh -c 'U="$(jq -r .serve_url "$VERIFY_HOME/iso.json")"; C="$(go run ./scripts/verify iso crew -- remote pair --name TEST-curl --url https://iso.invalid 2>&1 | grep -oE "\b[A-Z0-9]{8}\b" | head -1)"; T="$(curl -fsS -X POST -d "{\"code\":\"$C\",\"name\":\"TEST-curl\"}" "$U/api/v1/pair" | jq -r .token)"; S="$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $T" "$U/api/v1/work-items/resolve")"; test "$S" = 400'
+```
+
+Expect: 400 with `item is required`.
+
+### an owner device makes a pair code over HTTP
+
+```sh
+sh -c 'U="$(jq -r .serve_url "$VERIFY_HOME/iso.json")"; C="$(go run ./scripts/verify iso crew -- remote pair --name TEST-curl --url https://iso.invalid 2>&1 | grep -oE "\b[A-Z0-9]{8}\b" | head -1)"; T="$(curl -fsS -X POST -d "{\"code\":\"$C\",\"name\":\"TEST-curl\"}" "$U/api/v1/pair" | jq -r .token)"; curl -fsS -X POST -d "{}" -H "Authorization: Bearer $T" "$U/api/v1/pair/code" | jq -e ".code | length == 8"'
+```
+
+Expect: a single-use code and its expiry.
+
+### push subscribe and unsubscribe (manual: needs a real browser push subscription)
+
+### session rename, switch, resume, interrupt and kill dev servers over HTTP (manual: no CLI prints a session id for a curl recipe)
+
+### review viewed and hunk over HTTP (manual: no CLI prints a session id for a curl recipe)
+
+### automation run rerun over HTTP (manual: needs a finished run, and a run starts a real agent)
+
+### mates stop over HTTP (manual: needs a running mate with a real harness)
+
 ### scan the QR code with a phone camera (manual: no camera on the server)
 
 ## Cleanup
@@ -79,3 +137,4 @@ go run ./scripts/verify iso down
 
 - Sign out revokes the device (#537). After a recipe signs out, the paired `TEST-verify` token no longer works. Run `iso down` and `iso up` to pair again.
 - `crew serve` checks `Origin` against `--url`. `iso up` passes the Vite URL as `--url`, because the PWA runs on the Vite dev server.
+- The HTTP recipes pair a `TEST-curl` device with `remote pair` and `POST /api/v1/pair`, then use its token. `iso.json` does not keep the token of `TEST-verify`.
