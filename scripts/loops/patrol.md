@@ -33,7 +33,7 @@ Keep Phase A under 20 minutes. Do not wait for slow macOS CI jobs. The next run 
 ## Phase B: one new verified fix
 
 1. **Stack.** `go run ./scripts/verify doctor`, then `go run ./scripts/verify iso up` and `iso seed --sessions 3`.
-2. **Area.** Read the rotation. The `patrol run log` issue has comments `area: <name>`. Take the area in `features/README.md` after the newest one, and comment `area: <name>`. Skip `mac-app` for live work (CI only).
+2. **Area.** Read the rotation. The `patrol run log` issue has comments `area: <name>`. Take the area in `features/README.md` after the newest one, and comment `area: <name>`.
 3. **Map warm-up**, 15 minutes at most: `go run ./scripts/verify map run <area>`. Fix map drift in its own small PR in this run. A real bug becomes a candidate.
 4. **Explore** like a real user. For the PWA, use both viewports. Look for wrong or stale data, dead or wrong actions, errors and failed API calls, friction and dead ends, layout breaks, missing loading, empty or error states, slow screens, and edge states (dialogs, long text, back and forward, double submit).
 5. **Pick one fix**, about 5 files or 200 lines at most.

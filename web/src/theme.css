@@ -3302,6 +3302,26 @@ button.danger {
   grid-template-columns: minmax(12rem, 18rem) 1fr minmax(14rem, 20rem);
 }
 
+@media (max-width: 600px) {
+  .review-body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: max-content;
+    overflow-y: auto;
+  }
+
+  .review-tree {
+    max-height: 30vh;
+    border-right: 0;
+    border-bottom: 1px solid var(--surface);
+  }
+
+  .draft-panel {
+    overflow-y: visible;
+    border-left: 0;
+    border-top: 1px solid var(--surface);
+  }
+}
+
 .review-tree {
   overflow-y: auto;
   border-right: 1px solid var(--surface);
