@@ -127,6 +127,14 @@ export async function interrupt(a: Authed, session: string): Promise<void> {
   await authedRequest<unknown>(a, sessionPath(session, "/interrupt"), "POST");
 }
 
+export async function sessionPane(a: Authed, session: string, kind: "shell" | "nvim"): Promise<string> {
+  const res = await authedRequest<{ pane?: unknown }>(a, sessionPath(session, "/" + kind), "POST", {});
+  if (typeof res?.pane !== "string" || !res.pane) {
+    throw new ApiError(0, "failed", "The server did not give a pane.");
+  }
+  return res.pane;
+}
+
 export type PromptChoice = {
   id: string;
   label: string;

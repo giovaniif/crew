@@ -4,6 +4,7 @@ import { App, type AppEnv } from "../App";
 import type { Frame, Session, StreamState } from "../stream";
 import { FakeServer, MemoryStorage } from "./fake-server";
 import { FakeSockets } from "./fake-socket";
+import { FakeTerminals } from "./fake-terminal";
 import { FakeWidth } from "./fake-width";
 
 const golden = (name: string) => JSON.parse(readFileSync(new URL("../../../internal/serve/testdata/" + name, import.meta.url), "utf8"));
@@ -24,6 +25,7 @@ export function desktop(hash = "", wide = true, userAgent = "Mozilla/5.0 (X11; L
     .on("GET", "/api/v1/hello", { status: 200, body: { api: "v1", build: "v0.12.0+abc" } })
     .on("GET", "/api/v1/workspaces", { status: 200, body: { workspaces: [], last_used: "" } });
   const width = new FakeWidth(wide);
+  const terminals = new FakeTerminals();
   const env: AppEnv = {
     fetch: server.fetch,
     storage,
@@ -40,11 +42,12 @@ export function desktop(hash = "", wide = true, userAgent = "Mozilla/5.0 (X11; L
       return () => window.removeEventListener("hashchange", listener);
     },
     wide: width,
+    terminal: terminals.env,
   };
   render(<App env={env} />);
   const live = (state: StreamState = goldenState()) => {
     sockets.last.open();
     sockets.last.push({ state });
   };
-  return { sockets, storage, server, width, live };
+  return { sockets, storage, server, width, live, terminals };
 }
