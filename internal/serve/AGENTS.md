@@ -53,6 +53,8 @@ Unknown paths under `/api/` answer `not_found`.
 | `GET /api/v1/automations` | yes | `automation.list` | → `{"automations":[Automation],"problems"}` |
 | `GET /api/v1/automations/runs?name=&limit=` | yes | `automation.runs` | → `{"runs":[AutomationRun]}`, newest first; both query values optional |
 | `POST /api/v1/automations/{name}/run` | yes | `automation.run` | `{"context","work_item"}` (both optional, no other keys: a phone cannot rerun or pick a repo) → `{"run","session"}` |
+| `POST /api/v1/automations` | owner | `automation.save` | `{"automation"}` (a name that is not blank, no other keys) → the saved `Automation`; it writes `config.toml` |
+| `POST /api/v1/automations/runs/{id}/rerun` | owner | `automation.run` | → `{"run","session"}`; runs again with the context, work item and repo of run `id` |
 | `POST /api/v1/sessions` | yes | `session.new` | `{"workspace","work_item","harness","model","effort","prompt"}` (`harness` required; the rest optional. An empty `work_item` starts a session that is named from its first prompt) → the new `Session`; a setup recipe failure is `failed` with its output in `message` |
 | `GET /api/v1/work-items/resolve?workspace=&item=` | yes | `session.resolve` | → `{"source","ref","title","worktree","workspace"}`; `bad_request` for an empty item or an unsupported link, `not_found` for an unknown workspace or an item the tracker does not know |
 | `GET /api/v1/sessions/{id}/messages?before=&limit=` | yes | `transcript.page` | → `{"messages":[Message],"before"}`; both query values optional integers |
@@ -93,10 +95,26 @@ Unknown paths under `/api/` answer `not_found`.
 | `POST /api/v1/sessions/{id}/review/send` | yes | `review.send` | `{"note"}` (optional, the body can be empty) → the queued `ReviewDraft`; an empty draft is `bad_request` |
 | `POST /api/v1/sessions/{id}/review/hunk` | yes | `review.hunk` | `{"worktree","file","hunk","action"}` (`action` is `stage` or `revert`) → `{}`; when git refuses the patch, it is `failed` with the message of git. The app sends `file` with only the hunk (`hunk` 0), so the body stays below 64 KiB |
 | `POST /api/v1/sessions/{id}/fresh` | yes | `mate.fresh` | `{"same_worktree","prompt"}` (optional, the body can be empty) → the new session; "Start fresh" on a mate session |
+| `GET /api/v1/disk` | yes | `disk.view`, `subscribe` | → the `DiskView` (tiles, `rows`, `recent`) and `ports` `[{"port","pgid","command","worktree","session"}]`, from the worktrees of one snapshot, because the stream drops `Ports` |
+| `POST /api/v1/cleanup/worktree` | owner | `cleanup.worktree` | `{"path","backup"}` (`path` not blank, no other keys) → the `CleanupItem` with its `outcome`. The daemon applies the cleanup rules again. It never removes a `keep` worktree, and it removes a dirty worktree only with `backup` |
+| `POST /api/v1/ports/kill` | owner | `ports.kill` | `{"pgids"}` (not empty) → `{"killed"}`; the daemon stops only process groups that hold a listed port |
+| `GET /api/v1/config` | owner | `config.get` | → `{"path","values"}`, the settings of `config.toml` that crew can change |
+| `POST /api/v1/config` | owner | `config.set` | `{"key","value"}` (`key` not blank, no other keys; an empty `value` removes the key) → `{"path","values"}` |
+| `GET /api/v1/onboarding` | owner | `onboarding.status` | → `{"done","harnesses":{"<harness>":{"installed","file"}},"nvim":{"on_path","configured","config_file","plugin_dir","plugin_found"}}` |
+| `POST /api/v1/onboarding/install` | owner | `onboarding.install` | `{"harness"}` (not blank, no other keys) → `{"installed","file","backup","err"}` |
+| `POST /api/v1/onboarding/remove` | owner | `onboarding.remove` | `{"harness"}` → the same |
+| `POST /api/v1/onboarding/nvim` | owner | `onboarding.nvim` | → the `nvim` object of the status |
+| `POST /api/v1/onboarding/finish` | owner | `onboarding.finish` | → `{}` |
+| `GET /api/v1/workspaces/dirs?path=` | owner | `workspace.dirs` | → `{"dirs":[{"Name","Path","Git"}]}`, the folders in `path` (required, absolute) |
+| `GET /api/v1/devices` | owner | `device.list` | → `{"devices":[Device]}`, oldest first |
+| `POST /api/v1/devices/{id}/revoke` | owner | `device.revoke` | → `{}`; the streams of that device close with 4401 |
+| `POST /api/v1/pair/code` | owner | `pair.code` | `{"name"}` (optional, the body can be empty) → `{"code","expires_at"}`, a one-time code for `POST /api/v1/pair` |
 
+- An "owner" route also needs the owner device. The owner device is the app on the computer that runs crew: the request comes from a loopback address. serve uses the address rule of `pair` (`clientAddr`). Thus a phone through a proxy is not the owner device. Other devices get 403 `forbidden`, and serve does not call the daemon.
 - Auth is `Authorization: Bearer <token>`. Before the method runs, serve checks it with `device.check` on the connection of the request. Then it checks it against the set of revoked device IDs.
 - `pair` passes the address of the caller as `addr`. This is `RemoteAddr`. If the peer is a loopback or private address (the location of a proxy in front of serve), it is the last `X-Forwarded-For` entry, else `X-Real-IP`. serve ignores a forged header from a direct client.
 - Domain structs (`Workspace`, `Session`, ...) encode with their Go field names, as in the socket protocol. The goldens lock them. A `Message` is `rpc.Message`: `{"id","cursor","turn","role","text","tool":{"name","summary","status"},"at"}`. Keep messages by `id` and replace by `id` (see [internal/rpc/](../rpc/AGENTS.md)).
+- An "owner" route also needs the owner device: the request comes from a loopback address (the address rule of `pair`, `clientAddr`). Thus a phone through a proxy is not the owner device. Other devices get 403 `forbidden`, and serve does not call the daemon.
 - The maximum body size is 64 KiB.
 - A route reads the device that made the request with `deviceOf(r)`. The auth check sets it. `push/subscribe` passes its ID to the daemon.
 - The daemon sends pushes, not serve. serve only forwards the key and the subscription. See "Web Push" in [internal/daemon/](../daemon/AGENTS.md).

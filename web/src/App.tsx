@@ -9,6 +9,7 @@ import { parseRoute } from "./route";
 import { Approvals } from "./screens/Approvals";
 import { Automations } from "./screens/Automations";
 import { Desktop } from "./screens/Desktop";
+import { Disk } from "./screens/Disk";
 import { MateProfile, Mates, NewMate } from "./screens/Mates";
 import { Install } from "./screens/Install";
 import { NewSession } from "./screens/NewSession";
@@ -150,7 +151,7 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
   const wide = useWide(env.wide);
   const route = parseRoute(hash);
   const retry = () => client.retryNow();
-  const other = otherScreen(hash, { env, auth, api, now, snapshot, onSignOut });
+  const other = otherScreen(hash, { env, auth, api, now, snapshot, onSignOut, go });
   if (wide) {
     return (
       <Desktop
@@ -212,9 +213,13 @@ type OtherInputs = {
   now: number;
   snapshot: ReturnType<typeof useStream>;
   onSignOut: () => Promise<void>;
+  go: (hash: string) => void;
 };
 
-function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut }: OtherInputs): { screen: ReactNode; tab: Tab } | null {
+function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, go }: OtherInputs): { screen: ReactNode; tab: Tab } | null {
+  if (hash === "#/disk") {
+    return { screen: <Disk api={api} state={snapshot.state} now={now} go={go} />, tab: "sessions" };
+  }
   if (hash === "#/automations") {
     return { screen: <Automations api={api} />, tab: "automations" };
   }
@@ -243,6 +248,7 @@ function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut }:
             fetch={env.fetch}
             push={env.push ?? noPush}
             onSignOut={onSignOut}
+            userAgent={env.userAgent}
           />
           {env.desktop && <DesktopAlerts storage={env.storage} />}
         </>
