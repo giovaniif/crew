@@ -1,6 +1,6 @@
 ---
 name: verify
-description: Start an isolated crew, drive the TUI and the PWA, read Mac app CI evidence, and prove a change with an evidence bundle. Use it before you claim that a crew change works, to reproduce a bug, to run the feature map, or to make PR screenshots.
+description: Start an isolated crew, drive the TUI and the PWA, and prove a change with an evidence bundle. Use it before you claim that a crew change works, to reproduce a bug, to run the feature map, or to make PR screenshots.
 ---
 
 # Verify a crew change
@@ -53,12 +53,6 @@ CLI of the isolated crew:
 
 ```sh
 go run ./scripts/verify iso crew --expect "#100" -- pr seed-session-1
-```
-
-Mac app: the server has no macOS. Use CI results and snapshots only:
-
-```sh
-go run ./scripts/verify mac evidence --pr <n>
 ```
 
 ## 3. Feature map

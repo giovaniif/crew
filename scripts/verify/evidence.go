@@ -204,7 +204,7 @@ func isUIFile(f string) bool {
 	if strings.HasSuffix(f, "_test.go") || strings.Contains(f, ".test.") || strings.Contains(f, "/testdata/") {
 		return false
 	}
-	return strings.HasPrefix(f, "internal/tui/") || strings.HasPrefix(f, "web/src/") || strings.HasPrefix(f, "macos/") && strings.HasSuffix(f, ".swift")
+	return strings.HasPrefix(f, "internal/tui/") || strings.HasPrefix(f, "web/src/")
 }
 
 func isWebFile(f string) bool { return strings.HasPrefix(f, "web/src/") && isUIFile(f) }
