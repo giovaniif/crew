@@ -50,6 +50,15 @@ go run ./scripts/verify tui drive --restart --out-dir /tmp/crew-verify-map/revie
 
 Expect: `cmd/tool/main.go` and `main.go` are two different rows, never two bare `main.go` rows (#584).
 
+### branch vs base on repos without an origin shows the error, not no changes
+
+```sh
+for d in api-2 web-2; do rm -rf /tmp/seed/$d && mkdir -p /tmp/seed/$d && git -C /tmp/seed/$d init -q -b main && printf 'package main\n' > /tmp/seed/$d/main.go && git -C /tmp/seed/$d add . && git -C /tmp/seed/$d -c user.email=t@t -c user.name=t commit -qm TEST-init; done
+go run ./scripts/verify tui drive --restart --out-dir /tmp/crew-verify-map/review --steps '[{"expect":"seeded change 1","timeout":8000},{"keys":"r"},{"expect":"REVIEW","timeout":5000},{"wait":1200},{"keys":"]"},{"expect":"has no origin","timeout":5000},{"absent":"no changes","timeout":1500},{"shot":"no-origin.png"}]'
+```
+
+Expect: each worktree shows `! the repo has no origin default branch`, and the tree does not also say `no changes` (#632).
+
 ### diff, comments and send on a real repo (manual: the seeded worktrees are not repos; the review needs a session on a temp repo with changes, see internal/adapters/git tests)
 
 ### crew review comment, scope and send from the CLI (manual: it needs a real repo diff and a live harness to receive the send)
