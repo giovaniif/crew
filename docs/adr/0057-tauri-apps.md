@@ -65,6 +65,8 @@ Remove `macos/`, its CI jobs and its release job only when all of these conditio
 
 Until then, the SwiftUI app gets only bug fixes.
 
+The owner agreed on 2026-10-21 in #531. #531 removed `macos/`, the `macos` CI job and the `macos-app` release job.
+
 ## Consequences
 
 - One UI code base for five platforms. A UI change is made one time.

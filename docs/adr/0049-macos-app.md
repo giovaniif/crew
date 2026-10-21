@@ -1,6 +1,6 @@
 # ADR 0049: Native macOS app
 
-Status: proposed, 2026-10-06. The screens and interactions are in [docs/macos-app-design.md](../macos-app-design.md).
+Status: superseded by [ADR 0057](0057-tauri-apps.md), 2026-10-21. #531 removed the SwiftUI app in `macos/`. The parts that are not about the UI (`crew rpc`, the derived view, the review highlighting in Go, `client.native`) stay. The screens and interactions are in [docs/macos-app-design.md](../macos-app-design.md).
 
 ## Context
 

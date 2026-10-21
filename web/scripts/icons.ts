@@ -2,7 +2,6 @@ import { readFile } from "node:fs/promises";
 import { chromium } from "playwright";
 
 const publicDir = new URL("../public/", import.meta.url);
-const macosDir = new URL("../../macos/", import.meta.url);
 
 const icons = [
   { dir: publicDir, file: "icon-192.png", size: 192, bleed: false, scale: 1 },
@@ -10,7 +9,6 @@ const icons = [
   { dir: publicDir, file: "icon-maskable-512.png", size: 512, bleed: true, scale: 1 },
   { dir: publicDir, file: "favicon-32.png", size: 32, bleed: false, scale: 1 },
   { dir: publicDir, file: "apple-touch-icon.png", size: 180, bleed: true, scale: 1 },
-  { dir: macosDir, file: "AppIcon.png", size: 1024, bleed: false, scale: 0.8 },
 ];
 
 function page(svg: string, size: number, bleed: boolean, scale: number): string {
