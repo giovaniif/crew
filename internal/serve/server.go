@@ -87,6 +87,8 @@ func (s *Server) routes() []route {
 		{"POST /api/v1/workspaces", addWorkspace},
 		{"POST /api/v1/workspaces/remove", removeWorkspace},
 		{"POST /api/v1/automations/{name}/run", runAutomation},
+		{"POST /api/v1/automations", ownerOnly(saveAutomation)},
+		{"POST /api/v1/automations/runs/{id}/rerun", ownerOnly(rerunAutomation)},
 		{"POST /api/v1/sessions", newSession},
 		{"GET /api/v1/work-items/resolve", resolveWorkItem},
 		{"GET /api/v1/sessions/{id}/messages", messages},
