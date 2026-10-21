@@ -40,7 +40,7 @@ const board: Mates = {
 
 const defs = {
   mates: [
-    { name: "helper", prompt: "Help.\nMore help.", agent: "claude", model: "opus", effort: "high", repos: ["api"], avatar: "owl", enabled: true },
+    { name: "helper", prompt: "Help.\nWith care.\n\nMore help.", agent: "claude", model: "opus", effort: "high", repos: ["api"], avatar: "owl", enabled: true },
     { name: "webby", prompt: "Web.", agent: "codex", enabled: false },
     { name: "fresh", prompt: "New.", agent: "claude", enabled: true },
   ],
@@ -107,16 +107,21 @@ describe("Mates", () => {
     expect(screen.getByRole("link", { name: "Mates" })).toHaveAttribute("href", "#/mates");
   });
 
-  it("shows a face card for each mate with its state, linked to the profile", async () => {
+  it("shows a face card for each mate with its status once and the first paragraph of its prompt, linked to the profile", async () => {
     setup();
     const helper = await screen.findByRole("link", { name: /^helper/ });
     expect(helper).toHaveAttribute("href", "#/mates/helper");
     expect(await within(helper).findByRole("img", { name: "Owl working" })).toBeInTheDocument();
-    expect(helper).toHaveTextContent("Help.");
+    expect(within(helper).getByText("Help. With care.")).toBeInTheDocument();
     expect(helper).not.toHaveTextContent("More help.");
-    expect(helper).toHaveTextContent("working");
-    expect(within(screen.getByRole("link", { name: /^webby/ })).getByText("paused")).toBeInTheDocument();
-    expect(within(screen.getByRole("link", { name: /^fresh/ })).getByText("idle")).toBeInTheDocument();
+    expect(within(helper).getByText(/^Working on /)).toBeInTheDocument();
+    expect(within(helper).queryByText("working")).toBeNull();
+    const webby = screen.getByRole("link", { name: /^webby/ });
+    expect(within(webby).getByText("Paused")).toBeInTheDocument();
+    expect(within(webby).queryByText("paused")).toBeNull();
+    const fresh = screen.getByRole("link", { name: /^fresh/ });
+    expect(within(fresh).getByText("Idle")).toBeInTheDocument();
+    expect(within(fresh).queryByText("idle")).toBeNull();
     expect(screen.getByRole("link", { name: "New mate" })).toHaveAttribute("href", "#/mates/new");
     expect(await screen.findByText("No approvals wait for you.")).toBeInTheDocument();
   });
@@ -124,7 +129,7 @@ describe("Mates", () => {
   it("has the source list with a count for each source", async () => {
     setup();
     const sources = await screen.findByRole("navigation", { name: "Mate sources" });
-    await screen.findByText("Help.");
+    await screen.findByText("Help. With care.");
     for (const [name, n] of [["All Mates", "3"], ["Live", "2"], ["Claude", "2"], ["Codex", "1"]]) {
       expect(within(sources).getByRole("button", { name: new RegExp("^" + name + " " + n + "$") })).toBeInTheDocument();
     }
@@ -138,7 +143,7 @@ describe("Mates", () => {
   it("searches the mates by name and by the first paragraph of the prompt", async () => {
     setup();
     const user = userEvent.setup();
-    await screen.findByText("Help.");
+    await screen.findByText("Help. With care.");
     await user.type(screen.getByRole("searchbox", { name: "Search mates" }), "web");
     expect(screen.getByRole("link", { name: /^webby/ })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /^helper/ })).toBeNull();
@@ -150,7 +155,7 @@ describe("Mates", () => {
 
   it("shows the live count and the status line on each card", async () => {
     setup();
-    await screen.findByText("Help.");
+    await screen.findByText("Help. With care.");
     const helper = screen.getByRole("link", { name: /^helper/ });
     expect(helper).toHaveTextContent("1 live");
     expect(helper).toHaveTextContent("Working on add login");
