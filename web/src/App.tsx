@@ -288,7 +288,9 @@ function Paired({ env }: { env: AppEnv }) {
   const [auth, setAuth] = useState<Auth | null>(() => env.desktopAuth ?? loadAuth(env.storage));
   const [notice, setNotice] = useState("");
   const [code, setCode] = useState(() => (auth ? "" : pairCodeFromHash(env.hash)));
-  const { storage } = env;
+  const [hash, setHash] = useState(env.hash);
+  const { storage, onHashChange } = env;
+  useEffect(() => onHashChange(setHash), [onHashChange]);
   const unpair = useCallback(() => {
     clearAuth(storage);
     setAuth(null);
@@ -304,7 +306,7 @@ function Paired({ env }: { env: AppEnv }) {
       unpair();
       await unpairDevice(env.fetch, auth.token).catch(() => undefined);
     };
-    return <Connected env={env} auth={auth} onUnauthorized={refused} onSignOut={signOut} />;
+    return <Connected env={{ ...env, hash }} auth={auth} onUnauthorized={refused} onSignOut={signOut} />;
   }
   if (!env.installed) {
     return <Install code={code} host={env.host} />;
