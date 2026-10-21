@@ -172,7 +172,7 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
   if (route.screen === "session") {
     return (
       <PhoneSession key={route.id} session={snapshot.state?.sessions.find((s) => s.ID === route.id) ?? null} terminals={terminals}>
-        <SessionScreen key={route.id} id={route.id} snapshot={snapshot} now={now} onRetry={retry} client={client} api={api} />
+        <SessionScreen key={route.id} id={route.id} snapshot={snapshot} now={now} onRetry={retry} client={client} api={api} storage={env.storage} />
       </PhoneSession>
     );
   }
@@ -231,6 +231,7 @@ function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut }:
             auth={auth}
             host={env.host}
             installed={env.installed}
+            storage={env.storage}
             fetch={env.fetch}
             push={env.push ?? noPush}
             onSignOut={onSignOut}

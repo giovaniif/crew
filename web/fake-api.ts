@@ -275,6 +275,71 @@ function fakeTerminal(req: IncomingMessage, socket: Duplex, pane: string) {
   });
   socket.on("error", () => undefined);
 }
+const goLine = (Kind: number, Old: number, New: number, Text: string) => {
+  const spans: [number, number, string][] = [];
+  for (const m of Text.matchAll(/\b(func|return|if|for|package|import|err|nil)\b|"[^"]*"|\/\/.*$|\b\d+\b/g)) {
+    const at = new TextEncoder().encode(Text.slice(0, m.index)).length;
+    const end = at + new TextEncoder().encode(m[0]).length;
+    spans.push([at, end, m[0].startsWith('"') ? "string" : m[0].startsWith("//") ? "comment" : /^\d/.test(m[0]) ? "number" : "keyword"]);
+  }
+  return { Kind, Old, New, Text, Spans: spans };
+};
+
+const fakeReview = {
+  scope: "branch",
+  viewed: [{ Worktree: "w1", Path: "src/client.go", Blob: "b1" }],
+  draft: {
+    id: "d1",
+    session: "s3",
+    status: "open",
+    turns: null,
+    comments: [{ id: "c1", worktree: "/home/me/api-retries", path: "src/retry.go", start: 14, end: 15, code: [], body: "Cap the backoff at 30 s." }],
+  },
+  worktrees: [
+    {
+      Worktree: { ID: "w1", Repo: "/home/me/api", Path: "/home/me/api-retries", Branch: "42-add-retries", PR: { Number: 42 } },
+      From: "abc123",
+      Err: "",
+      Files: [
+        {
+          Path: "src/retry.go",
+          OldPath: "",
+          Status: "M",
+          Added: 5,
+          Deleted: 1,
+          Binary: false,
+          Blob: "b2",
+          Hunks: [
+            {
+              Header: "@@ -10,6 +10,10 @@ func Do(ctx context.Context, fn func() error) error {",
+              Lines: [
+                goLine(32, 10, 10, "\tvar err error"),
+                goLine(32, 11, 11, "\tfor attempt := 0; attempt < 5; attempt++ {"),
+                goLine(45, 12, 0, "\t\ttime.Sleep(time.Second)"),
+                goLine(43, 0, 12, "\t\tdelay := time.Duration(1<<attempt) * 100 * time.Millisecond"),
+                goLine(43, 0, 13, "\t\t// wait before the next try"),
+                goLine(43, 0, 14, "\t\ttime.Sleep(delay)"),
+                goLine(43, 0, 15, "\t\tif err = fn(); err == nil {"),
+                goLine(43, 0, 16, "\t\t\treturn nil"),
+                goLine(32, 13, 17, "\t\t}"),
+                goLine(32, 14, 18, "\t}"),
+                goLine(32, 15, 19, "\treturn err"),
+              ],
+            },
+          ],
+        },
+        { Path: "src/client.go", OldPath: "", Status: "M", Added: 2, Deleted: 2, Binary: false, Blob: "b1", Hunks: [] },
+        { Path: "src/retry_test.go", OldPath: "", Status: "A", Added: 24, Deleted: 0, Binary: false, Blob: "b3", Hunks: [] },
+      ],
+    },
+    {
+      Worktree: { ID: "w2", Repo: "/home/me/web", Path: "/home/me/web-retries", Branch: "42-add-retries", PR: null },
+      From: "def456",
+      Err: "",
+      Files: [{ Path: "src/api.ts", OldPath: "", Status: "M", Added: 3, Deleted: 1, Binary: false, Blob: "b4", Hunks: [] }],
+    },
+  ],
+};
 
 export function fakeApi(build = "v0.12.0+demo"): Plugin {
   return {
@@ -316,6 +381,25 @@ export function fakeApi(build = "v0.12.0+demo"): Plugin {
         const pane = path.match(/^\/api\/v1\/sessions\/([^/]+)\/(shell|nvim)$/);
         if (pane && req.method === "POST") {
           send(res, 200, { pane: "%" + decodeURIComponent(pane[1]) + "-" + pane[2], dir: "/w/api", shown: true });
+          return;
+        }
+        const review = path.match(/^\/api\/v1\/sessions\/([^/]+)\/review(\/[a-z]+)?$/);
+        if (review) {
+          const sub = review[2] ?? "";
+          if (req.method === "GET" && sub === "") {
+            const scope = new URL(req.url ?? "", "http://fake").searchParams.get("scope") || "branch";
+            send(res, 200, { ...fakeReview, scope });
+            return;
+          }
+          if (req.method === "POST" && sub === "/hunk") {
+            send(res, 500, { error: { code: "failed", message: "error: patch failed: src/retry.go:12\nerror: src/retry.go: patch does not apply" } });
+            return;
+          }
+          if (req.method === "POST" && (sub === "/comments" || sub === "/send")) {
+            send(res, 200, { ...fakeReview.draft, status: sub === "/send" ? "queued" : "open" });
+            return;
+          }
+          send(res, 200, {});
           return;
         }
         const session = path.match(/^\/api\/v1\/sessions\/([^/]+)\/(messages|interrupt|prompt|answer|sends\/[^/]+)$/);
@@ -474,11 +558,19 @@ export function fakeApi(build = "v0.12.0+demo"): Plugin {
         if (req.method === "GET" && path === "/api/v1/session-options") {
           send(res, 200, {
             harnesses: [
-              { harness: "claude", default_model: "opus", default_effort: "high" },
-              { harness: "codex", default_model: "gpt-6.1-sol", default_effort: "medium" },
+              { harness: "claude", models: ["opus", "sonnet", "haiku"], efforts: ["low", "medium", "high", "xhigh"], default_model: "opus", default_effort: "high" },
+              { harness: "codex", models: ["gpt-6.1-sol", "gpt-6.1-mini"], efforts: ["low", "medium", "high"], default_model: "gpt-6.1-sol", default_effort: "medium" },
             ],
             home: "/home/me",
           });
+          return;
+        }
+        if (req.method === "POST" && /^\/api\/v1\/sessions\/[^/]+\/kill-dev-servers$/.test(path)) {
+          send(res, 200, { killed: [4211] });
+          return;
+        }
+        if (req.method === "POST" && /^\/api\/v1\/sessions\/[^/]+\/(switch|rename|mute|end|resume)$/.test(path)) {
+          send(res, 200, {});
           return;
         }
         if (req.method === "GET" && path === "/api/v1/work-items/resolve") {

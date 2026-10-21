@@ -11,7 +11,7 @@ Golden responses are in `testdata/`. To make them again, run `go test ./internal
 
 ## Layers
 
-- depguard: from `internal/`, `internal/serve` imports only `rpc` and `domain`. It also imports the standard library and `github.com/coder/websocket`. It does not import `os/exec`. `cmd/crew/serve.go` parses the flags and reads `[serve] url`. It passes a `Dial` that starts the daemon as the TUI does (`rpc.Connect` with `spawn`).
+- depguard: from `internal/`, `internal/serve` imports only `rpc`, `domain`, `view` and `syntax`. It also imports the standard library and `github.com/coder/websocket`. It does not import `os/exec`. `cmd/crew/serve.go` parses the flags and reads `[serve] url`. It passes a `Dial` that starts the daemon as the TUI does (`rpc.Connect` with `spawn`).
 - `serve.Daemon` is the part of `*rpc.Client` that serve uses (`Call`, `Subscribe`, `WatchTranscript`, `Close`). Each HTTP request dials its own connection and closes it. Each stream has its own connection. Thus a slow phone never stops the reader of a different client.
 
 ## Listening
@@ -60,6 +60,8 @@ Unknown paths under `/api/` answer `not_found`.
 | `POST /api/v1/sessions/{id}/resume` | yes | `session.resume` | → the resumed `Session` |
 | `POST /api/v1/sessions/{id}/mute` | yes | `session.mute` | `{"muted":bool}` (required) → `{}` |
 | `POST /api/v1/sessions/{id}/rename` | yes | `session.rename` | `{"name"}` → `{}` |
+| `POST /api/v1/sessions/{id}/switch` | yes | `session.switch` | `{"kind","value"}` (`kind` is `model` or `effort`, `value` not blank, no other keys) → the `Session` |
+| `POST /api/v1/sessions/{id}/kill-dev-servers` | yes | `subscribe`, `ports.kill` | → `{"killed":[pgid]}`; serve reads the ports of the worktrees of the session from the daemon state and kills their process groups. With no ports, it calls nothing and answers `{"killed":[]}`. The phone never sends process groups |
 | `POST /api/v1/sessions/{id}/messages` | yes | `session.send` | `{"text"}` (not blank) → `{"id","queued"}`; a queued send shows in the stream's `sends` until it is pasted |
 | `DELETE /api/v1/sessions/{id}/sends/{send}` | yes | `session.unsend` | → `{}`; `not_found` once the send has gone out (it left `sends`) |
 | `POST /api/v1/sessions/{id}/interrupt` | yes | `session.interrupt` | → `{}` |
@@ -85,6 +87,11 @@ Unknown paths under `/api/` answer `not_found`.
 | `POST /api/v1/mates/{name}/memory` | yes | `mate.set_memory` | `{"text"}` → the same; an empty text clears the memory |
 | `POST /api/v1/sessions/{id}/shell` | yes | `shell.focus` | `{"worktree"}` (optional, the body can be empty) → `{"pane","dir","shown"}`; open `pane` with the terminal route |
 | `POST /api/v1/sessions/{id}/nvim` | yes | `nvim.toggle` | `{"worktree"}` (optional, the body can be empty) → `{"pane","socket","shown"}`; open `pane` with the terminal route |
+| `GET /api/v1/sessions/{id}/review?scope=&worktree=` | yes | `review.open` | → `{"scope","worktrees":[{Worktree,From,Files,Err}],"viewed","draft"}`; each diff line has `Spans` (`[start, end, class]`, see [internal/syntax/](../syntax/AGENTS.md)); an empty `scope` is the last scope of the session, an empty `worktree` is all worktrees |
+| `POST /api/v1/sessions/{id}/review/viewed` | yes | `review.viewed` | `{"mark":{Worktree,Path,Blob},"viewed"}` (`mark` required) → `{}` |
+| `POST /api/v1/sessions/{id}/review/comments` | yes | `review.comment` | `{"worktree","path","start_line","end_line","code","body","removed"}` → the `ReviewDraft` |
+| `POST /api/v1/sessions/{id}/review/send` | yes | `review.send` | `{"note"}` (optional, the body can be empty) → the queued `ReviewDraft`; an empty draft is `bad_request` |
+| `POST /api/v1/sessions/{id}/review/hunk` | yes | `review.hunk` | `{"worktree","file","hunk","action"}` (`action` is `stage` or `revert`) → `{}`; when git refuses the patch, it is `failed` with the message of git. The app sends `file` with only the hunk (`hunk` 0), so the body stays below 64 KiB |
 | `POST /api/v1/sessions/{id}/fresh` | yes | `mate.fresh` | `{"same_worktree","prompt"}` (optional, the body can be empty) → the new session; "Start fresh" on a mate session |
 
 - Auth is `Authorization: Bearer <token>`. Before the method runs, serve checks it with `device.check` on the connection of the request. Then it checks it against the set of revoked device IDs.
