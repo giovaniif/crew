@@ -69,6 +69,17 @@ go run ./scripts/verify web drive / --viewport mobile --out-dir /tmp/crew-verify
 
 Expect: the `unread` badge of `seeded change 3` is gone after the chat opens. See #488.
 
+### PWA names a root session by its workspace
+
+```sh
+rm -rf /tmp/crew-verify-map/TEST-root && mkdir -p /tmp/crew-verify-map/TEST-root
+go run ./scripts/verify web drive /#/new --viewport mobile --out-dir /tmp/crew-verify-map/sessions --steps '[{"click":{"role":"button","name":"Add workspace…"}},{"fill":{"label":"Folder on the server","exact":false},"value":"/tmp/crew-verify-map/TEST-root"},{"click":{"role":"button","name":"Add","exact":true}},{"wait":800},{"fill":{"label":"First prompt","exact":false},"value":"TEST root"},{"click":{"role":"button","name":"Start session"}},{"expect":{"text":"TEST-root · claude"}},{"shot":"root.png"}]'
+go run ./scripts/verify iso crew --expect "removed /tmp/crew-verify-map/TEST-root" -- workspace remove /tmp/crew-verify-map/TEST-root
+rm -rf /tmp/crew-verify-map/TEST-root
+```
+
+Expect: the chat header of a session with no worktree names its workspace. See #557.
+
 ### new session dialog with a real harness (manual: the fake claude holds the pane but does not run turns; use make dev FAKES=1 to try it)
 
 ### workspace add, list and remove a TEST repo
