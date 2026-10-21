@@ -113,7 +113,7 @@ The phone app: a PWA that `crew serve` embeds and serves at `/` (ADR [0046](../d
   - Terminal uses `session.Pane`. Shell and nvim call `POST …/shell` or `…/nvim` one time for each session, because `nvim.toggle` hides nvim on a second call. After a close with 4404, the next try calls it again.
   - The terminal fits its pane (`FitAddon` and a `ResizeObserver`) and sends `{"size"}` on each resize. Keys go to the pane, except keys with Cmd and the app shortcuts of `keyAction`. Ctrl+C, Ctrl+T, Ctrl+E, Ctrl+N, Ctrl+Space and Esc go to the pane.
   - The colors are the `--term-*` tokens (Mocha in both schemes).
-  - On a phone, a session has the tabs Chat, Terminal, Shell and nvim (`screens/PhoneSession.tsx`).
+  - On a phone, a session has the same tabs as the desktop: Chat, Terminal, Review, Shell and nvim (`screens/PhoneSession.tsx`).
   - `npm run fake` gives each session a demo pane. Tests: `npm test -- Terminal`.
 - **Review tab** (issue #518). `screens/Review.tsx` is the same review as the Mac app and the TUI. It uses the `review` routes of `crew serve` (see [internal/serve/](../internal/serve/AGENTS.md)).
   - `src/review.ts` holds the pure rules: `decodeReview` (Go nulls become empty lists), `reviewTree` (files by worktree, viewed when the blob did not change), `worktreeMenu`, `splitRows`, `segments` (the spans use byte offsets), `commentAnchor`, `commentedLines`, `draftRows` (`repo · path:lines`), `canSend` and `hunkOnly`.

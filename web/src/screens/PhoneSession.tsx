@@ -3,16 +3,17 @@ import type { Session } from "../stream";
 import type { PaneKind, TerminalStore } from "../terminal";
 import { TerminalPane } from "./Terminal";
 
-type PhoneTab = "chat" | PaneKind;
+type PhoneTab = "chat" | "review" | PaneKind;
 
 const phoneTabs: { id: PhoneTab; title: string }[] = [
   { id: "chat", title: "Chat" },
   { id: "agent", title: "Terminal" },
+  { id: "review", title: "Review" },
   { id: "shell", title: "Shell" },
   { id: "nvim", title: "nvim" },
 ];
 
-export function PhoneSession({ session, terminals, children }: { session: Session | null; terminals: TerminalStore | null; children: ReactNode }) {
+export function PhoneSession({ session, terminals, review, children }: { session: Session | null; terminals: TerminalStore | null; review: ReactNode; children: ReactNode }) {
   const [tab, setTab] = useState<PhoneTab>("chat");
   if (!session || !terminals) {
     return <>{children}</>;
@@ -36,7 +37,7 @@ export function PhoneSession({ session, terminals, children }: { session: Sessio
         ))}
       </div>
       <section className={"phone-pane phone-pane-" + tab} role="tabpanel" id={"phone-pane-" + tab} aria-labelledby={"phone-tab-" + current.id}>
-        {tab === "chat" ? children : <TerminalPane store={terminals} session={session} kind={tab} />}
+        {tab === "chat" ? children : tab === "review" ? review : <TerminalPane store={terminals} session={session} kind={tab} />}
       </section>
     </div>
   );

@@ -17,6 +17,7 @@ import { SessionScreen } from "./screens/Session";
 import { SessionList } from "./screens/SessionList";
 import { Settings } from "./screens/Settings";
 import { PhoneSession } from "./screens/PhoneSession";
+import { ReviewPane } from "./screens/Review";
 import { useStream, useStreamClient, type OpenSocket } from "./stream";
 import { TerminalStore, type TerminalEnv } from "./terminal";
 
@@ -170,8 +171,14 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
     return <NewSession env={env} token={auth.token} />;
   }
   if (route.screen === "session") {
+    const phoneSession = snapshot.state?.sessions.find((s) => s.ID === route.id) ?? null;
     return (
-      <PhoneSession key={route.id} session={snapshot.state?.sessions.find((s) => s.ID === route.id) ?? null} terminals={terminals}>
+      <PhoneSession
+        key={route.id}
+        session={phoneSession}
+        terminals={terminals}
+        review={phoneSession ? <ReviewPane session={phoneSession.ID} sessionState={phoneSession.State} api={api} /> : null}
+      >
         <SessionScreen key={route.id} id={route.id} snapshot={snapshot} now={now} onRetry={retry} client={client} api={api} storage={env.storage} />
       </PhoneSession>
     );
