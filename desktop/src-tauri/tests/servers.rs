@@ -6,6 +6,37 @@ use crew_desktop::servers::{
     Store, LOCAL_ID,
 };
 
+#[test]
+fn a_remote_page_cannot_call_the_server_commands() {
+    for permission in crew_desktop::hub::REMOTE_PERMISSIONS {
+        assert!(
+            ["allow-crew-notify", "allow-crew-attention", "allow-crew-server-auth"].contains(permission),
+            "{permission}"
+        );
+    }
+    for command in ["allow-crew-servers", "allow-crew-ssh-hosts", "allow-crew-server-add", "allow-crew-server-fix", "allow-crew-server-workspace"] {
+        assert!(crew_desktop::hub::LOCAL_PERMISSIONS.contains(&command), "{command}");
+    }
+}
+
+#[test]
+fn the_static_capability_for_any_local_port_is_the_remote_one() {
+    let file: serde_json::Value = serde_json::from_str(include_str!("../capabilities/default.json")).unwrap();
+    let listed: Vec<&str> = file["permissions"].as_array().unwrap().iter().map(|p| p.as_str().unwrap()).collect();
+    assert_eq!(listed, crew_desktop::hub::REMOTE_PERMISSIONS);
+}
+
+#[test]
+fn only_the_page_of_the_local_crew_serve_is_trusted() {
+    let mut hub = crew_desktop::hub::Hub::open(temp_file("trust"));
+    let url = |s: &str| url::Url::parse(s).unwrap();
+    assert!(!hub.trusted(&url("http://127.0.0.1:4000/")));
+    hub.local = Some((url("http://127.0.0.1:4000/"), None));
+    assert!(hub.trusted(&url("http://127.0.0.1:4000/#/servers")));
+    assert!(!hub.trusted(&url("http://127.0.0.1:5000/")));
+    assert!(!hub.trusted(&url("https://crew.example.ts.net/")));
+}
+
 fn temp_file(name: &str) -> PathBuf {
     let dir = std::env::temp_dir().join(format!("crew-desktop-servers-{}-{}", name, std::process::id()));
     let _ = fs::remove_dir_all(&dir);
