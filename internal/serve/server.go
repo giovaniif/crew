@@ -120,6 +120,9 @@ func (s *Server) routes() []route {
 		{"POST /api/v1/mates/{name}/new", newMateConversation},
 		{"POST /api/v1/sessions/{id}/fresh", freshMateConversation},
 		{"GET /api/v1/mates/{name}/memory", mateMemory},
+		{"GET /api/v1/disk", diskView},
+		{"POST /api/v1/cleanup/worktree", ownerOnly(cleanupWorktree)},
+		{"POST /api/v1/ports/kill", ownerOnly(killPorts)},
 		{"POST /api/v1/mates/{name}/memory", setMateMemory},
 	}
 }

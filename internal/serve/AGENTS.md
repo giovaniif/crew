@@ -86,10 +86,14 @@ Unknown paths under `/api/` answer `not_found`.
 | `POST /api/v1/sessions/{id}/shell` | yes | `shell.focus` | `{"worktree"}` (optional, the body can be empty) → `{"pane","dir","shown"}`; open `pane` with the terminal route |
 | `POST /api/v1/sessions/{id}/nvim` | yes | `nvim.toggle` | `{"worktree"}` (optional, the body can be empty) → `{"pane","socket","shown"}`; open `pane` with the terminal route |
 | `POST /api/v1/sessions/{id}/fresh` | yes | `mate.fresh` | `{"same_worktree","prompt"}` (optional, the body can be empty) → the new session; "Start fresh" on a mate session |
+| `GET /api/v1/disk` | yes | `disk.view`, `subscribe` | → the `DiskView` (tiles, `rows`, `recent`) and `ports` `[{"port","pgid","command","worktree","session"}]`, from the worktrees of one snapshot, because the stream drops `Ports` |
+| `POST /api/v1/cleanup/worktree` | owner | `cleanup.worktree` | `{"path","backup"}` (`path` not blank, no other keys) → the `CleanupItem` with its `outcome`. The daemon applies the cleanup rules again. It never removes a `keep` worktree, and it removes a dirty worktree only with `backup` |
+| `POST /api/v1/ports/kill` | owner | `ports.kill` | `{"pgids"}` (not empty) → `{"killed"}`; the daemon stops only process groups that hold a listed port |
 
 - Auth is `Authorization: Bearer <token>`. Before the method runs, serve checks it with `device.check` on the connection of the request. Then it checks it against the set of revoked device IDs.
 - `pair` passes the address of the caller as `addr`. This is `RemoteAddr`. If the peer is a loopback or private address (the location of a proxy in front of serve), it is the last `X-Forwarded-For` entry, else `X-Real-IP`. serve ignores a forged header from a direct client.
 - Domain structs (`Workspace`, `Session`, ...) encode with their Go field names, as in the socket protocol. The goldens lock them. A `Message` is `rpc.Message`: `{"id","cursor","turn","role","text","tool":{"name","summary","status"},"at"}`. Keep messages by `id` and replace by `id` (see [internal/rpc/](../rpc/AGENTS.md)).
+- An "owner" route also needs the owner device: the request comes from a loopback address (the address rule of `pair`, `clientAddr`). Thus a phone through a proxy is not the owner device. Other devices get 403 `forbidden`, and serve does not call the daemon.
 - The maximum body size is 64 KiB.
 - A route reads the device that made the request with `deviceOf(r)`. The auth check sets it. `push/subscribe` passes its ID to the daemon.
 - The daemon sends pushes, not serve. serve only forwards the key and the subscription. See "Web Push" in [internal/daemon/](../daemon/AGENTS.md).
