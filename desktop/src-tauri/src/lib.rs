@@ -1,9 +1,12 @@
 pub mod attention;
 pub mod hub;
+pub mod ipc;
 pub mod local;
 pub mod servers;
+pub mod update;
 
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 use std::time::Duration;
 
@@ -11,20 +14,22 @@ use std::time::Duration;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 #[cfg(desktop)]
 use tauri::tray::TrayIconBuilder;
-use tauri::ipc::CapabilityBuilder;
-use tauri::{AppHandle, Manager, RunEvent, Runtime, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Manager, RunEvent, Runtime, Webview, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_notification::NotificationExt;
 use url::Url;
 
 use attention::Banner;
 #[cfg(desktop)]
 use attention::{Action, Entry};
-use hub::Hub;
+use hub::{FixTarget, Hub};
 use local::LocalServe;
-use servers::Kind;
+use servers::{Kind, LOCAL_ID};
 
 #[cfg(desktop)]
 const TRAY: &str = "crew";
+
+#[cfg(desktop)]
+const OPEN_LOCAL: &str = "server:local";
 
 pub const DEFAULT_URL: &str = "http://127.0.0.1:7420/";
 
@@ -49,14 +54,28 @@ pub fn start_page(mobile: bool, configured: Option<String>) -> Result<Start, url
 }
 
 struct Started {
-    url: Url,
+    url: Option<Url>,
     auth: Option<serde_json::Value>,
+    problem: Option<String>,
+    remote: bool,
 }
+
+type Shared = Mutex<Hub>;
+
+static WINDOWS: AtomicUsize = AtomicUsize::new(0);
 
 fn configured_url() -> Option<String> {
     std::env::var("CREW_URL")
         .ok()
         .filter(|v| !v.trim().is_empty())
+}
+
+fn find_local_crew() -> Option<PathBuf> {
+    let bundled = std::env::current_exe()
+        .ok()
+        .and_then(|exe| exe.parent().map(|d| d.to_path_buf()));
+    let path = std::env::var_os("PATH");
+    local::find_crew(bundled.as_deref(), path.as_deref())
 }
 
 fn stored_auth(file: &PathBuf) -> Option<serde_json::Value> {
@@ -75,19 +94,19 @@ fn save_auth(file: &PathBuf, auth: &serde_json::Value) {
     }
 }
 
-fn start_local(app: &tauri::App, slot: &Mutex<Option<LocalServe>>) -> Result<Started, String> {
-    let bundled = std::env::current_exe()
-        .ok()
-        .and_then(|exe| exe.parent().map(|d| d.to_path_buf()));
-    let path = std::env::var_os("PATH");
-    let crew = local::find_crew(bundled.as_deref(), path.as_deref())
-        .ok_or("crew is not in the app bundle or on PATH")?;
+fn start_local(app: &AppHandle, slot: &Mutex<Option<LocalServe>>) -> Result<Started, String> {
+    let crew = find_local_crew().ok_or("crew is not in the app bundle or on PATH")?;
     let port = local::free_port().map_err(|e| e.to_string())?;
     let mut serve = LocalServe::start(&crew, port).map_err(|e| e.to_string())?;
     let url = Url::parse(&local::base_url(port)).map_err(|e| e.to_string())?;
     if !serve.wait_ready(Duration::from_secs(20)) {
-        *slot.lock().unwrap() = Some(serve);
-        return Ok(Started { url, auth: None });
+        serve.stop();
+        return Ok(Started {
+            url: None,
+            auth: None,
+            problem: Some("crew serve did not start. The crew daemon may be down.".to_string()),
+            remote: false,
+        });
     }
     let file = app
         .path()
@@ -108,19 +127,346 @@ fn start_local(app: &tauri::App, slot: &Mutex<Option<LocalServe>>) -> Result<Sta
         },
     };
     *slot.lock().unwrap() = Some(serve);
+    if let Some(state) = app.try_state::<Shared>() {
+        let mut hub = state.lock().unwrap();
+        hub.crew = Some(crew);
+        hub.local = Some((url.clone(), auth.clone()));
+    }
+    Ok(Started {
+        url: Some(url),
+        auth,
+        problem: None,
+        remote: false,
+    })
+}
+
+fn add_capability(app: &AppHandle, capability: Option<String>) {
+    if let Some(capability) = capability {
+        if let Err(err) = app.add_capability(capability) {
+            eprintln!("crew-desktop: no IPC for crew serve: {err}");
+        }
+    }
+}
+
+fn open_window(app: &AppHandle, started: Started) -> tauri::Result<()> {
+    let n = WINDOWS.fetch_add(1, Ordering::SeqCst);
+    let label = if n == 0 {
+        "main".to_string()
+    } else {
+        format!("main-{n}")
+    };
+    if let Some(url) = started.url.as_ref() {
+        let trusted = app
+            .try_state::<Shared>()
+            .map(|s| s.lock().unwrap().trusted(url))
+            .unwrap_or(false);
+        if !started.remote {
+            add_capability(app, ipc::serve_capability(url));
+        } else {
+            add_capability(app, ipc::tunnel_capability(url));
+        }
+        if trusted {
+            add_capability(app, ipc::server_capability(url));
+        }
+    }
+    let url = match started.url {
+        Some(url) => WebviewUrl::External(url),
+        None => WebviewUrl::App("index.html".into()),
+    };
+    let window = WebviewWindowBuilder::new(app, &label, url);
+    #[cfg(desktop)]
+    let window = window
+        .title("crew")
+        .inner_size(1280.0, 800.0)
+        .min_inner_size(900.0, 600.0);
+    let mut window = window;
+    if let Some(auth) = started.auth {
+        window = window.initialization_script(format!("window.__CREW_DESKTOP_AUTH__ = {auth};"));
+    }
+    if let Some(problem) = started.problem {
+        let problem = serde_json::Value::String(problem);
+        window =
+            window.initialization_script(format!("window.__CREW_DESKTOP_PROBLEM__ = {problem};"));
+    }
+    let old: Vec<_> = app.webview_windows().into_values().collect();
+    window.build()?;
+    for w in old {
+        let _ = w.close();
+    }
+    Ok(())
+}
+
+fn fix_local(app: &AppHandle) -> Result<(), String> {
+    let crew = find_local_crew().ok_or("crew is not in the app bundle or on PATH")?;
+    local::fix_daemon(&crew)?;
+    if configured_url().is_some() {
+        return Ok(());
+    }
+    let slot = app.state::<Mutex<Option<LocalServe>>>();
+    let mut current = slot.lock().unwrap().take();
+    if let Some(serve) = current.as_mut() {
+        if serve.alive() {
+            *slot.lock().unwrap() = current;
+            return Ok(());
+        }
+        let port = serve.port;
+        serve.stop();
+        let mut again = LocalServe::start(&crew, port).map_err(|e| e.to_string())?;
+        let ready = again.wait_ready(Duration::from_secs(20));
+        *slot.lock().unwrap() = Some(again);
+        return if ready {
+            Ok(())
+        } else {
+            Err("crew serve did not start".to_string())
+        };
+    }
+    let started = start_local(app, &slot)?;
+    if let Some(problem) = started.problem {
+        return Err(problem);
+    }
+    if started.auth.is_none() {
+        return Err("crew serve started, but pairing failed".to_string());
+    }
+    open_window(app, started).map_err(|e| e.to_string())
+}
+
+fn fix_ssh(app: &AppHandle, host: &str) -> Result<(), String> {
+    hub::ssh_setup(host)?;
+    let id = {
+        let state = app.state::<Shared>();
+        let mut hub = state.lock().unwrap();
+        let id = hub
+            .store
+            .servers
+            .iter()
+            .find(|s| matches!(&s.kind, Kind::Ssh { host: h } if h == host))
+            .map(|s| s.id.clone())
+            .ok_or(format!("no server {host}"))?;
+        if hub.tunnel_url(&id).is_some() {
+            return Ok(());
+        }
+        id
+    };
+    let (url, auth) = connect(app, &id)?;
+    show(app, url, auth, true)
+}
+
+#[tauri::command]
+async fn fix_daemon(app: AppHandle, webview: Webview) -> Result<(), String> {
+    let page = webview.url().map_err(|e| e.to_string())?;
+    let target = app
+        .try_state::<Shared>()
+        .map(|s| s.lock().unwrap().fix_target(&page))
+        .unwrap_or(FixTarget::Local);
+    blocking(move || match target {
+        FixTarget::Local => fix_local(&app),
+        FixTarget::Ssh(host) => fix_ssh(&app, &host),
+    })
+    .await
+}
+
+async fn blocking<T: Send + 'static>(
+    work: impl FnOnce() -> Result<T, String> + Send + 'static,
+) -> Result<T, String> {
+    tauri::async_runtime::spawn_blocking(work)
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+fn guard(app: &AppHandle, webview: &Webview) -> Result<(), String> {
+    let page = webview.url().map_err(|e| e.to_string())?;
+    let trusted = app
+        .try_state::<Shared>()
+        .map(|s| s.lock().unwrap().trusted(&page))
+        .unwrap_or(false);
+    if trusted {
+        Ok(())
+    } else {
+        Err("only the page of this computer can manage servers".into())
+    }
+}
+
+fn connect(app: &AppHandle, id: &str) -> Result<(Url, Option<serde_json::Value>), String> {
+    let state = app.state::<Shared>();
+    let server = state
+        .lock()
+        .unwrap()
+        .store
+        .get(id)
+        .cloned()
+        .ok_or(format!("no server {id}"))?;
+    match &server.kind {
+        Kind::Local => state
+            .lock()
+            .unwrap()
+            .local
+            .clone()
+            .ok_or_else(|| "crew serve did not start on this computer".to_string()),
+        Kind::Url { url } => Ok((Url::parse(url).map_err(|e| e.to_string())?, server.auth.clone())),
+        Kind::Ssh { host } => {
+            if let Some(url) = state.lock().unwrap().tunnel_url(id) {
+                return Ok((url, server.auth.clone()));
+            }
+            let tunnel = hub::ssh_tunnel(host)?;
+            let port = tunnel.port;
+            let saved = server.auth.clone().filter(|a| local::token_works(port, a));
+            let auth = match saved {
+                Some(auth) => auth,
+                None => hub::ssh_pair(host, port)?,
+            };
+            let mut hub = state.lock().unwrap();
+            hub.store.add(server.kind.clone(), Some(auth.clone()));
+            hub.save()?;
+            hub.tunnels.insert(id.to_string(), tunnel);
+            Ok((Url::parse(&local::base_url(port)).map_err(|e| e.to_string())?, Some(auth)))
+        }
+    }
+}
+
+fn show(app: &AppHandle, url: Url, auth: Option<serde_json::Value>, remote: bool) -> Result<(), String> {
+    open_window(
+        app,
+        Started {
+            url: Some(url),
+            auth,
+            problem: None,
+            remote,
+        },
+    )
+    .map_err(|e| e.to_string())
+}
+
+fn open_server(app: &AppHandle, id: &str) -> Result<(), String> {
+    let (url, auth) = connect(app, id)?;
     {
         let state = app.state::<Shared>();
         let mut hub = state.lock().unwrap();
-        hub.crew = Some(crew.clone());
-        hub.local = Some((url.clone(), auth.clone()));
+        hub.store.select(id)?;
+        hub.first_run = false;
+        hub.save()?;
     }
-    allow_origin(app.handle(), url.as_str(), hub::LOCAL_PERMISSIONS);
-    Ok(Started { url, auth })
+    show(app, url, auth, id != LOCAL_ID)
+}
+
+#[tauri::command]
+fn crew_servers(app: AppHandle, webview: Webview) -> Result<hub::Listing, String> {
+    guard(&app, &webview)?;
+    Ok(app.state::<Shared>().lock().unwrap().listing())
+}
+
+#[tauri::command]
+fn crew_ssh_hosts(app: AppHandle, webview: Webview) -> Result<Vec<String>, String> {
+    guard(&app, &webview)?;
+    Ok(hub::ssh_config_hosts(app.path().home_dir().ok().as_deref()))
+}
+
+#[tauri::command]
+async fn crew_server_add(
+    app: AppHandle,
+    webview: Webview,
+    kind: String,
+    target: String,
+    code: Option<String>,
+) -> Result<String, String> {
+    guard(&app, &webview)?;
+    blocking(move || {
+        let state = app.state::<Shared>();
+        match kind.as_str() {
+            "url" => {
+                let url = servers::server_url(&target).ok_or("That is not a valid address.")?;
+                let parsed = Url::parse(&url).map_err(|e| e.to_string())?;
+                let auth = hub::url_pair(&parsed, code.as_deref().unwrap_or(""))?;
+                let mut hub = state.lock().unwrap();
+                let id = hub.store.add(Kind::Url { url }, Some(auth));
+                hub.save()?;
+                Ok(id)
+            }
+            "ssh" => {
+                let host = servers::ssh_target(&target).ok_or("Type a host name, not ssh options.")?;
+                hub::ssh_setup(&host)?;
+                let tunnel = hub::ssh_tunnel(&host)?;
+                let auth = hub::ssh_pair(&host, tunnel.port)?;
+                let mut hub = state.lock().unwrap();
+                let id = hub.store.add(Kind::Ssh { host }, Some(auth));
+                hub.save()?;
+                hub.tunnels.insert(id.clone(), tunnel);
+                Ok(id)
+            }
+            other => Err(format!("unknown server kind {other}")),
+        }
+    })
+    .await
+}
+
+#[tauri::command]
+async fn crew_server_open(app: AppHandle, webview: Webview, id: String) -> Result<(), String> {
+    guard(&app, &webview)?;
+    blocking(move || open_server(&app, &id)).await
+}
+
+#[tauri::command]
+fn crew_server_remove(app: AppHandle, webview: Webview, id: String) -> Result<(), String> {
+    guard(&app, &webview)?;
+    let state = app.state::<Shared>();
+    let mut hub = state.lock().unwrap();
+    hub.store.remove(&id)?;
+    hub.save()?;
+    if let Some(mut tunnel) = hub.tunnels.remove(&id) {
+        tunnel.stop();
+    }
+    Ok(())
+}
+
+#[tauri::command]
+async fn crew_server_fix(app: AppHandle, webview: Webview, id: String) -> Result<(), String> {
+    guard(&app, &webview)?;
+    blocking(move || {
+        let server = app
+            .state::<Shared>()
+            .lock()
+            .unwrap()
+            .store
+            .get(&id)
+            .cloned()
+            .ok_or(format!("no server {id}"))?;
+        match server.kind {
+            Kind::Local => fix_local(&app),
+            Kind::Ssh { host } => hub::ssh_setup(&host),
+            Kind::Url { .. } => Err("This server was added by its address, so the app cannot reach it over SSH. Run crew setup daemon on it, or add it again as an SSH server.".into()),
+        }
+    })
+    .await
+}
+
+#[tauri::command]
+async fn crew_server_workspace(app: AppHandle, webview: Webview, id: String, path: String) -> Result<(), String> {
+    guard(&app, &webview)?;
+    blocking(move || {
+        let (url, auth) = connect(&app, &id)?;
+        let token = hub::token_of(&auth).ok_or("this server is not paired")?;
+        hub::add_workspace(&url, &token, path.trim())
+    })
+    .await
+}
+
+fn reopen(app: &AppHandle) {
+    let selected = app.state::<Shared>().lock().unwrap().store.selected.clone();
+    if hub::is_local(&selected) || configured_url().is_some() {
+        return;
+    }
+    let handle = app.clone();
+    std::thread::spawn(move || {
+        if let Err(err) = open_server(&handle, &selected) {
+            eprintln!("crew-desktop: cannot open {selected}: {err}");
+        }
+    });
 }
 
 #[cfg(desktop)]
 fn build_menu<R: Runtime>(app: &AppHandle<R>, model: &attention::Menu) -> tauri::Result<Menu<R>> {
     let menu = Menu::new(app)?;
+    menu.append(&MenuItem::with_id(app, OPEN_LOCAL, "Open This computer", true, None::<&str>)?)?;
+    menu.append(&PredefinedMenuItem::separator(app)?)?;
     for entry in attention::entries(model) {
         match entry {
             Entry::Separator => menu.append(&PredefinedMenuItem::separator(app)?)?,
@@ -138,11 +484,25 @@ fn build_menu<R: Runtime>(app: &AppHandle<R>, model: &attention::Menu) -> tauri:
 }
 
 #[cfg(desktop)]
-fn on_menu<R: Runtime>(app: &AppHandle<R>, id: &str) {
+fn main_window<R: Runtime>(app: &AppHandle<R>) -> Option<tauri::WebviewWindow<R>> {
+    app.webview_windows().into_values().next()
+}
+
+#[cfg(desktop)]
+fn on_menu(app: &AppHandle, id: &str) {
+    if id == OPEN_LOCAL {
+        let handle = app.clone();
+        std::thread::spawn(move || {
+            if let Err(err) = open_server(&handle, LOCAL_ID) {
+                eprintln!("crew-desktop: cannot open this computer: {err}");
+            }
+        });
+        return;
+    }
     match attention::action(id) {
         Some(Action::Quit) => app.exit(0),
         Some(Action::Show(hash)) => {
-            if let Some(window) = app.get_webview_window("main") {
+            if let Some(window) = main_window(app) {
                 let _ = window.unminimize();
                 let _ = window.show();
                 let _ = window.set_focus();
@@ -188,232 +548,14 @@ fn crew_attention<R: Runtime>(app: AppHandle<R>, menu: attention::Menu) -> Resul
         let _ = tray.set_tooltip(Some(tip));
     }
     #[cfg(desktop)]
-    if let Some(window) = app.get_webview_window("main") {
+    if let Some(window) = main_window(&app) {
         let _ = window.set_badge_count(attention::badge(&menu));
     }
     Ok(())
 }
 
-type Shared = Mutex<Hub>;
-
-fn guard<R: Runtime>(app: &AppHandle<R>, webview: &tauri::Webview<R>) -> Result<(), String> {
-    let page = webview.url().map_err(|e| e.to_string())?;
-    if app.state::<Shared>().lock().unwrap().trusted(&page) {
-        return Ok(());
-    }
-    Err("only the page of this computer can manage servers".into())
-}
-
-fn allow_origin<R: Runtime>(app: &AppHandle<R>, url: &str, permissions: &[&str]) {
-    let Ok(parsed) = Url::parse(url) else { return };
-    let origin = parsed.origin().ascii_serialization();
-    let mut capability = CapabilityBuilder::new(format!("server-{origin}"))
-        .remote(format!("{origin}/*"))
-        .window("main");
-    for permission in permissions {
-        capability = capability.permission(*permission);
-    }
-    if let Err(err) = app.add_capability(capability) {
-        eprintln!("crew-desktop: no IPC for {origin}: {err}");
-    }
-}
-
-async fn blocking<T: Send + 'static>(work: impl FnOnce() -> Result<T, String> + Send + 'static) -> Result<T, String> {
-    tauri::async_runtime::spawn_blocking(work)
-        .await
-        .map_err(|e| e.to_string())?
-}
-
-#[tauri::command]
-fn crew_servers<R: Runtime>(app: AppHandle<R>, webview: tauri::Webview<R>) -> Result<hub::Listing, String> {
-    guard(&app, &webview)?;
-    Ok(app.state::<Shared>().lock().unwrap().listing())
-}
-
-#[tauri::command]
-fn crew_ssh_hosts<R: Runtime>(app: AppHandle<R>, webview: tauri::Webview<R>) -> Result<Vec<String>, String> {
-    guard(&app, &webview)?;
-    Ok(hub::ssh_config_hosts(app.path().home_dir().ok().as_deref()))
-}
-
-#[tauri::command]
-fn crew_server_auth<R: Runtime>(app: AppHandle<R>, webview: tauri::Webview<R>) -> Option<serde_json::Value> {
-    let page = webview.url().ok()?;
-    app.state::<Shared>().lock().unwrap().auth_for(&page)
-}
-
-#[tauri::command]
-async fn crew_server_add<R: Runtime>(app: AppHandle<R>, webview: tauri::Webview<R>, kind: String, target: String, code: Option<String>) -> Result<String, String> {
-    guard(&app, &webview)?;
-    let handle = app.clone();
-    blocking(move || {
-        let state = handle.state::<Shared>();
-        match kind.as_str() {
-            "url" => {
-                let url = servers::server_url(&target).ok_or("That is not a valid address.")?;
-                let auth = hub::url_pair(&Url::parse(&url).map_err(|e| e.to_string())?, code.as_deref().unwrap_or(""))?;
-                let mut hub = state.lock().unwrap();
-                let id = hub.store.add(Kind::Url { url: url.clone() }, Some(auth));
-                hub.save()?;
-                drop(hub);
-                allow_origin(&handle, &url, hub::REMOTE_PERMISSIONS);
-                Ok(id)
-            }
-            "ssh" => {
-                let host = servers::ssh_target(&target).ok_or("Type a host name, not ssh options.")?;
-                hub::ssh_setup(&host)?;
-                let tunnel = hub::ssh_tunnel(&host)?;
-                let auth = hub::ssh_pair(&host, tunnel.port)?;
-                let mut hub = state.lock().unwrap();
-                let id = hub.store.add(Kind::Ssh { host }, Some(auth));
-                hub.save()?;
-                hub.tunnels.insert(id.clone(), tunnel);
-                Ok(id)
-            }
-            other => Err(format!("unknown server kind {other}")),
-        }
-    })
-    .await
-}
-
-fn connect<R: Runtime>(app: &AppHandle<R>, id: &str) -> Result<(Url, Option<String>), String> {
-    let state = app.state::<Shared>();
-    let server = state.lock().unwrap().store.get(id).cloned().ok_or(format!("no server {id}"))?;
-    match &server.kind {
-        Kind::Local => {
-            let hub = state.lock().unwrap();
-            let (url, auth) = hub.local.clone().ok_or("crew serve did not start on this computer")?;
-            Ok((url, hub::token_of(&auth)))
-        }
-        Kind::Url { url } => Ok((Url::parse(url).map_err(|e| e.to_string())?, hub::token_of(&server.auth))),
-        Kind::Ssh { host } => {
-            if let Some(url) = state.lock().unwrap().tunnel_url(id) {
-                return Ok((url, hub::token_of(&server.auth)));
-            }
-            let tunnel = hub::ssh_tunnel(host)?;
-            let port = tunnel.port;
-            let saved = server.auth.clone().filter(|a| local::token_works(port, a));
-            let auth = match saved {
-                Some(auth) => auth,
-                None => hub::ssh_pair(host, port)?,
-            };
-            let mut hub = state.lock().unwrap();
-            hub.store.add(server.kind.clone(), Some(auth.clone()));
-            hub.save()?;
-            hub.tunnels.insert(id.to_string(), tunnel);
-            Ok((Url::parse(&local::base_url(port)).map_err(|e| e.to_string())?, hub::token_of(&Some(auth))))
-        }
-    }
-}
-
-fn show<R: Runtime>(app: &AppHandle<R>, url: Url) -> Result<(), String> {
-    let window = app.get_webview_window("main").ok_or("no main window")?;
-    window.navigate(url).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-async fn crew_server_open<R: Runtime>(app: AppHandle<R>, webview: tauri::Webview<R>, id: String) -> Result<(), String> {
-    let page = webview.url().map_err(|e| e.to_string())?;
-    if !app.state::<Shared>().lock().unwrap().may_open(&page, &id) {
-        return Err("only the page of this computer can manage servers".into());
-    }
-    let handle = app.clone();
-    blocking(move || {
-        let (url, _) = connect(&handle, &id)?;
-        {
-            let state = handle.state::<Shared>();
-            let mut hub = state.lock().unwrap();
-            hub.store.select(&id)?;
-            hub.first_run = false;
-            hub.save()?;
-        }
-        show(&handle, url)
-    })
-    .await
-}
-
-#[tauri::command]
-fn crew_server_remove<R: Runtime>(app: AppHandle<R>, webview: tauri::Webview<R>, id: String) -> Result<(), String> {
-    guard(&app, &webview)?;
-    let state = app.state::<Shared>();
-    let mut hub = state.lock().unwrap();
-    let was_selected = hub.store.selected == id;
-    hub.store.remove(&id)?;
-    hub.save()?;
-    if let Some(mut tunnel) = hub.tunnels.remove(&id) {
-        tunnel.stop();
-    }
-    let local = hub.local.clone();
-    drop(hub);
-    if was_selected {
-        if let Some((url, _)) = local {
-            show(&app, url)?;
-        }
-    }
-    Ok(())
-}
-
-#[tauri::command]
-async fn crew_server_fix<R: Runtime>(app: AppHandle<R>, webview: tauri::Webview<R>, id: String) -> Result<(), String> {
-    guard(&app, &webview)?;
-    let handle = app.clone();
-    blocking(move || {
-        let state = handle.state::<Shared>();
-        let (server, crew) = {
-            let hub = state.lock().unwrap();
-            (hub.store.get(&id).cloned().ok_or(format!("no server {id}"))?, hub.crew.clone())
-        };
-        match server.kind {
-            Kind::Local => hub::local_setup(&crew.ok_or("crew is not in the app bundle or on PATH")?),
-            Kind::Ssh { host } => hub::ssh_setup(&host),
-            Kind::Url { .. } => Err("This server was added by its address, so the app cannot reach it over SSH. Run crew setup daemon on it, or add it again as an SSH server.".into()),
-        }
-    })
-    .await
-}
-
-#[tauri::command]
-async fn crew_server_workspace<R: Runtime>(app: AppHandle<R>, webview: tauri::Webview<R>, id: String, path: String) -> Result<(), String> {
-    guard(&app, &webview)?;
-    let handle = app.clone();
-    blocking(move || {
-        let (url, token) = connect(&handle, &id)?;
-        hub::add_workspace(&url, &token.ok_or("this server is not paired")?, path.trim())
-    })
-    .await
-}
-
-fn reopen<R: Runtime>(app: &AppHandle<R>) {
-    let (urls, selected) = {
-        let state = app.state::<Shared>();
-        let hub = state.lock().unwrap();
-        let urls: Vec<String> = hub
-            .store
-            .servers
-            .iter()
-            .filter_map(|s| match &s.kind {
-                Kind::Url { url } => Some(url.clone()),
-                _ => None,
-            })
-            .collect();
-        (urls, hub.store.selected.clone())
-    };
-    for url in &urls {
-        allow_origin(app, url, hub::REMOTE_PERMISSIONS);
-    }
-    if hub::is_local(&selected) || configured_url().is_some() {
-        return;
-    }
-    let handle = app.clone();
-    std::thread::spawn(move || {
-        if let Err(err) = connect(&handle, &selected).and_then(|(url, _)| show(&handle, url)) {
-            eprintln!("crew-desktop: cannot open {selected}: {err}");
-        }
-    });
-}
-
 #[cfg(desktop)]
-fn add_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
+fn add_tray(app: &AppHandle) -> tauri::Result<()> {
     let menu = build_menu(app, &attention::Menu::default())?;
     let mut tray = TrayIconBuilder::with_id(TRAY)
         .tooltip("crew")
@@ -426,26 +568,48 @@ fn add_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     Ok(())
 }
 
+fn stop_serve<R: Runtime>(handle: &AppHandle<R>) {
+    if let Some(mut serve) = handle
+        .state::<Mutex<Option<LocalServe>>>()
+        .lock()
+        .unwrap()
+        .take()
+    {
+        serve.stop();
+    }
+    if let Some(state) = handle.try_state::<Shared>() {
+        for (_, mut tunnel) in state.lock().unwrap().tunnels.drain() {
+            tunnel.stop();
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let app = tauri::Builder::default()
-        .plugin(tauri_plugin_notification::init())
+    let builder = tauri::Builder::default().plugin(tauri_plugin_notification::init());
+    #[cfg(desktop)]
+    let builder = builder
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build());
+    let app = builder
         .invoke_handler(tauri::generate_handler![
             crew_notify,
             crew_attention,
+            fix_daemon,
             crew_servers,
             crew_ssh_hosts,
             crew_server_add,
             crew_server_open,
             crew_server_remove,
             crew_server_fix,
-            crew_server_workspace,
-            crew_server_auth
+            crew_server_workspace
         ])
         .manage(Mutex::new(None::<LocalServe>))
         .setup(|app| {
             if start_page(cfg!(mobile), None) == Ok(Start::Bundled) {
-                let connect = serde_json::Value::String(servers::connect_url(cfg!(target_os = "ios")).into());
+                let connect = serde_json::Value::String(
+                    servers::connect_url(cfg!(target_os = "ios")).into(),
+                );
                 WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
                     .initialization_script(format!("window.__CREW_CONNECT_URL__ = {connect};"))
                     .build()?;
@@ -453,53 +617,41 @@ pub fn run() {
             }
             let file = app.path().app_data_dir()?.join("servers.json");
             app.manage(Mutex::new(Hub::open(file)));
+            let handle = app.handle().clone();
             let started = match configured_url() {
                 Some(value) => Started {
-                    url: start_url(Some(value))?,
+                    url: Some(start_url(Some(value))?),
                     auth: None,
+                    problem: None,
+                    remote: false,
                 },
                 None => {
                     let slot = app.state::<Mutex<Option<LocalServe>>>();
-                    start_local(app, &slot).unwrap_or_else(|err| {
-                        eprintln!("crew-desktop: {err}");
-                        Started {
-                            url: start_url(None).expect("the default URL is valid"),
-                            auth: None,
-                        }
+                    start_local(&handle, &slot).unwrap_or_else(|err| Started {
+                        url: None,
+                        auth: None,
+                        problem: Some(err),
+                        remote: false,
                     })
                 }
             };
-            let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::External(started.url));
-            #[cfg(desktop)]
-            let window = window
-                .title("crew")
-                .inner_size(1280.0, 800.0)
-                .min_inner_size(900.0, 600.0);
-            let mut window = window;
-            if let Some(auth) = started.auth {
-                window =
-                    window.initialization_script(format!("window.__CREW_DESKTOP_AUTH__ = {auth};"));
-            }
-            window.build()?;
+            open_window(&handle, started)?;
             #[cfg(desktop)]
             if let Err(err) = add_tray(app.handle()) {
                 eprintln!("crew-desktop: no tray: {err}");
             }
-            reopen(app.handle());
+            reopen(&handle);
+            #[cfg(desktop)]
+            if !update::off() {
+                update::watch(app.handle().clone(), find_local_crew(), stop_serve);
+            }
             Ok(())
         })
         .build(tauri::generate_context!())
         .expect("the crew app failed to start");
     app.run(|handle, event| {
         if let RunEvent::Exit = event {
-            if let Some(mut serve) = handle
-                .state::<Mutex<Option<LocalServe>>>()
-                .lock()
-                .unwrap()
-                .take()
-            {
-                serve.stop();
-            }
+            stop_serve(handle);
         }
     });
 }
@@ -510,7 +662,10 @@ mod tests {
 
     #[test]
     fn mobile_opens_the_bundled_connect_page() {
-        assert_eq!(start_page(true, Some("https://crew.example.ts.net/".into())), Ok(Start::Bundled));
+        assert_eq!(
+            start_page(true, Some("https://crew.example.ts.net/".into())),
+            Ok(Start::Bundled)
+        );
         assert_eq!(start_page(true, None), Ok(Start::Bundled));
     }
 
@@ -518,8 +673,13 @@ mod tests {
     fn desktop_opens_the_configured_url() {
         assert_eq!(
             start_page(false, Some("https://crew.example.ts.net/".into())),
-            Ok(Start::Remote(Url::parse("https://crew.example.ts.net/").unwrap()))
+            Ok(Start::Remote(
+                Url::parse("https://crew.example.ts.net/").unwrap()
+            ))
         );
-        assert_eq!(start_page(false, None), Ok(Start::Remote(Url::parse(DEFAULT_URL).unwrap())));
+        assert_eq!(
+            start_page(false, None),
+            Ok(Start::Remote(Url::parse(DEFAULT_URL).unwrap()))
+        );
     }
 }

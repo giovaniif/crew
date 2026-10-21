@@ -7,26 +7,6 @@ use crew_desktop::servers::{
 };
 
 #[test]
-fn a_remote_page_cannot_call_the_server_commands() {
-    for permission in crew_desktop::hub::REMOTE_PERMISSIONS {
-        assert!(
-            ["allow-crew-notify", "allow-crew-attention", "allow-crew-server-auth", "allow-crew-server-open"].contains(permission),
-            "{permission}"
-        );
-    }
-    for command in ["allow-crew-servers", "allow-crew-ssh-hosts", "allow-crew-server-add", "allow-crew-server-fix", "allow-crew-server-workspace"] {
-        assert!(crew_desktop::hub::LOCAL_PERMISSIONS.contains(&command), "{command}");
-    }
-}
-
-#[test]
-fn the_static_capability_for_any_local_port_is_the_remote_one() {
-    let file: serde_json::Value = serde_json::from_str(include_str!("../capabilities/default.json")).unwrap();
-    let listed: Vec<&str> = file["permissions"].as_array().unwrap().iter().map(|p| p.as_str().unwrap()).collect();
-    assert_eq!(listed, crew_desktop::hub::REMOTE_PERMISSIONS);
-}
-
-#[test]
 fn only_the_page_of_the_local_crew_serve_is_trusted() {
     let mut hub = crew_desktop::hub::Hub::open(temp_file("trust"));
     let url = |s: &str| url::Url::parse(s).unwrap();
@@ -38,13 +18,20 @@ fn only_the_page_of_the_local_crew_serve_is_trusted() {
 }
 
 #[test]
-fn a_remote_page_can_only_open_this_computer() {
-    let mut hub = crew_desktop::hub::Hub::open(temp_file("open"));
+fn the_banner_fix_runs_on_the_computer_that_served_the_page() {
+    use crew_desktop::hub::{FixTarget, Hub};
+    let mut hub = Hub::open(temp_file("fix"));
     let url = |s: &str| url::Url::parse(s).unwrap();
     hub.local = Some((url("http://127.0.0.1:4000/"), None));
-    assert!(hub.may_open(&url("https://crew.example.ts.net/"), LOCAL_ID));
-    assert!(!hub.may_open(&url("https://crew.example.ts.net/"), "ssh:box"));
-    assert!(hub.may_open(&url("http://127.0.0.1:4000/"), "ssh:box"));
+    let id = hub.store.add(Kind::Ssh { host: "box".into() }, None);
+    let tunnel = crew_desktop::local::LocalServe::spawn(std::ffi::OsStr::new("sleep"), &["30".to_string()], 4555).unwrap();
+    hub.tunnels.insert(id, tunnel);
+    assert_eq!(hub.fix_target(&url("http://127.0.0.1:4000/")), FixTarget::Local);
+    assert_eq!(hub.fix_target(&url("http://127.0.0.1:4555/#/")), FixTarget::Ssh("box".into()));
+    assert_eq!(hub.fix_target(&url("tauri://localhost/index.html")), FixTarget::Local);
+    for (_, mut t) in hub.tunnels.drain() {
+        t.stop();
+    }
 }
 
 fn temp_file(name: &str) -> PathBuf {

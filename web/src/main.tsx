@@ -10,9 +10,11 @@ import { hello } from "./api";
 import { App } from "./App";
 import { buildOfWorker, checkBuild, workerURL } from "./build";
 import { desktopAuth } from "./auth";
+import { desktopFix, desktopProblem } from "./desktop-host";
 import { tauriBridge } from "./desktopBridge";
 import { isInstalled } from "./display";
 import { browserPush } from "./push";
+import { browserTerminal } from "./xterm";
 
 const checkEvery = 5 * 60 * 1000;
 const installTimeout = 15 * 1000;
@@ -111,14 +113,8 @@ function watchBuild() {
 }
 
 const root = document.getElementById("root");
-const desktop = tauriBridge(window);
-const injected = (window as { __CREW_DESKTOP_AUTH__?: unknown }).__CREW_DESKTOP_AUTH__;
 const connectUrl = (window as { __CREW_CONNECT_URL__?: unknown }).__CREW_CONNECT_URL__;
-const login: Promise<unknown> = injected || !desktop ? Promise.resolve(injected) : desktop.invoke("crew_server_auth").catch(() => null);
-void login.then((auth) => {
-  if (!root) {
-    return;
-  }
+if (root) {
   createRoot(root).render(
     <StrictMode>
       <App
@@ -135,12 +131,15 @@ void login.then((auth) => {
           push: browserPush(window),
           visibility,
           wide,
-          desktop,
-          desktopAuth: desktopAuth(auth),
+          terminal: browserTerminal(window.location),
+          desktop: tauriBridge(window),
+          desktopAuth: desktopAuth((window as { __CREW_DESKTOP_AUTH__?: unknown }).__CREW_DESKTOP_AUTH__),
+          desktopProblem: desktopProblem(window),
+          desktopFix: desktopFix(window),
           connectUrl: typeof connectUrl === "string" ? connectUrl : undefined,
         }}
       />
     </StrictMode>,
   );
-});
+}
 watchBuild();

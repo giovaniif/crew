@@ -19,6 +19,7 @@ type call struct {
 type fakeDaemon struct {
 	mu      sync.Mutex
 	down    bool
+	dialErr error
 	devices map[string]rpc.Device
 	results map[string]any
 	errs    map[string]*rpc.Error
@@ -53,6 +54,9 @@ func (f *fakeDaemon) dial(context.Context) (serve.Daemon, error) {
 	defer f.mu.Unlock()
 	if f.down {
 		return nil, errors.New("connect: no such file or directory")
+	}
+	if f.dialErr != nil {
+		return nil, f.dialErr
 	}
 	f.dials++
 	return &fakeConn{f: f}, nil

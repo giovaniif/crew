@@ -54,17 +54,6 @@ function app(hash: string, options: { desktop?: FakeDesktop; connectUrl?: string
   render(<App env={env} />);
 }
 
-describe("a page of a remote server", () => {
-  it("cannot list the servers but can go back to This computer", async () => {
-    const desktop = new FakeDesktop();
-    desktop.failures.crew_servers = "only the page of this computer can manage servers";
-    app("#/", { desktop });
-    await userEvent.click(await screen.findByRole("button", { name: "This computer" }));
-    expect(desktop.of("crew_server_open")).toEqual([{ id: "local" }]);
-    expect(screen.queryByRole("button", { name: /^Server:/ })).not.toBeInTheDocument();
-  });
-});
-
 describe("Servers", () => {
   it("lists the servers and marks the current one", async () => {
     const desktop = withRemote();

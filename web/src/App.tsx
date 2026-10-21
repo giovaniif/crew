@@ -1,24 +1,29 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
-import { tokenRefused, unpairDevice, type Fetch } from "./api";
+import { sessionPane, tokenRefused, unpairDevice, type Fetch } from "./api";
 import { clearAuth, loadAuth, saveAuth, type Auth, type KeyValue } from "./auth";
 import { pairCodeFromHash } from "./display";
 import { DesktopAlerts, useDesktopAttention, type DesktopBridge } from "./desktopBridge";
 import { disablePush, noPush, type PushEnv } from "./push";
+import { modifierKeys } from "./desktop";
 import { parseRoute } from "./route";
 import { Approvals } from "./screens/Approvals";
 import { Automations } from "./screens/Automations";
 import { Desktop } from "./screens/Desktop";
+import { Disk } from "./screens/Disk";
 import { MateProfile, Mates, NewMate } from "./screens/Mates";
 import { Install } from "./screens/Install";
 import { NewSession } from "./screens/NewSession";
 import { Pair } from "./screens/Pair";
 import { SessionScreen } from "./screens/Session";
-import { SessionList } from "./screens/SessionList";
+import { DesktopProblem, SessionList } from "./screens/SessionList";
 import { FirstRun } from "./screens/FirstRun";
 import { ServersScreen } from "./screens/Servers";
 import { Settings } from "./screens/Settings";
+import { PhoneSession } from "./screens/PhoneSession";
+import { ReviewPane } from "./screens/Review";
 import { Servers } from "./servers";
 import { useStream, useStreamClient, type OpenSocket } from "./stream";
+import { TerminalStore, type TerminalEnv } from "./terminal";
 
 export type AppEnv = {
   fetch: Fetch;
@@ -35,6 +40,9 @@ export type AppEnv = {
   visibility?: PageVisibility;
   wide?: Width;
   desktopAuth?: Auth | null;
+  desktopProblem?: string | null;
+  desktopFix?: () => Promise<void>;
+  terminal?: TerminalEnv;
   desktop?: DesktopBridge;
   connectUrl?: string;
 };
@@ -98,6 +106,12 @@ function useNow(now: () => number, every: number): number {
   return value;
 }
 
+function useTerminals(env: TerminalEnv | undefined, api: { fetch: Fetch; token: string }, mac: boolean): TerminalStore | null {
+  const store = useMemo(() => (env ? new TerminalStore(env, api.token, (session, kind) => sessionPane(api, session, kind), mac) : null), [env, api, mac]);
+  useEffect(() => () => store?.dispose(), [store]);
+  return store;
+}
+
 type ConnectedProps = { env: AppEnv; auth: Auth; onUnauthorized: () => void; onSignOut: () => Promise<void> };
 
 function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
@@ -116,6 +130,14 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
   const now = useNow(env.now, snapshot.status === "offline" ? 1000 : 30000);
   const api = useMemo(() => ({ fetch, token: auth.token }), [fetch, auth.token]);
   const servers = useMemo(() => (env.desktop ? new Servers(env.desktop) : undefined), [env.desktop]);
+  const terminals = useTerminals(env.terminal, api, modifierKeys(env.userAgent).mac);
+  const sessionIds = snapshot.state ? snapshot.state.sessions.map((s) => s.ID).join("\n") : null;
+
+  useEffect(() => {
+    if (terminals && sessionIds !== null) {
+      terminals.prune(sessionIds ? sessionIds.split("\n") : []);
+    }
+  }, [terminals, sessionIds]);
 
   useEffect(() => onHashChange(setHash), [onHashChange]);
   useDesktopAttention(env.desktop, client, snapshot, hash, env.storage, visibility, now);
@@ -135,7 +157,7 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
   const wide = useWide(env.wide);
   const route = parseRoute(hash);
   const retry = () => client.retryNow();
-  const other = otherScreen(hash, { env, auth, api, now, snapshot, onSignOut, servers });
+  const other = otherScreen(hash, { env, auth, api, now, snapshot, onSignOut, go, servers });
   if (wide) {
     return (
       <Desktop
@@ -149,6 +171,7 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
         onRetry={retry}
         client={client}
         api={api}
+        terminals={terminals}
         other={other?.screen ?? null}
       />
     );
@@ -164,7 +187,17 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
     );
   }
   if (route.screen === "session") {
-    return <SessionScreen key={route.id} id={route.id} snapshot={snapshot} now={now} onRetry={retry} client={client} api={api} />;
+    const phoneSession = snapshot.state?.sessions.find((s) => s.ID === route.id) ?? null;
+    return (
+      <PhoneSession
+        key={route.id}
+        session={phoneSession}
+        terminals={terminals}
+        review={phoneSession ? <ReviewPane session={phoneSession.ID} sessionState={phoneSession.State} api={api} /> : null}
+      >
+        <SessionScreen key={route.id} id={route.id} snapshot={snapshot} now={now} onRetry={retry} client={client} api={api} storage={env.storage} />
+      </PhoneSession>
+    );
   }
   if (other) {
     return (
@@ -194,12 +227,16 @@ type OtherInputs = {
   now: number;
   snapshot: ReturnType<typeof useStream>;
   onSignOut: () => Promise<void>;
+  go: (hash: string) => void;
   servers?: Servers;
 };
 
-function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, servers }: OtherInputs): { screen: ReactNode; tab: Tab } | null {
+function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, go, servers }: OtherInputs): { screen: ReactNode; tab: Tab } | null {
   if (hash === "#/servers" && servers) {
     return { screen: <ServersScreen servers={servers} />, tab: "settings" };
+  }
+  if (hash === "#/disk") {
+    return { screen: <Disk api={api} state={snapshot.state} now={now} go={go} />, tab: "sessions" };
   }
   if (hash === "#/automations") {
     return { screen: <Automations api={api} />, tab: "automations" };
@@ -225,10 +262,12 @@ function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, s
             auth={auth}
             host={env.host}
             installed={env.installed}
+            storage={env.storage}
             fetch={env.fetch}
             push={env.push ?? noPush}
             onSignOut={onSignOut}
             connectUrl={env.connectUrl}
+            userAgent={env.userAgent}
           />
           {env.desktop && <DesktopAlerts storage={env.storage} />}
         </>
@@ -243,6 +282,13 @@ const refusedNotice =
   "This device was removed from crew, or the server rejected its login. Pair it again with a new code from crew remote pair.";
 
 export function App({ env }: { env: AppEnv }) {
+  if (env.desktopProblem) {
+    return <DesktopProblem host={env.host} problem={env.desktopProblem} fix={env.desktopFix} />;
+  }
+  return <Paired env={env} />;
+}
+
+function Paired({ env }: { env: AppEnv }) {
   const [auth, setAuth] = useState<Auth | null>(() => env.desktopAuth ?? loadAuth(env.storage));
   const [notice, setNotice] = useState("");
   const [code, setCode] = useState(() => (auth ? "" : pairCodeFromHash(env.hash)));

@@ -35,7 +35,7 @@ function fakeSession(id: string, over: Record<string, unknown>) {
     ID: id,
     TaskID: "t-" + id,
     Harness: "claude",
-    Pane: "",
+    Pane: "%" + id,
     Model: "",
     Effort: "",
     State: "idle",
@@ -76,7 +76,13 @@ export function fakeStreamState(now = Date.now()) {
     seq: 1,
     workspaces: [],
     tasks: [],
-    worktrees: [],
+    worktrees: [
+      { ID: "w1", Repo: "api", Path: "/home/me/.crew/worktrees/api/login", Branch: "login", PR: { Number: 41, Title: "Fix the login redirect", URL: "", Head: "login", State: "OPEN", Checks: "pending" }, SubtaskSlug: "", SessionID: "s1", Ports: null },
+      { ID: "w2", Repo: "web", Path: "/home/me/.crew/worktrees/web/cache", Branch: "cache", PR: null, SubtaskSlug: "", SessionID: "s2", Ports: null },
+      { ID: "w3", Repo: "api", Path: "/home/me/.crew/worktrees/api/old-auth", Branch: "old-auth", PR: { Number: 77, Title: "Drop the old auth", URL: "", Head: "old-auth", State: "MERGED", Checks: "pass" }, SubtaskSlug: "", SessionID: "", Ports: null },
+      { ID: "w4", Repo: "web", Path: "/home/me/.crew/worktrees/web/tweak", Branch: "tweak", PR: { Number: 80, Title: "Tweak the header", URL: "", Head: "tweak", State: "MERGED", Checks: "pass" }, SubtaskSlug: "", SessionID: "", Ports: null },
+      { ID: "w5", Repo: "api", Path: "/home/me/.crew/worktrees/api/spike", Branch: "", PR: null, SubtaskSlug: "", SessionID: "", Ports: null },
+    ],
     sessions: [
       fakeSession("s1", { State: "permission", name: "fix the login redirect", where: "api@login", banner: "needs permission: Bash: make test", since: ago(3) }),
       fakeSession("s2", { Harness: "codex", State: "waiting", name: "pick a cache key", where: "web@cache", banner: "asks: Which TTL should the cache use?", since: ago(12) }),
@@ -224,13 +230,134 @@ function fakeStream(req: IncomingMessage, socket: Duplex) {
   socket.on("error", () => undefined);
 }
 
+function wsBinary(payload: Buffer): Buffer {
+  const len = payload.length;
+  const head = len < 126 ? Buffer.from([0x82, len]) : Buffer.from([0x82, 126, len >> 8, len & 255]);
+  return Buffer.concat([head, payload]);
+}
+
+function clientPayload(chunk: Buffer): { op: number; data: Buffer } | null {
+  const len = chunk[1] & 0x7f;
+  if (len >= 126 || chunk.length < 6 + len) {
+    return null;
+  }
+  const mask = chunk.subarray(2, 6);
+  const data = Buffer.alloc(len);
+  for (let i = 0; i < len; i++) {
+    data[i] = chunk[6 + i] ^ mask[i % 4];
+  }
+  return { op: chunk[0] & 0x0f, data };
+}
+
+function fakeScreen(pane: string): string {
+  const rows = pane.endsWith("-nvim")
+    ? ["\x1b[34m  1 \x1b[0mpackage auth", "\x1b[34m  2 \x1b[0m", "\x1b[34m  3 \x1b[0mfunc Redirect(next string) string {", "\x1b[34m  4 \x1b[0m\treturn sanitize(next)", "\x1b[34m  5 \x1b[0m}"]
+    : pane.endsWith("-shell")
+      ? ["\x1b[32m~/w/api\x1b[0m $ git status --short", " M auth/redirect.go", "?? auth/redirect_test.go", "\x1b[32m~/w/api\x1b[0m $ "]
+      : ["\x1b[1m> fix the login redirect\x1b[0m", "", "\x1b[35m●\x1b[0m Read auth/redirect.go", "\x1b[35m●\x1b[0m Bash go test ./auth/...", "  \x1b[32mok\x1b[0m  example.com/api/auth  0.412s", "", "The redirect now keeps only same-origin paths."];
+  return "\x1b[2J\x1b[H" + rows.join("\r\n");
+}
+
+function fakeTerminal(req: IncomingMessage, socket: Duplex, pane: string) {
+  const key = String(req.headers["sec-websocket-key"] ?? "");
+  const accept = createHash("sha1").update(key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").digest("base64");
+  socket.write(["HTTP/1.1 101 Switching Protocols", "Upgrade: websocket", "Connection: Upgrade", "Sec-WebSocket-Accept: " + accept, "", ""].join("\r\n"));
+  let authed = false;
+  socket.on("data", (chunk: Buffer) => {
+    const frame = clientPayload(chunk);
+    if (!frame) {
+      return;
+    }
+    if (!authed && frame.op === 1) {
+      authed = true;
+      const first = JSON.parse(frame.data.toString() || "{}");
+      const screen = { pane, window: "@1", cols: first.cols ?? 80, rows: first.rows ?? 24, cursor: { x: 0, y: 0, visible: true }, data: fakeScreen(pane) };
+      socket.write(wsFrame(JSON.stringify({ screen })));
+      return;
+    }
+    if (authed && frame.op === 2) {
+      socket.write(wsBinary(frame.data));
+    }
+  });
+  socket.on("error", () => undefined);
+}
+const goLine = (Kind: number, Old: number, New: number, Text: string) => {
+  const spans: [number, number, string][] = [];
+  for (const m of Text.matchAll(/\b(func|return|if|for|package|import|err|nil)\b|"[^"]*"|\/\/.*$|\b\d+\b/g)) {
+    const at = new TextEncoder().encode(Text.slice(0, m.index)).length;
+    const end = at + new TextEncoder().encode(m[0]).length;
+    spans.push([at, end, m[0].startsWith('"') ? "string" : m[0].startsWith("//") ? "comment" : /^\d/.test(m[0]) ? "number" : "keyword"]);
+  }
+  return { Kind, Old, New, Text, Spans: spans };
+};
+
+const fakeReview = {
+  scope: "branch",
+  viewed: [{ Worktree: "w1", Path: "src/client.go", Blob: "b1" }],
+  draft: {
+    id: "d1",
+    session: "s3",
+    status: "open",
+    turns: null,
+    comments: [{ id: "c1", worktree: "/home/me/api-retries", path: "src/retry.go", start: 14, end: 15, code: [], body: "Cap the backoff at 30 s." }],
+  },
+  worktrees: [
+    {
+      Worktree: { ID: "w1", Repo: "/home/me/api", Path: "/home/me/api-retries", Branch: "42-add-retries", PR: { Number: 42 } },
+      From: "abc123",
+      Err: "",
+      Files: [
+        {
+          Path: "src/retry.go",
+          OldPath: "",
+          Status: "M",
+          Added: 5,
+          Deleted: 1,
+          Binary: false,
+          Blob: "b2",
+          Hunks: [
+            {
+              Header: "@@ -10,6 +10,10 @@ func Do(ctx context.Context, fn func() error) error {",
+              Lines: [
+                goLine(32, 10, 10, "\tvar err error"),
+                goLine(32, 11, 11, "\tfor attempt := 0; attempt < 5; attempt++ {"),
+                goLine(45, 12, 0, "\t\ttime.Sleep(time.Second)"),
+                goLine(43, 0, 12, "\t\tdelay := time.Duration(1<<attempt) * 100 * time.Millisecond"),
+                goLine(43, 0, 13, "\t\t// wait before the next try"),
+                goLine(43, 0, 14, "\t\ttime.Sleep(delay)"),
+                goLine(43, 0, 15, "\t\tif err = fn(); err == nil {"),
+                goLine(43, 0, 16, "\t\t\treturn nil"),
+                goLine(32, 13, 17, "\t\t}"),
+                goLine(32, 14, 18, "\t}"),
+                goLine(32, 15, 19, "\treturn err"),
+              ],
+            },
+          ],
+        },
+        { Path: "src/client.go", OldPath: "", Status: "M", Added: 2, Deleted: 2, Binary: false, Blob: "b1", Hunks: [] },
+        { Path: "src/retry_test.go", OldPath: "", Status: "A", Added: 24, Deleted: 0, Binary: false, Blob: "b3", Hunks: [] },
+      ],
+    },
+    {
+      Worktree: { ID: "w2", Repo: "/home/me/web", Path: "/home/me/web-retries", Branch: "42-add-retries", PR: null },
+      From: "def456",
+      Err: "",
+      Files: [{ Path: "src/api.ts", OldPath: "", Status: "M", Added: 3, Deleted: 1, Binary: false, Blob: "b4", Hunks: [] }],
+    },
+  ],
+};
+
 export function fakeApi(build = "v0.12.0+demo"): Plugin {
   return {
     name: "crew-fake-api",
     configureServer(server) {
       server.httpServer?.on("upgrade", (req: IncomingMessage, socket: Duplex) => {
-        if ((req.url ?? "").split("?")[0] === "/api/v1/stream") {
+        const path = (req.url ?? "").split("?")[0];
+        if (path === "/api/v1/stream") {
           fakeStream(req, socket);
+        }
+        if (path.startsWith("/api/v1/terminal/")) {
+          fakeTerminal(req, socket, decodeURIComponent(path.slice("/api/v1/terminal/".length)));
         }
       });
       server.middlewares.use(async (req, res, next) => {
@@ -255,6 +382,30 @@ export function fakeApi(build = "v0.12.0+demo"): Plugin {
             device: { id: "k3m9p2qx", name: String(body.name ?? "phone"), created_at: now, last_seen: now },
             token: "demo-token",
           });
+          return;
+        }
+        const pane = path.match(/^\/api\/v1\/sessions\/([^/]+)\/(shell|nvim)$/);
+        if (pane && req.method === "POST") {
+          send(res, 200, { pane: "%" + decodeURIComponent(pane[1]) + "-" + pane[2], dir: "/w/api", shown: true });
+          return;
+        }
+        const review = path.match(/^\/api\/v1\/sessions\/([^/]+)\/review(\/[a-z]+)?$/);
+        if (review) {
+          const sub = review[2] ?? "";
+          if (req.method === "GET" && sub === "") {
+            const scope = new URL(req.url ?? "", "http://fake").searchParams.get("scope") || "branch";
+            send(res, 200, { ...fakeReview, scope });
+            return;
+          }
+          if (req.method === "POST" && sub === "/hunk") {
+            send(res, 500, { error: { code: "failed", message: "error: patch failed: src/retry.go:12\nerror: src/retry.go: patch does not apply" } });
+            return;
+          }
+          if (req.method === "POST" && (sub === "/comments" || sub === "/send")) {
+            send(res, 200, { ...fakeReview.draft, status: sub === "/send" ? "queued" : "open" });
+            return;
+          }
+          send(res, 200, {});
           return;
         }
         const session = path.match(/^\/api\/v1\/sessions\/([^/]+)\/(messages|interrupt|prompt|answer|sends\/[^/]+)$/);
@@ -313,6 +464,33 @@ export function fakeApi(build = "v0.12.0+demo"): Plugin {
         }
         if (req.method === "GET" && path === "/api/v1/workspaces" && process.env.CREW_FAKE_STREAM === "revoked") {
           send(res, 401, { error: { code: "unauthorized", message: "unknown or revoked device token" } });
+          return;
+        }
+        if (req.method === "GET" && path === "/api/v1/disk") {
+          const at = (minutes: number) => new Date(Date.now() - minutes * minute).toISOString();
+          send(res, 200, {
+            free: 61_400_000_000,
+            total: 494_000_000_000,
+            auto_clean_every: 600_000_000_000,
+            next_cleanup: new Date(Date.now() + 7 * minute).toISOString(),
+            deps_store: { path: "/home/me/.local/share/pnpm/store", size: 3_100_000_000 },
+            rows: [
+              { WorktreeID: "w1", Size: 412_000_000, Action: "keep", Reason: "its session is live" },
+              { WorktreeID: "w2", Size: 1_240_000_000, Action: "keep", Reason: "its session is live" },
+              { WorktreeID: "w3", Size: 214_000_000, Action: "remove", Reason: "PR #77 merged" },
+              { WorktreeID: "w4", Size: 530_000_000, Action: "backup_then_ask", Reason: "3 uncommitted changes" },
+              { WorktreeID: "w5", Size: 88_000_000, Action: "keep", Reason: "not merged" },
+            ],
+            recent: [
+              { at: at(25), path: "/home/me/.crew/worktrees/api/rate-limit", branch: "rate-limit", action: "remove", outcome: "removed" },
+              { at: at(150), path: "/home/me/.crew/worktrees/web/footer", branch: "footer", action: "backup_then_ask", outcome: "backed up, removed" },
+            ],
+            reclaimable: 744_000_000,
+            reclaimable_pending: 0,
+            worktrees_size: 2_484_000_000,
+            worktrees_pending: 0,
+            ports: [{ port: 5173, pgid: 4242, command: "node", worktree: "/home/me/.crew/worktrees/api/login", session: "s1" }],
+          });
           return;
         }
         if (req.method === "GET" && path === "/api/v1/automations") {
@@ -413,11 +591,19 @@ export function fakeApi(build = "v0.12.0+demo"): Plugin {
         if (req.method === "GET" && path === "/api/v1/session-options") {
           send(res, 200, {
             harnesses: [
-              { harness: "claude", default_model: "opus", default_effort: "high" },
-              { harness: "codex", default_model: "gpt-6.1-sol", default_effort: "medium" },
+              { harness: "claude", models: ["opus", "sonnet", "haiku"], efforts: ["low", "medium", "high", "xhigh"], default_model: "opus", default_effort: "high" },
+              { harness: "codex", models: ["gpt-6.1-sol", "gpt-6.1-mini"], efforts: ["low", "medium", "high"], default_model: "gpt-6.1-sol", default_effort: "medium" },
             ],
             home: "/home/me",
           });
+          return;
+        }
+        if (req.method === "POST" && /^\/api\/v1\/sessions\/[^/]+\/kill-dev-servers$/.test(path)) {
+          send(res, 200, { killed: [4211] });
+          return;
+        }
+        if (req.method === "POST" && /^\/api\/v1\/sessions\/[^/]+\/(switch|rename|mute|end|resume)$/.test(path)) {
+          send(res, 200, {});
           return;
         }
         if (req.method === "GET" && path === "/api/v1/work-items/resolve") {

@@ -10,26 +10,11 @@ use url::Url;
 use crate::local::{self, LocalServe};
 use crate::servers::{self, Kind, Row, Store, LOCAL_ID};
 
-pub const REMOTE_PERMISSIONS: &[&str] = &[
-    "allow-crew-notify",
-    "allow-crew-attention",
-    "allow-crew-server-auth",
-    "allow-crew-server-open",
-];
-
-pub const LOCAL_PERMISSIONS: &[&str] = &[
-    "core:default",
-    "allow-crew-notify",
-    "allow-crew-attention",
-    "allow-crew-server-auth",
-    "allow-crew-servers",
-    "allow-crew-ssh-hosts",
-    "allow-crew-server-add",
-    "allow-crew-server-open",
-    "allow-crew-server-remove",
-    "allow-crew-server-fix",
-    "allow-crew-server-workspace",
-];
+#[derive(Debug, PartialEq)]
+pub enum FixTarget {
+    Local,
+    Ssh(String),
+}
 
 #[derive(Serialize)]
 pub struct Listing {
@@ -82,26 +67,17 @@ impl Hub {
         matches!(&self.local, Some((url, _)) if url.origin() == page.origin())
     }
 
-    pub fn may_open(&self, page: &Url, id: &str) -> bool {
-        id == LOCAL_ID || self.trusted(page)
-    }
-
-    pub fn auth_for(&self, page: &Url) -> Option<serde_json::Value> {
+    pub fn fix_target(&self, page: &Url) -> FixTarget {
         let origin = page.origin();
-        if let Some((url, auth)) = &self.local {
-            if url.origin() == origin {
-                return auth.clone();
-            }
-        }
         for (id, tunnel) in &self.tunnels {
-            if Url::parse(&local::base_url(tunnel.port)).map(|u| u.origin()) == Ok(origin.clone()) {
-                return self.store.get(id).and_then(|s| s.auth.clone());
+            if Url::parse(&local::base_url(tunnel.port)).map(|u| u.origin()).ok() != Some(origin.clone()) {
+                continue;
+            }
+            if let Some(Kind::Ssh { host }) = self.store.get(id).map(|s| &s.kind) {
+                return FixTarget::Ssh(host.clone());
             }
         }
-        self.store.servers.iter().find_map(|s| match &s.kind {
-            Kind::Url { url } if Url::parse(url).map(|u| u.origin()) == Ok(origin.clone()) => s.auth.clone(),
-            _ => None,
-        })
+        FixTarget::Local
     }
 
     pub fn tunnel_url(&mut self, id: &str) -> Option<Url> {
@@ -144,19 +120,6 @@ pub fn ssh_setup(host: &str) -> Result<(), String> {
         Some(reason) => Err(format!("the daemon on {host} still fails after crew setup daemon: {reason}")),
         None => Ok(()),
     }
-}
-
-pub fn local_setup(crew: &Path) -> Result<(), String> {
-    let program = crew.to_string_lossy().into_owned();
-    let (status, _, err) = run(&[program.clone(), "setup".into(), "daemon".into()])?;
-    let (_, check, _) = run(&[program, "setup".into(), "daemon".into(), "--check".into()])?;
-    if let Some(reason) = servers::check_failure(&check) {
-        return Err(reason);
-    }
-    if status != Some(0) {
-        return Err(err.trim().to_string());
-    }
-    Ok(())
 }
 
 pub fn ssh_tunnel(host: &str) -> Result<LocalServe, String> {

@@ -7,14 +7,13 @@ function errorText(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
-export function useServerListing(servers: Servers | undefined): [ServerListing | null, () => void, boolean] {
+export function useServerListing(servers: Servers | undefined): [ServerListing | null, () => void] {
   const [listing, setListing] = useState<ServerListing | null>(null);
-  const [refused, setRefused] = useState(false);
   const live = useRef(true);
   const load = useCallback(() => {
     servers?.list().then(
       (l) => live.current && setListing(l),
-      () => live.current && setRefused(true),
+      () => undefined,
     );
   }, [servers]);
   useEffect(() => {
@@ -24,7 +23,7 @@ export function useServerListing(servers: Servers | undefined): [ServerListing |
       live.current = false;
     };
   }, [load]);
-  return [listing, load, refused];
+  return [listing, load];
 }
 
 function Row({ server, current, servers, reload }: { server: ServerRow; current: boolean; servers: Servers; reload: () => void }) {
@@ -99,25 +98,11 @@ export function ServersScreen({ servers }: { servers: Servers }) {
   );
 }
 
-export function ServerChip({ servers, listing, refused, go }: { servers: Servers; listing: ServerListing | null; refused: boolean; go: (hash: string) => void }) {
+export function ServerChip({ servers, listing, go }: { servers: Servers; listing: ServerListing | null; go: (hash: string) => void }) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
   if (!listing) {
-    if (!refused) {
-      return null;
-    }
-    return (
-      <div className="server-chip">
-        <button type="button" className="chip-button" onClick={() => servers.open("local").catch((err: unknown) => setError(errorText(err)))}>
-          This computer
-        </button>
-        {error ? (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        ) : null}
-      </div>
-    );
+    return null;
   }
   const current = listing.servers.find((s) => s.id === listing.selected) ?? listing.servers[0];
   const pick = async (id: string) => {

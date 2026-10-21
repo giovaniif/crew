@@ -1,0 +1,7 @@
+{
+  "on_path": true,
+  "configured": true,
+  "config_file": "/home/me/.config/nvim/init.lua",
+  "plugin_dir": "/home/me/.crew/nvim",
+  "plugin_found": true
+}

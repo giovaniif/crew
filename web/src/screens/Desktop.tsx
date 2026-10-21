@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { Authed } from "../api";
 import type { AppEnv } from "../App";
 import { emptyMain, keyAction, mainTabs, modifierKeys, nextNeeding, sidebarRows, type Keys, type MainTab } from "../desktop";
@@ -9,8 +9,13 @@ import type { Servers } from "../servers";
 import { Brand } from "./Brand";
 import { FirstRun } from "./FirstRun";
 import { ServerChip, useServerListing } from "./Servers";
+import { BrowserPane, type BrowserStore } from "./Browser";
 import { NewSession } from "./NewSession";
+import { ReviewPane } from "./Review";
 import { SessionScreen } from "./Session";
+import { TerminalPane } from "./Terminal";
+import type { TerminalStore } from "../terminal";
+import { SessionCommands, type MenuPoint } from "./SessionCommands";
 import { Connection, Limits, sessionHref, sessionTitle } from "./SessionList";
 
 export type PaneProps = {
@@ -20,6 +25,9 @@ export type PaneProps = {
   onRetry: () => void;
   client: StreamClient;
   api: Authed;
+  terminals: TerminalStore | null;
+  host: string;
+  browsers: BrowserStore;
 };
 
 function Placeholder({ title }: { title: string }) {
@@ -33,13 +41,16 @@ function Placeholder({ title }: { title: string }) {
 
 export const panes: Record<MainTab, (props: PaneProps) => ReactNode> = {
   chat: (p) => <SessionScreen key={p.session.ID} id={p.session.ID} snapshot={p.snapshot} now={p.now} onRetry={p.onRetry} client={p.client} api={p.api} />,
-  terminal: () => <Placeholder title="Terminal" />,
-  review: () => <Placeholder title="Review" />,
-  shell: () => <Placeholder title="Shell" />,
-  nvim: () => <Placeholder title="nvim" />,
+  terminal: (p) => <TerminalPane store={p.terminals} session={p.session} kind="agent" />,
+  review: (p) => <ReviewPane key={p.session.ID} session={p.session.ID} sessionState={p.session.State} api={p.api} />,
+  shell: (p) => <TerminalPane store={p.terminals} session={p.session} kind="shell" />,
+  nvim: (p) => <TerminalPane store={p.terminals} session={p.session} kind="nvim" />,
+  browser: (p) => <BrowserPane key={p.session.ID} session={p.session.ID} worktrees={p.snapshot.state?.worktrees ?? []} host={p.host} store={p.browsers} />,
 };
 
-function Row({ session, current, shortcut, keys }: { session: Session; current: boolean; shortcut: number | null; keys: Keys }) {
+type OnMenu = (id: string, x: number, y: number) => void;
+
+function Row({ session, current, shortcut, keys, onMenu }: { session: Session; current: boolean; shortcut: number | null; keys: Keys; onMenu: OnMenu }) {
   return (
     <li>
       <a
@@ -47,6 +58,10 @@ function Row({ session, current, shortcut, keys }: { session: Session; current: 
         href={sessionHref(session.ID)}
         aria-current={current ? "page" : undefined}
         aria-keyshortcuts={shortcut === null ? undefined : keys.aria + "+" + shortcut}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          onMenu(session.ID, e.clientX, e.clientY);
+        }}
       >
         <span className="glyph" aria-hidden="true">
           {stateStyle(session.State).glyph}
@@ -61,7 +76,7 @@ function Row({ session, current, shortcut, keys }: { session: Session; current: 
   );
 }
 
-function Group({ title, sessions, selected, keys, numbered }: { title: string; sessions: Session[]; selected: string | null; keys: Keys; numbered: boolean }) {
+function Group({ title, sessions, selected, keys, numbered, onMenu }: { title: string; sessions: Session[]; selected: string | null; keys: Keys; numbered: boolean; onMenu: OnMenu }) {
   const id = "side-" + title.toLowerCase();
   return (
     <section className="side-group" aria-labelledby={id}>
@@ -73,16 +88,16 @@ function Group({ title, sessions, selected, keys, numbered }: { title: string; s
       </h2>
       <ul>
         {sessions.map((s, i) => (
-          <Row key={s.ID} session={s} current={s.ID === selected} shortcut={numbered && i < 9 ? i + 1 : null} keys={keys} />
+          <Row key={s.ID} session={s} current={s.ID === selected} shortcut={numbered && i < 9 ? i + 1 : null} keys={keys} onMenu={onMenu} />
         ))}
       </ul>
     </section>
   );
 }
 
-type SidebarProps = { env: AppEnv; snapshot: StreamSnapshot; now: number; onRetry: () => void; selected: string | null; hash: string; keys: Keys; chip: ReactNode };
+type SidebarProps = { env: AppEnv; snapshot: StreamSnapshot; now: number; onRetry: () => void; selected: string | null; hash: string; keys: Keys; onMenu: OnMenu; chip: ReactNode };
 
-function Sidebar({ env, snapshot, now, onRetry, selected, hash, keys, chip }: SidebarProps) {
+function Sidebar({ env, snapshot, now, onRetry, selected, hash, keys, onMenu, chip }: SidebarProps) {
   const rows = sidebarRows(snapshot.state?.sessions ?? []);
   const mark = (prefix: string) => (hash === prefix || hash.startsWith(prefix + "/") ? "page" : undefined);
   return (
@@ -94,10 +109,10 @@ function Sidebar({ env, snapshot, now, onRetry, selected, hash, keys, chip }: Si
           New session
         </a>
       </div>
-      <Connection snapshot={snapshot} now={now} onRetry={onRetry} />
+      <Connection snapshot={snapshot} now={now} onRetry={onRetry} fix={env.desktopFix} />
       <div className="side-scroll">
-        <Group title="Sessions" sessions={rows.live} selected={selected} keys={keys} numbered />
-        {rows.ended.length > 0 ? <Group title="Ended" sessions={rows.ended} selected={selected} keys={keys} numbered={false} /> : null}
+        <Group title="Sessions" sessions={rows.live} selected={selected} keys={keys} numbered onMenu={onMenu} />
+        {rows.ended.length > 0 ? <Group title="Ended" sessions={rows.ended} selected={selected} keys={keys} numbered={false} onMenu={onMenu} /> : null}
       </div>
       <div className="side-foot">
         {snapshot.state?.mates?.stopped ? (
@@ -122,6 +137,11 @@ function Sidebar({ env, snapshot, now, onRetry, selected, hash, keys, chip }: Si
             </a>
           </li>
           <li>
+            <a href="#/disk" aria-current={mark("#/disk")}>
+              Disk
+            </a>
+          </li>
+          <li>
             <a href="#/settings" aria-current={mark("#/settings")}>
               Settings
             </a>
@@ -133,7 +153,7 @@ function Sidebar({ env, snapshot, now, onRetry, selected, hash, keys, chip }: Si
   );
 }
 
-function Toolbar({ tab, hasSession, onTab }: { tab: MainTab; hasSession: boolean; onTab: (tab: MainTab) => void }) {
+function Toolbar({ tab, hasSession, onTab, children }: { tab: MainTab; hasSession: boolean; onTab: (tab: MainTab) => void; children?: ReactNode }) {
   return (
     <div className="toolbar">
       <div className="view-tabs" role="tablist" aria-label="Views">
@@ -156,6 +176,7 @@ function Toolbar({ tab, hasSession, onTab }: { tab: MainTab; hasSession: boolean
           );
         })}
       </div>
+      {children ? <div className="toolbar-actions">{children}</div> : null}
     </div>
   );
 }
@@ -204,13 +225,16 @@ export type DesktopProps = {
   onRetry: () => void;
   client: StreamClient;
   api: Authed;
+  terminals?: TerminalStore | null;
   other: ReactNode;
   servers?: Servers;
 };
 
-export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, api, other, servers }: DesktopProps) {
+export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, api, terminals = null, other, servers }: DesktopProps) {
   const [tab, setTab] = useState<MainTab>("chat");
-  const [listing, , refused] = useServerListing(servers);
+  const browsers = useRef<BrowserStore>(new Map());
+  const [menu, setMenu] = useState<(MenuPoint & { id: string }) | null>(null);
+  const [listing] = useServerListing(servers);
   const [firstRun, setFirstRun] = useState(false);
   useEffect(() => {
     if (listing?.first_run) {
@@ -223,10 +247,17 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
   const sessions = snapshot.state?.sessions ?? [];
   const rows = sidebarRows(sessions);
   const session = sessions.find((s) => s.ID === selectedId) ?? null;
+  const routeTab = route.screen === "session" ? route.tab : undefined;
+
+  useEffect(() => {
+    if (routeTab) {
+      setTab(routeTab);
+    }
+  }, [routeTab, selectedId]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const action = keyAction(e);
+      const action = keyAction(e, keys.mac);
       if (!action) {
         return;
       }
@@ -244,6 +275,10 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
         go("#/new");
         return;
       }
+      if (action.kind === "tab") {
+        setTab(action.tab);
+        return;
+      }
       const next = nextNeeding(rows.live, selectedId);
       if (next) {
         go(sessionHref(next.ID));
@@ -251,7 +286,7 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [rows.live, selectedId, go]);
+  }, [rows.live, selectedId, go, keys.mac]);
 
   let main: ReactNode;
   if (other) {
@@ -259,9 +294,11 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
   } else if (session || (tab === "terminal" && route.screen !== "session")) {
     main = (
       <>
-        <Toolbar tab={tab} hasSession={session !== null} onTab={setTab} />
+        <Toolbar tab={tab} hasSession={session !== null} onTab={setTab}>
+          {session ? <SessionCommands key={session.ID} api={api} session={session} storage={env.storage} button /> : null}
+        </Toolbar>
         <section className={"pane pane-" + tab} role="tabpanel" id={"pane-" + tab} aria-labelledby={"tab-" + tab}>
-          {session ? panes[tab]({ session, snapshot, now, onRetry, client, api }) : <Placeholder title="Terminal" />}
+          {session ? panes[tab]({ session, snapshot, now, onRetry, client, api, terminals, host: env.host, browsers: browsers.current }) : <Placeholder title="Terminal" />}
         </section>
       </>
     );
@@ -274,6 +311,9 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
     );
   }
 
+  const menuSession = menu ? sessions.find((s) => s.ID === menu.id) : undefined;
+  const onMenu: OnMenu = (id, x, y) => setMenu((m) => ({ id, x, y, n: (m?.n ?? 0) + 1 }));
+
   return (
     <div className="desktop">
       <Sidebar
@@ -284,8 +324,10 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
         selected={selectedId}
         hash={hash}
         keys={keys}
-        chip={servers ? <ServerChip servers={servers} listing={listing} refused={refused} go={go} /> : null}
+        onMenu={onMenu}
+        chip={servers ? <ServerChip servers={servers} listing={listing} go={go} /> : null}
       />
+      {menu && menuSession ? <SessionCommands key={"menu-" + menu.id} api={api} session={menuSession} storage={env.storage} openAt={menu} /> : null}
       <main className="main-column">{main}</main>
       {route.screen === "new" ? (
         <Sheet onClose={() => go("#/")}>
