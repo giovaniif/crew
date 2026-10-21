@@ -101,7 +101,7 @@ function Sidebar({ env, snapshot, now, onRetry, selected, hash, keys, onMenu }: 
           New session
         </a>
       </div>
-      <Connection snapshot={snapshot} now={now} onRetry={onRetry} />
+      <Connection snapshot={snapshot} now={now} onRetry={onRetry} fix={env.desktopFix} />
       <div className="side-scroll">
         <Group title="Sessions" sessions={rows.live} selected={selected} keys={keys} numbered onMenu={onMenu} />
         {rows.ended.length > 0 ? <Group title="Ended" sessions={rows.ended} selected={selected} keys={keys} numbered={false} onMenu={onMenu} /> : null}

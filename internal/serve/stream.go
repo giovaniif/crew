@@ -17,6 +17,7 @@ import (
 const (
 	CloseBadHandshake  websocket.StatusCode = 4400
 	CloseUnauthorized  websocket.StatusCode = 4401
+	CloseBuildMismatch websocket.StatusCode = 4502
 	streamReadLimit                         = 64 << 10
 	streamWriteTimeout                      = 10 * time.Second
 	maxWatches                              = 32
@@ -192,12 +193,14 @@ func (s *Server) authenticate(ctx context.Context, st *stream) (Daemon, rpc.Subs
 	}
 	d, err := s.dial(ctx)
 	if err != nil {
-		return nil, none, rpc.Device{}, websocket.StatusTryAgainLater, apiError(err).Message
+		code, reason := daemonDown(err)
+		return nil, none, rpc.Device{}, code, reason
 	}
 	sub, err := d.Subscribe(ctx)
 	if err != nil {
 		_ = d.Close()
-		return nil, none, rpc.Device{}, websocket.StatusTryAgainLater, apiError(err).Message
+		code, reason := daemonDown(err)
+		return nil, none, rpc.Device{}, code, reason
 	}
 	device, err := s.check(ctx, d, first.Token)
 	if err != nil {
@@ -206,7 +209,8 @@ func (s *Server) authenticate(ctx context.Context, st *stream) (Daemon, rpc.Subs
 		if e.Code == rpc.CodeUnauthorized {
 			return nil, none, rpc.Device{}, CloseUnauthorized, e.Message
 		}
-		return nil, none, rpc.Device{}, websocket.StatusTryAgainLater, e.Message
+		code, reason := daemonDown(e)
+		return nil, none, rpc.Device{}, code, reason
 	}
 	return d, sub, device, 0, ""
 }
@@ -346,4 +350,12 @@ func orEmpty[T any](xs []T) []T {
 		return []T{}
 	}
 	return xs
+}
+
+func daemonDown(err error) (websocket.StatusCode, string) {
+	e := apiError(err)
+	if e.Code == rpc.CodeVersionMismatch {
+		return CloseBuildMismatch, e.Message
+	}
+	return websocket.StatusTryAgainLater, e.Message
 }

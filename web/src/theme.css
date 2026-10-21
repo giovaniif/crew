@@ -580,6 +580,35 @@ code {
   border-left: 4px solid var(--red);
 }
 
+.connection.banner-info {
+  border-left: 4px solid var(--blue);
+}
+
+.connection.banner-warn {
+  border-left: 4px solid var(--peach);
+}
+
+.connection.banner-bad {
+  border-left: 4px solid var(--red);
+}
+
+.banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.banner-title {
+  font-weight: 600;
+}
+
+.banner-detail {
+  color: var(--subtext);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
 .retry {
   min-height: 44px;
   padding: 8px 14px;

@@ -16,7 +16,7 @@ export function session(id: string, name: string, extra: Partial<Session> = {}):
   return { ...goldenState().sessions[0], ID: id, name, WorktreeIDs: null, order: undefined, ...extra };
 }
 
-export function desktop(hash = "", wide = true, userAgent = "Mozilla/5.0 (X11; Linux x86_64)") {
+export function desktop(hash = "", wide = true, userAgent = "Mozilla/5.0 (X11; Linux x86_64)", extra: Partial<AppEnv> = {}) {
   window.location.hash = hash;
   const sockets = new FakeSockets();
   const storage = new MemoryStorage();
@@ -43,6 +43,7 @@ export function desktop(hash = "", wide = true, userAgent = "Mozilla/5.0 (X11; L
     },
     wide: width,
     terminal: terminals.env,
+    ...extra,
   };
   render(<App env={env} />);
   const live = (state: StreamState = goldenState()) => {

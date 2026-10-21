@@ -217,6 +217,10 @@ func (s *Server) check(ctx context.Context, d Daemon, token string) (rpc.Device,
 
 func (s *Server) dial(ctx context.Context) (Daemon, error) {
 	d, err := s.cfg.Dial(ctx)
+	var mismatch *rpc.Error
+	if errors.As(err, &mismatch) && mismatch.Code == rpc.CodeVersionMismatch {
+		return nil, mismatch
+	}
 	if err != nil {
 		return nil, &rpc.Error{Code: rpc.CodeUnavailable, Message: "the crew daemon is not reachable: " + err.Error()}
 	}
