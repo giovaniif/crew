@@ -24,8 +24,7 @@ function state(): StreamState {
 }
 
 function open(wide = true) {
-  const d = desktop("#/disk", wide);
-  d.server.on("GET", "/api/v1/disk", { status: 200, body: disk });
+  const d = desktop("#/disk", wide, undefined, (server) => server.on("GET", "/api/v1/disk", { status: 200, body: disk }));
   d.live(state());
   return d;
 }
