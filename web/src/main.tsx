@@ -10,8 +10,11 @@ import { hello } from "./api";
 import { App } from "./App";
 import { buildOfWorker, checkBuild, workerURL } from "./build";
 import { desktopAuth } from "./auth";
+import { desktopFix } from "./desktop-host";
+import { tauriBridge } from "./desktopBridge";
 import { isInstalled } from "./display";
 import { browserPush } from "./push";
+import { browserTerminal } from "./xterm";
 
 const checkEvery = 5 * 60 * 1000;
 const installTimeout = 15 * 1000;
@@ -25,6 +28,14 @@ const visibility = {
   onChange: (listener: () => void) => {
     document.addEventListener("visibilitychange", listener);
     return () => document.removeEventListener("visibilitychange", listener);
+  },
+};
+const wideQuery = window.matchMedia("(min-width: 56.25em)");
+const wide = {
+  matches: () => wideQuery.matches,
+  onChange: (listener: () => void) => {
+    wideQuery.addEventListener("change", listener);
+    return () => wideQuery.removeEventListener("change", listener);
   },
 };
 const onHashChange = (listener: (hash: string) => void) => {
@@ -102,6 +113,7 @@ function watchBuild() {
 }
 
 const root = document.getElementById("root");
+const connectUrl = (window as { __CREW_CONNECT_URL__?: unknown }).__CREW_CONNECT_URL__;
 if (root) {
   createRoot(root).render(
     <StrictMode>
@@ -118,7 +130,12 @@ if (root) {
           onHashChange,
           push: browserPush(window),
           visibility,
+          wide,
+          terminal: browserTerminal(window.location),
+          desktop: tauriBridge(window),
           desktopAuth: desktopAuth((window as { __CREW_DESKTOP_AUTH__?: unknown }).__CREW_DESKTOP_AUTH__),
+          desktopFix: desktopFix(window),
+          connectUrl: typeof connectUrl === "string" ? connectUrl : undefined,
         }}
       />
     </StrictMode>,

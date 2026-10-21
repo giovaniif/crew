@@ -67,6 +67,11 @@ export function Pair({ env, code, notice = "", onPaired }: PairProps) {
             </>
           )}
         </dl>
+        {env.connectUrl ? (
+          <a className="change-server" href={env.connectUrl}>
+            Change server
+          </a>
+        ) : null}
       </section>
       <form onSubmit={submit}>
         <label>

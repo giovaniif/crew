@@ -40,7 +40,7 @@ const board: Mates = {
 
 const defs = {
   mates: [
-    { name: "helper", prompt: "Help.\nMore help.", agent: "claude", model: "opus", effort: "high", repos: ["api"], avatar: "owl", enabled: true },
+    { name: "helper", prompt: "Help.\nWith care.\n\nMore help.", agent: "claude", model: "opus", effort: "high", repos: ["api"], avatar: "owl", enabled: true },
     { name: "webby", prompt: "Web.", agent: "codex", enabled: false },
     { name: "fresh", prompt: "New.", agent: "claude", enabled: true },
   ],
@@ -107,18 +107,61 @@ describe("Mates", () => {
     expect(screen.getByRole("link", { name: "Mates" })).toHaveAttribute("href", "#/mates");
   });
 
-  it("shows a face card for each mate with its state, linked to the profile", async () => {
+  it("shows a face card for each mate with its status once and the first paragraph of its prompt, linked to the profile", async () => {
     setup();
     const helper = await screen.findByRole("link", { name: /^helper/ });
     expect(helper).toHaveAttribute("href", "#/mates/helper");
     expect(await within(helper).findByRole("img", { name: "Owl working" })).toBeInTheDocument();
-    expect(helper).toHaveTextContent("Help.");
+    expect(within(helper).getByText("Help. With care.")).toBeInTheDocument();
     expect(helper).not.toHaveTextContent("More help.");
-    expect(helper).toHaveTextContent("working");
-    expect(within(screen.getByRole("link", { name: /^webby/ })).getByText("paused")).toBeInTheDocument();
-    expect(within(screen.getByRole("link", { name: /^fresh/ })).getByText("idle")).toBeInTheDocument();
+    expect(within(helper).getByText(/^Working on /)).toBeInTheDocument();
+    expect(within(helper).queryByText("working")).toBeNull();
+    const webby = screen.getByRole("link", { name: /^webby/ });
+    expect(within(webby).getByText("Paused")).toBeInTheDocument();
+    expect(within(webby).queryByText("paused")).toBeNull();
+    const fresh = screen.getByRole("link", { name: /^fresh/ });
+    expect(within(fresh).getByText("Idle")).toBeInTheDocument();
+    expect(within(fresh).queryByText("idle")).toBeNull();
     expect(screen.getByRole("link", { name: "New mate" })).toHaveAttribute("href", "#/mates/new");
     expect(await screen.findByText("No approvals wait for you.")).toBeInTheDocument();
+  });
+
+  it("has the source list with a count for each source", async () => {
+    setup();
+    const sources = await screen.findByRole("navigation", { name: "Mate sources" });
+    await screen.findByText("Help. With care.");
+    for (const [name, n] of [["All Mates", "3"], ["Live", "2"], ["Claude", "2"], ["Codex", "1"]]) {
+      expect(within(sources).getByRole("button", { name: new RegExp("^" + name + " " + n + "$") })).toBeInTheDocument();
+    }
+    expect(within(sources).getByRole("button", { name: /^All Mates/ })).toHaveAttribute("aria-pressed", "true");
+    await userEvent.setup().click(within(sources).getByRole("button", { name: /^Codex/ }));
+    expect(screen.getByRole("link", { name: /^webby/ })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /^helper/ })).toBeNull();
+    expect(screen.queryByRole("link", { name: /^fresh/ })).toBeNull();
+  });
+
+  it("searches the mates by name and by the first paragraph of the prompt", async () => {
+    setup();
+    const user = userEvent.setup();
+    await screen.findByText("Help. With care.");
+    await user.type(screen.getByRole("searchbox", { name: "Search mates" }), "web");
+    expect(screen.getByRole("link", { name: /^webby/ })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /^helper/ })).toBeNull();
+    await user.clear(screen.getByRole("searchbox", { name: "Search mates" }));
+    await user.type(screen.getByRole("searchbox", { name: "Search mates" }), "new.");
+    expect(screen.getByRole("link", { name: /^fresh/ })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /^webby/ })).toBeNull();
+  });
+
+  it("shows the live count and the status line on each card", async () => {
+    setup();
+    await screen.findByText("Help. With care.");
+    const helper = screen.getByRole("link", { name: /^helper/ });
+    expect(helper).toHaveTextContent("1 live");
+    expect(helper).toHaveTextContent("Working on add login");
+    expect(screen.getByRole("link", { name: /^webby/ })).toHaveTextContent("Paused");
+    expect(screen.getByRole("link", { name: /^fresh/ })).toHaveTextContent("No live chats");
+    expect(screen.getByRole("link", { name: /^fresh/ })).toHaveTextContent("Idle");
   });
 
   it("shows needs you on the face of a mate with a pending approval", async () => {
@@ -133,7 +176,7 @@ describe("Mates", () => {
     };
     setup("#/mates", board, [ask]);
     const helper = await screen.findByRole("link", { name: /^helper/ });
-    expect(await within(helper).findByText("needs you")).toBeInTheDocument();
+    expect(await within(helper).findByText("Needs you")).toBeInTheDocument();
     expect(within(helper).getByRole("img", { name: "Owl needs" })).toBeInTheDocument();
     expect(screen.getByRole("listitem", { name: "helper: merge" })).toBeInTheDocument();
   });
@@ -210,6 +253,36 @@ describe("Mate profile", () => {
     expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/mates/helper/memory")?.body).toEqual({ text: "- Small PRs." });
   });
 
+  it("shows the memory meter, the size against the limit", async () => {
+    setup("#/mates/helper");
+    const meter = await screen.findByRole("meter", { name: "Memory size" });
+    await waitFor(() => expect(meter).toHaveAttribute("aria-valuenow", "19"));
+    expect(meter).toHaveAttribute("aria-valuemax", "8192");
+    expect(screen.getByText("19 bytes of 8 KB")).toBeInTheDocument();
+  });
+
+  it("clears the memory only after a confirm", async () => {
+    const { server } = setup("#/mates/helper");
+    const user = userEvent.setup();
+    await screen.findByText("- Tests come first.");
+    await user.click(screen.getByRole("button", { name: "Clear memory" }));
+    const ask = screen.getByRole("dialog", { name: "Clear the memory of helper?" });
+    expect(server.calls.some((c) => c.method === "POST" && c.path === "/api/v1/mates/helper/memory")).toBe(false);
+    await user.click(within(ask).getByRole("button", { name: "Clear" }));
+    await waitFor(() => expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/mates/helper/memory")?.body).toEqual({ text: "" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("keeps the memory when the owner cancels Clear memory", async () => {
+    const { server } = setup("#/mates/helper");
+    const user = userEvent.setup();
+    await screen.findByText("- Tests come first.");
+    await user.click(screen.getByRole("button", { name: "Clear memory" }));
+    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(server.calls.some((c) => c.method === "POST" && c.path === "/api/v1/mates/helper/memory")).toBe(false);
+  });
+
   it("offers Connect to Slack with the Slack mark for a mate without Slack", async () => {
     setup("#/mates/fresh");
     const user = userEvent.setup();
@@ -230,9 +303,10 @@ describe("Mate profile", () => {
 });
 
 describe("New mate", () => {
-  it("makes a mate in three steps: face, personality with tone, brains", async () => {
+  it("makes a mate in four steps: face, personality with tone, brains, meet", async () => {
     const { server } = setup("#/mates/new");
     const user = userEvent.setup();
+    expect(await screen.findByLabelText("Step 1 of 4")).toBeInTheDocument();
     await user.click(await screen.findByRole("button", { name: "Quill" }));
     expect(screen.getByRole("button", { name: "Quill" })).toHaveAttribute("aria-pressed", "true");
     await user.click(screen.getByRole("button", { name: "Color #209fb5" }));
@@ -249,6 +323,13 @@ describe("New mate", () => {
     await user.type(screen.getByLabelText("Model"), "gpt-5");
     await user.type(screen.getByLabelText("Effort"), "high");
     await user.type(screen.getByLabelText("Repos"), "api, web");
+    await user.click(screen.getByRole("button", { name: "Next: meet" }));
+    expect(screen.getByLabelText("Step 4 of 4")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Meet scout" })).toBeInTheDocument();
+    const facts = screen.getByRole("region", { name: "About scout" });
+    expect(facts).toHaveTextContent("Codex · gpt-5 · high");
+    expect(facts).toHaveTextContent("api, web");
+    expect(server.calls.some((c) => c.method === "POST" && c.path === "/api/v1/mates")).toBe(false);
     await user.click(screen.getByRole("button", { name: "Create" }));
     await waitFor(() =>
       expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/mates")?.body).toEqual({
@@ -311,12 +392,33 @@ describe("New mate", () => {
 });
 
 describe("Mate conversation", () => {
-  it("shows the face of the mate and starts fresh with mate.fresh in the same worktree", async () => {
+  it("shows the face of the mate in the toolbar, linked to the profile", async () => {
+    setup("#/sessions/s2");
+    const bar = await screen.findByRole("toolbar", { name: "Session" });
+    const who = within(bar).getByRole("link", { name: /^webby/ });
+    expect(who).toHaveAttribute("href", "#/mates/webby");
+    expect(within(who).getByRole("img", { name: /paused$/ })).toBeInTheDocument();
+    expect(within(bar).getByRole("button", { name: "Start fresh" })).toBeInTheDocument();
+  });
+
+  it("asks before it starts fresh, and starts nothing on Cancel", async () => {
     const { server } = setup("#/sessions/s2");
     const user = userEvent.setup();
-    expect(await screen.findByRole("img", { name: /^Owl paused$|paused$/ })).toBeInTheDocument();
-    expect(await screen.findByRole("checkbox", { name: "Keep this worktree" })).toBeChecked();
-    await user.click(screen.getByRole("button", { name: "Start fresh" }));
+    await user.click(await screen.findByRole("button", { name: "Start fresh" }));
+    const ask = screen.getByRole("dialog", { name: "Start fresh with Webby?" });
+    expect(ask).toHaveTextContent("Webby writes a handoff to memory");
+    await user.click(within(ask).getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(calls(server)).not.toContain("POST /api/v1/sessions/s2/fresh");
+  });
+
+  it("starts fresh with mate.fresh in the same worktree", async () => {
+    const { server } = setup("#/sessions/s2");
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Start fresh" }));
+    const ask = screen.getByRole("dialog");
+    expect(within(ask).getByRole("checkbox", { name: "Keep this worktree" })).toBeChecked();
+    await user.click(within(ask).getByRole("button", { name: "Start fresh" }));
     await waitFor(() => expect(window.location.hash).toBe("#/sessions/s8"));
     expect(calls(server).filter((c) => c.startsWith("POST") && !c.endsWith("/read"))).toEqual(["POST /api/v1/sessions/s2/fresh"]);
     expect(calls(server)).toContain("POST /api/v1/sessions/s2/read");
@@ -326,8 +428,10 @@ describe("Mate conversation", () => {
   it("starts fresh in a new worktree when the owner clears Keep this worktree", async () => {
     const { server } = setup("#/sessions/s2");
     const user = userEvent.setup();
-    await user.click(await screen.findByRole("checkbox", { name: "Keep this worktree" }));
-    await user.click(screen.getByRole("button", { name: "Start fresh" }));
+    await user.click(await screen.findByRole("button", { name: "Start fresh" }));
+    const ask = screen.getByRole("dialog");
+    await user.click(within(ask).getByRole("checkbox", { name: "Keep this worktree" }));
+    await user.click(within(ask).getByRole("button", { name: "Start fresh" }));
     await waitFor(() => expect(window.location.hash).toBe("#/sessions/s8"));
     expect(server.calls.find((c) => c.path === "/api/v1/sessions/s2/fresh")?.body).toEqual({ same_worktree: false });
   });

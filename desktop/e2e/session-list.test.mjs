@@ -52,6 +52,32 @@ after(async () => {
 test("the app window shows the session list of the server", async () => {
   await waitFor(() => run("return document.readyState === 'complete' && location.protocol.startsWith('http')"), "the served page");
   await run("localStorage.setItem('crew.auth', arguments[0]); location.reload(); return true", [auth]);
-  await waitFor(() => run("const h = document.querySelector('h1'); return h !== null && h.textContent === 'Sessions'"), "the Sessions heading");
+  await waitFor(
+    () => run("return [...document.querySelectorAll('h1, nav[aria-label=Sidebar] h2 span')].some((h) => h.textContent === 'Sessions')"),
+    "the Sessions heading",
+  );
   await waitFor(() => run("return document.body.innerText.includes('fix the login redirect')"), "a session row from the stream");
+});
+
+const runAsync = (script, args = []) => call("POST", "/session/" + session + "/execute/async", { script, args });
+
+test("the served page can call the tray and banner commands of the app", async () => {
+  const menu = {
+    needsYou: [{ id: "a", name: "api", where: "api@main", permission: true }],
+    doneUnread: [],
+    working: [],
+    meters: [{ title: "Claude 5h", caption: "40%", low: false }],
+    badge: 1,
+  };
+  const banner = { id: "a", title: "api", body: "wants to run Bash", kind: "permission", sound: false };
+  const result = await runAsync(
+    "const done = arguments[arguments.length - 1];" +
+      "const t = window.__TAURI_INTERNALS__;" +
+      "if (!t) { done('no ipc'); return; }" +
+      "t.invoke('crew_attention', { menu: arguments[0] })" +
+      ".then(() => t.invoke('crew_notify', { banner: arguments[1] }))" +
+      ".then(() => done('ok'), (e) => done('error: ' + String(e)));",
+    [menu, banner],
+  );
+  assert.equal(result, "ok");
 });

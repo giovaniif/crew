@@ -33,6 +33,8 @@ The phone app: a PWA that `crew serve` embeds and serves at `/` (ADR [0046](../d
   - on close code 4401, asks `confirmRefused` before it stops. The app passes `tokenRefused`, an authed `GET /api/v1/workspaces`. Only a 401 `unauthorized` from that call makes the status `unauthorized`. All other results (success, 5xx, a network error) retry with the same token, as for all other closes.
   - retries on all other close codes, also 4400 (a late or malformed first frame).
 
+  The connection banner (`Connection` in `screens/SessionList.tsx`) has these states, as in the Mac app: Connecting…; No crew daemon · retrying (close 1013, with the reason); Reconnecting in N s (other closes); Build mismatch · stopped (close 4502, no retry, with Reconnect). In the desktop app (`AppEnv.desktopFix`, see `src/desktop-host.ts`), the retrying states show Fix instead of Retry now. Fix shows Fixing the daemon, then connects again. A failed Fix shows Fix failed · retrying with the reason. If the app cannot start `crew serve`, the bundled connect page (`desktop/connect/index.html`) shows the problem and Fix. Tests: `npm test -- Connection`.
+
   The app forgets `crew.auth` (it copies the login of the alphas one time, see `src/legacy.ts`) only on `unauthorized` (or Sign out). Then it shows pairing, with a note that the device was removed or its login was rejected. Tests: `npm test -- stream SessionList`.
   - `onFrame` passes all frames (transcripts, watch errors). `send` writes `watch`/`unwatch` frames while `live`.
   - With `visible` set (`AppEnv.visibility`, `document.visibilityState` in `main.tsx`), it sends `{"visible":bool}` when live and on each `visibilitychange` (`visibilityChanged`). While the app is shown, it sends `{"visible":true}` every 30 s. Thus the daemon does not push to a phone that has the app open.
@@ -74,7 +76,17 @@ The phone app: a PWA that `crew serve` embeds and serves at `/` (ADR [0046](../d
   - Sign out first calls `POST /api/v1/push/unsubscribe` and unsubscribes the browser, then calls `POST /api/v1/unpair` (both best effort). Then it forgets the token.
 
   Tests: `npm test -- Push` and `npm test -- Settings`.
+- `src/desktopBridge.tsx` and `src/desktopAttention.ts`: the desktop app (see [desktop/](../desktop/AGENTS.md)). `AppEnv.desktop` is set only in the Tauri window.
+  - `bannerStep` posts one banner for each new `banner` of a session. It posts nothing for the banners that were there when the stream connected. A newer banner of the same session replaces the older one.
+  - It skips muted sessions, the events that the settings turn off, and the session in view while the window is in front. The settings are in `crew.alerts` in `localStorage`. Their defaults are the defaults of the Mac app. Settings shows them in the desktop app only.
+  - The app sends `{"viewing":{"session","front"}}` on the stream when the route, the focus or the visibility changes. serve passes it to `client.viewing`.
+  - `attentionMenu` gives the tray rows and the badge.
+  - Tests: `npm test -- Attention`.
 - `#/automations` (`screens/Automations.tsx`) lists the automations with agent, trigger and state. Run… opens a form with a multi-line context and an optional work item, then posts `/api/v1/automations/<name>/run`. A started run opens its session. A skipped or failed run shows its reason. Tests: `npm test -- Automations`.
+  - Issue #524: the screen has search (name and prompt), filters (state, last outcome, agent) and sort (name, last run). `src/automations.ts` holds these rules (`automationRows`) and the draft of the form (`draftOf`, `automationOf`), as `Automations.swift` of the Mac app does.
+  - Details opens Overview (the fields, the prompt and the source file) and Runs (the history, Open session and Rerun, which posts `/api/v1/automations/runs/<id>/rerun`).
+  - New automation and Edit post `/api/v1/automations` (`automation.save`). A repo automation (its source ends with `/.crew.toml`) shows that file and has no Edit.
+  - Save and Rerun are owner-only routes. Another device gets a note.
 - **Faces.** `src/faces.ts` has the 12 faces of the design (`FACES`: id, name, accent for light and dark, the SVG parts and the 2-line TUI glyph), `faceSvg` and `faceGlyph`. The TUI and the Mac app use the same rules:
   - The face of a mate is its `avatar` (from the stream row, else from `GET /api/v1/mates`) if that is a face id. Else it is the face with the id of the mate name. Else it is `FACES[sum of the UTF-8 bytes of the name % 12]`. The color is the `color` of the mate, else the accent of the face.
   - `faceState`: `paused` if the mate is paused or a guard holds it. Else `needs` if the mate has a pending approval, or a thread or conversation that is not ended waits or asks for permission. Else `working` if one runs. Else `idle`.
@@ -93,7 +105,49 @@ The phone app: a PWA that `crew serve` embeds and serves at `/` (ADR [0046](../d
   - A session that Start fresh made has `Mate.FreshFrom` (the old session id). The chat loads the newest page of the old session one time. It shows those messages above a dashed divider "Earlier conversation ended · handoff saved to memory", the same as the Mac app. A session with no `FreshFrom` shows no divider.
 - Tests: `npm test -- Mates faces`.
 - `#/approvals` (`screens/Approvals.tsx`) shows a card for each pending approval of a mate (`GET /api/v1/approvals`): the mate, the action, who asked, the tool, the exact input, the time until it expires and a link to the session. Approve and Deny post `/api/v1/approvals/<id>/approve|deny`, then the card shows the result. A 409 `stale` or a `not_found` shows "This approval is gone". The push of an approval opens this screen. Tests: `npm test -- Approvals`.
-- `#/settings` shows Settings (server, this device, Enable notifications, sign out). A tab bar under the session list and Settings switches between them.
+- `#/settings` (`screens/Settings.tsx`) shows Settings (issue #521). A tab bar under the session list and Settings switches between them. On the desktop layout, the Settings link of the sidebar opens it in the main column. The left list has two groups:
+  - This app: General (the server, this device, Enable notifications, the General options, Sign out), Notifications (the alerts for each state), Appearance and Shortcuts. The app keeps them in `crew.settings` in `localStorage` (`src/settings.ts`). The Theme option sets `data-theme` on `<html>`, and `theme.css` has a palette for each value.
+  - Server (`screens/ServerSettings.tsx`): Workspaces (the path field shows the folders of `GET /workspaces/dirs`), Agents (hooks, default model and effort, `fallback.threshold`, nvim), Notifications (`push.away_after`, the devices with Revoke, Pair a device) and Appearance (the `[theme]` colours).
+  - A server group that gets `unknown_method` shows a note that the server does not have this setting. A group that gets `forbidden` shows a note that only the owner device can change it.
+  - `src/shortcuts.ts` has the shortcut rules of the Mac app: a combo needs Cmd or Ctrl, Cmd or Ctrl with 1 to 9 is for the session jumps, a combo cannot have two actions, and the fixed combos (Cmd+, and the review keys) stay. Tests: `npm test -- Settings Shortcuts`.
+- `#/disk` (`screens/Disk.tsx`) is the worktrees and disk window of the Mac app (issue #520). The sidebar of the desktop layout links to it. The phone layout shows it too.
+  - `src/disk.ts` holds the pure rules, the same as `Disk.swift`: `diskTiles`, `diskRows` (the state Open, Merged · clean, Merged · dirty, Detached or No PR, and what cleanup does), `diskActions`, `diskPorts`, `diskRecent` and `pollDelay`.
+  - It loads `GET /api/v1/disk` every 2 s while a size is pending, else every 10 s.
+  - Each destructive action (Remove…, Back up and remove…, Kill…) asks first. A `keep` row offers no removal. A `backup_then_ask` row offers only Back up and remove. The daemon applies the cleanup rules again.
+  - Go to session opens `#/sessions/<id>`. Open shell posts `…/shell` with the worktree, then opens `#/sessions/<id>/shell`, which selects the Shell tab.
+  - Tests: `npm test -- Disk`.
+- **Desktop layout** (issue #514, ADR [0057](../docs/adr/0057-tauri-apps.md)). `AppEnv.wide` (`matchMedia("(min-width: 900px)")` in `main.tsx`, `FakeWidth` in tests) selects it. A narrow window keeps the phone layout.
+  - `screens/Desktop.tsx` has the sidebar (sessions in the daemon order, `order` when the stream has it, else the sessions that need you first; an Ended group; Mates, Approvals, Automations, Settings; the limits), the toolbar (the tabs Chat, Terminal, Review, Shell, nvim and Browser) and the main column.
+  - `src/desktop.ts` holds the pure rules: `mainTabs` (a tab with `needs` is disabled with no session and tells why), `sidebarRows`, `nextNeeding`, `emptyMain` and `keyAction`.
+  - To fill a tab, replace its entry in `panes` in `Desktop.tsx`. It gets the session, the snapshot, the client and the API.
+  - The Browser tab (`screens/Browser.tsx`, [ADR 0059](../docs/adr/0059-tauri-browser-tab.md)) shows a page of the session in a sandboxed `iframe`. `src/browser.ts` holds the address rules (`browserAddress`, the same as `BrowserAddress` of the Mac app), the port links of the session worktrees (`portLinks`) and the tab label. Each session keeps its tabs while the app runs. Profiles, cookies, agent control and the headless view are not available yet.
+  - Keys: the app shortcuts use Cmd on a Mac and Ctrl+Shift on Linux and Windows (`keyAction(e, mac)`, `modifierKeys`). Thus all plain Ctrl keys go to the terminal. The sidebar hints show the same keys. `keyAction` reads `e.code`, because Shift changes `e.key`.
+    - Cmd or Ctrl+Shift with 1 to 9 selects a session, with N opens New session as a sheet (`#/new`), with T opens Shell and with E opens nvim.
+    - Ctrl+Space on a Mac (Ctrl+Shift+Space on Linux and Windows) goes to the next session that needs you.
+  - The main column is white (`--paper`) in Latte. Tests: `npm test -- Layout Sidebar`.
+- **Terminal, Shell and nvim** (issue #517). `src/terminal.ts` has `TerminalStore`. `screens/Terminal.tsx` shows one of its terminals in a pane. `src/xterm.ts` is the xterm.js adapter (`AppEnv.terminal`; tests use `FakeTerminals` in `src/test/fake-terminal.ts`).
+  - The store keeps one terminal and one socket for each session and kind (`agent`, `shell`, `nvim`). A change of tab or session moves the terminal element and does not close the socket. Thus the scrollback stays. The store removes the terminals of sessions that the stream does not show.
+  - Terminal uses `session.Pane`. Shell and nvim call `POST …/shell` or `…/nvim` one time for each session, because `nvim.toggle` hides nvim on a second call. After a close with 4404, the next try calls it again.
+  - The terminal fits its pane (`FitAddon` and a `ResizeObserver`) and sends `{"size"}` on each resize. Keys go to the pane, except keys with Cmd and the app shortcuts of `keyAction`. Ctrl+C, Ctrl+T, Ctrl+E, Ctrl+N, Ctrl+Space and Esc go to the pane.
+  - The colors are the `--term-*` tokens (Mocha in both schemes).
+  - On a phone, a session has the same tabs as the desktop: Chat, Terminal, Review, Shell and nvim (`screens/PhoneSession.tsx`).
+  - `npm run fake` gives each session a demo pane. Tests: `npm test -- Terminal`.
+- **Review tab** (issue #518). `screens/Review.tsx` is the same review as the Mac app and the TUI. It uses the `review` routes of `crew serve` (see [internal/serve/](../internal/serve/AGENTS.md)).
+  - `src/review.ts` holds the pure rules: `decodeReview` (Go nulls become empty lists), `reviewTree` (files by worktree, viewed when the blob did not change), `worktreeMenu`, `splitRows`, `segments` (the spans use byte offsets), `commentAnchor`, `commentedLines`, `draftRows` (`repo · path:lines`), `canSend` and `hunkOnly`.
+  - Click `+` next to a line number to comment. Shift-click a second line to select a range.
+  - Stage and revert send only the hunk. When git refuses the patch, the hunk shows the message of git and the review does not open again.
+  - Tests: `npm test -- Review review`. They read the serve goldens `review-*.json`. One test decodes and renders a review of 50 files in less than 300 ms.
+- **Session commands** (issue #519). `screens/SessionCommands.tsx` has the commands of the sidebar menu of the Mac app: Rename…, Mute or Unmute, Model…, Effort…, Kill dev servers and End session…. An ended session has only Resume. `src/commands.ts` holds the pure rules (`commandItems`, `killedNote`) and the setting.
+  - Open the menu with a right-click on a sidebar row, with the `⋯` button of the toolbar (desktop), or with the `⋯` button of the chat header (phone).
+  - Model… and Effort… show the choices of the harness from `GET /api/v1/session-options`, then post `…/switch`. Kill dev servers posts `…/kill-dev-servers`. serve finds the process groups, so the app never sends one.
+  - End session asks first while Settings has "Ask before I end a session" on (the default). The value is `crew.confirmEnd` in `localStorage` (`off` turns it off).
+  - A failed command shows the message of the daemon in a `role="alert"` note. Tests: `npm test -- SessionCommands`.
+- **Servers** (desktop app only, issue #522). `src/servers.ts` has the steps of the Add a server flow (the same as the Mac app), the SSH target check and `Servers`, which calls the `crew_server*` commands (see [desktop/](../desktop/AGENTS.md)).
+  - The chip in the sidebar shows the current server. Its menu switches servers and has Add a server… and Manage servers…. A page of a remote server has no IPC, so it has no chip. The tray menu has Open This computer.
+  - `#/servers` (`screens/Servers.tsx`) lists the servers with Open, Fix and Remove. You cannot remove This computer. A server that you added by its address has no Fix.
+  - `#/servers/add` and the first start of the app show `screens/FirstRun.tsx` in a sheet: Welcome, Where agents run, Server, Set up, Workspace, Done. This computer skips Server. Only the first start shows Welcome.
+  - On mobile, `AppEnv.connectUrl` (`window.__CREW_CONNECT_URL__`) adds Change server to Settings and to the pairing screen.
+  - Tests: `npm test -- FirstRun Servers`.
 - `src/screens/`: one component for each screen. `src/theme.css`: the Latte palette as CSS variables, and Mocha under `prefers-color-scheme: dark`, and IBM Plex Sans and JetBrains Mono from `@fontsource`.
 - `src/test/`: test helpers (`FakeServer`, `MemoryStorage`, the Vitest setup). tdd-check treats them as port fakes.
 

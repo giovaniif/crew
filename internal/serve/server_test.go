@@ -38,10 +38,15 @@ var (
 		rpc.MethodAutomationList, rpc.MethodAutomationRun,
 		rpc.MethodPushKey, rpc.MethodPushSubscribe, rpc.MethodPushUnsubscribe, rpc.MethodDeviceRevoke,
 		rpc.MethodSessionSend, rpc.MethodSessionUnsend, rpc.MethodSessionInterrupt,
-		rpc.MethodSessionPrompt, rpc.MethodSessionAnswer, rpc.MethodDeviceViewing,
+		rpc.MethodSessionPrompt, rpc.MethodSessionAnswer, rpc.MethodDeviceViewing, rpc.MethodClientViewing,
 		rpc.MethodSessionOptions, rpc.MethodWorkspaceAdd, rpc.MethodWorkspaceRemove, rpc.MethodAutomationRuns,
 		rpc.MethodApprovalList, rpc.MethodApprovalDecide,
 		rpc.MethodClientNative, rpc.MethodShellFocus, rpc.MethodNvimToggle,
+		rpc.MethodConfigGet, rpc.MethodConfigSet, rpc.MethodOnboarding, rpc.MethodOnboardingInstall,
+		rpc.MethodOnboardingRemove, rpc.MethodOnboardingNvim, rpc.MethodOnboardingFinish, rpc.MethodWorkspaceDirs,
+		rpc.MethodDeviceList, rpc.MethodPairCode,
+		rpc.MethodReviewOpen, rpc.MethodReviewViewed, rpc.MethodReviewComment, rpc.MethodReviewSend, rpc.MethodReviewHunk,
+		rpc.MethodSwitch, rpc.MethodPortsKill, rpc.MethodAutomationSave, rpc.MethodDiskView, rpc.MethodCleanupWorktree,
 	}
 )
 
@@ -49,7 +54,7 @@ type authedEndpoint struct {
 	method, path, body string
 }
 
-var authedEndpoints = []authedEndpoint{
+var authedEndpoints = append([]authedEndpoint{
 	{"GET", "/api/v1/workspaces", ""},
 	{"GET", "/api/v1/session-options", ""},
 	{"GET", "/api/v1/automations", ""},
@@ -78,7 +83,17 @@ var authedEndpoints = []authedEndpoint{
 	{"POST", "/api/v1/approvals/a1/deny", ""},
 	{"POST", "/api/v1/sessions/s1/shell", ""},
 	{"POST", "/api/v1/sessions/s1/nvim", ""},
-}
+	{"GET", "/api/v1/disk", ""},
+	{"POST", "/api/v1/cleanup/worktree", `{"path":"/w/x"}`},
+	{"POST", "/api/v1/ports/kill", `{"pgids":[1]}`},
+	{"GET", "/api/v1/sessions/s1/review", ""},
+	{"POST", "/api/v1/sessions/s1/review/viewed", `{"mark":{"Worktree":"w1","Path":"a.go","Blob":"b"},"viewed":true}`},
+	{"POST", "/api/v1/sessions/s1/review/comments", `{"path":"a.go","start_line":1,"body":"x"}`},
+	{"POST", "/api/v1/sessions/s1/review/send", ""},
+	{"POST", "/api/v1/sessions/s1/review/hunk", `{"worktree":"w1","file":{"Path":"a.go"},"hunk":0,"action":"stage"}`},
+	{"POST", "/api/v1/sessions/s1/switch", `{"kind":"model","value":"opus"}`},
+	{"POST", "/api/v1/sessions/s1/kill-dev-servers", ""},
+}, append(settingsEndpoints, automationOwnerEndpoints...)...)
 
 func startServer(t *testing.T, f *fakeDaemon, cfg serve.Config) (*serve.Server, *httptest.Server) {
 	t.Helper()
@@ -292,15 +307,11 @@ func TestServeReachesOnlyAllowlistedDaemonMethods(t *testing.T) {
 	forbidden := []authedEndpoint{
 		{"POST", "/api/v1/shell/toggle", `{}`},
 		{"POST", "/api/v1/nvim/open", `{}`},
-		{"POST", "/api/v1/ports/kill", `{"pgids":[1]}`},
-		{"GET", "/api/v1/disk", ""},
 		{"POST", "/api/v1/cleanup", ""},
-		{"POST", "/api/v1/cleanup/worktree", `{}`},
 		{"GET", "/api/v1/review", ""},
 		{"POST", "/api/v1/review/send", `{}`},
 		{"POST", "/api/v1/rpc", `{"method":"ports.kill"}`},
-		{"POST", "/api/v1/devices/k3m9p2qx/revoke", ""},
-		{"GET", "/api/v1/sessions/s1/../../disk", ""},
+		{"GET", "/api/v1/sessions/s1/../../review", ""},
 		{"DELETE", "/api/v1/workspaces", ""},
 	}
 	for _, ep := range forbidden {

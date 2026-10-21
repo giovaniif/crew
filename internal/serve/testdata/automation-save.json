@@ -1,0 +1,10 @@
+{
+  "name": "fix-ci",
+  "agent": "claude",
+  "prompt": "Fix the CI.",
+  "on": [
+    "pr.ci_failed"
+  ],
+  "enabled": true,
+  "source": "/home/me/.crew/config.toml"
+}

@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/giovaniif/crew/internal/rpc"
+	"github.com/giovaniif/crew/internal/syntax"
 	"github.com/giovaniif/crew/internal/view"
 )
 
@@ -144,7 +145,7 @@ func tokenised(line []byte, resp rpc.Response) [][]byte {
 	if resp.Error != nil || resp.Result == nil {
 		return [][]byte{line}
 	}
-	result, err := withSpans(resp.Result)
+	result, err := syntax.ReviewSpans(resp.Result)
 	if err != nil {
 		return [][]byte{line}
 	}
