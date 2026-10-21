@@ -55,11 +55,12 @@ func seed(n int, codex bool) []Event {
 		s.Unread = s.State == domain.StateDone
 		for w := range i%3 + 1 {
 			repo := seedRepos[w]
+			path := fmt.Sprintf("/tmp/seed/%s-%d", repo, i+1)
 			wt := domain.Worktree{
-				ID:          fmt.Sprintf("seed-wt-%d-%d", i+1, w+1),
+				ID:          path,
 				SessionID:   s.ID,
 				Repo:        repo,
-				Path:        fmt.Sprintf("/tmp/seed/%s-%d", repo, i+1),
+				Path:        path,
 				Branch:      fmt.Sprintf("seed-%d-%s", i+1, repo),
 				SubtaskSlug: fmt.Sprintf("part-%d", w+1),
 			}
