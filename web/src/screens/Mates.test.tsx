@@ -176,7 +176,7 @@ describe("Mates", () => {
     };
     setup("#/mates", board, [ask]);
     const helper = await screen.findByRole("link", { name: /^helper/ });
-    expect(await within(helper).findByText("needs you")).toBeInTheDocument();
+    expect(await within(helper).findByText("Needs you")).toBeInTheDocument();
     expect(within(helper).getByRole("img", { name: "Owl needs" })).toBeInTheDocument();
     expect(screen.getByRole("listitem", { name: "helper: merge" })).toBeInTheDocument();
   });
