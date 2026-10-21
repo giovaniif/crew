@@ -122,20 +122,6 @@ export function Connection({ snapshot, now, onRetry, fix }: { snapshot: StreamSn
   return <BannerBox view={{ ...base, tone: "warn", action: { label: "Retry now", run: onRetry } }} />;
 }
 
-export function DesktopProblem({ host, problem, fix }: { host: string; problem: string; fix?: () => Promise<void> }) {
-  const fixer = useFix(fix, () => undefined);
-  const base = { title: "crew is not running", detail: problem };
-  const view: BannerView = fix ? fixView(base, fixer.state, () => void fixer.run()) : { ...base, tone: "bad", action: null };
-  return (
-    <main className="screen">
-      <Brand host={host} />
-      <h1>crew did not start</h1>
-      <BannerBox view={view} />
-      <p className="muted">Fix runs crew setup daemon, starts crew serve again and opens the app.</p>
-    </main>
-  );
-}
-
 function Card({ session, now }: { session: Session; now: number }) {
   const age = timeInState(session.since, now);
   return (
