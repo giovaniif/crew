@@ -110,6 +110,12 @@ The phone app: a PWA that `crew serve` embeds and serves at `/` (ADR [0046](../d
   - Server (`screens/ServerSettings.tsx`): Workspaces (the path field shows the folders of `GET /workspaces/dirs`), Agents (hooks, default model and effort, `fallback.threshold`, nvim), Notifications (`push.away_after`, the devices with Revoke, Pair a device) and Appearance (the `[theme]` colours).
   - A server group that gets `unknown_method` shows a note that the server does not have this setting. A group that gets `forbidden` shows a note that only the owner device can change it.
   - `src/shortcuts.ts` has the shortcut rules of the Mac app: a combo needs Cmd or Ctrl, Cmd or Ctrl with 1 to 9 is for the session jumps, a combo cannot have two actions, and the fixed combos (Cmd+, and the review keys) stay. Tests: `npm test -- Settings Shortcuts`.
+- `#/disk` (`screens/Disk.tsx`) is the worktrees and disk window of the Mac app (issue #520). The sidebar of the desktop layout links to it. The phone layout shows it too.
+  - `src/disk.ts` holds the pure rules, the same as `Disk.swift`: `diskTiles`, `diskRows` (the state Open, Merged · clean, Merged · dirty, Detached or No PR, and what cleanup does), `diskActions`, `diskPorts`, `diskRecent` and `pollDelay`.
+  - It loads `GET /api/v1/disk` every 2 s while a size is pending, else every 10 s.
+  - Each destructive action (Remove…, Back up and remove…, Kill…) asks first. A `keep` row offers no removal. A `backup_then_ask` row offers only Back up and remove. The daemon applies the cleanup rules again.
+  - Go to session opens `#/sessions/<id>`. Open shell posts `…/shell` with the worktree, then opens `#/sessions/<id>/shell`, which selects the Shell tab.
+  - Tests: `npm test -- Disk`.
 - **Desktop layout** (issue #514, ADR [0057](../docs/adr/0057-tauri-apps.md)). `AppEnv.wide` (`matchMedia("(min-width: 900px)")` in `main.tsx`, `FakeWidth` in tests) selects it. A narrow window keeps the phone layout.
   - `screens/Desktop.tsx` has the sidebar (sessions in the daemon order, `order` when the stream has it, else the sessions that need you first; an Ended group; Mates, Approvals, Automations, Settings; the limits), the toolbar (the tabs Chat, Terminal, Review, Shell, nvim and Browser) and the main column.
   - `src/desktop.ts` holds the pure rules: `mainTabs` (a tab with `needs` is disabled with no session and tells why), `sidebarRows`, `nextNeeding`, `emptyMain` and `keyAction`.
