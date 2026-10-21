@@ -162,18 +162,28 @@ jobs:
         run: |
           version="${VERSION#v}"
           if [ "$RUNNER_OS" = Windows ]; then version="${version%%-*}"; fi
+          bundle='{}'
           if [ -n "$CREW" ]; then
             mkdir -p desktop/src-tauri/binaries
             tar -xzf "archives/crew_$CREW.tar.gz" -C desktop/src-tauri/binaries crew
             mv desktop/src-tauri/binaries/crew "desktop/src-tauri/binaries/crew-$TARGET"
-            jq -n --arg v "$version" '{version: $v, bundle: {externalBin: ["binaries/crew"]}}' > "$RUNNER_TEMP/release.json"
-          else
-            jq -n --arg v "$version" '{version: $v}' > "$RUNNER_TEMP/release.json"
+            bundle="$(jq -c '. + {externalBin: ["binaries/crew"]}' <<<"$bundle")"
           fi
+          if [ "$HAS_UPDATER_KEY" = 1 ]; then
+            bundle="$(jq -c '. + {createUpdaterArtifacts: true}' <<<"$bundle")"
+          elif [ "$GITHUB_REF_TYPE" = tag ]; then
+            echo "A tag release needs the TAURI_SIGNING_PRIVATE_KEY secret."
+            exit 1
+          else
+            echo "No updater key. The build has no updater artifacts."
+          fi
+          jq -n --arg v "$version" --argjson b "$bundle" '{version: $v, bundle: $b}' > "$RUNNER_TEMP/release.json"
+          cat "$RUNNER_TEMP/release.json"
         env:
           VERSION: ${{ needs.goreleaser.outputs.version }}
           CREW: ${{ matrix.crew }}
           TARGET: ${{ matrix.target }}
+          HAS_UPDATER_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' && '1' || '0' }}
       - name: Set up signing
         if: runner.os == 'macOS'
         run: |
@@ -205,6 +215,20 @@ jobs:
         env:
           TARGET: ${{ matrix.target }}
           BUNDLES: ${{ matrix.bundles }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      - name: Notarize the disk image
+        if: runner.os == 'macOS' && env.CREW_SIGNED == '1'
+        run: |
+          dmg="$(ls desktop/src-tauri/target/"$TARGET"/release/bundle/dmg/*.dmg)"
+          xcrun notarytool submit "$dmg" --key "$APPLE_API_KEY_PATH" --key-id "$APPLE_API_KEY" --issuer "$APPLE_API_ISSUER" --wait --timeout 20m
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            if xcrun stapler staple "$dmg"; then exit 0; fi
+            sleep 30
+          done
+          exit 1
+        env:
+          TARGET: ${{ matrix.target }}
       - name: Check the packages
         run: |
           out="$PWD/desktop/src-tauri/target/$TARGET/release/bundle"
@@ -218,7 +242,8 @@ jobs:
               if [ "${CREW_SIGNED:-}" = 1 ]; then
                 codesign --verify --deep --strict --verbose=2 "$app"
                 spctl --assess --type execute --verbose=2 "$app"
-                xcrun stapler validate "$app"
+                dmg="$(ls "$out"/dmg/*.dmg)"
+                spctl --assess --type open --context context:primary-signature --verbose=2 "$dmg"
               fi
               ;;
             Linux)
@@ -245,17 +270,101 @@ jobs:
           mkdir -p packages
           for f in "$out"/dmg/*.dmg "$out"/deb/*.deb "$out"/appimage/*.AppImage "$out"/msi/*.msi "$out"/nsis/*.exe; do
             if [ -f "$f" ]; then cp "$f" packages/; fi
+            if [ -f "$f.sig" ]; then cp "$f.sig" packages/; fi
           done
+          if [ -f "$out/macos/crew.app.tar.gz" ]; then
+            case "$TARGET" in aarch64-*) arch=aarch64 ;; *) arch=x64 ;; esac
+            cp "$out/macos/crew.app.tar.gz" "packages/crew_${VERSION#v}_$arch.app.tar.gz"
+            cp "$out/macos/crew.app.tar.gz.sig" "packages/crew_${VERSION#v}_$arch.app.tar.gz.sig"
+          fi
           ls packages
           test -n "$(ls packages)"
         env:
           TARGET: ${{ matrix.target }}
+          VERSION: ${{ needs.goreleaser.outputs.version }}
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-${{ matrix.target }}
           path: packages/*
       - if: startsWith(github.ref, 'refs/tags/v')
         run: gh release upload "$VERSION" packages/* --repo "$GITHUB_REPOSITORY"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.goreleaser.outputs.version }}
+
+  updater:
+    needs: [goreleaser, desktop]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: desktop-*
+          path: packages
+          merge-multiple: true
+      - name: Make latest.json
+        run: |
+          ls packages
+          if ! ls packages/*.sig >/dev/null 2>&1; then
+            if [ "$GITHUB_REF_TYPE" = tag ]; then exit 1; fi
+            echo "No updater artifacts. latest.json is not made."
+            exit 0
+          fi
+          base="https://github.com/$GITHUB_REPOSITORY/releases/download/$VERSION"
+          entry() {
+            local file="packages/$2"
+            if [ -n "$2" ] && [ -f "$file" ] && [ -f "$file.sig" ]; then
+              jq -n --arg k "$1" --arg u "$base/$2" --rawfile s "$file.sig" '{($k): {url: $u, signature: $s}}'
+            fi
+          }
+          v="${VERSION#v}"
+          nsis="$(cd packages && ls -- *-setup.exe 2>/dev/null | head -n1)"
+          msi="$(cd packages && ls -- *.msi 2>/dev/null | head -n1)"
+          {
+            entry darwin-aarch64 "crew_${v}_aarch64.app.tar.gz"
+            entry darwin-x86_64 "crew_${v}_x64.app.tar.gz"
+            entry linux-x86_64 "crew_${v}_amd64.AppImage"
+            entry linux-x86_64-appimage "crew_${v}_amd64.AppImage"
+            entry linux-x86_64-deb "crew_${v}_amd64.deb"
+            entry windows-x86_64 "$nsis"
+            entry windows-x86_64-nsis "$nsis"
+            entry windows-x86_64-msi "$msi"
+          } | jq -s --arg v "$v" --arg n "https://github.com/$GITHUB_REPOSITORY/releases/tag/$VERSION" \
+            '{version: $v, notes: $n, pub_date: (now | todate), platforms: add}' > latest.json
+          jq . latest.json
+          for k in darwin-aarch64 darwin-x86_64 linux-x86_64 windows-x86_64; do
+            jq -e --arg k "$k" '.platforms[$k].signature | length > 0' latest.json >/dev/null
+          done
+        env:
+          VERSION: ${{ needs.goreleaser.outputs.version }}
+      - name: Verify the signatures
+        if: hashFiles('latest.json') != ''
+        run: |
+          sudo apt-get update && sudo apt-get install -y minisign
+          jq -r .plugins.updater.pubkey desktop/src-tauri/tauri.conf.json | base64 -d > "$RUNNER_TEMP/updater.pub"
+          for sig in packages/*.sig; do
+            base64 -d "$sig" > "$RUNNER_TEMP/check.minisig"
+            minisign -V -q -p "$RUNNER_TEMP/updater.pub" -x "$RUNNER_TEMP/check.minisig" -m "${sig%.sig}"
+            echo "signature good: ${sig#packages/}"
+          done
+      - if: hashFiles('latest.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: latest-json
+          path: latest.json
+      - name: Publish latest.json
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          gh release upload "$VERSION" latest.json --clobber --repo "$GITHUB_REPOSITORY"
+          dir="$(mktemp -d)"
+          cp latest.json "$dir/"
+          cd "$dir"
+          git init -q -b updater
+          git add latest.json
+          git -c user.name=github-actions -c user.email=github-actions@users.noreply.github.com commit -qm "updater: $VERSION"
+          git push -f "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git" updater
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ needs.goreleaser.outputs.version }}

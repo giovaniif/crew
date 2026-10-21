@@ -1,0 +1,46 @@
+{
+  "free": 61400000000,
+  "total": 494000000000,
+  "auto_clean_every": 600000000000,
+  "next_cleanup": "2026-10-20T14:30:00Z",
+  "deps_store": {
+    "path": "/home/me/.local/share/pnpm/store",
+    "size": 3100000000
+  },
+  "rows": [
+    {
+      "WorktreeID": "w1",
+      "Size": 412000000,
+      "Action": "keep",
+      "Reason": "its session is live"
+    },
+    {
+      "WorktreeID": "w2",
+      "Size": -1,
+      "Action": "remove",
+      "Reason": "PR #77 merged"
+    }
+  ],
+  "recent": [
+    {
+      "at": "2026-10-20T13:30:00Z",
+      "path": "/w/api-old",
+      "branch": "old",
+      "action": "remove",
+      "outcome": "removed"
+    }
+  ],
+  "reclaimable": 0,
+  "reclaimable_pending": 1,
+  "worktrees_size": 412000000,
+  "worktrees_pending": 1,
+  "ports": [
+    {
+      "port": 5173,
+      "pgid": 40,
+      "command": "node",
+      "worktree": "/w/api-feat",
+      "session": "s1"
+    }
+  ]
+}

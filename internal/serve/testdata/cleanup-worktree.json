@@ -1,0 +1,7 @@
+{
+  "path": "/w/web-old",
+  "branch": "old",
+  "action": "backup_then_ask",
+  "reason": "2 uncommitted changes",
+  "outcome": "backed up, removed"
+}

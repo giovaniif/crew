@@ -17,6 +17,7 @@ import (
 const (
 	CloseBadHandshake  websocket.StatusCode = 4400
 	CloseUnauthorized  websocket.StatusCode = 4401
+	CloseBuildMismatch websocket.StatusCode = 4502
 	streamReadLimit                         = 64 << 10
 	streamWriteTimeout                      = 10 * time.Second
 	maxWatches                              = 32
@@ -50,11 +51,12 @@ type TranscriptFrame struct {
 }
 
 type clientFrame struct {
-	Token   string  `json:"token"`
-	Watch   *string `json:"watch"`
-	After   int64   `json:"after"`
-	Unwatch *string `json:"unwatch"`
-	Visible *bool   `json:"visible"`
+	Token   string                   `json:"token"`
+	Watch   *string                  `json:"watch"`
+	After   int64                    `json:"after"`
+	Unwatch *string                  `json:"unwatch"`
+	Visible *bool                    `json:"visible"`
+	Viewing *rpc.ClientViewingParams `json:"viewing"`
 }
 
 type stream struct {
@@ -191,12 +193,14 @@ func (s *Server) authenticate(ctx context.Context, st *stream) (Daemon, rpc.Subs
 	}
 	d, err := s.dial(ctx)
 	if err != nil {
-		return nil, none, rpc.Device{}, websocket.StatusTryAgainLater, apiError(err).Message
+		code, reason := daemonDown(err)
+		return nil, none, rpc.Device{}, code, reason
 	}
 	sub, err := d.Subscribe(ctx)
 	if err != nil {
 		_ = d.Close()
-		return nil, none, rpc.Device{}, websocket.StatusTryAgainLater, apiError(err).Message
+		code, reason := daemonDown(err)
+		return nil, none, rpc.Device{}, code, reason
 	}
 	device, err := s.check(ctx, d, first.Token)
 	if err != nil {
@@ -205,7 +209,8 @@ func (s *Server) authenticate(ctx context.Context, st *stream) (Daemon, rpc.Subs
 		if e.Code == rpc.CodeUnauthorized {
 			return nil, none, rpc.Device{}, CloseUnauthorized, e.Message
 		}
-		return nil, none, rpc.Device{}, websocket.StatusTryAgainLater, e.Message
+		code, reason := daemonDown(e)
+		return nil, none, rpc.Device{}, code, reason
 	}
 	return d, sub, device, 0, ""
 }
@@ -236,8 +241,11 @@ func (st *stream) handle(ctx context.Context, data []byte) error {
 	case f.Visible != nil:
 		st.viewing(ctx, *f.Visible)
 		return nil
+	case f.Viewing != nil:
+		_ = st.d.Call(ctx, rpc.MethodClientViewing, *f.Viewing, nil)
+		return nil
 	}
-	return st.write(ctx, Frame{Error: &rpc.Error{Code: rpc.CodeBadRequest, Message: `send {"watch": "<session>", "after": <cursor>}, {"unwatch": "<session>"} or {"visible": <bool>}`}})
+	return st.write(ctx, Frame{Error: &rpc.Error{Code: rpc.CodeBadRequest, Message: `send {"watch": "<session>", "after": <cursor>}, {"unwatch": "<session>"}, {"visible": <bool>} or {"viewing": {"session", "front"}}`}})
 }
 
 func (st *stream) viewing(ctx context.Context, visible bool) {
@@ -342,4 +350,12 @@ func orEmpty[T any](xs []T) []T {
 		return []T{}
 	}
 	return xs
+}
+
+func daemonDown(err error) (websocket.StatusCode, string) {
+	e := apiError(err)
+	if e.Code == rpc.CodeVersionMismatch {
+		return CloseBuildMismatch, e.Message
+	}
+	return websocket.StatusTryAgainLater, e.Message
 }

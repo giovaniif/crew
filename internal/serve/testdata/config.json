@@ -1,0 +1,7 @@
+{
+  "path": "/home/me/.crew/config.toml",
+  "values": {
+    "fallback.threshold": "80",
+    "push.away_after": "2m"
+  }
+}

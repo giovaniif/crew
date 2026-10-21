@@ -174,10 +174,10 @@ func TestViewSubscribeSendsTheOtherSessionsWhoseOrderChanged(t *testing.T) {
 	}
 }
 
-func TestViewForThePhoneDropsPortsAndOrder(t *testing.T) {
+func TestViewForThePhoneDropsPortsAndBoard(t *testing.T) {
 	_, state := view.New(nativeFixture())
 	b, _ := json.Marshal(state)
-	for _, key := range []string{`"order"`, `"board"`, `"events"`, `"Ports":[{`} {
+	for _, key := range []string{`"board"`, `"events"`, `"Ports":[{`} {
 		if bytes.Contains(b, []byte(key)) {
 			t.Fatalf("phone state has %s: %s", key, b)
 		}
@@ -242,5 +242,30 @@ func TestViewWhereNamesTheLaunchDirOfASessionWithNoWorktree(t *testing.T) {
 		if s.ID == "s3" && s.Where != "api" {
 			t.Fatalf("where %q, want api", s.Where)
 		}
+	}
+}
+
+func TestViewForThePhoneHasTheSidebarOrder(t *testing.T) {
+	st := rpc.State{Sessions: []domain.Session{
+		{ID: "a", TaskID: "a", State: domain.StateRunning},
+		{ID: "b", TaskID: "b", State: domain.StatePermission},
+		{ID: "c", TaskID: "c", State: domain.StateIdle, Ended: true},
+	}}
+	v, state := view.New(st)
+	got := map[string]int{}
+	for _, s := range state.Sessions {
+		got[s.ID] = s.Order
+	}
+	if got["b"] != 0 || got["a"] != 1 || got["c"] != -1 {
+		t.Fatalf("phone orders %v", got)
+	}
+	moved := map[string]int{}
+	for _, d := range v.Apply(rpc.Diff{Seq: 2, Session: &domain.Session{ID: "a", TaskID: "a", State: domain.StateWaiting}}) {
+		if d.Session != nil {
+			moved[d.Session.ID] = d.Session.Order
+		}
+	}
+	if len(moved) != 2 || moved["a"] != 0 || moved["b"] != 1 {
+		t.Fatalf("phone orders after a change %v", moved)
 	}
 }
