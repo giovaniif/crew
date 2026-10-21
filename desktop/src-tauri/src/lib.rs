@@ -1,4 +1,5 @@
 pub mod attention;
+pub mod ipc;
 pub mod local;
 pub mod update;
 
@@ -129,6 +130,11 @@ fn open_window(app: &AppHandle, started: Started) -> tauri::Result<()> {
     } else {
         format!("main-{n}")
     };
+    if let Some(capability) = started.url.as_ref().and_then(ipc::serve_capability) {
+        if let Err(err) = app.add_capability(capability) {
+            eprintln!("crew-desktop: no IPC for crew serve: {err}");
+        }
+    }
     let url = match started.url {
         Some(url) => WebviewUrl::External(url),
         None => WebviewUrl::App("index.html".into()),

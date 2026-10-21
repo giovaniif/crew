@@ -117,9 +117,10 @@ The phone app: a PWA that `crew serve` embeds and serves at `/` (ADR [0046](../d
   - Go to session opens `#/sessions/<id>`. Open shell posts `…/shell` with the worktree, then opens `#/sessions/<id>/shell`, which selects the Shell tab.
   - Tests: `npm test -- Disk`.
 - **Desktop layout** (issue #514, ADR [0057](../docs/adr/0057-tauri-apps.md)). `AppEnv.wide` (`matchMedia("(min-width: 900px)")` in `main.tsx`, `FakeWidth` in tests) selects it. A narrow window keeps the phone layout.
-  - `screens/Desktop.tsx` has the sidebar (sessions in the daemon order, `order` when the stream has it, else the sessions that need you first; an Ended group; Mates, Approvals, Automations, Settings; the limits), the toolbar (the tabs Chat, Terminal, Review, Shell and nvim) and the main column.
+  - `screens/Desktop.tsx` has the sidebar (sessions in the daemon order, `order` when the stream has it, else the sessions that need you first; an Ended group; Mates, Approvals, Automations, Settings; the limits), the toolbar (the tabs Chat, Terminal, Review, Shell, nvim and Browser) and the main column.
   - `src/desktop.ts` holds the pure rules: `mainTabs` (a tab with `needs` is disabled with no session and tells why), `sidebarRows`, `nextNeeding`, `emptyMain` and `keyAction`.
   - To fill a tab, replace its entry in `panes` in `Desktop.tsx`. It gets the session, the snapshot, the client and the API.
+  - The Browser tab (`screens/Browser.tsx`, [ADR 0059](../docs/adr/0059-tauri-browser-tab.md)) shows a page of the session in a sandboxed `iframe`. `src/browser.ts` holds the address rules (`browserAddress`, the same as `BrowserAddress` of the Mac app), the port links of the session worktrees (`portLinks`) and the tab label. Each session keeps its tabs while the app runs. Profiles, cookies, agent control and the headless view are not available yet.
   - Keys: the app shortcuts use Cmd on a Mac and Ctrl+Shift on Linux and Windows (`keyAction(e, mac)`, `modifierKeys`). Thus all plain Ctrl keys go to the terminal. The sidebar hints show the same keys. `keyAction` reads `e.code`, because Shift changes `e.key`.
     - Cmd or Ctrl+Shift with 1 to 9 selects a session, with N opens New session as a sheet (`#/new`), with T opens Shell and with E opens nvim.
     - Ctrl+Space on a Mac (Ctrl+Shift+Space on Linux and Windows) goes to the next session that needs you.

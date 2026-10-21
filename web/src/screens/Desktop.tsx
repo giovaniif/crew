@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { Authed } from "../api";
 import type { AppEnv } from "../App";
 import { emptyMain, keyAction, mainTabs, modifierKeys, nextNeeding, sidebarRows, type Keys, type MainTab } from "../desktop";
@@ -6,6 +6,7 @@ import { parseRoute } from "../route";
 import { sessionMeta, stateStyle } from "../sessions";
 import type { Session, StreamClient, StreamSnapshot } from "../stream";
 import { Brand } from "./Brand";
+import { BrowserPane, type BrowserStore } from "./Browser";
 import { NewSession } from "./NewSession";
 import { ReviewPane } from "./Review";
 import { SessionScreen } from "./Session";
@@ -22,6 +23,8 @@ export type PaneProps = {
   client: StreamClient;
   api: Authed;
   terminals: TerminalStore | null;
+  host: string;
+  browsers: BrowserStore;
 };
 
 function Placeholder({ title }: { title: string }) {
@@ -39,6 +42,7 @@ export const panes: Record<MainTab, (props: PaneProps) => ReactNode> = {
   review: (p) => <ReviewPane key={p.session.ID} session={p.session.ID} sessionState={p.session.State} api={p.api} />,
   shell: (p) => <TerminalPane store={p.terminals} session={p.session} kind="shell" />,
   nvim: (p) => <TerminalPane store={p.terminals} session={p.session} kind="nvim" />,
+  browser: (p) => <BrowserPane key={p.session.ID} session={p.session.ID} worktrees={p.snapshot.state?.worktrees ?? []} host={p.host} store={p.browsers} />,
 };
 
 type OnMenu = (id: string, x: number, y: number) => void;
@@ -223,6 +227,7 @@ export type DesktopProps = {
 
 export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, api, terminals = null, other }: DesktopProps) {
   const [tab, setTab] = useState<MainTab>("chat");
+  const browsers = useRef<BrowserStore>(new Map());
   const [menu, setMenu] = useState<(MenuPoint & { id: string }) | null>(null);
   const keys = modifierKeys(env.userAgent);
   const route = parseRoute(hash);
@@ -281,7 +286,7 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
           {session ? <SessionCommands key={session.ID} api={api} session={session} storage={env.storage} button /> : null}
         </Toolbar>
         <section className={"pane pane-" + tab} role="tabpanel" id={"pane-" + tab} aria-labelledby={"tab-" + tab}>
-          {session ? panes[tab]({ session, snapshot, now, onRetry, client, api, terminals }) : <Placeholder title="Terminal" />}
+          {session ? panes[tab]({ session, snapshot, now, onRetry, client, api, terminals, host: env.host, browsers: browsers.current }) : <Placeholder title="Terminal" />}
         </section>
       </>
     );
