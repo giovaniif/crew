@@ -42,6 +42,7 @@ var (
 		rpc.MethodSessionOptions, rpc.MethodWorkspaceAdd, rpc.MethodWorkspaceRemove, rpc.MethodAutomationRuns,
 		rpc.MethodApprovalList, rpc.MethodApprovalDecide,
 		rpc.MethodClientNative, rpc.MethodShellFocus, rpc.MethodNvimToggle,
+		rpc.MethodDiskView, rpc.MethodCleanupWorktree, rpc.MethodPortsKill,
 	}
 )
 
@@ -78,6 +79,9 @@ var authedEndpoints = []authedEndpoint{
 	{"POST", "/api/v1/approvals/a1/deny", ""},
 	{"POST", "/api/v1/sessions/s1/shell", ""},
 	{"POST", "/api/v1/sessions/s1/nvim", ""},
+	{"GET", "/api/v1/disk", ""},
+	{"POST", "/api/v1/cleanup/worktree", `{"path":"/w/x"}`},
+	{"POST", "/api/v1/ports/kill", `{"pgids":[1]}`},
 }
 
 func startServer(t *testing.T, f *fakeDaemon, cfg serve.Config) (*serve.Server, *httptest.Server) {
@@ -292,15 +296,12 @@ func TestServeReachesOnlyAllowlistedDaemonMethods(t *testing.T) {
 	forbidden := []authedEndpoint{
 		{"POST", "/api/v1/shell/toggle", `{}`},
 		{"POST", "/api/v1/nvim/open", `{}`},
-		{"POST", "/api/v1/ports/kill", `{"pgids":[1]}`},
-		{"GET", "/api/v1/disk", ""},
 		{"POST", "/api/v1/cleanup", ""},
-		{"POST", "/api/v1/cleanup/worktree", `{}`},
 		{"GET", "/api/v1/review", ""},
 		{"POST", "/api/v1/review/send", `{}`},
 		{"POST", "/api/v1/rpc", `{"method":"ports.kill"}`},
 		{"POST", "/api/v1/devices/k3m9p2qx/revoke", ""},
-		{"GET", "/api/v1/sessions/s1/../../disk", ""},
+		{"GET", "/api/v1/sessions/s1/../../review", ""},
 		{"DELETE", "/api/v1/workspaces", ""},
 	}
 	for _, ep := range forbidden {
