@@ -1,0 +1,164 @@
+{
+  "draft": {
+    "id": "d1",
+    "session": "s1",
+    "status": "open",
+    "comments": [
+      {
+        "id": "c1",
+        "worktree": "/home/me/api-42",
+        "path": "main.go",
+        "start": 2,
+        "end": 2,
+        "code": [
+          "func run() int { return 1 }"
+        ],
+        "body": "name it start"
+      }
+    ],
+    "turns": null
+  },
+  "scope": "branch",
+  "viewed": [
+    {
+      "Worktree": "w1",
+      "Path": "main.go",
+      "Blob": "b2"
+    }
+  ],
+  "worktrees": [
+    {
+      "Err": "",
+      "Files": [
+        {
+          "Added": 1,
+          "Binary": false,
+          "Blob": "b2",
+          "Deleted": 1,
+          "Hunks": [
+            {
+              "Header": "@@ -1,2 +1,2 @@",
+              "Lines": [
+                {
+                  "Kind": 32,
+                  "New": 1,
+                  "Old": 1,
+                  "Spans": [
+                    [
+                      0,
+                      7,
+                      "keyword"
+                    ]
+                  ],
+                  "Text": "package main"
+                },
+                {
+                  "Kind": 45,
+                  "New": 0,
+                  "Old": 2,
+                  "Spans": [
+                    [
+                      0,
+                      4,
+                      "keyword"
+                    ],
+                    [
+                      5,
+                      8,
+                      "function"
+                    ],
+                    [
+                      8,
+                      10,
+                      "punctuation"
+                    ],
+                    [
+                      11,
+                      13,
+                      "punctuation"
+                    ]
+                  ],
+                  "Text": "func old() {}"
+                },
+                {
+                  "Kind": 43,
+                  "New": 2,
+                  "Old": 0,
+                  "Spans": [
+                    [
+                      0,
+                      4,
+                      "keyword"
+                    ],
+                    [
+                      5,
+                      8,
+                      "function"
+                    ],
+                    [
+                      8,
+                      10,
+                      "punctuation"
+                    ],
+                    [
+                      11,
+                      14,
+                      "type"
+                    ],
+                    [
+                      15,
+                      16,
+                      "punctuation"
+                    ],
+                    [
+                      17,
+                      23,
+                      "keyword"
+                    ],
+                    [
+                      24,
+                      25,
+                      "number"
+                    ],
+                    [
+                      26,
+                      27,
+                      "punctuation"
+                    ]
+                  ],
+                  "Text": "func run() int { return 1 }"
+                }
+              ]
+            }
+          ],
+          "OldPath": "",
+          "Path": "main.go",
+          "Status": "M"
+        }
+      ],
+      "From": "abc123",
+      "Worktree": {
+        "ID": "w1",
+        "Repo": "/home/me/api",
+        "Path": "/home/me/api-42",
+        "Branch": "42-fix",
+        "PR": {
+          "Number": 42,
+          "Title": "",
+          "URL": "",
+          "Head": "",
+          "State": "",
+          "Checks": "",
+          "ReviewDecision": "",
+          "Mergeable": "",
+          "UnresolvedThreads": 0,
+          "BotComments": 0,
+          "Failing": null
+        },
+        "SubtaskSlug": "",
+        "SessionID": "",
+        "Ports": null
+      }
+    }
+  ]
+}

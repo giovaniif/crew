@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "failed",
+    "message": "error: patch failed: main.go:1"
+  }
+}

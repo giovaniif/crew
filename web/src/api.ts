@@ -416,6 +416,36 @@ export function startFresh(a: Authed, session: string, sameWorktree: boolean): P
   return authedRequest<{ ID: string }>(a, sessionPath(session, "/fresh"), "POST", { same_worktree: sameWorktree });
 }
 
+export function openReview(a: Authed, session: string, scope: string, worktree: string): Promise<unknown> {
+  const q = new URLSearchParams();
+  if (scope) {
+    q.set("scope", scope);
+  }
+  if (worktree) {
+    q.set("worktree", worktree);
+  }
+  const query = q.toString();
+  return authedRequest<unknown>(a, sessionPath(session, "/review" + (query ? "?" + query : "")));
+}
+
+export async function markViewed(a: Authed, session: string, mark: { Worktree: string; Path: string; Blob: string }, viewed: boolean): Promise<void> {
+  await authedRequest<unknown>(a, sessionPath(session, "/review/viewed"), "POST", { mark, viewed });
+}
+
+export type ReviewCommentBody = { worktree: string; path: string; start_line: number; end_line: number; code: string; body: string; removed: boolean };
+
+export function addReviewComment(a: Authed, session: string, body: ReviewCommentBody): Promise<unknown> {
+  return authedRequest<unknown>(a, sessionPath(session, "/review/comments"), "POST", body);
+}
+
+export function sendReview(a: Authed, session: string, note: string): Promise<unknown> {
+  return authedRequest<unknown>(a, sessionPath(session, "/review/send"), "POST", { note });
+}
+
+export async function applyHunk(a: Authed, session: string, body: { worktree: string; file: unknown; hunk: number; action: "stage" | "revert" }): Promise<void> {
+  await authedRequest<unknown>(a, sessionPath(session, "/review/hunk"), "POST", body);
+}
+
 export type SwitchKind = "model" | "effort";
 
 export async function renameSession(a: Authed, session: string, name: string): Promise<void> {
