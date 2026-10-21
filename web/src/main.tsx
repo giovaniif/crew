@@ -10,8 +10,10 @@ import { hello } from "./api";
 import { App } from "./App";
 import { buildOfWorker, checkBuild, workerURL } from "./build";
 import { desktopAuth } from "./auth";
+import { tauriBridge } from "./desktopBridge";
 import { isInstalled } from "./display";
 import { browserPush } from "./push";
+import { browserTerminal } from "./xterm";
 
 const checkEvery = 5 * 60 * 1000;
 const installTimeout = 15 * 1000;
@@ -127,6 +129,8 @@ if (root) {
           push: browserPush(window),
           visibility,
           wide,
+          terminal: browserTerminal(window.location),
+          desktop: tauriBridge(window),
           desktopAuth: desktopAuth((window as { __CREW_DESKTOP_AUTH__?: unknown }).__CREW_DESKTOP_AUTH__),
         }}
       />

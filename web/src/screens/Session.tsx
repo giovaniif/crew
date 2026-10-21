@@ -7,6 +7,8 @@ import { timeInState } from "../sessions";
 import type { Message, QueuedSend, Session, StreamClient, StreamSnapshot, StreamStatus } from "../stream";
 import { emptyTranscript, newestCursor, toolRow, withFrame, withPage, type Transcript } from "../transcript";
 import { Connection, sessionTitle } from "./SessionList";
+import { SessionCommands } from "./SessionCommands";
+import type { KeyValue } from "../auth";
 import { legacyBrowserWord } from "../legacy";
 
 const stateLabels: Record<string, string> = {
@@ -41,7 +43,19 @@ function Back() {
   );
 }
 
-function Header({ session, now, onInterrupt, mate }: { session: Session; now: number; onInterrupt: () => void; mate?: ReactNode }) {
+function Header({
+  session,
+  now,
+  onInterrupt,
+  mate,
+  commands,
+}: {
+  session: Session;
+  now: number;
+  onInterrupt: () => void;
+  mate?: ReactNode;
+  commands?: ReactNode;
+}) {
   const age = timeInState(session.since, now);
   const state = stateOf(session);
   const meta = [session.where, [session.Harness, session.Model].filter(Boolean).join(" ")].filter(Boolean).join(" · ");
@@ -55,6 +69,7 @@ function Header({ session, now, onInterrupt, mate }: { session: Session; now: nu
             Interrupt
           </button>
         ) : null}
+        {commands}
       </div>
       <h1>{sessionTitle(session)}</h1>
       <p className="meta">{meta}</p>
@@ -667,6 +682,7 @@ export function SessionScreen({
   onRetry,
   client,
   api,
+  storage,
 }: {
   id: string;
   snapshot: StreamSnapshot;
@@ -674,6 +690,7 @@ export function SessionScreen({
   onRetry: () => void;
   client: StreamClient;
   api: Authed;
+  storage?: KeyValue;
 }) {
   const [confirming, setConfirming] = useState(false);
   const session = snapshot.state?.sessions.find((s) => s.ID === id);
@@ -704,6 +721,7 @@ export function SessionScreen({
         now={now}
         onInterrupt={() => setConfirming(true)}
         mate={session.Mate?.Name ? <MateTools api={api} session={session} mate={session.Mate.Name} snapshot={snapshot} /> : undefined}
+        commands={storage ? <SessionCommands api={api} session={session} storage={storage} button /> : undefined}
       />
       <Connection snapshot={snapshot} now={now} onRetry={onRetry} />
       <main className="chat-main">
