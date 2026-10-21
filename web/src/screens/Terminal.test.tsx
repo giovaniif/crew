@@ -152,6 +152,15 @@ describe("the Shell and nvim tabs", () => {
 });
 
 describe("the tabs on a phone", () => {
+  it("has the same tabs as the desktop and opens the review", async () => {
+    const d = open("#/sessions/s1", false);
+    const tabs = within(screen.getByRole("tablist", { name: "Views" })).getAllByRole("tab");
+    expect(tabs.map((t) => t.textContent)).toEqual(["Chat", "Terminal", "Review", "Shell", "nvim"]);
+    await userEvent.click(tab("Review"));
+    expect(panel("Review")).toBeInTheDocument();
+    await waitFor(() => expect(d.server.calls.some((c) => c.path.startsWith("/api/v1/sessions/s1/review"))).toBe(true));
+  });
+
   it("shows Chat first and opens the terminal of the session", async () => {
     const d = open("#/sessions/s1", false);
     const tabs = within(screen.getByRole("tablist", { name: "Views" })).getAllByRole("tab");
