@@ -46,6 +46,7 @@ Repo tooling. The repo-wide rules are in the [root AGENTS.md](../AGENTS.md).
   - `/api/v1/stream` sends a demo state with every group, both limits and two queued sends on the running `s3`.
   - `GET …/messages` answers each session with a chat of tool rows (done with a test result, failed, running) and Markdown. It answers its older page after 5 s, so a shot can catch the loading row.
   - Send, unsend and interrupt answer success.
+  - `GET /api/v1/sessions/s1/browser` is live with the demo page `web/scripts/demo-headless.png`. Other sessions have no headless tab. `POST /api/v1/browser/cookies` answers 3 cookies.
   - With `CREW_FAKE_STREAM=offline`, it drops the first stream after 300 ms and refuses the rest, for the offline state.
   - With `CREW_FAKE_STREAM=late`, it closes the first stream with 4401 after 300 ms, while `GET /api/v1/workspaces` still answers. Thus the app keeps its login and connects again.
   - With `CREW_FAKE_STREAM=revoked`, it does the same, but `GET /api/v1/workspaces` answers 401. This gives the pairing screen with its signed-out note.

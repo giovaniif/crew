@@ -66,6 +66,7 @@ type PullRequest struct {
 	Head   string
 	Author string `json:",omitempty"`
 	State  PRState
+	Draft  bool `json:",omitempty"`
 	Checks CheckState
 
 	ReviewDecision    ReviewDecision
