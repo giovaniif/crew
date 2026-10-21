@@ -104,7 +104,10 @@ async fn check<R: tauri::Runtime>(
         .dialog()
         .message(text.message)
         .title(text.title)
-        .buttons(MessageDialogButtons::OkCancelCustom(text.install, text.later))
+        .buttons(MessageDialogButtons::OkCancelCustom(
+            text.install,
+            text.later,
+        ))
         .blocking_show();
     for step in answer(agreed) {
         match step {

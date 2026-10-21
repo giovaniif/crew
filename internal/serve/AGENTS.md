@@ -11,7 +11,7 @@ Golden responses are in `testdata/`. To make them again, run `go test ./internal
 
 ## Layers
 
-- depguard: from `internal/`, `internal/serve` imports only `rpc` and `domain`. It also imports the standard library and `github.com/coder/websocket`. It does not import `os/exec`. `cmd/crew/serve.go` parses the flags and reads `[serve] url`. It passes a `Dial` that starts the daemon as the TUI does (`rpc.Connect` with `spawn`).
+- depguard: from `internal/`, `internal/serve` imports only `rpc`, `domain`, `view` and `syntax`. It also imports the standard library and `github.com/coder/websocket`. It does not import `os/exec`. `cmd/crew/serve.go` parses the flags and reads `[serve] url`. It passes a `Dial` that starts the daemon as the TUI does (`rpc.Connect` with `spawn`).
 - `serve.Daemon` is the part of `*rpc.Client` that serve uses (`Call`, `Subscribe`, `WatchTranscript`, `Close`). Each HTTP request dials its own connection and closes it. Each stream has its own connection. Thus a slow phone never stops the reader of a different client.
 
 ## Listening
@@ -60,6 +60,8 @@ Unknown paths under `/api/` answer `not_found`.
 | `POST /api/v1/sessions/{id}/resume` | yes | `session.resume` | → the resumed `Session` |
 | `POST /api/v1/sessions/{id}/mute` | yes | `session.mute` | `{"muted":bool}` (required) → `{}` |
 | `POST /api/v1/sessions/{id}/rename` | yes | `session.rename` | `{"name"}` → `{}` |
+| `POST /api/v1/sessions/{id}/switch` | yes | `session.switch` | `{"kind","value"}` (`kind` is `model` or `effort`, `value` not blank, no other keys) → the `Session` |
+| `POST /api/v1/sessions/{id}/kill-dev-servers` | yes | `subscribe`, `ports.kill` | → `{"killed":[pgid]}`; serve reads the ports of the worktrees of the session from the daemon state and kills their process groups. With no ports, it calls nothing and answers `{"killed":[]}`. The phone never sends process groups |
 | `POST /api/v1/sessions/{id}/messages` | yes | `session.send` | `{"text"}` (not blank) → `{"id","queued"}`; a queued send shows in the stream's `sends` until it is pasted |
 | `DELETE /api/v1/sessions/{id}/sends/{send}` | yes | `session.unsend` | → `{}`; `not_found` once the send has gone out (it left `sends`) |
 | `POST /api/v1/sessions/{id}/interrupt` | yes | `session.interrupt` | → `{}` |
@@ -85,8 +87,25 @@ Unknown paths under `/api/` answer `not_found`.
 | `POST /api/v1/mates/{name}/memory` | yes | `mate.set_memory` | `{"text"}` → the same; an empty text clears the memory |
 | `POST /api/v1/sessions/{id}/shell` | yes | `shell.focus` | `{"worktree"}` (optional, the body can be empty) → `{"pane","dir","shown"}`; open `pane` with the terminal route |
 | `POST /api/v1/sessions/{id}/nvim` | yes | `nvim.toggle` | `{"worktree"}` (optional, the body can be empty) → `{"pane","socket","shown"}`; open `pane` with the terminal route |
+| `GET /api/v1/sessions/{id}/review?scope=&worktree=` | yes | `review.open` | → `{"scope","worktrees":[{Worktree,From,Files,Err}],"viewed","draft"}`; each diff line has `Spans` (`[start, end, class]`, see [internal/syntax/](../syntax/AGENTS.md)); an empty `scope` is the last scope of the session, an empty `worktree` is all worktrees |
+| `POST /api/v1/sessions/{id}/review/viewed` | yes | `review.viewed` | `{"mark":{Worktree,Path,Blob},"viewed"}` (`mark` required) → `{}` |
+| `POST /api/v1/sessions/{id}/review/comments` | yes | `review.comment` | `{"worktree","path","start_line","end_line","code","body","removed"}` → the `ReviewDraft` |
+| `POST /api/v1/sessions/{id}/review/send` | yes | `review.send` | `{"note"}` (optional, the body can be empty) → the queued `ReviewDraft`; an empty draft is `bad_request` |
+| `POST /api/v1/sessions/{id}/review/hunk` | yes | `review.hunk` | `{"worktree","file","hunk","action"}` (`action` is `stage` or `revert`) → `{}`; when git refuses the patch, it is `failed` with the message of git. The app sends `file` with only the hunk (`hunk` 0), so the body stays below 64 KiB |
 | `POST /api/v1/sessions/{id}/fresh` | yes | `mate.fresh` | `{"same_worktree","prompt"}` (optional, the body can be empty) → the new session; "Start fresh" on a mate session |
+| `GET /api/v1/config` | owner | `config.get` | → `{"path","values"}`, the settings of `config.toml` that crew can change |
+| `POST /api/v1/config` | owner | `config.set` | `{"key","value"}` (`key` not blank, no other keys; an empty `value` removes the key) → `{"path","values"}` |
+| `GET /api/v1/onboarding` | owner | `onboarding.status` | → `{"done","harnesses":{"<harness>":{"installed","file"}},"nvim":{"on_path","configured","config_file","plugin_dir","plugin_found"}}` |
+| `POST /api/v1/onboarding/install` | owner | `onboarding.install` | `{"harness"}` (not blank, no other keys) → `{"installed","file","backup","err"}` |
+| `POST /api/v1/onboarding/remove` | owner | `onboarding.remove` | `{"harness"}` → the same |
+| `POST /api/v1/onboarding/nvim` | owner | `onboarding.nvim` | → the `nvim` object of the status |
+| `POST /api/v1/onboarding/finish` | owner | `onboarding.finish` | → `{}` |
+| `GET /api/v1/workspaces/dirs?path=` | owner | `workspace.dirs` | → `{"dirs":[{"Name","Path","Git"}]}`, the folders in `path` (required, absolute) |
+| `GET /api/v1/devices` | owner | `device.list` | → `{"devices":[Device]}`, oldest first |
+| `POST /api/v1/devices/{id}/revoke` | owner | `device.revoke` | → `{}`; the streams of that device close with 4401 |
+| `POST /api/v1/pair/code` | owner | `pair.code` | `{"name"}` (optional, the body can be empty) → `{"code","expires_at"}`, a one-time code for `POST /api/v1/pair` |
 
+- An "owner" route also needs the owner device. The owner device is the app on the computer that runs crew: the request comes from a loopback address. serve uses the address rule of `pair` (`clientAddr`). Thus a phone through a proxy is not the owner device. Other devices get 403 `forbidden`, and serve does not call the daemon.
 - Auth is `Authorization: Bearer <token>`. Before the method runs, serve checks it with `device.check` on the connection of the request. Then it checks it against the set of revoked device IDs.
 - `pair` passes the address of the caller as `addr`. This is `RemoteAddr`. If the peer is a loopback or private address (the location of a proxy in front of serve), it is the last `X-Forwarded-For` entry, else `X-Real-IP`. serve ignores a forged header from a direct client.
 - Domain structs (`Workspace`, `Session`, ...) encode with their Go field names, as in the socket protocol. The goldens lock them. A `Message` is `rpc.Message`: `{"id","cursor","turn","role","text","tool":{"name","summary","status"},"at"}`. Keep messages by `id` and replace by `id` (see [internal/rpc/](../rpc/AGENTS.md)).
@@ -126,6 +145,7 @@ The `/` fallback: `Handler(fallback)` mounts `fallback` at `/`. `Handler(nil)` s
   - `where`: `domain.WorktreeLabel`, `repo@branch +N`.
   - `banner`: the body of `domain.BannerFor` for its state, also for a muted session. It is empty while the session is running or idle.
   - `since`: `domain.StateSince`, the time when the replayed events last changed its state. It is `null` when the events do not explain the state.
+  - `order`: the index of the session in the sidebar of the daemon (see [internal/view/](../view/AGENTS.md)). An ended session has `-1`. The desktop sidebar uses it.
 
   The phone shows these fields and never calculates them again. If a task or worktree diff changes the derived fields of a different session, a `session` diff with the same `seq` follows it.
 - `limits` is `domain.Quotas` of the sessions as `StreamQuota`: the Go fields and `label` (`domain.WindowLabel`), `low` and `stale_at` (`ReportedAt` + `domain.StaleQuotaAfter`).
@@ -152,6 +172,7 @@ The `/` fallback: `Handler(fallback)` mounts `fallback` at `/`. `Handler(nil)` s
   |---|---|---|
   | 4401 `CloseUnauthorized` | the daemon refused the token, or the device was revoked | confirms with an authed GET before it forgets the login (see [web/](../../web/AGENTS.md)) |
   | 4400 `CloseBadHandshake` | the first frame was late, not JSON, or had no token | retries |
+  | 4502 `CloseBuildMismatch` | the daemon runs a different build (`version_mismatch`); the reason tells the two builds | stops and shows Build mismatch with Reconnect |
   | 1013 | the daemon went away, or could not be reached to check the token | retries |
   | 1001 | serve is stopping (also while a stream waits for its token) | retries |
   | 1011 | a write failed | retries |

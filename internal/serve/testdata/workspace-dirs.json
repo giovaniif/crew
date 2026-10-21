@@ -1,0 +1,14 @@
+{
+  "dirs": [
+    {
+      "Name": "api",
+      "Path": "/home/me/api",
+      "Git": 1
+    },
+    {
+      "Name": "notes",
+      "Path": "/home/me/notes",
+      "Git": 0
+    }
+  ]
+}

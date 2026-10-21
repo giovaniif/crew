@@ -83,7 +83,7 @@ func skipDir(rel, name string) bool {
 	if name == "vendor" || name == "node_modules" || strings.HasPrefix(name, "_") {
 		return true
 	}
-	return rel == "bin" || name == "dist"
+	return rel == "bin" || name == "dist" || name == "target" || name == "build"
 }
 
 func inTestdata(rel string) bool {
