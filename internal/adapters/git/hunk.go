@@ -3,6 +3,7 @@ package git
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -17,7 +18,11 @@ import (
 var _ app.HunkGit = Review{}
 
 func (Review) Stage(ctx context.Context, dir, patch string) error {
-	return apply(ctx, dir, patch, "--cached")
+	err := apply(ctx, dir, patch, "--cached")
+	if err != nil && apply(ctx, dir, patch, "--cached", "-R", "--check") == nil {
+		return errors.New("hunk already staged")
+	}
+	return err
 }
 
 func (Review) Revert(ctx context.Context, dir, patch string) error {
