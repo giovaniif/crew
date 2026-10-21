@@ -12,154 +12,81 @@
   <a href="https://github.com/giovaniif/crew/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/giovaniif/crew/actions/workflows/ci.yml/badge.svg"></a>
 </p>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/readme/mac-window-mocha.png">
-  <img src="docs/images/readme/mac-window-latte.png" alt="The crew Mac app with sessions in the sidebar and an agent in the main pane">
-</picture>
+<img src="docs/images/readme/desktop-chat.png" alt="The crew desktop app with sessions in the sidebar and the chat of an agent">
 
-crew runs Claude Code and Codex sessions side by side, each in its own git worktree. It tells you which session needs you, shows each change in a local, PR-style review, and removes the worktree when its PR merges. Use it from the desktop app (Mac, Linux and Windows), the terminal (TUI), or your phone.
+crew runs Claude Code and Codex sessions side by side, each in its own git worktree. It tells you which session needs you, shows each change in a local, PR-style review, and removes the worktree when its PR merges. Use it from the desktop app (macOS and Linux), the terminal (TUI) or your phone.
 
-## Why crew
+## Features
 
-- **Parallel agents, no mess.** Each session works in its own worktree. crew attaches each worktree to its session, and removes it when the PR merges. It never deletes a branch, and it backs up uncommitted work first.
-- **Review like a PR.** See the last turn, the uncommitted changes or the whole branch. Comment on lines, and send all comments to the agent as one prompt.
-- **You step in only when it is necessary.** A session that asks for permission, waits for an answer or finishes goes to the top, with a notification on your Mac or your phone.
-
-## Tour
-
-### Sessions and attention
-
-The sidebar groups sessions by task and shows the state of each one: ◆ permission, ● waiting, ◌ running, ✓ done. The quota bar shows the Claude and Codex limits. Answer a permission prompt from its card.
-
-<img src="docs/images/readme/tui-sidebar.png" alt="The crew TUI sidebar with six sessions">
-
-### Review
-
-Read the diff of a session, mark files as viewed, comment on lines, and send the review to the agent. Stage or revert one hunk.
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/readme/mac-review-mocha.png">
-  <img src="docs/images/readme/mac-review-latte.png" alt="The review view of the Mac app">
-</picture>
-
-### New session
-
-Select a workspace, a task (a PR URL or text, optional), the agent, the model and the effort. crew makes the worktree and runs the setup recipe of the repo.
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/readme/mac-new-session-mocha.png">
-  <img src="docs/images/readme/mac-new-session.png" alt="The new-session sheet of the Mac app">
-</picture>
-
-### Automations
-
-Define `[[automation]]` tables in `config.toml` or in a repo's `.crew.toml`. Run them by hand with context, on a schedule, or on an event such as a failed CI. See the outcome and history of each run.
-
-<img src="docs/images/readme/mac-automations.png" alt="The automations window of the Mac app">
-
-### Browser
-
-The Mac app has a browser for each session. Agents control it with `crew browser`: open the dev server, take a snapshot, click, fill forms and take screenshots.
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/readme/mac-browser-mocha.png">
-  <img src="docs/images/readme/mac-browser-latte.png" alt="The browser of the Mac app with a dev server">
-</picture>
-
-When the Mac app is not connected, the daemon can use a headless Chromium on the server. Install Chromium on the server, then set this in `~/.crew/config.toml`:
-
-```toml
-[browser]
-fallback = "headless"
-```
-
-To give the headless browser your logins, run `crew browser cookies import <file>` with a `cookies.txt`, a JSON cookie list or a Playwright `storageState`. See [ADR 0054](docs/adr/0054-headless-browser-fallback.md).
-
-### Phone app
-
-`crew serve` gives a phone app (a PWA): the sessions that need you, a chat view of each session, new sessions, automations and push notifications. See [docs/remote-app.md](docs/remote-app.md).
+- **Parallel agents, no mess.** Each session works in its own worktree. crew removes the worktree when the PR merges. It never deletes a branch, and it backs up uncommitted work first.
+- **Attention.** The sidebar shows the state of each session: ◆ permission, ● waiting, ◌ running, ✓ done. A session that needs you goes to the top, with a notification on your computer or your phone. The quota bar shows the Claude and Codex limits.
+- **Review like a PR.** See the last turn, the uncommitted changes or the whole branch. Comment on lines, stage or revert one hunk, and send all comments to the agent as one prompt.
+- **New sessions.** Select a workspace, a task (a PR URL or text), the agent, the model and the effort. crew makes the worktree and runs the setup recipe of the repo (`.crew.toml`).
+- **Automations.** Define `[[automation]]` tables in `config.toml` or in `.crew.toml`. Run them by hand, on a schedule or on an event such as a failed CI.
+- **Browser.** Agents control a browser for each session with `crew browser`. When no desktop app is connected, the daemon can use a headless Chromium ([ADR 0054](docs/adr/0054-headless-browser-fallback.md)).
+- **Disk and cleanup.** See the size and state of each worktree, the dev servers on its ports, and what cleanup will do and when.
+- **Terminal and nvim.** All of crew also works in the TUI. The nvim plugin sends review comments from nvim.
+- **Phone.** `crew serve` gives the same app to your phone. See [docs/remote-app.md](docs/remote-app.md).
 
 <p>
-  <img src="docs/images/readme/phone-sessions-light.png" alt="The phone app session list" width="240">
-  <img src="docs/images/readme/phone-chat-dark.png" alt="The phone app chat in dark mode" width="240">
-  <img src="docs/images/readme/phone-automations-light.png" alt="The phone app automations" width="240">
+  <img src="docs/images/readme/desktop-review.png" alt="The review view with the changed files, a diff and a draft comment" width="49%">
+  <img src="docs/images/readme/desktop-new-session.png" alt="The new-session dialog" width="49%">
+  <img src="docs/images/readme/desktop-automations.png" alt="The automations screen" width="49%">
+  <img src="docs/images/readme/desktop-disk.png" alt="The worktrees and disk screen" width="49%">
 </p>
 
-### Disk and cleanup
-
-See the size and state of each worktree, the dev servers on its ports, and what cleanup will do and when.
-
-<img src="docs/images/readme/mac-disk-worktrees.png" alt="The worktrees and disk window">
-
-### TUI and nvim
-
-All of crew also works in the terminal. `t` opens a shell in the worktree, `e` opens nvim for the session, and the nvim plugin sends review comments from nvim.
-
-<img src="docs/images/readme/tui-new-session.png" alt="The new-session dialog of the TUI">
+<p>
+  <img src="docs/images/readme/phone-sessions.png" alt="The phone app session list" width="240">
+  <img src="docs/images/readme/phone-chat.png" alt="The phone app chat" width="240">
+  <img src="docs/images/readme/tui-sidebar.png" alt="The crew TUI sidebar with six sessions" width="420">
+</p>
 
 ## Install
 
-Builds are available for macOS (arm64, amd64) and Linux (amd64, arm64). You do not need a Go toolchain. You need `tmux`, `git` and the GitHub CLI (`gh`, signed in). You also need Claude Code, the Codex CLI or both.
-
-Optional, on macOS: `brew install terminal-notifier`. If it is on `PATH` when the daemon starts, each session keeps one banner, and a click on a banner shows your terminal on that session. Without it, banners go through `osascript`.
-
-### CLI
-
-Install the newest release:
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/giovaniif/crew/main/scripts/install.sh | sh
-```
-
-The script does these steps:
-
-1. It downloads the archive for your OS and CPU from GitHub Releases.
-2. It checks the archive against `checksums.txt`.
-3. It puts the `crew` binary in `~/.local/bin`.
-4. It puts the nvim plugin in `~/.local/share/crew/nvim` (`$XDG_DATA_HOME/crew/nvim` if that is set).
-
-Two environment variables change this behavior:
-
-```sh
-# a specific release
-curl -fsSL https://raw.githubusercontent.com/giovaniif/crew/main/scripts/install.sh | CREW_VERSION=v0.1.0-beta.1 sh
-# another directory
-curl -fsSL https://raw.githubusercontent.com/giovaniif/crew/main/scripts/install.sh | CREW_INSTALL_DIR="$HOME/bin" sh
-```
-
-If the install directory is not on your `PATH`, the script tells you. Add it in your shell profile (`~/.zshrc` or `~/.bashrc`):
-
-```sh
-export PATH="$HOME/.local/bin:$PATH"
-```
-
-Check the install:
-
-```sh
-crew version   # crew v0.1.0-beta.1 (commit abc1234)
-```
+crew runs on macOS and Linux. Windows is not supported. You need `tmux`, `git` and the GitHub CLI (`gh`, signed in). You also need Claude Code, the Codex CLI or both. For the nvim integration, you need Neovim 0.10+. For `:CrewDiff`, you also need [diffview.nvim](https://github.com/sindrets/diffview.nvim).
 
 ### Desktop app
 
-Each release also has the desktop app (Tauri). It is the Mac app, and it also runs on Linux and Windows. Each package holds the matching `crew` binary, and the app starts its own `crew serve`. You do not need to install the CLI first.
+Get the package from [GitHub Releases](https://github.com/giovaniif/crew/releases). Each package holds the matching `crew` binary, and the app starts its own `crew serve`. You do not need to install the CLI first.
 
 | OS | File | Install |
 |---|---|---|
 | macOS (Apple silicon) | `crew_<version>_aarch64.dmg` | Open it and drag `crew.app` to Applications. The app is signed and notarized. |
 | macOS (Intel) | `crew_<version>_x64.dmg` | The same as Apple silicon. |
-| Linux (amd64) | `crew_<version>_amd64.deb` | `sudo apt install ./crew_<version>_amd64.deb`. Then start `crew-desktop`. |
 | Linux (amd64) | `crew_<version>_amd64.AppImage` | `chmod +x crew_<version>_amd64.AppImage`, then run it. |
-| Windows (x64) | `crew_<version>_x64_en-US.msi` or `crew_<version>_x64-setup.exe` | Run the installer. The installer is not signed, so Windows SmartScreen shows a warning. Select More info › Run anyway. |
+| Linux (amd64) | `crew_<version>_amd64.deb` | `sudo apt install ./crew_<version>_amd64.deb`. Then start `crew-desktop`. |
 
-The Windows package has no `crew` binary, because `crew` does not build for Windows. The Windows app uses a `crew` on `PATH`, else it opens `http://127.0.0.1:7420/`.
+### Phone
+
+The phone app connects to a `crew serve` on your computer or server. Pair it with `crew remote pair`.
+
+- **iOS:** the app is on TestFlight. Ask the maintainer for an invite.
+- **Android:** a store build is not available yet. Each CI run on `main` has a debug APK (the `crew-android-debug` artifact).
+- **All phones:** open `crew serve` in the browser and add it to the Home Screen (a PWA).
+
+**Do not open `serve` to the internet, unless a layer in front of it adds its own authentication.** The setups for Tailscale, a LAN or VPN behind Caddy or nginx, and Cloudflare Tunnel are in [docs/remote-app.md](docs/remote-app.md).
+
+### CLI
+
+Install the newest release of `crew` and its nvim plugin:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/giovaniif/crew/main/scripts/install.sh | sh
+```
+
+The script downloads the tarball for your OS and CPU (macOS or Linux, amd64 or arm64) from GitHub Releases, and checks it against `checksums.txt`. It puts `crew` in `~/.local/bin` and the nvim plugin in `~/.local/share/crew/nvim`. Set `CREW_VERSION` for a specific release, or `CREW_INSTALL_DIR` for another directory. You can also download a tarball from the release page.
+
+```sh
+crew version   # crew v0.1.0-beta.1 (commit abc1234)
+```
+
+Optional, on macOS: `brew install terminal-notifier`. Then a click on a banner shows your terminal on that session.
 
 ### Upgrade
 
-`crew version` prints the installed version. At most one time each day, it also checks GitHub for a newer release. To stop this check, set `CREW_NO_UPDATE_CHECK=1`. The `crew` binary does not update itself.
+The desktop app updates itself and its `crew` binary. At launch and each 6 h, it looks for a newer release. It asks you before it installs.
 
-If you use the desktop app, the app updates itself and its `crew` binary. At launch and each 6 h, it looks for a newer release, also a prerelease. It asks you before it installs. Then it stops the crew daemon and restarts, so that the new `crew` starts a new daemon. A `crew` in the app bundle tells you to accept the update in the app.
-
-If you installed `crew` with the install script, run the install script again to upgrade. Then stop the old daemon, so that the new binary starts its own daemon:
+`crew version` checks GitHub for a newer release at most one time each day. To stop this check, set `CREW_NO_UPDATE_CHECK=1`. The `crew` binary does not update itself. To upgrade, run the install script again, then stop the old daemon:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/giovaniif/crew/main/scripts/install.sh | sh
@@ -167,48 +94,38 @@ crew daemon stop
 crew
 ```
 
-### Upgrade from the alphas
+The alpha releases had another name. The first start of `crew` moves your old state to `~/.crew` one time, and writes one line for each step.
 
-The alpha releases had another name. The first start of `crew` (or `crew setup`) moves your state one time, and writes one line for each step:
+## Quick start
 
-- The old home dir moves to `~/.crew` (sessions, worktrees, `config.toml` and paired phones), and the old path becomes a link. If both dirs exist, crew uses `~/.crew` and does not change the old dir. If an old daemon still runs, crew does not move the dir and tells you to run `crew daemon stop`.
-- Live sessions keep running: the daemon uses the old tmux server until its sessions end.
-- The Claude, Codex and omp hooks run `crew hook` after the move. crew backs up each file first.
-- `crew setup` replaces the systemd units and launchd agents of the alphas with `crew-*` and `dev.crew.*`.
-- The old nvim plugin dir, nvim setup file, browser skill, Claude settings backup and repo config files move to their crew names (`.crew.toml` in a repo). Each old file stays as a `.bak` copy.
-- The link with the old command name next to the binary goes away. Scripts that call the old command must call `crew`.
-- Environment variables with the old prefix still work as a fallback.
+1. Run `crew`. The first time, a setup screen opens.
+2. Select Claude Code, Codex or both. The screen shows the file that it changes (`~/.claude/settings.json` or `~/.codex/hooks.json`), where the backup goes, and how to undo it (`crew setup claude --remove`). Codex then needs a one-time trust step: start `codex` and accept the review prompt for the new hooks.
+3. Optional: set up Neovim. It writes `~/.config/nvim/plugin/crew.lua` and does not edit your own files.
+4. Press `n` to start your first session.
 
-## Getting started
+To open the setup screen again, press `S` in the sidebar or run `crew setup`. More: [docs/getting-started.md](docs/getting-started.md).
 
-Run `crew`. The first time, a setup screen opens on top of the sidebar:
+## How it works
 
-1. **Agents.** Select Claude Code, Codex or both. Each agent shows if its hooks are already set up.
-2. **Claude Code.** The screen shows the file that it changes (`~/.claude/settings.json`), what it adds, where the backup goes, and how to undo it (`crew setup claude --remove`).
-3. **Codex.** The same for `~/.codex/hooks.json`. Codex then needs a one-time trust step: start `codex` and accept the review prompt for the new hooks.
-4. **Neovim (optional).** It writes `~/.config/nvim/plugin/crew.lua`, which loads the plugin. It does not edit your own files.
-5. **Done.** Press `⏎` to close the setup screen, then press `n` to start your first session.
+`crew` is one Go binary. It is the daemon, the TUI, the CLI and the hook handler. The Claude Code and Codex hooks (`crew hook`) send each state change to the daemon. The agents run in the `crew` tmux server. crew uses the `git`, `gh` and `tmux` CLIs. `crew serve` gives an HTTP and WebSocket API to the desktop and phone apps. More: [ARCHITECTURE.md](ARCHITECTURE.md).
 
-To open it again, press `S` in the sidebar or run `crew setup`. `crew setup claude`, `crew setup codex` and `crew setup nvim` do the same installs without the screen. More: [docs/getting-started.md](docs/getting-started.md).
+## Develop
 
-## Requirements
+The build is test-driven, and CI enforces it. Read [AGENTS.md](AGENTS.md) before you open a PR. It covers the layer rules, tests first, no comments, and one PR per issue.
 
-- macOS or Linux, tmux, git and the GitHub CLI (`gh`, signed in).
-- Claude Code, the Codex CLI or both.
-- For the nvim integration: Neovim 0.10+. For `:CrewDiff`, also [diffview.nvim](https://github.com/sindrets/diffview.nvim).
+- `make build`, `make test`, `make lint` and `make e2e` are the main commands.
+- `make dev SEED=3 FAKES=1` runs crew from the checkout with demo data.
+- `make readme-shots` makes the images of this README.
 
-## Remote app
+## Docs
 
-`crew serve` serves the phone app, and `crew remote pair` pairs a phone with a QR code. **Do not open `serve` to the internet, unless a layer in front of it adds its own authentication.** The setups for Tailscale, a LAN or VPN behind Caddy or nginx, and Cloudflare Tunnel are in [docs/remote-app.md](docs/remote-app.md).
-
-## Codex setup
-
-`crew setup codex` adds the hooks that Codex needs to send state. It also prints the one-time trust step that Codex requires. `crew setup codex --remove` removes the hooks. It backs up an existing `hooks.json` first, and does not change your other hooks.
+- [FEATURES.md](FEATURES.md): what crew does.
+- [ARCHITECTURE.md](ARCHITECTURE.md): the layers and the performance budgets.
+- [docs/getting-started.md](docs/getting-started.md): the first run.
+- [docs/remote-app.md](docs/remote-app.md): the phone app and remote access.
+- [docs/adr/](docs/adr/): the decisions.
+- [docs/style.md](docs/style.md): the writing style.
 
 ## Status
 
-crew is in **beta**. Sessions, worktrees and cleanup, review, notifications, the TUI and the Mac app are stable for daily use. Automations, the browser and the phone app are new, and can change. Report a bug or an idea in [GitHub Issues](https://github.com/giovaniif/crew/issues). Include the output of `crew version` and, for the daemon, `~/.crew/daemon.log`.
-
-## Contributing
-
-The build is test-driven, and CI enforces it. Read [AGENTS.md](AGENTS.md) before you open a PR. It covers the layer rules, tests first, no low-value tests or comments, and one PR per issue. Write docs in the style of [docs/style.md](docs/style.md). `make build`, `make test`, `make lint` and `make e2e` are the main commands. `make readme-shots` makes the images of this README.
+crew is in **beta**. Report a bug or an idea in [GitHub Issues](https://github.com/giovaniif/crew/issues). Include the output of `crew version` and, for the daemon, `~/.crew/daemon.log`.
