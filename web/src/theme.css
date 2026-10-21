@@ -2120,6 +2120,22 @@ button.danger {
   color: var(--subtext);
 }
 
+.side-row kbd.on-demand {
+  display: none;
+}
+
+.side-row:hover kbd.on-demand {
+  display: inline;
+}
+
+.side-row:focus-visible kbd.on-demand {
+  display: inline;
+}
+
+.side-row[aria-current="page"] kbd.on-demand {
+  display: inline;
+}
+
 .side-foot {
   display: flex;
   flex-direction: column;
