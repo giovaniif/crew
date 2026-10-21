@@ -46,6 +46,14 @@ shot desktop-automations.png
 goto /#/disk
 wait 800
 shot desktop-disk.png
+goto /#/mates
+see pip
+wait 600
+shot desktop-mates.png
+goto /#/mates/pip
+see Never force-push main
+wait 600
+shot desktop-mate.png
 device iPhone 15
 scheme light
 mode installed
