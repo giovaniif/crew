@@ -24,13 +24,20 @@ go run ./scripts/verify iso crew --expect seed-1-api --expect "#100 OPEN failing
 go run ./scripts/verify iso crew --expect seed-session-1 --absent unassigned -- worktree list
 ```
 
+### a seeded worktree can be assigned by its listed path (#587)
+
+```sh
+go run ./scripts/verify iso crew --expect "assigned /tmp/seed/web-3 to seed-session-2" -- worktree assign /tmp/seed/web-3 seed-session-2
+go run ./scripts/verify iso crew --expect "/tmp/seed/web-3    seed-3-web    seed-session-2" -- worktree list
+```
+
 ### cleanup dry run keeps worktrees it cannot read
 
 ```sh
-go run ./scripts/verify iso crew --expect "keep" --expect "kept" --absent "removed" -- cleanup --dry-run
+go run ./scripts/verify iso crew --expect "keep" --expect "kept" --expect "its session is live" --absent "removed" -- cleanup --dry-run
 ```
 
-Expect: each seeded worktree is `keep` with `facts unavailable`, because the folders are not repos.
+Expect: each seeded worktree is `keep` with `its session is live`, because each seeded session is live. The live-session rule comes before the facts of the folder.
 
 ### cleanup of a merged worktree on a temp repo (manual: needs a temp repo with a merged PR in the fake gh; the rules are in internal/domain cleanup tests and internal/app tests)
 
