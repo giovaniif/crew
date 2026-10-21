@@ -44,8 +44,8 @@ impl Hub {
         }
     }
 
-    pub fn listing(&mut self) -> Listing {
-        let first_run = std::mem::take(&mut self.first_run);
+    pub fn listing(&self) -> Listing {
+        let first_run = self.first_run;
         Listing {
             servers: self.store.rows(),
             selected: self.store.selected.clone(),

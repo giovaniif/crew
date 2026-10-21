@@ -322,6 +322,7 @@ async fn crew_server_open<R: Runtime>(app: AppHandle<R>, id: String) -> Result<(
             let state = handle.state::<Shared>();
             let mut hub = state.lock().unwrap();
             hub.store.select(&id)?;
+            hub.first_run = false;
             hub.save()?;
         }
         show(&handle, url)
