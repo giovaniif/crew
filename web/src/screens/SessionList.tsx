@@ -132,6 +132,7 @@ function Card({ session, now }: { session: Session; now: number }) {
             {stateStyle(session.State).glyph}
           </span>
           <span className="name">{sessionTitle(session)}</span>
+          {session.Muted ? <span className="badge muted-badge">muted</span> : null}
           {session.State === "done" && session.Unread ? <span className="badge">unread</span> : null}
           {age ? <span className="age">{age}</span> : null}
         </span>
