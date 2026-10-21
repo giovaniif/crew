@@ -3201,6 +3201,132 @@ tr.picked td.diff-ln {
   height: 100%;
 }
 
+.browser {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 12px 12px;
+}
+
+.browser-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.browser-tab {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 8px;
+  background: var(--mantle);
+}
+
+.browser-tabs button {
+  font: inherit;
+  font-size: 13px;
+  min-height: 28px;
+  padding: 2px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--subtext);
+  cursor: pointer;
+}
+
+.browser-tab button[aria-selected="true"] {
+  background: var(--paper);
+  color: var(--text);
+  box-shadow: 0 1px 2px var(--shadow-soft);
+}
+
+.browser-tabs .browser-close {
+  padding: 2px 8px;
+}
+
+.browser-bar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.browser-bar input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-family: var(--mono);
+  font-size: 13px;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid var(--surface);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--text);
+}
+
+.browser-external {
+  font-size: 13px;
+  color: var(--link);
+  white-space: nowrap;
+}
+
+.browser-refused {
+  margin: 0;
+  font-size: 13px;
+  color: var(--red);
+}
+
+.browser-ports {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.browser-ports button {
+  font: inherit;
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 3px 10px;
+  border: 1px solid var(--surface);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.browser-page {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  border: 1px solid var(--surface);
+  border-radius: var(--radius);
+  background: var(--paper);
+  overflow: hidden;
+}
+
+.browser-page iframe {
+  flex: 1;
+  border: 0;
+  background: #ffffff;
+}
+
+.browser-empty {
+  margin: auto;
+  padding: 16px;
+  text-align: center;
+}
+
+.browser-note {
+  margin: 0;
+  font-size: 12px;
+}
+
 .chat-bar .mate-bar-who {
   display: flex;
   align-items: center;
