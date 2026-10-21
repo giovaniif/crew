@@ -1,4 +1,4 @@
-import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import {
   type Authed,
   type Mate,
@@ -17,7 +17,25 @@ import {
   setMateTokens,
   stopAllMates,
 } from "../api";
-import { ACCENTS, FACES, type FaceState, faceColor, faceOf, faceState, faceSvg, stateWords, type ToneAxis, toneLines, toneOf } from "../faces";
+import {
+  ACCENTS,
+  FACES,
+  type FaceState,
+  faceColor,
+  faceOf,
+  faceState,
+  faceSvg,
+  gallery,
+  inSource,
+  mateCard,
+  type MateSource,
+  mateTagline,
+  memoryMeter,
+  stateWords,
+  type ToneAxis,
+  toneLines,
+  toneOf,
+} from "../faces";
 import type { MateRow, Mates as MateBoard } from "../stream";
 import { ApprovalList } from "./Approvals";
 
@@ -304,6 +322,53 @@ function Connect({ api, name }: { api: Authed; name: string }) {
   );
 }
 
+export function Confirm({
+  id,
+  title,
+  body,
+  action,
+  danger,
+  busy,
+  note,
+  onCancel,
+  onConfirm,
+  children,
+}: {
+  id: string;
+  title: string;
+  body: string;
+  action: string;
+  danger?: boolean;
+  busy?: boolean;
+  note?: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="dialog-backdrop">
+      <div className="dialog" role="dialog" aria-modal="true" aria-labelledby={id + "-title"} aria-describedby={id + "-body"}>
+        <h2 id={id + "-title"}>{title}</h2>
+        <p id={id + "-body"}>{body}</p>
+        {children}
+        {note ? (
+          <p className="error" role="alert">
+            {note}
+          </p>
+        ) : null}
+        <div className="dialog-actions">
+          <button type="button" className="secondary" autoFocus onClick={onCancel}>
+            Cancel
+          </button>
+          <button type="button" className={danger ? "danger" : "primary"} disabled={busy} onClick={onConfirm}>
+            {action}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function StateWord({ state }: { state: FaceState }) {
   return (
     <span className={"face-state face-" + state}>
@@ -313,10 +378,22 @@ function StateWord({ state }: { state: FaceState }) {
   );
 }
 
+const sources: [MateSource, string][] = [
+  ["all", "All Mates"],
+  ["live", "Live"],
+  ["claude", "Claude"],
+  ["codex", "Codex"],
+];
+
 export function Mates({ api, now, board }: { api: Authed; now: number; board?: MateBoard }) {
   const { defs, problems, error } = useMateDefs(api);
   const asking = useAskingMates(api);
+  const [source, setSource] = useState<MateSource>("all");
+  const [search, setSearch] = useState("");
   const rows = board?.mates ?? [];
+  const cards = rows.map((row) => mateCard(row, defs.find((d) => d.name === row.name), asking));
+  const shown = gallery(cards, source, search);
+  const live = cards.reduce((n, c) => n + c.live, 0);
   return (
     <main className="screen mates">
       <div className="mates-top">
@@ -325,24 +402,39 @@ export function Mates({ api, now, board }: { api: Authed; now: number; board?: M
           +
         </a>
       </div>
+      <p className="muted mates-sum">
+        {cards.length} mate{cards.length === 1 ? "" : "s"} · {live} live
+      </p>
       {error && <p role="alert">{error}</p>}
       {problems.map((p) => (
         <p key={p} className="mate-error">
           {p}
         </p>
       ))}
+      <div className="mate-filters">
+        <nav className="mate-sources" aria-label="Mate sources">
+          {sources.map(([key, label]) => (
+            <button key={key} type="button" aria-pressed={source === key} className={source === key ? "on" : ""} onClick={() => setSource(key)}>
+              {label} <span className="count">{cards.filter((c) => inSource(c, key)).length}</span>
+            </button>
+          ))}
+        </nav>
+        <input type="search" className="mate-search" aria-label="Search mates" placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)} />
+      </div>
       {board === undefined && <p>Loading…</p>}
       {board !== undefined && rows.length === 0 && <p>No mates yet.</p>}
+      {rows.length > 0 && shown.length === 0 && <p className="muted">No mate matches.</p>}
       <div className="mate-grid">
-        {rows.map((row) => {
-          const def = defs.find((d) => d.name === row.name);
-          const state = faceState(row, asking);
+        {shown.map((card) => {
+          const { row, def } = card;
           return (
-            <a key={row.name} className="mate-card" href={"#/mates/" + encodeURIComponent(row.name)} aria-label={row.name + ", " + stateWords[state]}>
-              <MateFace name={row.name} avatar={row.avatar || def?.avatar} color={row.color || def?.color} state={state} px={64} />
+            <a key={row.name} className="mate-card" href={"#/mates/" + encodeURIComponent(row.name)} aria-label={row.name + ", " + stateWords[card.face]}>
+              <MateFace name={row.name} avatar={row.avatar || def?.avatar} color={row.color || def?.color} state={card.face} px={64} />
               <strong className="mate-name">{row.name}</strong>
+              <StateWord state={card.face} />
+              <span className={"mate-live" + (card.live > 0 ? " on" : "")}>{card.liveLabel}</span>
               {def && <span className="mate-tag">{firstLine(def.prompt)}</span>}
-              <StateWord state={state} />
+              <span className="mate-status">{card.status}</span>
             </a>
           );
         })}
@@ -357,6 +449,7 @@ export function Mates({ api, now, board }: { api: Authed; now: number; board?: M
 function Memory({ api, name }: { api: Authed; name: string }) {
   const [memory, setMemory] = useState<MateMemory | null>(null);
   const [draft, setDraft] = useState<string | null>(null);
+  const [clearing, setClearing] = useState(false);
   const [note, setNote] = useState("");
 
   useEffect(() => {
@@ -369,25 +462,45 @@ function Memory({ api, name }: { api: Authed; name: string }) {
     };
   }, [api, name]);
 
-  async function save() {
+  async function save(text: string) {
     setNote("");
     try {
-      setMemory(await setMateMemory(api, name, draft ?? ""));
+      setMemory(await setMateMemory(api, name, text));
       setDraft(null);
+      setClearing(false);
     } catch (err) {
       setNote(message(err));
     }
   }
+
+  const meter = memoryMeter(draft ?? memory?.text ?? "", memory?.limit ?? 8192);
 
   return (
     <section className="mate-memory" aria-label={"Memory section of " + name}>
       <div className="sec-row">
         <h2>Memory</h2>
         {draft === null && (
-          <button type="button" className="link-button" onClick={() => setDraft(memory?.text ?? "")}>
-            Edit memory
-          </button>
+          <span className="mem-actions">
+            <button type="button" className="link-button" onClick={() => setDraft(memory?.text ?? "")}>
+              Edit memory
+            </button>
+            <button type="button" className="link-button danger-link" disabled={!memory?.text} onClick={() => setClearing(true)}>
+              Clear memory
+            </button>
+          </span>
         )}
+      </div>
+      <div className={"mem-meter" + (meter.full ? " full" : "")}>
+        <meter
+          aria-label="Memory size"
+          min={0}
+          max={memory?.limit ?? 8192}
+          value={new TextEncoder().encode(draft ?? memory?.text ?? "").length}
+          aria-valuenow={new TextEncoder().encode(draft ?? memory?.text ?? "").length}
+          aria-valuemin={0}
+          aria-valuemax={memory?.limit ?? 8192}
+        />
+        <span className="muted">{meter.label}</span>
       </div>
       {draft === null ? (
         <pre className="mem">{memory?.text ? memory.text : "Empty. " + name + " writes notes here as it learns."}</pre>
@@ -401,13 +514,25 @@ function Memory({ api, name }: { api: Authed; name: string }) {
             <button type="button" onClick={() => setDraft(null)}>
               Cancel
             </button>
-            <button type="button" onClick={save}>
+            <button type="button" onClick={() => void save(draft ?? "")}>
               Save memory
             </button>
           </div>
         </>
       )}
-      {note && <p role="alert">{note}</p>}
+      {note && !clearing && <p role="alert">{note}</p>}
+      {clearing && (
+        <Confirm
+          id="clear-memory"
+          title={"Clear the memory of " + name + "?"}
+          body={name + " forgets all its notes. Its personality stays."}
+          action="Clear"
+          danger
+          note={note}
+          onCancel={() => setClearing(false)}
+          onConfirm={() => void save("")}
+        />
+      )}
     </section>
   );
 }
@@ -543,6 +668,11 @@ const presets: [string, string][] = [
   ["Blank", ""],
 ];
 
+function brainsLine(mate: Mate): string {
+  const agent = mate.agent === "codex" ? "Codex" : mate.agent === "claude" ? "Claude" : mate.agent;
+  return [agent, mate.model, mate.effort ? mate.effort + " effort" : ""].filter(Boolean).join(" · ");
+}
+
 const mateHandle = /^[a-z0-9][a-z0-9_-]*$/;
 
 function nameProblemOf(name: string, defs: Mate[]): string {
@@ -607,8 +737,8 @@ export function NewMate({ api }: { api: Authed }) {
         </a>
         <strong>New mate</strong>
       </div>
-      <div className="steps" aria-label={"Step " + (step + 1) + " of 3"}>
-        {[0, 1, 2].map((i) => (
+      <div className="steps" aria-label={"Step " + (step + 1) + " of 4"}>
+        {[0, 1, 2, 3].map((i) => (
           <span key={i} className={i <= step ? "on" : ""} />
         ))}
       </div>
@@ -705,17 +835,52 @@ export function NewMate({ api }: { api: Authed }) {
       {step === 2 && (
         <>
           <h2>3 · Brains</h2>
-          <form className="mate-form" aria-label="Brains" onSubmit={(e) => (e.preventDefault(), void create())}>
+          <form className="mate-form" aria-label="Brains" onSubmit={(e) => (e.preventDefault(), setStep(3))}>
             <Brains mate={mate} repos={repos} onMate={setMate} onRepos={setRepos} />
             <div className="mate-actions">
               <button type="button" onClick={() => setStep(1)}>
                 Back
               </button>
-              <button type="submit" className="primary" disabled={busy}>
-                Create
+              <button type="submit" className="primary">
+                Next: meet
               </button>
             </div>
           </form>
+        </>
+      )}
+      {step === 3 && (
+        <>
+          <h2>Meet {mate.name}</h2>
+          {mateTagline(mate.prompt) && <p className="mate-tag">{mateTagline(mate.prompt)}</p>}
+          {lines.length > 0 && (
+            <div className="mtags">
+              {tones.map((t, i) =>
+                tone[i] === 2 ? null : (
+                  <span key={t.key} className="mtag">
+                    {tone[i] < 2 ? t.low : t.high}
+                  </span>
+                ),
+              )}
+            </div>
+          )}
+          <dl className="meet-facts" aria-label={"About " + mate.name} role="region">
+            <dt>Agent</dt>
+            <dd>{brainsLine(mate)}</dd>
+            <dt>Repos</dt>
+            <dd>{splitRepos(repos)?.join(", ") ?? "The first repo of each conversation"}</dd>
+            <dt>Memory</dt>
+            <dd>Empty. {mate.name} writes notes here as it learns.</dd>
+          </dl>
+          <p className="muted">{mate.name} starts with fresh context in each conversation and keeps its personality and memory.</p>
+          <p className="muted">Slack is optional. Connect it later from the profile.</p>
+          <div className="mate-actions">
+            <button type="button" onClick={() => setStep(2)}>
+              Back
+            </button>
+            <button type="button" className="primary" disabled={busy} onClick={() => void create()}>
+              Create
+            </button>
+          </div>
           {note && <p role="alert">{note}</p>}
         </>
       )}

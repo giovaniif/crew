@@ -1,3 +1,4 @@
+import type { Mate } from "./api";
 import type { MateRow } from "./stream";
 
 export type FaceState = "idle" | "working" | "thinking" | "needs" | "paused";
@@ -166,4 +167,72 @@ export function toneLines(tones: ToneAxis[], steps: number[]): string[] {
 
 export function toneOf(tones: ToneAxis[], steps: number[]): Record<string, number> {
   return Object.fromEntries(tones.map((t, i) => [t.key, (steps[i] ?? 2) + 1]));
+}
+
+export type MateCard = { name: string; agent: string; tagline: string; live: number; liveLabel: string; status: string; face: FaceState; row: MateRow; def?: Mate };
+
+export type MateSource = "all" | "live" | "claude" | "codex";
+
+export function mateTagline(prompt: string): string {
+  const text = prompt.trim();
+  return text.split("\n\n")[0];
+}
+
+export function mateCard(row: MateRow, def: Mate | undefined, asking: string[]): MateCard {
+  const live = [...row.threads.map((t) => ({ name: t.session || t.session_id, state: t.state, ended: t.ended })), ...(row.conversations ?? [])].filter(
+    (c) => !c.ended,
+  );
+  const face = faceState(row, asking);
+  let status = "Idle";
+  const working = live.find((c) => c.state === "running");
+  const done = live.find((c) => c.state === "done");
+  if (row.guard) {
+    status = "Held · " + row.guard.replaceAll("_", " ");
+  } else if (row.state === "paused" || def?.enabled === false) {
+    status = "Paused";
+  } else if (face === "needs") {
+    status = "Needs you";
+  } else if (working) {
+    status = "Working on " + working.name;
+  } else if (done) {
+    status = "Finished " + done.name;
+  }
+  return {
+    name: row.name,
+    agent: def?.agent ?? "",
+    tagline: def ? mateTagline(def.prompt) : "",
+    live: live.length,
+    liveLabel: live.length === 0 ? "No live chats" : live.length + " live",
+    status,
+    face: def?.enabled === false ? "paused" : face,
+    row,
+    def,
+  };
+}
+
+export function inSource(card: MateCard, source: MateSource): boolean {
+  if (source === "all") {
+    return true;
+  }
+  return source === "live" ? card.live > 0 : card.agent === source;
+}
+
+export function gallery(cards: MateCard[], source: MateSource, search: string): MateCard[] {
+  const q = search.trim().toLowerCase();
+  return cards.filter((c) => inSource(c, source) && (q === "" || [c.name, c.tagline].some((t) => t.toLowerCase().includes(q))));
+}
+
+export type MemoryMeter = { fraction: number; full: boolean; label: string };
+
+export function memoryMeter(text: string, limit: number): MemoryMeter {
+  const bytes = new TextEncoder().encode(text).length;
+  const cap = Math.max(limit, 1);
+  const kb = Math.floor(cap / 1024) + " KB";
+  let label = Math.floor(((bytes * 10 + 512) / 1024) / 10) + "." + (Math.floor((bytes * 10 + 512) / 1024) % 10) + " KB of " + kb;
+  if (bytes === 0) {
+    label = "Empty · " + kb + " limit";
+  } else if (bytes < 1024) {
+    label = bytes + " bytes of " + kb;
+  }
+  return { fraction: Math.min(1, bytes / cap), full: bytes > cap, label };
 }

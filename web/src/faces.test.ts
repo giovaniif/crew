@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { faceColor, faceOf, faceState, faceSvg, faceGlyph, FACES, toneLines, toneOf } from "./faces";
+import { faceColor, faceOf, faceState, faceSvg, faceGlyph, FACES, gallery, mateCard, memoryMeter, toneLines, toneOf } from "./faces";
 import type { MateRow } from "./stream";
 
 const row = (over: Partial<MateRow> = {}): MateRow => ({ name: "zed", state: "ready", work: [], threads: [], conversations: [], ...over });
@@ -68,5 +68,64 @@ describe("tone", () => {
   it("sends each step plus one by the axis key", () => {
     expect(toneOf(tones, [1, 2])).toEqual({ terse: 2, cautious: 3 });
     expect(toneOf(tones, [0, 4])).toEqual({ terse: 1, cautious: 5 });
+  });
+});
+
+const conv = (name: string, state: MateRow["threads"][number]["state"], ended = false) => ({ session: name, name, started_at: "", state, ended });
+
+describe("mate cards", () => {
+  const def = (over = {}) => ({ name: "zed", prompt: "Reviews diffs.\nWith care.\n\nMore rules.", agent: "claude", enabled: true, ...over });
+
+  it("takes the first paragraph of the prompt as the tagline", () => {
+    expect(mateCard(row(), def(), []).tagline).toBe("Reviews diffs.\nWith care.");
+  });
+
+  it("counts the live conversations and threads", () => {
+    const card = mateCard(row({ conversations: [conv("a", "idle"), conv("b", "done", true)] }), def(), []);
+    expect(card.live).toBe(1);
+    expect(card.liveLabel).toBe("1 live");
+    expect(mateCard(row(), def(), []).liveLabel).toBe("No live chats");
+  });
+
+  it("writes the status line as the Mac app does", () => {
+    expect(mateCard(row({ state: "paused" }), def(), []).status).toBe("Paused");
+    expect(mateCard(row(), def({ enabled: false }), []).status).toBe("Paused");
+    expect(mateCard(row({ guard: "rate_limit" }), def(), []).status).toBe("Held · rate limit");
+    expect(mateCard(row(), def(), ["zed"]).status).toBe("Needs you");
+    expect(mateCard(row({ conversations: [conv("fix", "permission")] }), def(), []).status).toBe("Needs you");
+    expect(mateCard(row({ conversations: [conv("done one", "done"), conv("add login", "running")] }), def(), []).status).toBe("Working on add login");
+    expect(mateCard(row({ conversations: [conv("add login", "done")] }), def(), []).status).toBe("Finished add login");
+    expect(mateCard(row(), def(), []).status).toBe("Idle");
+  });
+});
+
+describe("gallery", () => {
+  const cards = [
+    mateCard(row({ name: "ann", conversations: [conv("x", "running")] }), { name: "ann", prompt: "Fixes CSS.", agent: "claude", enabled: true }, []),
+    mateCard(row({ name: "bob" }), { name: "bob", prompt: "Writes docs.\n\nSecret rule.", agent: "codex", enabled: true }, []),
+    mateCard(row({ name: "cat" }), undefined, []),
+  ];
+
+  it("filters by source and counts each source", () => {
+    expect(gallery(cards, "all", "").map((c) => c.name)).toEqual(["ann", "bob", "cat"]);
+    expect(gallery(cards, "live", "").map((c) => c.name)).toEqual(["ann"]);
+    expect(gallery(cards, "claude", "").map((c) => c.name)).toEqual(["ann"]);
+    expect(gallery(cards, "codex", "").map((c) => c.name)).toEqual(["bob"]);
+  });
+
+  it("searches the name and the first paragraph of the prompt, without case", () => {
+    expect(gallery(cards, "all", " DOCS ").map((c) => c.name)).toEqual(["bob"]);
+    expect(gallery(cards, "all", "secret")).toEqual([]);
+    expect(gallery(cards, "all", "ca").map((c) => c.name)).toEqual(["cat"]);
+    expect(gallery(cards, "codex", "css")).toEqual([]);
+  });
+});
+
+describe("memory meter", () => {
+  it("measures the UTF-8 size against the limit", () => {
+    expect(memoryMeter("", 8192)).toEqual({ fraction: 0, full: false, label: "Empty · 8 KB limit" });
+    expect(memoryMeter("é", 8192).label).toBe("2 bytes of 8 KB");
+    expect(memoryMeter("a".repeat(2048), 8192)).toEqual({ fraction: 0.25, full: false, label: "2.0 KB of 8 KB" });
+    expect(memoryMeter("a".repeat(9000), 8192)).toEqual({ fraction: 1, full: true, label: "8.8 KB of 8 KB" });
   });
 });
