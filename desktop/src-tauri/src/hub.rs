@@ -10,6 +10,27 @@ use url::Url;
 use crate::local::{self, LocalServe};
 use crate::servers::{self, Kind, Row, Store, LOCAL_ID};
 
+pub const REMOTE_PERMISSIONS: &[&str] = &[
+    "allow-crew-notify",
+    "allow-crew-attention",
+    "allow-crew-server-auth",
+    "allow-crew-server-open",
+];
+
+pub const LOCAL_PERMISSIONS: &[&str] = &[
+    "core:default",
+    "allow-crew-notify",
+    "allow-crew-attention",
+    "allow-crew-server-auth",
+    "allow-crew-servers",
+    "allow-crew-ssh-hosts",
+    "allow-crew-server-add",
+    "allow-crew-server-open",
+    "allow-crew-server-remove",
+    "allow-crew-server-fix",
+    "allow-crew-server-workspace",
+];
+
 #[derive(Serialize)]
 pub struct Listing {
     pub servers: Vec<Row>,
@@ -55,6 +76,14 @@ impl Hub {
 
     pub fn save(&self) -> Result<(), String> {
         self.store.save(&self.file).map_err(|e| e.to_string())
+    }
+
+    pub fn trusted(&self, page: &Url) -> bool {
+        matches!(&self.local, Some((url, _)) if url.origin() == page.origin())
+    }
+
+    pub fn may_open(&self, page: &Url, id: &str) -> bool {
+        id == LOCAL_ID || self.trusted(page)
     }
 
     pub fn auth_for(&self, page: &Url) -> Option<serde_json::Value> {

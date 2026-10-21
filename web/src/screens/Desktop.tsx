@@ -210,7 +210,7 @@ export type DesktopProps = {
 
 export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, api, other, servers }: DesktopProps) {
   const [tab, setTab] = useState<MainTab>("chat");
-  const [listing] = useServerListing(servers);
+  const [listing, , refused] = useServerListing(servers);
   const [firstRun, setFirstRun] = useState(false);
   useEffect(() => {
     if (listing?.first_run) {
@@ -284,7 +284,7 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
         selected={selectedId}
         hash={hash}
         keys={keys}
-        chip={servers ? <ServerChip servers={servers} listing={listing} go={go} /> : null}
+        chip={servers ? <ServerChip servers={servers} listing={listing} refused={refused} go={go} /> : null}
       />
       <main className="main-column">{main}</main>
       {route.screen === "new" ? (

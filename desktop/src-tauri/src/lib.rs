@@ -114,6 +114,7 @@ fn start_local(app: &tauri::App, slot: &Mutex<Option<LocalServe>>) -> Result<Sta
         hub.crew = Some(crew.clone());
         hub.local = Some((url.clone(), auth.clone()));
     }
+    allow_origin(app.handle(), url.as_str(), hub::LOCAL_PERMISSIONS);
     Ok(Started { url, auth })
 }
 
@@ -193,29 +194,23 @@ fn crew_attention<R: Runtime>(app: AppHandle<R>, menu: attention::Menu) -> Resul
     Ok(())
 }
 
-const SERVER_PERMISSIONS: &[&str] = &[
-    "core:default",
-    "allow-crew-notify",
-    "allow-crew-attention",
-    "allow-crew-servers",
-    "allow-crew-ssh-hosts",
-    "allow-crew-server-add",
-    "allow-crew-server-open",
-    "allow-crew-server-remove",
-    "allow-crew-server-fix",
-    "allow-crew-server-workspace",
-    "allow-crew-server-auth",
-];
-
 type Shared = Mutex<Hub>;
 
-fn allow_origin<R: Runtime>(app: &AppHandle<R>, url: &str) {
+fn guard<R: Runtime>(app: &AppHandle<R>, webview: &tauri::Webview<R>) -> Result<(), String> {
+    let page = webview.url().map_err(|e| e.to_string())?;
+    if app.state::<Shared>().lock().unwrap().trusted(&page) {
+        return Ok(());
+    }
+    Err("only the page of this computer can manage servers".into())
+}
+
+fn allow_origin<R: Runtime>(app: &AppHandle<R>, url: &str, permissions: &[&str]) {
     let Ok(parsed) = Url::parse(url) else { return };
     let origin = parsed.origin().ascii_serialization();
     let mut capability = CapabilityBuilder::new(format!("server-{origin}"))
         .remote(format!("{origin}/*"))
         .window("main");
-    for permission in SERVER_PERMISSIONS {
+    for permission in permissions {
         capability = capability.permission(*permission);
     }
     if let Err(err) = app.add_capability(capability) {
@@ -230,13 +225,15 @@ async fn blocking<T: Send + 'static>(work: impl FnOnce() -> Result<T, String> + 
 }
 
 #[tauri::command]
-fn crew_servers<R: Runtime>(app: AppHandle<R>) -> hub::Listing {
-    app.state::<Shared>().lock().unwrap().listing()
+fn crew_servers<R: Runtime>(app: AppHandle<R>, webview: tauri::Webview<R>) -> Result<hub::Listing, String> {
+    guard(&app, &webview)?;
+    Ok(app.state::<Shared>().lock().unwrap().listing())
 }
 
 #[tauri::command]
-fn crew_ssh_hosts<R: Runtime>(app: AppHandle<R>) -> Vec<String> {
-    hub::ssh_config_hosts(app.path().home_dir().ok().as_deref())
+fn crew_ssh_hosts<R: Runtime>(app: AppHandle<R>, webview: tauri::Webview<R>) -> Result<Vec<String>, String> {
+    guard(&app, &webview)?;
+    Ok(hub::ssh_config_hosts(app.path().home_dir().ok().as_deref()))
 }
 
 #[tauri::command]
@@ -246,7 +243,8 @@ fn crew_server_auth<R: Runtime>(app: AppHandle<R>, webview: tauri::Webview<R>) -
 }
 
 #[tauri::command]
-async fn crew_server_add<R: Runtime>(app: AppHandle<R>, kind: String, target: String, code: Option<String>) -> Result<String, String> {
+async fn crew_server_add<R: Runtime>(app: AppHandle<R>, webview: tauri::Webview<R>, kind: String, target: String, code: Option<String>) -> Result<String, String> {
+    guard(&app, &webview)?;
     let handle = app.clone();
     blocking(move || {
         let state = handle.state::<Shared>();
@@ -258,7 +256,7 @@ async fn crew_server_add<R: Runtime>(app: AppHandle<R>, kind: String, target: St
                 let id = hub.store.add(Kind::Url { url: url.clone() }, Some(auth));
                 hub.save()?;
                 drop(hub);
-                allow_origin(&handle, &url);
+                allow_origin(&handle, &url, hub::REMOTE_PERMISSIONS);
                 Ok(id)
             }
             "ssh" => {
@@ -314,7 +312,11 @@ fn show<R: Runtime>(app: &AppHandle<R>, url: Url) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn crew_server_open<R: Runtime>(app: AppHandle<R>, id: String) -> Result<(), String> {
+async fn crew_server_open<R: Runtime>(app: AppHandle<R>, webview: tauri::Webview<R>, id: String) -> Result<(), String> {
+    let page = webview.url().map_err(|e| e.to_string())?;
+    if !app.state::<Shared>().lock().unwrap().may_open(&page, &id) {
+        return Err("only the page of this computer can manage servers".into());
+    }
     let handle = app.clone();
     blocking(move || {
         let (url, _) = connect(&handle, &id)?;
@@ -331,7 +333,8 @@ async fn crew_server_open<R: Runtime>(app: AppHandle<R>, id: String) -> Result<(
 }
 
 #[tauri::command]
-fn crew_server_remove<R: Runtime>(app: AppHandle<R>, id: String) -> Result<(), String> {
+fn crew_server_remove<R: Runtime>(app: AppHandle<R>, webview: tauri::Webview<R>, id: String) -> Result<(), String> {
+    guard(&app, &webview)?;
     let state = app.state::<Shared>();
     let mut hub = state.lock().unwrap();
     let was_selected = hub.store.selected == id;
@@ -351,7 +354,8 @@ fn crew_server_remove<R: Runtime>(app: AppHandle<R>, id: String) -> Result<(), S
 }
 
 #[tauri::command]
-async fn crew_server_fix<R: Runtime>(app: AppHandle<R>, id: String) -> Result<(), String> {
+async fn crew_server_fix<R: Runtime>(app: AppHandle<R>, webview: tauri::Webview<R>, id: String) -> Result<(), String> {
+    guard(&app, &webview)?;
     let handle = app.clone();
     blocking(move || {
         let state = handle.state::<Shared>();
@@ -369,7 +373,8 @@ async fn crew_server_fix<R: Runtime>(app: AppHandle<R>, id: String) -> Result<()
 }
 
 #[tauri::command]
-async fn crew_server_workspace<R: Runtime>(app: AppHandle<R>, id: String, path: String) -> Result<(), String> {
+async fn crew_server_workspace<R: Runtime>(app: AppHandle<R>, webview: tauri::Webview<R>, id: String, path: String) -> Result<(), String> {
+    guard(&app, &webview)?;
     let handle = app.clone();
     blocking(move || {
         let (url, token) = connect(&handle, &id)?;
@@ -394,7 +399,7 @@ fn reopen<R: Runtime>(app: &AppHandle<R>) {
         (urls, hub.store.selected.clone())
     };
     for url in &urls {
-        allow_origin(app, url);
+        allow_origin(app, url, hub::REMOTE_PERMISSIONS);
     }
     if hub::is_local(&selected) || configured_url().is_some() {
         return;
