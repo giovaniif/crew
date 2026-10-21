@@ -1,0 +1,19 @@
+{
+  "id": "d1",
+  "session": "s1",
+  "status": "open",
+  "comments": [
+    {
+      "id": "c1",
+      "worktree": "/home/me/api-42",
+      "path": "main.go",
+      "start": 2,
+      "end": 2,
+      "code": [
+        "func run() int { return 1 }"
+      ],
+      "body": "name it start"
+    }
+  ],
+  "turns": null
+}
