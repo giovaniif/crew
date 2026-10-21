@@ -2,6 +2,7 @@ package tui_test
 
 import (
 	"errors"
+	"fmt"
 	"github.com/charmbracelet/x/ansi"
 	"reflect"
 	"strings"
@@ -495,5 +496,22 @@ func TestWorktreesInANarrowTerminalKeepTheSizeColumnInsideTheWidth(t *testing.T)
 				t.Errorf("width %d: line %q is %d columns wide", width, l, w)
 			}
 		}
+	}
+}
+
+func TestWorktreesWithShortBranchesGiveTheSpareRoomToTheTask(t *testing.T) {
+	r := diskModel()
+	st := fixture(2, 1)
+	for i := range st.Worktrees {
+		st.Worktrees[i].Path = "/wt/" + st.Worktrees[i].ID
+		st.Worktrees[i].Branch = fmt.Sprintf("seed-%d-api", i+1)
+		st.Worktrees[i].SessionID = "s" + st.Worktrees[i].ID[1:3]
+		st.Worktrees[i].Ports = nil
+	}
+	r.m = update(r.m, tea.WindowSizeMsg{Width: 90, Height: 30})
+	r.m = update(r.m, tui.StateMsg(st))
+	out := screen(r.open().m)
+	if row := rowOf(t, out, "seed-1-api"); !strings.Contains(row, "#40 · task number 1") {
+		t.Errorf("row = %q, want the full task label while the branch column has spare room", row)
 	}
 }

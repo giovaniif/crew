@@ -419,8 +419,16 @@ func (m Model) diskColumns() diskColumns {
 		pr = 0
 	}
 	flex := max(m.width-fixed, 8)
-	task := flex * 2 / 5
-	return diskColumns{task: task, branch: flex - task, pr: pr, session: session, port: port}
+	branch := min(flex-flex*2/5, m.longestBranch()+2)
+	return diskColumns{task: flex - branch, branch: branch, pr: pr, session: session, port: port}
+}
+
+func (m Model) longestBranch() int {
+	n := len("BRANCH")
+	for _, w := range m.worktrees {
+		n = max(n, ansi.StringWidth(w.Branch))
+	}
+	return n
 }
 
 func cell(s string, width int) string {
