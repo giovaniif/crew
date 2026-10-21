@@ -515,3 +515,22 @@ func TestWorktreesWithShortBranchesGiveTheSpareRoomToTheTask(t *testing.T) {
 		t.Errorf("row = %q, want the full task label while the branch column has spare room", row)
 	}
 }
+
+func TestWorktreesShortTerminalKeepsTheFooterAndTheSelectedRowOnScreen(t *testing.T) {
+	for _, size := range []tea.WindowSizeMsg{{Width: 150, Height: 17}, {Width: 80, Height: 24}} {
+		r := diskModel().open()
+		r.m = update(r.m, size)
+		r.press("j", "j", "j")
+		out := screen(r.m)
+		lines := strings.Split(out, "\n")
+		if len(lines) > size.Height {
+			t.Errorf("%dx%d: %d lines, want at most %d:\n%s", size.Width, size.Height, len(lines), size.Height, out)
+		}
+		if !strings.Contains(lines[min(len(lines), size.Height)-1], "w or esc closes") {
+			t.Errorf("%dx%d: the last visible line is not the status line:\n%s", size.Width, size.Height, out)
+		}
+		if !strings.Contains(out, "▌") {
+			t.Errorf("%dx%d: the selected row is off screen:\n%s", size.Width, size.Height, out)
+		}
+	}
+}
