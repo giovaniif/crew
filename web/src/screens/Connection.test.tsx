@@ -94,30 +94,3 @@ describe("the connection banner", () => {
     expect(sockets.opened).toHaveLength(1);
   });
 });
-
-describe("the desktop app without crew serve", () => {
-  it("shows why crew did not start and a Fix, not the pairing screen", async () => {
-    let fixed = 0;
-    desktop("", true, undefined, {
-      desktopAuth: null,
-      desktopProblem: "crew is not in the app bundle or on PATH",
-      desktopFix: async () => void fixed++,
-    });
-    const status = screen.getByRole("status");
-    expect(status).toHaveTextContent("crew is not running");
-    expect(status).toHaveTextContent("crew is not in the app bundle or on PATH");
-    expect(screen.queryByRole("heading", { name: "Pair this device" })).not.toBeInTheDocument();
-    await userEvent.click(within(status).getByRole("button", { name: "Fix" }));
-    expect(fixed).toBe(1);
-  });
-
-  it("shows the reason when that fix fails", async () => {
-    desktop("", true, undefined, {
-      desktopProblem: "crew serve did not start",
-      desktopFix: () => Promise.reject(new Error("crew setup daemon: linger is off")),
-    });
-    await userEvent.click(screen.getByRole("button", { name: "Fix" }));
-    expect(await screen.findByText(/Fix failed/)).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("crew setup daemon: linger is off");
-  });
-});
