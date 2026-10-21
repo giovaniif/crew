@@ -46,7 +46,7 @@ var (
 		rpc.MethodOnboardingRemove, rpc.MethodOnboardingNvim, rpc.MethodOnboardingFinish, rpc.MethodWorkspaceDirs,
 		rpc.MethodDeviceList, rpc.MethodPairCode,
 		rpc.MethodReviewOpen, rpc.MethodReviewViewed, rpc.MethodReviewComment, rpc.MethodReviewSend, rpc.MethodReviewHunk,
-		rpc.MethodSwitch, rpc.MethodPortsKill, rpc.MethodAutomationSave,
+		rpc.MethodSwitch, rpc.MethodPortsKill, rpc.MethodAutomationSave, rpc.MethodDiskView, rpc.MethodCleanupWorktree,
 	}
 )
 
@@ -83,6 +83,9 @@ var authedEndpoints = append([]authedEndpoint{
 	{"POST", "/api/v1/approvals/a1/deny", ""},
 	{"POST", "/api/v1/sessions/s1/shell", ""},
 	{"POST", "/api/v1/sessions/s1/nvim", ""},
+	{"GET", "/api/v1/disk", ""},
+	{"POST", "/api/v1/cleanup/worktree", `{"path":"/w/x"}`},
+	{"POST", "/api/v1/ports/kill", `{"pgids":[1]}`},
 	{"GET", "/api/v1/sessions/s1/review", ""},
 	{"POST", "/api/v1/sessions/s1/review/viewed", `{"mark":{"Worktree":"w1","Path":"a.go","Blob":"b"},"viewed":true}`},
 	{"POST", "/api/v1/sessions/s1/review/comments", `{"path":"a.go","start_line":1,"body":"x"}`},
@@ -304,14 +307,11 @@ func TestServeReachesOnlyAllowlistedDaemonMethods(t *testing.T) {
 	forbidden := []authedEndpoint{
 		{"POST", "/api/v1/shell/toggle", `{}`},
 		{"POST", "/api/v1/nvim/open", `{}`},
-		{"POST", "/api/v1/ports/kill", `{"pgids":[1]}`},
-		{"GET", "/api/v1/disk", ""},
 		{"POST", "/api/v1/cleanup", ""},
-		{"POST", "/api/v1/cleanup/worktree", `{}`},
 		{"GET", "/api/v1/review", ""},
 		{"POST", "/api/v1/review/send", `{}`},
 		{"POST", "/api/v1/rpc", `{"method":"ports.kill"}`},
-		{"GET", "/api/v1/sessions/s1/../../disk", ""},
+		{"GET", "/api/v1/sessions/s1/../../review", ""},
 		{"DELETE", "/api/v1/workspaces", ""},
 	}
 	for _, ep := range forbidden {

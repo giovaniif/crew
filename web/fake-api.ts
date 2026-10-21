@@ -76,7 +76,13 @@ export function fakeStreamState(now = Date.now()) {
     seq: 1,
     workspaces: [],
     tasks: [],
-    worktrees: [],
+    worktrees: [
+      { ID: "w1", Repo: "api", Path: "/home/me/.crew/worktrees/api/login", Branch: "login", PR: { Number: 41, Title: "Fix the login redirect", URL: "", Head: "login", State: "OPEN", Checks: "pending" }, SubtaskSlug: "", SessionID: "s1", Ports: null },
+      { ID: "w2", Repo: "web", Path: "/home/me/.crew/worktrees/web/cache", Branch: "cache", PR: null, SubtaskSlug: "", SessionID: "s2", Ports: null },
+      { ID: "w3", Repo: "api", Path: "/home/me/.crew/worktrees/api/old-auth", Branch: "old-auth", PR: { Number: 77, Title: "Drop the old auth", URL: "", Head: "old-auth", State: "MERGED", Checks: "pass" }, SubtaskSlug: "", SessionID: "", Ports: null },
+      { ID: "w4", Repo: "web", Path: "/home/me/.crew/worktrees/web/tweak", Branch: "tweak", PR: { Number: 80, Title: "Tweak the header", URL: "", Head: "tweak", State: "MERGED", Checks: "pass" }, SubtaskSlug: "", SessionID: "", Ports: null },
+      { ID: "w5", Repo: "api", Path: "/home/me/.crew/worktrees/api/spike", Branch: "", PR: null, SubtaskSlug: "", SessionID: "", Ports: null },
+    ],
     sessions: [
       fakeSession("s1", { State: "permission", name: "fix the login redirect", where: "api@login", banner: "needs permission: Bash: make test", since: ago(3) }),
       fakeSession("s2", { Harness: "codex", State: "waiting", name: "pick a cache key", where: "web@cache", banner: "asks: Which TTL should the cache use?", since: ago(12) }),
@@ -458,6 +464,33 @@ export function fakeApi(build = "v0.12.0+demo"): Plugin {
         }
         if (req.method === "GET" && path === "/api/v1/workspaces" && process.env.CREW_FAKE_STREAM === "revoked") {
           send(res, 401, { error: { code: "unauthorized", message: "unknown or revoked device token" } });
+          return;
+        }
+        if (req.method === "GET" && path === "/api/v1/disk") {
+          const at = (minutes: number) => new Date(Date.now() - minutes * minute).toISOString();
+          send(res, 200, {
+            free: 61_400_000_000,
+            total: 494_000_000_000,
+            auto_clean_every: 600_000_000_000,
+            next_cleanup: new Date(Date.now() + 7 * minute).toISOString(),
+            deps_store: { path: "/home/me/.local/share/pnpm/store", size: 3_100_000_000 },
+            rows: [
+              { WorktreeID: "w1", Size: 412_000_000, Action: "keep", Reason: "its session is live" },
+              { WorktreeID: "w2", Size: 1_240_000_000, Action: "keep", Reason: "its session is live" },
+              { WorktreeID: "w3", Size: 214_000_000, Action: "remove", Reason: "PR #77 merged" },
+              { WorktreeID: "w4", Size: 530_000_000, Action: "backup_then_ask", Reason: "3 uncommitted changes" },
+              { WorktreeID: "w5", Size: 88_000_000, Action: "keep", Reason: "not merged" },
+            ],
+            recent: [
+              { at: at(25), path: "/home/me/.crew/worktrees/api/rate-limit", branch: "rate-limit", action: "remove", outcome: "removed" },
+              { at: at(150), path: "/home/me/.crew/worktrees/web/footer", branch: "footer", action: "backup_then_ask", outcome: "backed up, removed" },
+            ],
+            reclaimable: 744_000_000,
+            reclaimable_pending: 0,
+            worktrees_size: 2_484_000_000,
+            worktrees_pending: 0,
+            ports: [{ port: 5173, pgid: 4242, command: "node", worktree: "/home/me/.crew/worktrees/api/login", session: "s1" }],
+          });
           return;
         }
         if (req.method === "GET" && path === "/api/v1/automations") {
