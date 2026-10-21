@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -245,6 +246,17 @@ func TestWatchReportsARedRunOnTheMergeCommit(t *testing.T) {
 	got, code := runJSON(t, testEnv(t, g, "shadow"), "watch", "7")
 	if code != 1 || !strings.Contains(blockers(got), "build") || got["regression"] != true {
 		t.Errorf("exit %d:\n%s", code, blockers(got))
+	}
+}
+
+func TestWatchFlagsACancelledRunOnTheMergeCommitAndIsNoRegression(t *testing.T) {
+	g := greenPR()
+	g.api["repos/giovaniif/crew/pulls/7"] = `{"number":7,"merged":true,"merge_commit_sha":"mmmm","head":{"sha":"` + headSHA + `"},"base":{"ref":"main"}}`
+	g.api["repos/giovaniif/crew/commits/mmmm/check-runs"] = `{"check_runs":[{"name":"build","status":"completed","conclusion":"cancelled","html_url":"u"}]}`
+	got, code := runJSON(t, testEnv(t, g, "shadow"), "watch", "7")
+	flags := fmt.Sprint(got["flags"])
+	if code != 0 || got["regression"] != false || !strings.Contains(flags, "build was cancelled") {
+		t.Errorf("exit %d regression %v flags %s blockers %s", code, got["regression"], flags, blockers(got))
 	}
 }
 

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Duplex } from "node:stream";
 import type { Plugin } from "vite";
@@ -464,6 +465,15 @@ export function fakeApi(build = "v0.12.0+demo"): Plugin {
         }
         if (req.method === "GET" && path === "/api/v1/workspaces" && process.env.CREW_FAKE_STREAM === "revoked") {
           send(res, 401, { error: { code: "unauthorized", message: "unknown or revoked device token" } });
+          return;
+        }
+        if (req.method === "GET" && /^\/api\/v1\/sessions\/[^/]+\/browser$/.test(path)) {
+          const png = readFileSync(new URL("./scripts/demo-headless.png", import.meta.url)).toString("base64");
+          send(res, 200, path === "/api/v1/sessions/s1/browser" ? { live: true, png, width: 960, height: 600 } : { live: false });
+          return;
+        }
+        if (req.method === "POST" && path === "/api/v1/browser/cookies") {
+          send(res, 200, { imported: 3, total: 3 });
           return;
         }
         if (req.method === "GET" && path === "/api/v1/disk") {
