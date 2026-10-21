@@ -89,17 +89,35 @@ describe("the empty main column", () => {
 });
 
 describe("the keys", () => {
-  it("selects a session with Cmd or Ctrl and a number", async () => {
+  it("selects a session with Ctrl+Shift and a number on Linux and Windows", async () => {
     const { live } = desktop();
     live();
     await userEvent.keyboard("{Control>}2{/Control}");
+    expect(window.location.hash).toBe("");
+    await userEvent.keyboard("{Control>}{Shift>}2{/Shift}{/Control}");
     expect(window.location.hash).toBe("#/sessions/s2");
+  });
+
+  it("selects a session with Cmd and a number on a Mac", async () => {
+    const { live } = desktop("", true, "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_0)");
+    live();
+    await userEvent.keyboard("{Control>}2{/Control}");
+    expect(window.location.hash).toBe("");
     await userEvent.keyboard("{Meta>}1{/Meta}");
     expect(window.location.hash).toBe("#/sessions/s1");
   });
 
-  it("goes to the next session that needs you with Ctrl+Space", async () => {
+  it("keeps Ctrl+Space for the terminal on Linux and Windows", async () => {
     const { live } = desktop();
+    live({ ...goldenState(), sessions: [session("a", "alpha", { State: "permission" })] });
+    await userEvent.keyboard("{Control>}[Space]{/Control}");
+    expect(window.location.hash).toBe("");
+    await userEvent.keyboard("{Control>}{Shift>}[Space]{/Shift}{/Control}");
+    expect(window.location.hash).toBe("#/sessions/a");
+  });
+
+  it("goes to the next session that needs you with Ctrl+Space on a Mac", async () => {
+    const { live } = desktop("", true, "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_0)");
     live({
       ...goldenState(),
       sessions: [
@@ -116,10 +134,12 @@ describe("the keys", () => {
     expect(window.location.hash).toBe("#/sessions/a");
   });
 
-  it("opens New session as a sheet with Cmd or Ctrl+N", async () => {
+  it("opens New session as a sheet with Ctrl+Shift+N", async () => {
     const { live } = desktop();
     live();
     await userEvent.keyboard("{Control>}n{/Control}");
+    expect(screen.queryByRole("dialog", { name: "New session" })).not.toBeInTheDocument();
+    await userEvent.keyboard("{Control>}{Shift>}n{/Shift}{/Control}");
     const sheet = await screen.findByRole("dialog", { name: "New session" });
     expect(within(sheet).getByRole("heading", { name: "New session" })).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Sidebar" })).toBeInTheDocument();
@@ -128,7 +148,7 @@ describe("the keys", () => {
   it("does not use the keys on a narrow screen", async () => {
     const { live } = desktop("", false);
     live();
-    await userEvent.keyboard("{Control>}2{/Control}");
+    await userEvent.keyboard("{Control>}{Shift>}2{/Shift}{/Control}");
     expect(window.location.hash).toBe("");
   });
 });

@@ -226,8 +226,8 @@ func check(e *env, g gh, pr string, r *result) bool {
 	if p.Draft {
 		r.fail("the PR is a draft", "mark it ready for review")
 	}
-	if p.MergeableState != "clean" {
-		r.fail("mergeable state is "+p.MergeableState+", not clean", "update the branch or resolve what blocks it")
+	if p.MergeableState != "clean" && p.MergeableState != "behind" {
+		r.fail("mergeable state is "+p.MergeableState+", not clean", "resolve what blocks it; the merge queue updates a branch that is behind")
 	}
 	checkVerdict(g, pr, head, r)
 	checkChecks(g, p, r)
@@ -536,10 +536,10 @@ func merge(e *env, g gh, cfg config, pr string, r *result) {
 	case ok && cfg.Mode == "shadow":
 		action = "would-land"
 	case ok && cfg.Mode == "live":
-		action = "landed"
-		if _, errs, code := e.sys.exec(cmd{dir: e.repo, name: "gh", args: []string{"pr", "merge", pr, "--merge", "--match-head-commit", head, "--repo", g.repo}}); code != 0 {
-			action = "merge-failed"
-			r.fail("gh pr merge failed: "+strings.TrimSpace(errs), "the head may have moved; run check again")
+		action = "queued"
+		if _, errs, code := e.sys.exec(cmd{dir: e.repo, name: "gh", args: []string{"api", g.path("issues/" + pr + "/labels"), "-f", "labels[]=queue"}}); code != 0 {
+			action = "queue-failed"
+			r.fail("cannot add the queue label: "+strings.TrimSpace(errs), "run gh auth status")
 		}
 	}
 	r.set("action", action)
