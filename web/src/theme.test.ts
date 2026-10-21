@@ -181,3 +181,11 @@ describe("the stylesheet", () => {
     expect(rule(".check input").width).toBe("20px");
   });
 });
+
+describe("the review pane on a phone", () => {
+  it("stacks the file list, the diff and the draft so the diff gets the full width", () => {
+    const blocks = [...css.matchAll(/@media \(max-width: 600px\) {([\s\S]*?)\n}/g)].map((m) => m[1]);
+    const body = blocks.map((b) => b.match(/\.review-body\s*{([^}]*)}/)?.[1]).find((b) => b !== undefined) ?? "";
+    expect(body).toMatch(/grid-template-columns:\s*(1fr|minmax\(0, 1fr\))\s*;/);
+  });
+});
