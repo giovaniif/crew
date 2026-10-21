@@ -581,7 +581,9 @@ func watch(g gh, pr string, r *result) {
 		switch {
 		case c.Status != "completed":
 			pending++
-		case c.Conclusion == "failure" || c.Conclusion == "timed_out" || c.Conclusion == "cancelled":
+		case c.Conclusion == "cancelled":
+			r.flags = append(r.flags, "check "+c.Name+" was cancelled on the merge commit "+c.URL+"; a later run on main covers it")
+		case c.Conclusion == "failure" || c.Conclusion == "timed_out":
 			regression = true
 			r.fail("check "+c.Name+" is "+c.Conclusion+" on the merge commit "+c.URL, "open a revert PR (git revert -m 1 "+p.MergeCommitSHA+") and ping the owner; a revert never lands through the gate")
 		}

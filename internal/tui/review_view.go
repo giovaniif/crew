@@ -338,6 +338,7 @@ func (m Model) treeLines(width, height int) ([]string, []int) {
 	var rows []string
 	var files []int
 	curRow := 0
+	failed := false
 	for _, r := range m.rv.prep.tree {
 		if r.file < 0 {
 			if len(rows) > 0 {
@@ -349,6 +350,7 @@ func (m Model) treeLines(width, height int) ([]string, []int) {
 			}
 			rows = append(rows, p.cellRight(width, "", []seg{{text: " " + worktreeLabel(r.wt), bold: true}}, pr))
 			if r.err != "" {
+				failed = true
 				rows = append(rows, p.cell(width, "", seg{text: "   ! " + r.err, fg: t.Overlay}))
 			}
 			for len(files) < len(rows) {
@@ -378,7 +380,7 @@ func (m Model) treeLines(width, height int) ([]string, []int) {
 		}
 		files = append(files, r.file)
 	}
-	if len(m.rv.prep.files) == 0 && !m.rv.loading {
+	if len(m.rv.prep.files) == 0 && !m.rv.loading && (!failed || m.rv.err != "") {
 		msg := "  no changes"
 		if m.rv.err != "" {
 			msg = "  " + m.rv.err
