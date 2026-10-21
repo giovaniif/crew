@@ -353,6 +353,7 @@ export function ServerNotificationsGroup({ api, self }: { api: Authed; self: str
   const [away, setAway] = useState("");
   const [revoking, setRevoking] = useState("");
   const [code, setCode] = useState<PairCode | null>(null);
+  const delay = useFeedback();
   const { run, view } = useFeedback();
 
   useEffect(() => {
@@ -377,11 +378,12 @@ export function ServerNotificationsGroup({ api, self }: { api: Authed; self: str
             Push after I am away for
             <input type="text" value={away} placeholder="2m" onChange={(e) => setAway(e.target.value)} />
           </label>
-          <button type="button" onClick={() => run(async () => "Saved push.away_after in " + (await setConfig(api, "push.away_after", away)).path)}>
+          <button type="button" onClick={() => delay.run(async () => "Saved push.away_after in " + (await setConfig(api, "push.away_after", away)).path)}>
             Save delay
           </button>
         </div>
       ) : null}
+      {delay.view}
       <h3>Devices</h3>
       {devices.state === "failed" ? <Note text={devices.note} /> : null}
       {devices.state === "ready" ? (
