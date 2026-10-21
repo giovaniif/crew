@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { diskActions, diskPorts, diskRecent, diskRows, diskTiles, pollDelay, sizeLabel, type DiskView } from "./disk";
 import type { PullRequest, Session, Worktree } from "./stream";
 
-const golden = (): DiskView => JSON.parse(readFileSync(new URL("../../internal/serve/testdata/disk.json", import.meta.url), "utf8"));
+const golden = (): DiskView => JSON.parse(readFileSync(new URL("../../internal/serve/testdata/" + "disk.json", import.meta.url), "utf8"));
 
 const pr = (state: string, number = 7): PullRequest => ({ Number: number, Title: "t", URL: "u", Head: "h", State: state, Checks: "" });
 

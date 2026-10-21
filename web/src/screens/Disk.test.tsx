@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { StreamState } from "../stream";
 import { desktop, goldenState, session } from "../test/desktop";
 
-const disk = JSON.parse(readFileSync(new URL("../../../internal/serve/testdata/disk.json", import.meta.url), "utf8"));
+const disk = JSON.parse(readFileSync(new URL("../../../internal/serve/testdata/" + "disk.json", import.meta.url), "utf8"));
 
 afterEach(() => {
   window.location.hash = "";
