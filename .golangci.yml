@@ -47,6 +47,7 @@ linters:
             - github.com/giovaniif/crew/internal/rpc
             - github.com/giovaniif/crew/internal/domain
             - github.com/giovaniif/crew/internal/serve
+            - github.com/giovaniif/crew/internal/syntax
             - github.com/giovaniif/crew/internal/view
           deny:
             - pkg: github.com/giovaniif/crew/internal
