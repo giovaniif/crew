@@ -1,5 +1,6 @@
 import { groupSessions, limitRows, sessionMeta, stateStyle, timeInState } from "../sessions";
-import type { Session, StreamSnapshot } from "../stream";
+import { useState, type ReactNode } from "react";
+import { closeDaemonAway, type Session, type StreamSnapshot } from "../stream";
 import { Brand } from "./Brand";
 
 export function sessionHref(id: string): string {
@@ -39,7 +40,68 @@ export function Limits({ snapshot, now }: { snapshot: StreamSnapshot; now: numbe
   );
 }
 
-export function Connection({ snapshot, now, onRetry }: { snapshot: StreamSnapshot; now: number; onRetry: () => void }) {
+type FixState = { state: "ready" } | { state: "fixing" } | { state: "failed"; message: string };
+
+function useFix(fix: (() => Promise<void>) | undefined, after: () => void) {
+  const [state, setState] = useState<FixState>({ state: "ready" });
+  const run = async () => {
+    if (!fix || state.state === "fixing") {
+      return;
+    }
+    setState({ state: "fixing" });
+    try {
+      await fix();
+      setState({ state: "ready" });
+      after();
+    } catch (err) {
+      setState({ state: "failed", message: err instanceof Error ? err.message : String(err) });
+    }
+  };
+  return { state, run };
+}
+
+type BannerView = { title: string; detail: string; tone: "info" | "warn" | "bad"; action: { label: string; run: () => void } | null };
+
+function retryingBanner(snapshot: StreamSnapshot, now: number): { title: string; detail: string } {
+  if (snapshot.code === closeDaemonAway) {
+    return { title: "No crew daemon · retrying", detail: snapshot.reason };
+  }
+  const seconds = snapshot.retryAt === null ? 0 : Math.max(0, Math.ceil((snapshot.retryAt - now) / 1000));
+  return {
+    title: seconds > 0 ? "Reconnecting in " + seconds + " s" : "Reconnecting now",
+    detail: snapshot.reason || "The connection to the daemon dropped.",
+  };
+}
+
+function fixView(base: { title: string; detail: string }, fix: FixState, run: () => void): BannerView {
+  if (fix.state === "fixing") {
+    return { title: "Fixing the daemon", detail: "crew setup daemon writes the service again and restarts it.", tone: "info", action: null };
+  }
+  if (fix.state === "failed") {
+    return { title: "Fix failed · retrying", detail: fix.message, tone: "bad", action: { label: "Fix", run } };
+  }
+  return { ...base, tone: "warn", action: { label: "Fix", run } };
+}
+
+function BannerBox({ view, children }: { view: BannerView; children?: ReactNode }) {
+  return (
+    <div className={"connection banner-" + view.tone} role="status">
+      <span className="banner-text">
+        <span className="banner-title">{view.title}</span>
+        {view.detail ? <span className="banner-detail">{view.detail}</span> : null}
+      </span>
+      {view.action ? (
+        <button type="button" className="retry" onClick={view.action.run}>
+          {view.action.label}
+        </button>
+      ) : null}
+      {children}
+    </div>
+  );
+}
+
+export function Connection({ snapshot, now, onRetry, fix }: { snapshot: StreamSnapshot; now: number; onRetry: () => void; fix?: () => Promise<void> }) {
+  const fixer = useFix(fix, onRetry);
   if (snapshot.status === "live" || snapshot.status === "unauthorized") {
     return null;
   }
@@ -50,14 +112,27 @@ export function Connection({ snapshot, now, onRetry }: { snapshot: StreamSnapsho
       </div>
     );
   }
-  const seconds = snapshot.retryAt === null ? 0 : Math.max(0, Math.ceil((snapshot.retryAt - now) / 1000));
+  if (snapshot.status === "mismatch") {
+    return <BannerBox view={{ title: "Build mismatch · stopped", detail: snapshot.reason, tone: "bad", action: { label: "Reconnect", run: onRetry } }} />;
+  }
+  const base = retryingBanner(snapshot, now);
+  if (fix) {
+    return <BannerBox view={fixView(base, fixer.state, () => void fixer.run())} />;
+  }
+  return <BannerBox view={{ ...base, tone: "warn", action: { label: "Retry now", run: onRetry } }} />;
+}
+
+export function DesktopProblem({ host, problem, fix }: { host: string; problem: string; fix?: () => Promise<void> }) {
+  const fixer = useFix(fix, () => undefined);
+  const base = { title: "crew is not running", detail: problem };
+  const view: BannerView = fix ? fixView(base, fixer.state, () => void fixer.run()) : { ...base, tone: "bad", action: null };
   return (
-    <div className="connection offline" role="status">
-      <span>{seconds > 0 ? "Offline · retrying in " + seconds + "s" : "Offline · retrying"}</span>
-      <button type="button" className="retry" onClick={onRetry}>
-        Retry now
-      </button>
-    </div>
+    <main className="screen">
+      <Brand host={host} />
+      <h1>crew did not start</h1>
+      <BannerBox view={view} />
+      <p className="muted">Fix runs crew setup daemon, starts crew serve again and opens the app.</p>
+    </main>
   );
 }
 

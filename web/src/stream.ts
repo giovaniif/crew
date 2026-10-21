@@ -201,16 +201,19 @@ export type SocketLike = {
 
 export type OpenSocket = () => SocketLike;
 
-export type StreamStatus = "connecting" | "live" | "offline" | "unauthorized";
+export type StreamStatus = "connecting" | "live" | "offline" | "mismatch" | "unauthorized";
 
 export type StreamSnapshot = {
   status: StreamStatus;
   state: StreamState | null;
   retryAt: number | null;
   reason: string;
+  code: number | null;
 };
 
 export const closeUnauthorized = 4401;
+export const closeBuildMismatch = 4502;
+export const closeDaemonAway = 1013;
 export const defaultHeartbeat = 30000;
 
 export function defaultRetryDelay(attempt: number): number {
@@ -279,7 +282,7 @@ export class StreamClient {
   private attempt = 0;
   private running = false;
   private generation = 0;
-  private current: StreamSnapshot = { status: "connecting", state: null, retryAt: null, reason: "" };
+  private current: StreamSnapshot = { status: "connecting", state: null, retryAt: null, reason: "", code: null };
   private readonly listeners = new Set<() => void>();
   private readonly frameListeners = new Set<(frame: Frame) => void>();
 
@@ -309,7 +312,7 @@ export class StreamClient {
   }
 
   retryNow(): void {
-    if (!this.running || this.current.status !== "offline") {
+    if (!this.running || (this.current.status !== "offline" && this.current.status !== "mismatch")) {
       return;
     }
     this.clearTimer();
@@ -362,7 +365,7 @@ export class StreamClient {
     }
     if (frame.state) {
       this.attempt = 0;
-      this.update({ status: "live", state: frame.state, reason: "" });
+      this.update({ status: "live", state: frame.state, reason: "", code: null });
       this.startBeat();
     } else if (frame.diff && this.current.state) {
       this.update({ state: applyDiff(this.current.state, frame.diff) });
@@ -379,8 +382,13 @@ export class StreamClient {
     this.detach(socket);
     this.socket = null;
     this.stopBeat();
+    this.update({ code });
     if (code === closeUnauthorized) {
       this.confirmUnauthorized(reason);
+      return;
+    }
+    if (code === closeBuildMismatch) {
+      this.update({ status: "mismatch", retryAt: null, reason });
       return;
     }
     this.retryLater(reason);
