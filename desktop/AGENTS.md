@@ -28,6 +28,14 @@ The Tauri 2 app for desktop and mobile ([ADR 0057](../docs/adr/0057-tauri-apps.m
   - `tauri.android.conf.json` sets `version` to `0.0.1`, because Android does not accept `0.0.0`.
   - `gen/android/` is the output of `npx tauri android init`, with the comments removed. The bundle id is `sh.giovani.crew`.
   - The icons come from `macos/AppIcon.png`. Run `npx tauri icon ../macos/AppIcon.png -o src-tauri/icons` to make them again. Keep only the desktop files.
+- Update (`src/update.rs`, desktop only):
+  - At launch and each 6 h, the app gets `latest.json` from the `updater` branch (`plugins.updater.endpoints` in `tauri.conf.json`). The release workflow writes this file for each tag, also for a prerelease. Thus the app also offers `v0.1.0-beta.*` releases.
+  - `newer` compares the versions as semver, with prereleases (`0.1.0-beta.2` < `0.1.0-beta.10` < `0.1.0`).
+  - If a newer version is available, the app shows a dialog (`prompt`). It installs only when the user selects Install and restart. Then it stops `crew serve`, runs `crew daemon stop` and restarts. The bundle has `crew`, so the update replaces `crew` together with the app. The new `crew` starts a new daemon.
+  - Debug builds and `CREW_NO_UPDATE_CHECK=1` do not check.
+  - `tests/update.rs` tests the version compare, the prompt and the steps after the answer.
+  - The public key is `plugins.updater.pubkey`. The private key and its password are the repo secrets `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. Do not put them in the repo.
+  - The Windows build removes the prerelease part from its version, because the MSI does not accept it. Thus Windows does not get a prerelease update of the same core version.
 - `connect/`: the connect page (`index.html`, `server.js`) and its test (`node --test desktop/connect/server.test.mjs`).
 - `package.json`: the Tauri CLI (`npx tauri`).
 - `e2e/`: the WebDriver tests (`*.test.mjs`, `node --test`) and `e2e/run`.
@@ -80,3 +88,5 @@ The `desktop` job of `release.yml` makes the packages for each tag, on `workflow
 - It sets the version from the tag with `--config`.
 - On macOS, it signs and notarizes the app when the `APPLE_*` secrets exist. It writes `APPLE_API_KEY_P8` to a temporary `AuthKey.p8` for `APPLE_API_KEY_PATH`. Without the secrets, the build is not signed.
 - It runs `crew version` from each macOS and Linux package and compares the tag. It uploads the packages to the release only for a tag.
+- When the `TAURI_SIGNING_PRIVATE_KEY` secret exists, it sets `bundle.createUpdaterArtifacts` and signs the update bundles (`.app.tar.gz`, `.AppImage`, `.deb`, `.msi`, `.exe`, each with a `.sig`). A tag build without the secret fails.
+- The `updater` job makes `latest.json` from the signatures, verifies each signature with `minisign` and the public key, and uploads `latest.json` as the `latest-json` artifact. For a tag, it also uploads `latest.json` to the release and force-pushes it to the `updater` branch.

@@ -53,6 +53,8 @@ Unknown paths under `/api/` answer `not_found`.
 | `GET /api/v1/automations` | yes | `automation.list` | → `{"automations":[Automation],"problems"}` |
 | `GET /api/v1/automations/runs?name=&limit=` | yes | `automation.runs` | → `{"runs":[AutomationRun]}`, newest first; both query values optional |
 | `POST /api/v1/automations/{name}/run` | yes | `automation.run` | `{"context","work_item"}` (both optional, no other keys: a phone cannot rerun or pick a repo) → `{"run","session"}` |
+| `POST /api/v1/automations` | owner | `automation.save` | `{"automation"}` (a name that is not blank, no other keys) → the saved `Automation`; it writes `config.toml` |
+| `POST /api/v1/automations/runs/{id}/rerun` | owner | `automation.run` | → `{"run","session"}`; runs again with the context, work item and repo of run `id` |
 | `POST /api/v1/sessions` | yes | `session.new` | `{"workspace","work_item","harness","model","effort","prompt"}` (`harness` required; the rest optional. An empty `work_item` starts a session that is named from its first prompt) → the new `Session`; a setup recipe failure is `failed` with its output in `message` |
 | `GET /api/v1/work-items/resolve?workspace=&item=` | yes | `session.resolve` | → `{"source","ref","title","worktree","workspace"}`; `bad_request` for an empty item or an unsupported link, `not_found` for an unknown workspace or an item the tracker does not know |
 | `GET /api/v1/sessions/{id}/messages?before=&limit=` | yes | `transcript.page` | → `{"messages":[Message],"before"}`; both query values optional integers |

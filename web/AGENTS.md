@@ -83,6 +83,10 @@ The phone app: a PWA that `crew serve` embeds and serves at `/` (ADR [0046](../d
   - `attentionMenu` gives the tray rows and the badge.
   - Tests: `npm test -- Attention`.
 - `#/automations` (`screens/Automations.tsx`) lists the automations with agent, trigger and state. Run… opens a form with a multi-line context and an optional work item, then posts `/api/v1/automations/<name>/run`. A started run opens its session. A skipped or failed run shows its reason. Tests: `npm test -- Automations`.
+  - Issue #524: the screen has search (name and prompt), filters (state, last outcome, agent) and sort (name, last run). `src/automations.ts` holds these rules (`automationRows`) and the draft of the form (`draftOf`, `automationOf`), as `Automations.swift` of the Mac app does.
+  - Details opens Overview (the fields, the prompt and the source file) and Runs (the history, Open session and Rerun, which posts `/api/v1/automations/runs/<id>/rerun`).
+  - New automation and Edit post `/api/v1/automations` (`automation.save`). A repo automation (its source ends with `/.crew.toml`) shows that file and has no Edit.
+  - Save and Rerun are owner-only routes. Another device gets a note.
 - **Faces.** `src/faces.ts` has the 12 faces of the design (`FACES`: id, name, accent for light and dark, the SVG parts and the 2-line TUI glyph), `faceSvg` and `faceGlyph`. The TUI and the Mac app use the same rules:
   - The face of a mate is its `avatar` (from the stream row, else from `GET /api/v1/mates`) if that is a face id. Else it is the face with the id of the mate name. Else it is `FACES[sum of the UTF-8 bytes of the name % 12]`. The color is the `color` of the mate, else the accent of the face.
   - `faceState`: `paused` if the mate is paused or a guard holds it. Else `needs` if the mate has a pending approval, or a thread or conversation that is not ended waits or asks for permission. Else `working` if one runs. Else `idle`.

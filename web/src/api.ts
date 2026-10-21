@@ -305,9 +305,20 @@ export type Automation = {
   prompt: string;
   schedule?: string;
   on?: string[];
+  timezone?: string;
+  precheck?: string;
+  session?: string;
   enabled: boolean;
   source: string;
 };
+
+export function saveAutomation(a: Authed, automation: Omit<Automation, "source">): Promise<Automation> {
+  return authedRequest<Automation>(a, "/api/v1/automations", "POST", { automation });
+}
+
+export function rerunAutomation(a: Authed, run: string): Promise<{ run: AutomationRun }> {
+  return authedRequest<{ run: AutomationRun }>(a, "/api/v1/automations/runs/" + encodeURIComponent(run) + "/rerun", "POST");
+}
 
 export type AutomationList = { automations: Automation[]; problems?: string[] };
 

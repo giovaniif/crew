@@ -2432,13 +2432,45 @@ button.danger {
   color: var(--text);
 }
 
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
+.automations-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.automation-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.automation-filters label {
+  flex: 1 1 8rem;
+}
+
+.automation-filters label:first-child {
+  flex: 2 1 14rem;
+}
+
+.automation-detail {
+  margin-top: 8px;
+  padding: 12px;
+  background: var(--paper);
+  border: 1px solid var(--surface);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.detail-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.detail-tabs button {
+  min-height: 44px;
 .settings-layout {
   display: flex;
   flex-direction: column;
@@ -2477,11 +2509,17 @@ button.danger {
   font-weight: 500;
 }
 
+.detail-tabs button[aria-selected="true"] {
 .settings-nav button[aria-current="page"] {
   background: var(--blue);
   color: var(--on-accent);
 }
 
+.automation-detail .fact {
+  display: contents;
+}
+
+.automation-prompt {
 .settings-pane {
   display: flex;
   flex-direction: column;
@@ -2499,6 +2537,23 @@ button.danger {
   padding: 10px 12px;
   background: var(--mantle);
   border-radius: 8px;
+  white-space: pre-wrap;
+  font-family: var(--mono);
+  font-size: 14px;
+}
+
+.automation-form {
+  padding: 12px;
+  background: var(--mantle);
+  border-radius: var(--radius);
+}
+
+.automation-form h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.automation-form .check {
   color: var(--subtext);
 }
 
@@ -2610,6 +2665,9 @@ button.danger {
   min-height: 44px;
 }
 
+.rerun {
+  min-height: 44px;
+  padding: 6px 12px;
 .check input {
   width: 20px;
   height: 20px;

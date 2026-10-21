@@ -1,5 +1,6 @@
 pub mod attention;
 pub mod local;
+pub mod update;
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -291,10 +292,25 @@ fn add_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     Ok(())
 }
 
+fn stop_serve<R: Runtime>(handle: &AppHandle<R>) {
+    if let Some(mut serve) = handle
+        .state::<Mutex<Option<LocalServe>>>()
+        .lock()
+        .unwrap()
+        .take()
+    {
+        serve.stop();
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let app = tauri::Builder::default()
-        .plugin(tauri_plugin_notification::init())
+    let builder = tauri::Builder::default().plugin(tauri_plugin_notification::init());
+    #[cfg(desktop)]
+    let builder = builder
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build());
+    let app = builder
         .invoke_handler(tauri::generate_handler![
             crew_notify,
             crew_attention,
@@ -328,20 +344,17 @@ pub fn run() {
             if let Err(err) = add_tray(app.handle()) {
                 eprintln!("crew-desktop: no tray: {err}");
             }
+            #[cfg(desktop)]
+            if !update::off() {
+                update::watch(app.handle().clone(), find_local_crew(), stop_serve);
+            }
             Ok(())
         })
         .build(tauri::generate_context!())
         .expect("the crew app failed to start");
     app.run(|handle, event| {
         if let RunEvent::Exit = event {
-            if let Some(mut serve) = handle
-                .state::<Mutex<Option<LocalServe>>>()
-                .lock()
-                .unwrap()
-                .take()
-            {
-                serve.stop();
-            }
+            stop_serve(handle);
         }
     });
 }

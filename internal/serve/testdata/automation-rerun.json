@@ -1,0 +1,37 @@
+{
+  "run": {
+    "id": "r8",
+    "automation": "fix-ci",
+    "trigger": "rerun",
+    "start": "2026-10-03T12:00:00Z",
+    "end": "2026-10-03T12:00:00Z",
+    "outcome": "succeeded",
+    "session_id": "s9"
+  },
+  "session": {
+    "ID": "s9",
+    "TaskID": "",
+    "Harness": "",
+    "Pane": "",
+    "Model": "",
+    "Effort": "",
+    "State": "",
+    "Ended": false,
+    "Unread": false,
+    "Focused": false,
+    "Muted": false,
+    "WorktreeIDs": null,
+    "ResumeID": "",
+    "Transcript": "",
+    "Dir": "",
+    "Usage": {
+      "ContextLeftPercent": 0,
+      "HasContext": false,
+      "LimitUsedPercent": 0
+    },
+    "Limits": null,
+    "LimitsAt": "0001-01-01T00:00:00Z",
+    "Switches": null,
+    "SwitchWarning": false
+  }
+}
