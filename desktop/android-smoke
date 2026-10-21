@@ -6,19 +6,38 @@ pkg=sh.giovani.crew
 
 adb wait-for-device
 adb install -r "$apk"
-adb logcat -c
-adb shell am start -W -n "$pkg/.MainActivity"
 
-for _ in $(seq 1 30); do
-  if adb shell dumpsys activity activities | grep -q "topResumedActivity.*$pkg"; then
-    sleep 5
-    if adb shell pidof "$pkg" >/dev/null && ! adb logcat -d -b crash | grep -q "$pkg"; then
-      echo "android smoke: $pkg runs"
-      exit 0
+crashed() {
+  adb logcat -d -b crash | grep -q "$pkg"
+}
+
+launch() {
+  adb shell am force-stop "$pkg" || true
+  adb shell input keyevent KEYCODE_WAKEUP || true
+  adb shell input keyevent 82 || true
+  adb shell am start -W -n "$pkg/.MainActivity"
+  for _ in $(seq 1 30); do
+    if adb shell dumpsys activity activities | grep -q "topResumedActivity.*$pkg"; then
+      sleep 5
+      adb shell pidof "$pkg" >/dev/null && ! crashed
+      return
     fi
+    sleep 2
+  done
+  return 1
+}
+
+adb logcat -c
+for attempt in 1 2; do
+  if launch; then
+    echo "android smoke: $pkg runs"
+    exit 0
+  fi
+  if crashed; then
     break
   fi
-  sleep 2
+  echo "android smoke: attempt $attempt: $pkg is not the resumed activity" >&2
+  adb shell dumpsys activity activities | grep -E 'topResumedActivity|mResumedActivity' >&2 || true
 done
 
 adb logcat -d -b crash || true

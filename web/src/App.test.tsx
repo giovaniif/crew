@@ -99,6 +99,28 @@ describe("in the installed app", () => {
     expect(screen.getByRole("button", { name: "Pair" })).toBeDisabled();
   });
 
+  it("shows the screen of the current hash after a sign out and a new pair", async () => {
+    const listeners = new Set<(hash: string) => void>();
+    const { server, env } = setup({
+      hash: "",
+      onHashChange: (listener) => {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
+      },
+    });
+    server.on("POST", "/api/v1/pair", { status: 200, body: { device, token: "t0k" } });
+    server.on("POST", "/api/v1/push/unsubscribe", { status: 200, body: {} });
+    render(<App env={env} />);
+    await userEvent.type(screen.getByRole("textbox", { name: "Pairing code" }), "ABCD2345");
+    await userEvent.click(screen.getByRole("button", { name: "Pair" }));
+    await screen.findByRole("heading", { name: "Sessions" });
+    act(() => listeners.forEach((l) => l("#/settings")));
+    await userEvent.click(await screen.findByRole("button", { name: "Sign out" }));
+    await userEvent.type(await screen.findByRole("textbox", { name: "Pairing code" }), "WXYZ2345");
+    await userEvent.click(screen.getByRole("button", { name: "Pair" }));
+    expect(await screen.findByRole("button", { name: "Sign out" })).toBeInTheDocument();
+  });
+
   it("sends a typed code normalized, with the device name the user chose", async () => {
     const { server, env } = setup({ hash: "" });
     server.on("POST", "/api/v1/pair", { status: 200, body: { device, token: "t0k" } });

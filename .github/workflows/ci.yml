@@ -85,8 +85,25 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
+      - id: ndk-cache
+        uses: actions/cache@v4
+        with:
+          path: /usr/local/lib/android/sdk/ndk/${{ env.NDK_VERSION }}
+          key: ndk-${{ runner.os }}-${{ env.NDK_VERSION }}
+      - if: steps.ndk-cache.outputs.cache-hit != 'true'
+        run: |
+          for attempt in 1 2 3; do
+            if "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK_VERSION" && [ -f "$ANDROID_HOME/ndk/$NDK_VERSION/source.properties" ]; then
+              exit 0
+            fi
+            echo "sdkmanager: NDK install attempt $attempt failed"
+            rm -rf "$ANDROID_HOME/ndk/$NDK_VERSION"
+            sleep $((attempt * 15))
+          done
+          exit 1
       - run: |
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK_VERSION"
+          test "$ANDROID_HOME" = /usr/local/lib/android/sdk
+          test -f "$ANDROID_HOME/ndk/$NDK_VERSION/source.properties"
           echo "NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -116,6 +133,22 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+      - id: sysimg-cache
+        uses: actions/cache@v4
+        with:
+          path: /usr/local/lib/android/sdk/system-images/android-34/google_apis/x86_64
+          key: sysimg-${{ runner.os }}-34-google_apis-x86_64
+      - if: steps.sysimg-cache.outputs.cache-hit != 'true'
+        run: |
+          for attempt in 1 2 3; do
+            if "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "system-images;android-34;google_apis;x86_64" && [ -f "$ANDROID_HOME/system-images/android-34/google_apis/x86_64/system.img" ]; then
+              exit 0
+            fi
+            echo "sdkmanager: system image install attempt $attempt failed"
+            rm -rf "$ANDROID_HOME/system-images/android-34/google_apis/x86_64"
+            sleep $((attempt * 15))
+          done
+          exit 1
       - uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -123,6 +156,7 @@ jobs:
           target: google_apis
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
           disable-animations: true
+          emulator-boot-timeout: 600
           script: desktop/android-smoke
 
   desktop-macos:
