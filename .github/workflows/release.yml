@@ -205,6 +205,18 @@ jobs:
         env:
           TARGET: ${{ matrix.target }}
           BUNDLES: ${{ matrix.bundles }}
+      - name: Notarize the disk image
+        if: runner.os == 'macOS' && env.CREW_SIGNED == '1'
+        run: |
+          dmg="$(ls desktop/src-tauri/target/"$TARGET"/release/bundle/dmg/*.dmg)"
+          xcrun notarytool submit "$dmg" --key "$APPLE_API_KEY_PATH" --key-id "$APPLE_API_KEY" --issuer "$APPLE_API_ISSUER" --wait --timeout 20m
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            if xcrun stapler staple "$dmg"; then exit 0; fi
+            sleep 30
+          done
+          exit 1
+        env:
+          TARGET: ${{ matrix.target }}
       - name: Check the packages
         run: |
           out="$PWD/desktop/src-tauri/target/$TARGET/release/bundle"
@@ -218,7 +230,8 @@ jobs:
               if [ "${CREW_SIGNED:-}" = 1 ]; then
                 codesign --verify --deep --strict --verbose=2 "$app"
                 spctl --assess --type execute --verbose=2 "$app"
-                xcrun stapler validate "$app"
+                dmg="$(ls "$out"/dmg/*.dmg)"
+                spctl --assess --type open --context context:primary-signature --verbose=2 "$dmg"
               fi
               ;;
             Linux)

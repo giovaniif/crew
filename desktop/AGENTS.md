@@ -22,9 +22,11 @@ The Tauri 2 app for desktop and mobile ([ADR 0057](../docs/adr/0057-tauri-apps.m
   - Fix is the Tauri command `fix_daemon` (declared in `build.rs`, allowed in `capabilities/default.json`). It runs `crew setup daemon`, then `crew setup daemon --check` (`local::fix_daemon`). A failed setup or a `failing` check returns the `reason` of the check, else the error output of the setup. Then it starts `crew serve` again if it is not alive (on the same port), or, after a failed start, starts and pairs a new one and opens a new window (`main-<n>`). The web app calls it from the connection banner (see [web/](../web/AGENTS.md)).
   - With `CREW_URL`, Fix runs only `crew setup daemon` on this computer. The app has no list of remote servers yet, so it cannot run the SSH setup.
   - `cargo test --manifest-path desktop/src-tauri/Cargo.toml` runs `tests/local.rs` (the port choice, the `crew` lookup and the `serve` arguments) and `tests/fix.rs` (Fix with a fake `crew` script, Unix only).
-  - On mobile, the window loads the bundled connect page (`build.frontendDist` is `../connect`). The user types the address of a remote `crew serve`. The page keeps it and opens it. Then the pairing of the PWA starts ([ADR 0046](../docs/adr/0046-remote-app.md)).
+  - On mobile, the window loads the bundled connect page (`build.frontendDist` is `../connect`). `tests/start.rs` tests that mobile opens the bundled page. The user types the address of a remote `crew serve`. The page keeps it and opens it. Then the pairing of the PWA starts ([ADR 0046](../docs/adr/0046-remote-app.md)).
   - `Info.ios.plist` sets `ITSAppUsesNonExemptEncryption` to `false`. Thus TestFlight does not stop the build for export compliance.
   - `gen/apple/` is the Xcode project from `npx tauri ios init`. Its app icons come from `npx tauri icon ../macos/AppIcon.png --ios-color '#ffffff'`. App Store Connect refuses an icon with an alpha channel, so the icons have a white background and no alpha.
+  - `tauri.android.conf.json` sets `version` to `0.0.1`, because Android does not accept `0.0.0`.
+  - `gen/android/` is the output of `npx tauri android init`, with the comments removed. The bundle id is `sh.giovani.crew`.
   - The icons come from `macos/AppIcon.png`. Run `npx tauri icon ../macos/AppIcon.png -o src-tauri/icons` to make them again. Keep only the desktop files.
 - `connect/`: the connect page (`index.html`, `server.js`) and its test (`node --test desktop/connect/server.test.mjs`).
 - `package.json`: the Tauri CLI (`npx tauri`).
@@ -46,9 +48,21 @@ The Tauri 2 app for desktop and mobile ([ADR 0057](../docs/adr/0057-tauri-apps.m
   - `CREW_E2E_APP` selects a different app binary.
 - `tauri-driver` has no macOS driver. CI builds the app on macOS, but runs the e2e tests only on Linux.
 
+## Android
+
+- The build needs a full JDK 17 or 21 (a JRE is not sufficient, because Gradle compiles Java), the Android SDK (`platform-tools`, a platform, `build-tools`), the NDK and the four Rust Android targets. You can install all of them in your home directory. You do not need root.
+  - Get the command-line tools from developer.android.com into `~/Android/Sdk/cmdline-tools/latest`.
+  - Run `sdkmanager --licenses`, then `sdkmanager` with the packages `platform-tools`, `platforms;android-34`, `build-tools;34.0.0` and `ndk;27.0.12077973`. Gradle downloads a newer platform when the project needs it.
+  - Run `rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android`.
+  - You can extract a Temurin JDK into `~/.local/jdk` and set `JAVA_HOME` to it.
+  - Set `ANDROID_HOME=~/Android/Sdk` and `NDK_HOME=~/Android/Sdk/ndk/27.0.12077973`.
+- `make web`, then `npm ci` and `npx tauri android build --debug --apk` in `desktop/` make `src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk`.
+- `desktop/android-smoke [apk]` installs the APK on the device or emulator that `adb` sees, starts the app and makes sure that it does not stop. An x86_64 emulator needs KVM: your user must be able to open `/dev/kvm` (the `kvm` group).
+- `cargo test --manifest-path desktop/src-tauri/Cargo.toml` runs the Rust tests.
+
 ## CI
 
-The `desktop` job (`ubuntu-latest`) builds the app and runs `desktop/e2e/run`. The `desktop-macos` job (`macos-15`) builds the app only.
+The `desktop` job (`ubuntu-latest`) builds the app, runs the Rust tests and runs `desktop/e2e/run`. The `android` job (`ubuntu-latest`) builds the debug APK, uploads it as the `crew-android-debug` artifact and runs `desktop/android-smoke` on an API 34 emulator. The `desktop-macos` job (`macos-15`) builds the app only.
 
 The `ios` workflow (`.github/workflows/ios.yml`, `macos-15`) builds the iOS app:
 

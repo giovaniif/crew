@@ -108,6 +108,11 @@ The phone app: a PWA that `crew serve` embeds and serves at `/` (ADR [0046](../d
   - To fill a tab, replace its entry in `panes` in `Desktop.tsx`. It gets the session, the snapshot, the client and the API.
   - Keys: Cmd/Ctrl+1 to 9 select a session, Ctrl+Space goes to the next session that needs you, Cmd/Ctrl+N opens New session as a sheet (`#/new`).
   - The main column is white (`--paper`) in Latte. Tests: `npm test -- Layout Sidebar`.
+- **Session commands** (issue #519). `screens/SessionCommands.tsx` has the commands of the sidebar menu of the Mac app: Rename…, Mute or Unmute, Model…, Effort…, Kill dev servers and End session…. An ended session has only Resume. `src/commands.ts` holds the pure rules (`commandItems`, `killedNote`) and the setting.
+  - Open the menu with a right-click on a sidebar row, with the `⋯` button of the toolbar (desktop), or with the `⋯` button of the chat header (phone).
+  - Model… and Effort… show the choices of the harness from `GET /api/v1/session-options`, then post `…/switch`. Kill dev servers posts `…/kill-dev-servers`. serve finds the process groups, so the app never sends one.
+  - End session asks first while Settings has "Ask before I end a session" on (the default). The value is `crew.confirmEnd` in `localStorage` (`off` turns it off).
+  - A failed command shows the message of the daemon in a `role="alert"` note. Tests: `npm test -- SessionCommands`.
 - `src/screens/`: one component for each screen. `src/theme.css`: the Latte palette as CSS variables, and Mocha under `prefers-color-scheme: dark`, and IBM Plex Sans and JetBrains Mono from `@fontsource`.
 - `src/test/`: test helpers (`FakeServer`, `MemoryStorage`, the Vitest setup). tdd-check treats them as port fakes.
 
