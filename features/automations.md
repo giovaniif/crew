@@ -51,6 +51,15 @@ go run ./scripts/verify web drive /#/automations --viewport both --out-dir /tmp/
 
 Expect: the card and History show the skipped run with no reload (#503).
 
+### PWA details tabs and the form keep their styles
+
+```sh
+printf '\n[[automation]]\nname = "TEST-tabs"\nagent = "claude"\ntarget = "workspace"\nprompt = "TEST prompt"\n' >> "$(jq -r .home "${VERIFY_HOME:-/tmp/crew-verify-$(id -u)}/iso.json")/config.toml"
+go run ./scripts/verify web drive /#/automations --viewport both --out-dir /tmp/crew-verify-map/automations --steps '[{"click":{"role":"button","name":"Details of TEST-tabs"}},{"expect":{"role":"tab","name":"Runs"}},{"shot":"details.png"},{"click":{"role":"button","name":"New automation"}},{"expect":{"label":"Enabled"}},{"shot":"form.png"}]'
+```
+
+Expect: only the selected tab is blue, the facts show as a grid, and the form is in a panel with a small Enabled checkbox next to its label (#595).
+
 ### run an automation from config (manual: needs an [[automation]] table in the isolated config.toml and a harness that runs turns; the fake claude does not)
 
 ## Cleanup

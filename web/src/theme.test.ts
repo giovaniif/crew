@@ -154,3 +154,30 @@ describe("the session state chip", () => {
     expect(rule(".chip-permission::before").background).toBe("var(--red)");
   });
 });
+
+describe("the stylesheet", () => {
+  it("closes every rule so the browser does not drop the rule after it", () => {
+    const unclosed: string[] = [];
+    const open: string[] = [];
+    for (const line of css.split("\n")) {
+      const t = line.trim();
+      if (t.endsWith("{")) {
+        const parent = open[open.length - 1];
+        if (parent !== undefined && !parent.startsWith("@")) {
+          unclosed.push(parent);
+        }
+        open.push(t);
+      } else if (t.startsWith("}")) {
+        open.pop();
+      }
+    }
+    unclosed.push(...open);
+    expect(unclosed).toEqual([]);
+  });
+
+  it("gives the selected automation detail tab the accent and the form checkbox a 20px box", () => {
+    expect(rule('.detail-tabs button[aria-selected="true"]').background).toBe("var(--blue)");
+    expect(rule(".detail-tabs button").background).toBe("var(--mantle)");
+    expect(rule(".check input").width).toBe("20px");
+  });
+});

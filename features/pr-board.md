@@ -24,6 +24,12 @@ go run ./scripts/verify iso crew --expect "#100" --expect "checks failing" --exp
 go run ./scripts/verify iso crew --expect '"number"' --expect '100' -- pr seed-session-1 --json
 ```
 
+### a PR with no blockers is ready to merge (#591)
+
+```sh
+go run ./scripts/verify iso crew --expect "#101  seeded change 2  https://example.com/pull/101" --expect "ready to merge" -- pr seed-session-2
+```
+
 ### unknown session fails
 
 ```sh

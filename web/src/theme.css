@@ -2476,6 +2476,11 @@ button.danger {
 
 .detail-tabs button {
   min-height: 44px;
+  background: var(--mantle);
+  color: var(--text);
+  font-weight: 500;
+}
+
 .settings-layout {
   display: flex;
   flex-direction: column;
@@ -2515,6 +2520,10 @@ button.danger {
 }
 
 .detail-tabs button[aria-selected="true"] {
+  background: var(--blue);
+  color: var(--on-accent);
+}
+
 .settings-nav button[aria-current="page"] {
   background: var(--blue);
   color: var(--on-accent);
@@ -2525,6 +2534,15 @@ button.danger {
 }
 
 .automation-prompt {
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--mantle);
+  border-radius: 8px;
+  white-space: pre-wrap;
+  font-family: var(--mono);
+  font-size: 14px;
+}
+
 .settings-pane {
   display: flex;
   flex-direction: column;
@@ -2568,8 +2586,13 @@ button.danger {
 
 .check {
   display: flex;
+}
+
 .toolbar-actions {
   margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
 
 .first-run {
   display: flex;
@@ -2875,6 +2898,8 @@ button.danger {
 .rerun {
   min-height: 44px;
   padding: 6px 12px;
+}
+
 .check input {
   width: 20px;
   height: 20px;
@@ -3013,6 +3038,9 @@ button.danger {
   margin: 0 0 0 4px;
   padding: 6px 10px;
   background: transparent;
+  color: var(--link);
+  font-weight: 500;
+}
 
 .server-row-buttons button {
   margin-top: 0;
