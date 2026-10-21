@@ -54,9 +54,11 @@ function Row({ server, current, servers, reload }: { server: ServerRow; current:
             Open
           </button>
         )}
-        <button type="button" className="flow-button" disabled={busy} onClick={() => act("Fixing…", () => servers.fix(server.id), { state: "fixed" })}>
-          Fix
-        </button>
+        {server.kind === "url" ? null : (
+          <button type="button" className="flow-button" disabled={busy} onClick={() => act("Fixing…", () => servers.fix(server.id), { state: "fixed" })}>
+            Fix
+          </button>
+        )}
         {server.kind === "local" ? null : (
           <button type="button" className="flow-button danger" disabled={busy} onClick={() => act("Removing…", () => servers.remove(server.id), { state: "idle" })}>
             Remove

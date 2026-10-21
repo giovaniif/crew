@@ -108,7 +108,7 @@ The phone app: a PWA that `crew serve` embeds and serves at `/` (ADR [0046](../d
   - The main column is white (`--paper`) in Latte. Tests: `npm test -- Layout Sidebar`.
 - **Servers** (desktop app only, issue #522). `src/servers.ts` has the steps of the Add a server flow (the same as the Mac app), the SSH target check and `Servers`, which calls the `crew_server*` commands (see [desktop/](../desktop/AGENTS.md)).
   - The chip in the sidebar shows the current server. Its menu switches servers and has Add a server… and Manage servers….
-  - `#/servers` (`screens/Servers.tsx`) lists the servers with Open, Fix and Remove. You cannot remove This computer.
+  - `#/servers` (`screens/Servers.tsx`) lists the servers with Open, Fix and Remove. You cannot remove This computer. A server that you added by its address has no Fix.
   - `#/servers/add` and the first start of the app show `screens/FirstRun.tsx` in a sheet: Welcome, Where agents run, Server, Set up, Workspace, Done. This computer skips Server. Only the first start shows Welcome.
   - `main.tsx` gets the login from `window.__CREW_DESKTOP_AUTH__`, else from `crew_server_auth`. On mobile, `AppEnv.connectUrl` (`window.__CREW_CONNECT_URL__`) adds Change server to Settings and to the pairing screen.
   - Tests: `npm test -- FirstRun Servers`.

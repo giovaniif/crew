@@ -2285,6 +2285,15 @@ button.danger {
   cursor: pointer;
 }
 
+.where-choice input {
+  flex: none;
+  width: auto;
+  height: auto;
+  min-height: 0;
+  margin: 3px 0 0;
+  padding: 0;
+}
+
 .where-choice:has(input:checked) {
   border-color: var(--blue);
   background: var(--base);
@@ -2352,6 +2361,7 @@ button.danger {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px 12px;
+  text-align: left;
 }
 
 .server-row-text {
