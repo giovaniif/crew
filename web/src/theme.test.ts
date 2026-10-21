@@ -189,3 +189,12 @@ describe("the review pane on a phone", () => {
     expect(body).toMatch(/grid-template-columns:\s*(1fr|minmax\(0, 1fr\))\s*;/);
   });
 });
+
+describe("the sidebar shortcut hint", () => {
+  it("hides an on-demand hint until the row is hovered, focused or selected", () => {
+    expect(rule(".side-row kbd.on-demand").display).toBe("none");
+    expect(rule('.side-row[aria-current="page"] kbd.on-demand').display).toBe("inline");
+    expect(rule(".side-row:hover kbd.on-demand").display).toBe("inline");
+    expect(rule(".side-row:focus-visible kbd.on-demand").display).toBe("inline");
+  });
+});

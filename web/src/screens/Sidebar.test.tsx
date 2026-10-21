@@ -55,6 +55,20 @@ describe("the desktop sidebar", () => {
     expect(rows[0]).toHaveTextContent("Ctrl+Shift+1");
   });
 
+  it("shows the long Ctrl+Shift hint only on demand so it does not cut the names", () => {
+    const { live } = desktop();
+    live();
+    const rows = within(screen.getByRole("region", { name: "Sessions" })).getAllByRole("link");
+    expect(rows[0].querySelector("kbd")).toHaveClass("on-demand");
+  });
+
+  it("keeps the short Cmd hint on each row on a Mac", () => {
+    const { live } = desktop("", true, "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_0)");
+    live();
+    const rows = within(screen.getByRole("region", { name: "Sessions" })).getAllByRole("link");
+    expect(rows[0].querySelector("kbd")).not.toHaveClass("on-demand");
+  });
+
   it("has a Mates entry and the limits meters", () => {
     const { live } = desktop();
     live();
