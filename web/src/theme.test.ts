@@ -181,3 +181,12 @@ describe("the stylesheet", () => {
     expect(rule(".check input").width).toBe("20px");
   });
 });
+
+describe("the sidebar shortcut hint", () => {
+  it("hides an on-demand hint until the row is hovered, focused or selected", () => {
+    expect(rule(".side-row kbd.on-demand").display).toBe("none");
+    expect(rule('.side-row[aria-current="page"] kbd.on-demand').display).toBe("inline");
+    expect(rule(".side-row:hover kbd.on-demand").display).toBe("inline");
+    expect(rule(".side-row:focus-visible kbd.on-demand").display).toBe("inline");
+  });
+});
