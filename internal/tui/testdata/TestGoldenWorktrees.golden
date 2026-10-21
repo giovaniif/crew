@@ -11,12 +11,12 @@
  Shared deps store                                                                                                      
  deps 4.1 GB once, cloned per worktree                                                                                  
 
- STATE           TASK                  REPO     BRANCH                           PR     SESSION   PORT            SIZE  
-▌✓ merged        #40 · task number 1   api      feat-a                           #3600  1 claude                2.0 GB  
- ! merged, dirty #40 · task number 1   web      feat-b                           –      1 claude                500 MB  
+ STATE           TASK                                           REPO     BRANCH  PR     SESSION   PORT            SIZE  
+▌✓ merged        #40 · task number 1                            api      feat-a  #3600  1 claude                2.0 GB  
+ ! merged, dirty #40 · task number 1                            web      feat-b  –      1 claude                500 MB  
      ↳ 2 uncommitted changes · b backup + remove · o shell · g session                                                  
- ○ idle          #40 · task number 1   api      feat-c                           #3601  2 codex   :3000         1.5 GB  
- ○ idle          #40 · task number 1   web      feat-d                           –      2 codex                      …  
+ ○ idle          #40 · task number 1                            api      feat-c  #3601  2 codex   :3000         1.5 GB  
+ ○ idle          #40 · task number 1                            web      feat-d  –      2 codex                      …  
 
  RECENTLY CLEANED                                                                                                       
  12:03  old-merged  removed                                                                                             
