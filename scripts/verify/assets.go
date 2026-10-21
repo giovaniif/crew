@@ -42,7 +42,7 @@ func assetsCheck(e *env, repo, base string, r *result) {
 	}
 	var imgs []string
 	for _, f := range strings.Split(out, "\x00") {
-		if f != "" && imageExt[strings.ToLower(filepath.Ext(f))] && !strings.HasPrefix(f, "docs/images/readme/") && !strings.HasPrefix(f, "web/public/") && !strings.HasPrefix(f, "macos/") {
+		if f != "" && imageExt[strings.ToLower(filepath.Ext(f))] && !strings.HasPrefix(f, "docs/images/readme/") && !strings.HasPrefix(f, "web/public/") {
 			imgs = append(imgs, f)
 			r.fail("the PR branch commits an image: "+f, "remove it and push it with go run ./scripts/verify assets push --dir <pr> "+f)
 		}

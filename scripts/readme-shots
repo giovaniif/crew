@@ -43,19 +43,6 @@ STEPS
   )
 done
 
-if [ -n "${README_MAC_RUN:-}" ] || command -v gh >/dev/null 2>&1; then
-  run="${README_MAC_RUN:-$(gh run list --workflow ci.yml --branch main --status success --limit 1 --json databaseId --jq '.[0].databaseId')}"
-  mac="$(mktemp -d)"
-  if gh run download "$run" --name macos-snapshots --dir "$mac" >/dev/null 2>&1; then
-    for pattern in 'window-latte' 'window-mocha' 'review-latte' 'review-mocha' 'browser-*' 'automations*' 'disk*' 'new-session*' 'first-run-1*' 'menu-bar'; do
-      find "$mac" -name "$pattern.png" -exec sh -c 'cp "$1" "$2/mac-$(basename "$1")"' _ {} "$out" \;
-    done
-  else
-    echo "readme-shots: no macos-snapshots artifact in run $run; the Mac shots stay as they are" >&2
-  fi
-  rm -rf "$mac"
-fi
-
 if command -v oxipng >/dev/null 2>&1; then
   oxipng -q -o 4 --strip safe "$out"/*.png
 fi
