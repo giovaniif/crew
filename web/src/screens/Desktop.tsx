@@ -70,6 +70,7 @@ function Row({ session, current, shortcut, keys, onMenu }: { session: Session; c
           <span className="name">{sessionTitle(session)}</span>
           <span className="meta">{sessionMeta(session)}</span>
         </span>
+        {session.Muted ? <span className="badge muted-badge">muted</span> : null}
         {shortcut === null ? null : <kbd className={keys.mac ? undefined : "on-demand"}>{keys.label + shortcut}</kbd>}
       </a>
     </li>

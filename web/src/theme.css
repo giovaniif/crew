@@ -754,6 +754,11 @@ code {
   padding: 0 6px;
 }
 
+.badge.muted-badge {
+  color: var(--subtext);
+  background: var(--surface);
+}
+
 .meta {
   font-family: var(--mono);
   font-size: 13px;
