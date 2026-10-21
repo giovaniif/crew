@@ -7,6 +7,8 @@ import { timeInState } from "../sessions";
 import type { Message, QueuedSend, Session, StreamClient, StreamSnapshot, StreamStatus } from "../stream";
 import { emptyTranscript, newestCursor, toolRow, withFrame, withPage, type Transcript } from "../transcript";
 import { Connection, sessionTitle } from "./SessionList";
+import { SessionCommands } from "./SessionCommands";
+import type { KeyValue } from "../auth";
 import { legacyBrowserWord } from "../legacy";
 
 const stateLabels: Record<string, string> = {
@@ -41,7 +43,7 @@ function Back() {
   );
 }
 
-function Header({ session, now, onInterrupt }: { session: Session; now: number; onInterrupt: () => void }) {
+function Header({ session, now, onInterrupt, commands }: { session: Session; now: number; onInterrupt: () => void; commands?: ReactNode }) {
   const age = timeInState(session.since, now);
   const state = stateOf(session);
   const meta = [session.where, [session.Harness, session.Model].filter(Boolean).join(" ")].filter(Boolean).join(" · ");
@@ -54,6 +56,7 @@ function Header({ session, now, onInterrupt }: { session: Session; now: number; 
             Interrupt
           </button>
         ) : null}
+        {commands}
       </div>
       <h1>{sessionTitle(session)}</h1>
       <p className="meta">{meta}</p>
@@ -649,6 +652,7 @@ export function SessionScreen({
   onRetry,
   client,
   api,
+  storage,
 }: {
   id: string;
   snapshot: StreamSnapshot;
@@ -656,6 +660,7 @@ export function SessionScreen({
   onRetry: () => void;
   client: StreamClient;
   api: Authed;
+  storage?: KeyValue;
 }) {
   const [confirming, setConfirming] = useState(false);
   const session = snapshot.state?.sessions.find((s) => s.ID === id);
@@ -682,7 +687,7 @@ export function SessionScreen({
   return (
     <div className="chat-screen">
       {session.Mate?.Name ? <MateBar api={api} session={session} mate={session.Mate.Name} snapshot={snapshot} /> : null}
-      <Header session={session} now={now} onInterrupt={() => setConfirming(true)} />
+      <Header session={session} now={now} onInterrupt={() => setConfirming(true)} commands={storage ? <SessionCommands api={api} session={session} storage={storage} button /> : undefined} />
       <Connection snapshot={snapshot} now={now} onRetry={onRetry} />
       <main className="chat-main">
         <Chat id={id} client={client} api={api} status={snapshot.status} persona={persona} freshFrom={session.Mate?.FreshFrom || undefined}>
