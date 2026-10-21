@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+apk="${1:-$(dirname "$0")/src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk}"
+pkg=sh.giovani.crew
+
+adb wait-for-device
+adb install -r "$apk"
+adb logcat -c
+adb shell am start -W -n "$pkg/.MainActivity"
+
+for _ in $(seq 1 30); do
+  if adb shell dumpsys activity activities | grep -q "topResumedActivity.*$pkg"; then
+    sleep 5
+    if adb shell pidof "$pkg" >/dev/null && ! adb logcat -d -b crash | grep -q "$pkg"; then
+      echo "android smoke: $pkg runs"
+      exit 0
+    fi
+    break
+  fi
+  sleep 2
+done
+
+adb logcat -d -b crash || true
+echo "android smoke: $pkg did not start" >&2
+exit 1
