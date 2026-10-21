@@ -17,7 +17,7 @@
   <img src="docs/images/readme/mac-window-latte.png" alt="The crew Mac app with sessions in the sidebar and an agent in the main pane">
 </picture>
 
-crew runs Claude Code and Codex sessions side by side, each in its own git worktree. It tells you which session needs you, shows each change in a local, PR-style review, and removes the worktree when its PR merges. Use it from the native Mac app, the terminal (TUI), or your phone.
+crew runs Claude Code and Codex sessions side by side, each in its own git worktree. It tells you which session needs you, shows each change in a local, PR-style review, and removes the worktree when its PR merges. Use it from the desktop app (Mac, Linux and Windows), the terminal (TUI), or your phone.
 
 ## Why crew
 
@@ -139,19 +139,9 @@ Check the install:
 crew version   # crew v0.1.0-beta.1 (commit abc1234)
 ```
 
-### Mac app
-
-Each release also has `crew_<version>.dmg`. It is the native Mac app, with the matching `crew` builds in it. Open it and drag `crew.app` to Applications. The app is ad-hoc signed and not notarized, so macOS blocks its first launch. Remove the block one time with this command:
-
-```sh
-xattr -dr com.apple.quarantine /Applications/crew.app
-```
-
-Or open the app, then go to System Settings › Privacy & Security › Open Anyway.
-
 ### Desktop app
 
-Each release also has the desktop app (Tauri). Each package holds the matching `crew` binary, and the app starts its own `crew serve`. You do not need to install the CLI first.
+Each release also has the desktop app (Tauri). It is the Mac app, and it also runs on Linux and Windows. Each package holds the matching `crew` binary, and the app starts its own `crew serve`. You do not need to install the CLI first.
 
 | OS | File | Install |
 |---|---|---|
@@ -188,7 +178,6 @@ The alpha releases had another name. The first start of `crew` (or `crew setup`)
 - The old nvim plugin dir, nvim setup file, browser skill, Claude settings backup and repo config files move to their crew names (`.crew.toml` in a repo). Each old file stays as a `.bak` copy.
 - The link with the old command name next to the binary goes away. Scripts that call the old command must call `crew`.
 - Environment variables with the old prefix still work as a fallback.
-- The Mac app keeps your servers, settings and shortcuts.
 
 ## Getting started
 

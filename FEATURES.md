@@ -111,7 +111,7 @@ One terminal tool that runs Claude Code, Codex and Oh My Pi (`omp`) sessions in 
 
 ## P2
 
-- Native macOS client.
+- A desktop app for macOS, Linux and Windows (Tauri 2, see ADR 0057).
 - A phone app: a PWA that `crew serve` serves (see ADR 0046). It lists sessions, chats with them, starts new ones and gets push notifications. It uses the network path that the user selects.
   - While you type in an attached `crew` tmux client, the tool holds pushes (`[push] away_after`, default 2 minutes, `"0"` disables it).
   - If you leave and a session still needs you, the tool sends the push one time.
