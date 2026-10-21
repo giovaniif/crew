@@ -9,6 +9,7 @@ is_test_path() {
     (*_test.go | testdata/* | */testdata/* | test/*) return 0 ;;
     (web/*.test.ts | web/*.test.tsx | web/src/test/*) return 0 ;;
     (macos/Tests/*.swift | macos/*/Tests/*.swift) return 0 ;;
+    (desktop/src-tauri/tests/*) return 0 ;;
     (*) return 1 ;;
   esac
 }
@@ -113,7 +114,7 @@ changed_tests() {
     fi
     changed+=("$to")
     [ "$from" = "$to" ] || removed+=("$from")
-  done < <(git diff --name-status -z -M --diff-filter=AMRD "$old" "$new" -- '*_test.go' '*/testdata/*' 'web/*.test.ts' 'web/*.test.tsx' 'macos/Tests/*.swift' 'macos/*/Tests/*.swift')
+  done < <(git diff --name-status -z -M --diff-filter=AMRD "$old" "$new" -- '*_test.go' '*/testdata/*' 'web/*.test.ts' 'web/*.test.tsx' 'macos/Tests/*.swift' 'macos/*/Tests/*.swift' 'desktop/src-tauri/tests/*')
 }
 
 mixed=0
@@ -161,7 +162,7 @@ done
 
 pkgs=$(for f in "${changed[@]}"; do
   case "$f" in
-    (web/* | macos/*) ;;
+    (web/* | macos/* | desktop/*) ;;
     (*/testdata/*) echo "./${f%%/testdata/*}" ;;
     (*) echo "./$(dirname "$f")" ;;
   esac
@@ -179,6 +180,12 @@ swift_suites=$(for f in "${changed[@]}"; do
       f="${f#*Tests/}"
       f="${f%.swift}"
       echo "${f//\//.}" ;;
+  esac
+done | sort -u)
+rust_tests=$(for f in "${changed[@]}"; do
+  case "$f" in
+    (desktop/src-tauri/tests/*/*) ;;
+    (desktop/src-tauri/tests/*.rs) f="${f#desktop/src-tauri/tests/}"; echo "${f%.rs}" ;;
   esac
 done | sort -u)
 passed=()
@@ -217,6 +224,20 @@ if [ -n "$swift_suites" ]; then
       echo "tdd: swift test $suite on base"
       if (cd macos && "${swift_test[@]}" "$suite"); then
         passed+=("macos/$suite")
+      fi
+    done
+  fi
+fi
+
+if [ -n "$rust_tests" ]; then
+  if [ ! -f desktop/src-tauri/Cargo.toml ]; then
+    echo "tdd: no desktop/src-tauri/Cargo.toml on base, so these Rust tests cannot pass there:" $rust_tests
+  else
+    read -r -a rust_test <<<"${TDD_RUST_TEST:-cargo test --test}"
+    for name in $rust_tests; do
+      echo "tdd: cargo test $name on base"
+      if (cd desktop/src-tauri && "${rust_test[@]}" "$name"); then
+        passed+=("desktop/src-tauri/$name")
       fi
     done
   fi

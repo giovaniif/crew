@@ -168,6 +168,20 @@ describe("the server settings", () => {
     await waitFor(() => expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/config")?.body).toEqual({ key: "push.away_after", value: "5m" }));
   });
 
+  it("shows a failed push delay save next to the delay, above the devices", async () => {
+    const view = desktop("#/settings");
+    withServer(view.server).on("POST", "/api/v1/config", { status: 400, body: { error: { code: "bad_request", message: "push.away_after: invalid duration" } } });
+    view.live();
+    await userEvent.click(within(screen.getByRole("list", { name: "Server" })).getByRole("button", { name: "Notifications" }));
+    const away = await screen.findByRole("textbox", { name: "Push after I am away for" });
+    await userEvent.clear(away);
+    await userEvent.type(away, "banana");
+    await userEvent.click(screen.getByRole("button", { name: "Save delay" }));
+    const alert = await screen.findByRole("alert");
+    const heading = screen.getByRole("heading", { name: "Devices" });
+    expect(alert.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("saves a theme colour of the server", async () => {
     const { server } = await open("Server", "Appearance");
     const blue = await screen.findByRole("textbox", { name: "blue" });
