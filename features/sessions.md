@@ -43,10 +43,10 @@ Expect: mobile shows Needs you 1, Working 1, Done 1. No console errors and no fa
 ### PWA desktop sidebar lists the sessions in daemon order
 
 ```sh
-go run ./scripts/verify web drive / --viewport desktop --out-dir /tmp/crew-verify-map/sessions --steps '[{"expect":{"role":"navigation","name":"Sidebar"}},{"expect":{"text":"Sessions","exact":false}},{"expect":{"text":"seeded change 1"}},{"expect":{"text":"seeded change 2"}},{"expect":{"text":"Ctrl+Shift+1"}},{"shot":"sidebar.png"}]'
+go run ./scripts/verify web drive / --viewport desktop --out-dir /tmp/crew-verify-map/sessions --steps '[{"expect":{"role":"navigation","name":"Sidebar"}},{"expect":{"text":"Sessions","exact":false}},{"expect":{"text":"seeded change 1"}},{"expect":{"text":"seeded change 2"}},{"expect":{"text":"Ctrl+Shift+1"},"absent":true},{"click":{"text":"seeded change 2"}},{"expect":{"text":"Ctrl+Shift+1"}},{"shot":"sidebar.png"}]'
 ```
 
-Expect: one flat Sessions list with a state dot and a `Ctrl+Shift+<n>` key for each session. The desktop sidebar has no attention groups.
+Expect: one flat Sessions list with a state dot for each session. The desktop sidebar has no attention groups. On Linux and Windows, the `Ctrl+Shift+<n>` key shows only on the hovered, focused or selected row, so it does not cut the names (#623).
 
 ### PWA opens a session chat
 
