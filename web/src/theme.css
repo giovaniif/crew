@@ -2350,4 +2350,109 @@ button.danger {
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+.toolbar-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.commands-button {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 4px 12px;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.toolbar .commands-button {
+  min-height: 32px;
+  min-width: 36px;
+}
+
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+}
+
+.command-menu {
+  position: fixed;
+  min-width: 13rem;
+  max-width: calc(100vw - 32px);
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  border: 1px solid var(--surface);
+  border-radius: 10px;
+  background: var(--paper);
+  box-shadow: 0 8px 24px var(--shadow-deep);
+}
+
+.command-menu .menu-title {
+  margin: 4px 10px 6px;
+  font-size: 12px;
+  color: var(--subtext);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-menu button {
+  min-height: 44px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-weight: 500;
+  text-align: left;
+}
+
+.command-menu button:hover,
+.command-menu button:focus-visible {
+  background: var(--selected);
+}
+
+.command-menu .menu-danger {
+  color: var(--red);
+}
+
+.choice-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.command-note {
+  position: fixed;
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 15;
+  max-width: calc(100vw - 32px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px 8px 14px;
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--text);
+  border: 1px solid var(--surface);
+  box-shadow: 0 4px 16px var(--shadow-soft);
+}
+
+.command-note.error {
+  background: var(--deleted-bg);
+  border-left: 4px solid var(--red);
+}
+
+.check {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+}
+
+.check input {
+  width: 20px;
+  height: 20px;
 }

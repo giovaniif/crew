@@ -102,6 +102,8 @@ func (s *Server) routes() []route {
 		{"POST /api/v1/sessions/{id}/answer", sessionAction(rpc.MethodSessionAnswer, answerParams)},
 		{"POST /api/v1/sessions/{id}/shell", sessionAction(rpc.MethodShellFocus, shellParams)},
 		{"POST /api/v1/sessions/{id}/nvim", sessionAction(rpc.MethodNvimToggle, nvimParams)},
+		{"POST /api/v1/sessions/{id}/switch", sessionAction(rpc.MethodSwitch, switchParams)},
+		{"POST /api/v1/sessions/{id}/kill-dev-servers", killDevServers},
 		{"GET /api/v1/push/key", pushKey},
 		{"POST /api/v1/push/subscribe", pushSubscribe},
 		{"POST /api/v1/push/unsubscribe", pushUnsubscribe},

@@ -212,6 +212,8 @@ export type WorkItemResolved = {
 
 export type HarnessOptions = {
   harness: string;
+  models?: string[];
+  efforts?: string[];
   default_model?: string;
   default_effort?: string;
 };
@@ -429,4 +431,30 @@ export function openShell(a: Authed, session: string, worktree: string): Promise
 
 export function startFresh(a: Authed, session: string, sameWorktree: boolean): Promise<{ ID: string }> {
   return authedRequest<{ ID: string }>(a, sessionPath(session, "/fresh"), "POST", { same_worktree: sameWorktree });
+}
+
+export type SwitchKind = "model" | "effort";
+
+export async function renameSession(a: Authed, session: string, name: string): Promise<void> {
+  await authedRequest<unknown>(a, sessionPath(session, "/rename"), "POST", { name });
+}
+
+export async function muteSession(a: Authed, session: string, muted: boolean): Promise<void> {
+  await authedRequest<unknown>(a, sessionPath(session, "/mute"), "POST", { muted });
+}
+
+export async function switchSession(a: Authed, session: string, kind: SwitchKind, value: string): Promise<void> {
+  await authedRequest<unknown>(a, sessionPath(session, "/switch"), "POST", { kind, value });
+}
+
+export async function endSession(a: Authed, session: string): Promise<void> {
+  await authedRequest<unknown>(a, sessionPath(session, "/end"), "POST");
+}
+
+export async function resumeSession(a: Authed, session: string): Promise<void> {
+  await authedRequest<unknown>(a, sessionPath(session, "/resume"), "POST");
+}
+
+export function killDevServers(a: Authed, session: string): Promise<{ killed: number[] }> {
+  return authedRequest<{ killed: number[] }>(a, sessionPath(session, "/kill-dev-servers"), "POST");
 }

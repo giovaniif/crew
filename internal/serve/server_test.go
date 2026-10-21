@@ -42,7 +42,7 @@ var (
 		rpc.MethodSessionOptions, rpc.MethodWorkspaceAdd, rpc.MethodWorkspaceRemove, rpc.MethodAutomationRuns,
 		rpc.MethodApprovalList, rpc.MethodApprovalDecide,
 		rpc.MethodClientNative, rpc.MethodShellFocus, rpc.MethodNvimToggle,
-		rpc.MethodDiskView, rpc.MethodCleanupWorktree, rpc.MethodPortsKill,
+		rpc.MethodDiskView, rpc.MethodCleanupWorktree, rpc.MethodSwitch, rpc.MethodPortsKill,
 	}
 )
 
@@ -82,6 +82,8 @@ var authedEndpoints = []authedEndpoint{
 	{"GET", "/api/v1/disk", ""},
 	{"POST", "/api/v1/cleanup/worktree", `{"path":"/w/x"}`},
 	{"POST", "/api/v1/ports/kill", `{"pgids":[1]}`},
+	{"POST", "/api/v1/sessions/s1/switch", `{"kind":"model","value":"opus"}`},
+	{"POST", "/api/v1/sessions/s1/kill-dev-servers", ""},
 }
 
 func startServer(t *testing.T, f *fakeDaemon, cfg serve.Config) (*serve.Server, *httptest.Server) {

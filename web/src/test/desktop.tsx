@@ -12,7 +12,7 @@ const device = { id: "k3m9p2qx", name: "Laptop", created_at: "2026-10-03T10:00:0
 export const halfPastNoon = new Date("2026-10-03T12:30:00Z").getTime();
 
 export function session(id: string, name: string, extra: Partial<Session> = {}): Session {
-  return { ...goldenState().sessions[0], ID: id, name, WorktreeIDs: null, ...extra };
+  return { ...goldenState().sessions[0], ID: id, name, WorktreeIDs: null, order: undefined, ...extra };
 }
 
 export function desktop(hash = "", wide = true, userAgent = "Mozilla/5.0 (X11; Linux x86_64)", routes: (server: FakeServer) => void = () => undefined) {

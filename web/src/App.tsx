@@ -152,7 +152,7 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
     return <NewSession env={env} token={auth.token} />;
   }
   if (route.screen === "session") {
-    return <SessionScreen key={route.id} id={route.id} snapshot={snapshot} now={now} onRetry={retry} client={client} api={api} />;
+    return <SessionScreen key={route.id} id={route.id} snapshot={snapshot} now={now} onRetry={retry} client={client} api={api} storage={env.storage} />;
   }
   if (other) {
     return (
@@ -213,6 +213,7 @@ function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, g
             auth={auth}
             host={env.host}
             installed={env.installed}
+            storage={env.storage}
             fetch={env.fetch}
             push={env.push ?? noPush}
             onSignOut={onSignOut}
