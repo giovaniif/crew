@@ -15,7 +15,7 @@ import { Install } from "./screens/Install";
 import { NewSession } from "./screens/NewSession";
 import { Pair } from "./screens/Pair";
 import { SessionScreen } from "./screens/Session";
-import { DesktopProblem, SessionList } from "./screens/SessionList";
+import { SessionList } from "./screens/SessionList";
 import { FirstRun } from "./screens/FirstRun";
 import { ServersScreen } from "./screens/Servers";
 import { Settings } from "./screens/Settings";
@@ -40,7 +40,6 @@ export type AppEnv = {
   visibility?: PageVisibility;
   wide?: Width;
   desktopAuth?: Auth | null;
-  desktopProblem?: string | null;
   desktopFix?: () => Promise<void>;
   terminal?: TerminalEnv;
   desktop?: DesktopBridge;
@@ -282,9 +281,6 @@ const refusedNotice =
   "This device was removed from crew, or the server rejected its login. Pair it again with a new code from crew remote pair.";
 
 export function App({ env }: { env: AppEnv }) {
-  if (env.desktopProblem) {
-    return <DesktopProblem host={env.host} problem={env.desktopProblem} fix={env.desktopFix} />;
-  }
   return <Paired env={env} />;
 }
 
