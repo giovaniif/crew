@@ -198,17 +198,12 @@ func (m Model) nvimLines() []string {
 		out = append(out, m.line(false, []piece{{s.peach, " ▌ "}, {s.text, "The plugin files are not at " + n.PluginDir + "."}}, nil))
 		out = append(out, m.para(piece{s.peach, " ▌ "}, s.sub, "The install script puts them there; from a source checkout, add these lines yourself with the path to its nvim/ directory.")...)
 		out = append(out, "")
-		for _, l := range domain.NvimSnippet(n.PluginDir, n.ConfigFile) {
-			out = append(out, "   "+s.teal.Render(l))
-		}
-		return out
+		return append(out, m.code(domain.NvimSnippet(n.PluginDir, n.ConfigFile))...)
 	}
 	out = append(out, m.line(false, []piece{{s.text, " ⏎ writes "}, {s.bold, n.ConfigFile}}, nil))
 	out = append(out, m.para(piece{s.text, " "}, s.sub, "nvim loads every file in plugin/ at startup, whatever else your config uses (init.lua, init.vim, lazy.nvim), so nothing of yours is edited.")...)
 	out = append(out, "")
-	for _, l := range strings.Split(strings.TrimSuffix(domain.NvimSetupFile(n.PluginDir), "\n"), "\n") {
-		out = append(out, "   "+s.teal.Render(l))
-	}
+	out = append(out, m.code(strings.Split(strings.TrimSuffix(domain.NvimSetupFile(n.PluginDir), "\n"), "\n"))...)
 	out = append(out, "")
 	return append(out, m.line(false, []piece{bar, {s.sub, "Undo    "}, {s.text, "crew setup nvim --remove"}}, nil))
 }
@@ -247,6 +242,17 @@ func (m Model) finishLines() []string {
 	}
 	out = append(out, m.line(false, []piece{mark, {s.text, padRight("Neovim", 14)}, {s.sub, detail}}, nil), "")
 	return append(out, m.para(piece{s.text, " "}, s.sub, "Open this again with S in the sidebar or crew setup. n starts your first session.")...)
+}
+
+func (m Model) code(lines []string) []string {
+	room := max(m.width-4, 10)
+	var out []string
+	for _, l := range lines {
+		for _, w := range strings.Split(ansi.Wrap(l, room, ""), "\n") {
+			out = append(out, "   "+m.styles.teal.Render(w))
+		}
+	}
+	return out
 }
 
 func (m Model) para(bar piece, st lipgloss.Style, text string) []string {
