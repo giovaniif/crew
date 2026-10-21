@@ -85,7 +85,8 @@
         "name": "fix the login redirect",
         "where": "api@login",
         "banner": "",
-        "since": "2026-10-03T12:00:00Z"
+        "since": "2026-10-03T12:00:00Z",
+        "order": 0
       },
       {
         "ID": "s2",
@@ -121,7 +122,8 @@
         "name": "add retries",
         "where": "",
         "banner": "Added the retry to the client. (4m12s)",
-        "since": "2026-10-03T11:54:12Z"
+        "since": "2026-10-03T11:54:12Z",
+        "order": 1
       }
     ],
     "limits": [

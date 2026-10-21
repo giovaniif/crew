@@ -74,6 +74,12 @@ The phone app: a PWA that `crew serve` embeds and serves at `/` (ADR [0046](../d
   - Sign out first calls `POST /api/v1/push/unsubscribe` and unsubscribes the browser, then calls `POST /api/v1/unpair` (both best effort). Then it forgets the token.
 
   Tests: `npm test -- Push` and `npm test -- Settings`.
+- `src/desktopBridge.tsx` and `src/desktopAttention.ts`: the desktop app (see [desktop/](../desktop/AGENTS.md)). `AppEnv.desktop` is set only in the Tauri window.
+  - `bannerStep` posts one banner for each new `banner` of a session. It posts nothing for the banners that were there when the stream connected. A newer banner of the same session replaces the older one.
+  - It skips muted sessions, the events that the settings turn off, and the session in view while the window is in front. The settings are in `crew.alerts` in `localStorage`. Their defaults are the defaults of the Mac app. Settings shows them in the desktop app only.
+  - The app sends `{"viewing":{"session","front"}}` on the stream when the route, the focus or the visibility changes. serve passes it to `client.viewing`.
+  - `attentionMenu` gives the tray rows and the badge.
+  - Tests: `npm test -- Attention`.
 - `#/automations` (`screens/Automations.tsx`) lists the automations with agent, trigger and state. Run… opens a form with a multi-line context and an optional work item, then posts `/api/v1/automations/<name>/run`. A started run opens its session. A skipped or failed run shows its reason. Tests: `npm test -- Automations`.
 - **Faces.** `src/faces.ts` has the 12 faces of the design (`FACES`: id, name, accent for light and dark, the SVG parts and the 2-line TUI glyph), `faceSvg` and `faceGlyph`. The TUI and the Mac app use the same rules:
   - The face of a mate is its `avatar` (from the stream row, else from `GET /api/v1/mates`) if that is a face id. Else it is the face with the id of the mate name. Else it is `FACES[sum of the UTF-8 bytes of the name % 12]`. The color is the `color` of the mate, else the accent of the face.
@@ -105,6 +111,11 @@ The phone app: a PWA that `crew serve` embeds and serves at `/` (ADR [0046](../d
   - Click `+` next to a line number to comment. Shift-click a second line to select a range.
   - Stage and revert send only the hunk. When git refuses the patch, the hunk shows the message of git and the review does not open again.
   - Tests: `npm test -- Review review`. They read the serve goldens `review-*.json`. One test decodes and renders a review of 50 files in less than 300 ms.
+- **Session commands** (issue #519). `screens/SessionCommands.tsx` has the commands of the sidebar menu of the Mac app: Rename…, Mute or Unmute, Model…, Effort…, Kill dev servers and End session…. An ended session has only Resume. `src/commands.ts` holds the pure rules (`commandItems`, `killedNote`) and the setting.
+  - Open the menu with a right-click on a sidebar row, with the `⋯` button of the toolbar (desktop), or with the `⋯` button of the chat header (phone).
+  - Model… and Effort… show the choices of the harness from `GET /api/v1/session-options`, then post `…/switch`. Kill dev servers posts `…/kill-dev-servers`. serve finds the process groups, so the app never sends one.
+  - End session asks first while Settings has "Ask before I end a session" on (the default). The value is `crew.confirmEnd` in `localStorage` (`off` turns it off).
+  - A failed command shows the message of the daemon in a `role="alert"` note. Tests: `npm test -- SessionCommands`.
 - `src/screens/`: one component for each screen. `src/theme.css`: the Latte palette as CSS variables, and Mocha under `prefers-color-scheme: dark`, and IBM Plex Sans and JetBrains Mono from `@fontsource`.
 - `src/test/`: test helpers (`FakeServer`, `MemoryStorage`, the Vitest setup). tdd-check treats them as port fakes.
 
