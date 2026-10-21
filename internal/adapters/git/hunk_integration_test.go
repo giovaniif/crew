@@ -84,6 +84,18 @@ func TestReviewStageHunkMatchesGitAddPatch(t *testing.T) {
 	}
 }
 
+func TestReviewStageOfAnAlreadyStagedHunkSaysSo(t *testing.T) {
+	_, b := twoHunkRepos(t)
+	f, h := firstHunk(t, b)
+	if err := app.ApplyHunk(context.Background(), git.Review{}, b, f, h, domain.HunkStage); err != nil {
+		t.Fatal(err)
+	}
+	err := app.ApplyHunk(context.Background(), git.Review{}, b, f, h, domain.HunkStage)
+	if err == nil || err.Error() != "hunk already staged" {
+		t.Errorf("second stage: %v, want hunk already staged", err)
+	}
+}
+
 func TestReviewRevertHunkMatchesGitCheckoutPatchAndKeepsABackup(t *testing.T) {
 	a, b := twoHunkRepos(t)
 	interactive(t, a, "y\nn\n", "checkout", "-p", "--", "f.txt")
