@@ -32,13 +32,21 @@ go run ./scripts/verify tui drive --out-dir /tmp/crew-verify-map/sessions --step
 go run ./scripts/verify tui drive --out-dir /tmp/crew-verify-map/sessions --steps '[{"keys":"?"},{"expect":"keys","timeout":3000},{"keys":"?"},{"shot":"help.png"}]'
 ```
 
-### PWA groups sessions by attention at both viewports
+### PWA groups sessions by attention on mobile
 
 ```sh
-go run ./scripts/verify web drive / --viewport both --out-dir /tmp/crew-verify-map/sessions --steps '[{"expect":{"text":"seeded change 2"}},{"expect":{"text":"Needs you","exact":false}},{"expect":{"text":"Working","exact":false}},{"expect":{"text":"Done","exact":false}},{"shot":"list.png"}]'
+go run ./scripts/verify web drive / --viewport mobile --out-dir /tmp/crew-verify-map/sessions --steps '[{"expect":{"text":"seeded change 2"}},{"expect":{"text":"Needs you","exact":false}},{"expect":{"text":"Working","exact":false}},{"expect":{"text":"Done","exact":false}},{"shot":"list.png"}]'
 ```
 
-Expect: mobile and desktop show Needs you 1, Working 1, Done 1. No console errors and no failed API calls.
+Expect: mobile shows Needs you 1, Working 1, Done 1. No console errors and no failed API calls.
+
+### PWA desktop sidebar lists the sessions in daemon order
+
+```sh
+go run ./scripts/verify web drive / --viewport desktop --out-dir /tmp/crew-verify-map/sessions --steps '[{"expect":{"role":"navigation","name":"Sidebar"}},{"expect":{"text":"Sessions","exact":false}},{"expect":{"text":"seeded change 1"}},{"expect":{"text":"seeded change 2"}},{"expect":{"text":"Ctrl+Shift+1"}},{"shot":"sidebar.png"}]'
+```
+
+Expect: one flat Sessions list with a state dot and a `Ctrl+Shift+<n>` key for each session. The desktop sidebar has no attention groups.
 
 ### PWA opens a session chat
 
@@ -60,6 +68,17 @@ go run ./scripts/verify web drive / --viewport mobile --out-dir /tmp/crew-verify
 ```
 
 Expect: the `unread` badge of `seeded change 3` is gone after the chat opens. See #488.
+
+### PWA names a root session by its workspace
+
+```sh
+rm -rf /tmp/crew-verify-map/TEST-root && mkdir -p /tmp/crew-verify-map/TEST-root
+go run ./scripts/verify web drive /#/new --viewport mobile --out-dir /tmp/crew-verify-map/sessions --steps '[{"click":{"role":"button","name":"Add workspace…"}},{"fill":{"label":"Folder on the server","exact":false},"value":"/tmp/crew-verify-map/TEST-root"},{"click":{"role":"button","name":"Add","exact":true}},{"wait":800},{"fill":{"label":"First prompt","exact":false},"value":"TEST root"},{"click":{"role":"button","name":"Start session"}},{"expect":{"text":"TEST-root · claude"}},{"shot":"root.png"}]'
+go run ./scripts/verify iso crew --expect "removed /tmp/crew-verify-map/TEST-root" -- workspace remove /tmp/crew-verify-map/TEST-root
+rm -rf /tmp/crew-verify-map/TEST-root
+```
+
+Expect: the chat header of a session with no worktree names its workspace. See #557.
 
 ### new session dialog with a real harness (manual: the fake claude holds the pane but does not run turns; use make dev FAKES=1 to try it)
 
