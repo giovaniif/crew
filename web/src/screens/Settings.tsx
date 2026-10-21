@@ -35,6 +35,7 @@ export type SettingsProps = {
   onSignOut: () => void | Promise<void>;
   storage: KeyValue;
   userAgent: string;
+  connectUrl?: string;
 };
 
 function PushCard({ auth, installed, fetch, push }: Pick<SettingsProps, "auth" | "installed" | "fetch" | "push">) {
@@ -338,7 +339,7 @@ function GroupNav({ label, groups, current, onPick }: { label: string; groups: {
   );
 }
 
-export function Settings({ auth, host, installed, fetch, push, onSignOut, storage, userAgent }: SettingsProps) {
+export function Settings({ auth, host, installed, fetch, push, onSignOut, storage, userAgent, connectUrl }: SettingsProps) {
   const [group, setGroup] = useState<GroupId>("general");
   const [settings, setSettings] = useState<AppSettings>(() => loadSettings(storage));
   const api: Authed = { fetch, token: auth.token };
@@ -362,6 +363,11 @@ export function Settings({ auth, host, installed, fetch, push, onSignOut, storag
               <dt>Address</dt>
               <dd>{host}</dd>
             </dl>
+            {connectUrl ? (
+              <a className="change-server" href={connectUrl}>
+                Change server
+              </a>
+            ) : null}
           </section>
           <section className="card" aria-label="This device">
             <h2>This device</h2>

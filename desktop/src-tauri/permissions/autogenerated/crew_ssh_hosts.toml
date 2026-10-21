@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-crew-ssh-hosts"
+description = "Enables the crew_ssh_hosts command without any pre-configured scope."
+commands.allow = ["crew_ssh_hosts"]
+
+[[permission]]
+identifier = "deny-crew-ssh-hosts"
+description = "Denies the crew_ssh_hosts command without any pre-configured scope."
+commands.deny = ["crew_ssh_hosts"]
