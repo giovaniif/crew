@@ -188,7 +188,7 @@ export type Frame = {
   watch?: string;
 };
 
-export type ClientFrame = { watch: string; after: number } | { unwatch: string } | { visible: boolean };
+export type ClientFrame = { watch: string; after: number } | { unwatch: string } | { visible: boolean } | { viewing: { session: string; front: boolean } };
 
 export type SocketLike = {
   send(data: string): void;

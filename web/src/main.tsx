@@ -10,6 +10,7 @@ import { hello } from "./api";
 import { App } from "./App";
 import { buildOfWorker, checkBuild, workerURL } from "./build";
 import { desktopAuth } from "./auth";
+import { tauriBridge } from "./desktopBridge";
 import { isInstalled } from "./display";
 import { browserPush } from "./push";
 import { browserTerminal } from "./xterm";
@@ -129,6 +130,7 @@ if (root) {
           visibility,
           wide,
           terminal: browserTerminal(window.location),
+          desktop: tauriBridge(window),
           desktopAuth: desktopAuth((window as { __CREW_DESKTOP_AUTH__?: unknown }).__CREW_DESKTOP_AUTH__),
         }}
       />
