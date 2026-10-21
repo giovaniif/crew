@@ -234,6 +234,17 @@ func TestViewForThePhoneHasTheKillSwitch(t *testing.T) {
 	}
 }
 
+func TestViewWhereNamesTheLaunchDirOfASessionWithNoWorktree(t *testing.T) {
+	st := nativeFixture()
+	st.Sessions[2].Dir = "/w/api"
+	_, state := view.New(st)
+	for _, s := range state.Sessions {
+		if s.ID == "s3" && s.Where != "api" {
+			t.Fatalf("where %q, want api", s.Where)
+		}
+	}
+}
+
 func TestViewForThePhoneHasTheSidebarOrder(t *testing.T) {
 	st := rpc.State{Sessions: []domain.Session{
 		{ID: "a", TaskID: "a", State: domain.StateRunning},
