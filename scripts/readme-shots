@@ -21,27 +21,46 @@ tui() {
 tui tui-sidebar 96x26 "run env HOME=$demo/home crew debug seed 6" "wait 2" "run env HOME=$demo/home crew tui" "wait 3"
 tui tui-new-session 90x26 "run env HOME=$demo/home crew tui --new-session" "type fix the login redirect" "wait 1"
 
-for scheme in light dark; do
-  (cd "$out" && "$root/scripts/web-screenshot" <<STEPS
-scheme $scheme
+(cd "$out" && "$root/scripts/web-screenshot" <<STEPS
+device Desktop Chrome
+scheme light
+mode installed
+goto /
+fill Pairing code=ABCD2345
+click Pair
+see add retries
+goto /#/sessions/s3
+see add retries
+wait 800
+shot desktop-chat.png
+tab Review
+wait 1200
+shot desktop-review.png
+goto /#/new
+wait 800
+shot desktop-new-session.png
+goto /#/automations
+see last run succeeded
+wait 300
+shot desktop-automations.png
+goto /#/disk
+wait 800
+shot desktop-disk.png
+device iPhone 15
+scheme light
 mode installed
 goto /
 fill Pairing code=ABCD2345
 click Pair
 see Needs you
 wait 400
-shot phone-sessions-$scheme.png
+shot phone-sessions.png
 goto /#/sessions/s3
 see add retries
 wait 600
-shot phone-chat-$scheme.png
-goto /#/automations
-see last run succeeded
-wait 300
-shot phone-automations-$scheme.png
+shot phone-chat.png
 STEPS
-  )
-done
+)
 
 if command -v oxipng >/dev/null 2>&1; then
   oxipng -q -o 4 --strip safe "$out"/*.png

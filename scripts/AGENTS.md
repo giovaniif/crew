@@ -50,7 +50,7 @@ Repo tooling. The repo-wide rules are in the [root AGENTS.md](../AGENTS.md).
   - With `CREW_FAKE_STREAM=late`, it closes the first stream with 4401 after 300 ms, while `GET /api/v1/workspaces` still answers. Thus the app keeps its login and connects again.
   - With `CREW_FAKE_STREAM=revoked`, it does the same, but `GET /api/v1/workspaces` answers 401. This gives the pairing screen with its signed-out note.
 
-  It controls Playwright's Chromium from stdin steps: `device <Playwright device>` (default `iPhone 15`), `mode browser|installed` (installed sets `navigator.standalone`), `goto <path>`, `fill <label>=<text>`, `click <button name>`, `see <text>`, `wait <ms>`, `shot <file>` (full page, relative to the cwd). `device` and `mode` start a fresh browser context. Playwright is pinned in `web/package.json`. Install its browser one time with `cd web && npx playwright install chromium`. Push the images to the orphan `pr-assets` branch, as for `screenshot`.
+  It controls Playwright's Chromium from stdin steps: `device <Playwright device>` (default `iPhone 15`), `mode browser|installed` (installed sets `navigator.standalone`), `goto <path>`, `fill <label>=<text>`, `click <button name>`, `tab <tab name>`, `see <text>`, `wait <ms>`, `shot <file>` (full page, relative to the cwd). `device` and `mode` start a fresh browser context. Playwright is pinned in `web/package.json`. Install its browser one time with `cd web && npx playwright install chromium`. Push the images to the orphan `pr-assets` branch, as for `screenshot`.
 - **`install.sh`**: installs the newest beta or stable release (an alpha only with `CREW_VERSION`) as `crew`. It also copies `nvim/lua` and `nvim/plugin` to `${XDG_DATA_HOME:-~/.local/share}/crew/nvim`. To try a release build:
   1. Run `goreleaser release --snapshot --clean`.
   2. Serve `dist/` with `python3 -m http.server`.
@@ -59,7 +59,7 @@ Repo tooling. The repo-wide rules are in the [root AGENTS.md](../AGENTS.md).
   See [ADR 0040](../docs/adr/0040-first-run-walkthrough.md).
 - **`readme-shots`** (`make readme-shots`): makes all README images in `docs/images/readme/` from seeded demo data in a temp folder, never a real home or project.
   - TUI: `scripts/screenshot` with `crew debug seed 6` (`tui-*.png`).
-  - Phone: `scripts/web-screenshot` with the fake API, light and dark (`phone-*.png`).
+  - Desktop and phone: `scripts/web-screenshot` with the fake API, light theme (`desktop-*.png` at 1280x720, `phone-*.png`).
   - If `oxipng` is on `PATH`, it optimizes each PNG. It fails when a PNG is larger than `README_SHOT_LIMIT` (default 400 KB).
 - **`verify`** (`go run ./scripts/verify <command>`): the agent verification CLI (ADR [0055](../docs/adr/0055-agent-verification.md)). It is not in the `crew` binary. Agents (Claude Code and Codex) follow the skill in [.claude/skills/verify/SKILL.md](../.claude/skills/verify/SKILL.md).
   - Each command prints exactly one JSON object with `ok`, `problems` (`{msg, hint}`) and its data. The exit code is 0 for ok, 1 for a failure and 2 for a usage error.
