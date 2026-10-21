@@ -115,6 +115,12 @@ sh -c 'U="$(jq -r .serve_url "$VERIFY_HOME/iso.json")"; C="$(go run ./scripts/ve
 
 Expect: a single-use code and its expiry.
 
+### a wrong push delay shows its error under Save delay
+
+```sh
+go run ./scripts/verify web drive /#/settings --viewport mobile --out-dir /tmp/crew-verify-map/remote --steps '[{"expect":{"role":"heading","name":"Settings"}},{"eval":"document.querySelectorAll(\"ul.settings-nav\")[1].querySelectorAll(\"button\")[2].click()"},{"expect":{"text":"Devices"}},{"fill":{"label":"Push after I am away for"},"value":"TEST-bad"},{"click":{"role":"button","name":"Save delay"}},{"eval":"const a=document.querySelector(\"[role=alert]\"); const h=[...document.querySelectorAll(\"h3\")].find(e=>e.textContent===\"Devices\"); if (!a || !(a.compareDocumentPosition(h) & 4)) throw new Error(\"error not under Save delay\")"}]'
+```
+
 ### push subscribe and unsubscribe (manual: needs a real browser push subscription)
 
 ### session rename, switch, resume, interrupt and kill dev servers over HTTP (manual: no CLI prints a session id for a curl recipe)
