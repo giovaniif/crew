@@ -42,6 +42,7 @@ var (
 		rpc.MethodSessionOptions, rpc.MethodWorkspaceAdd, rpc.MethodWorkspaceRemove, rpc.MethodAutomationRuns,
 		rpc.MethodApprovalList, rpc.MethodApprovalDecide,
 		rpc.MethodClientNative, rpc.MethodShellFocus, rpc.MethodNvimToggle,
+		rpc.MethodSwitch, rpc.MethodPortsKill,
 	}
 )
 
@@ -78,6 +79,8 @@ var authedEndpoints = []authedEndpoint{
 	{"POST", "/api/v1/approvals/a1/deny", ""},
 	{"POST", "/api/v1/sessions/s1/shell", ""},
 	{"POST", "/api/v1/sessions/s1/nvim", ""},
+	{"POST", "/api/v1/sessions/s1/switch", `{"kind":"model","value":"opus"}`},
+	{"POST", "/api/v1/sessions/s1/kill-dev-servers", ""},
 }
 
 func startServer(t *testing.T, f *fakeDaemon, cfg serve.Config) (*serve.Server, *httptest.Server) {
