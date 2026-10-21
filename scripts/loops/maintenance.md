@@ -11,8 +11,7 @@ Read these first: the root `AGENTS.md`, `scripts/AGENTS.md`, `docs/adr/0055-agen
    - the CLI subcommands in `cmd/crew/`
    - the TUI views and keys in `internal/tui/`
    - the PWA routes in `web/src`
-   - the HTTP routes in `internal/serve/`
-   - the Mac app views in `macos/` (CI only).
+   - the HTTP routes in `internal/serve/`.
 
    Add each missing one to the area file as a recipe, or as `### <label> (manual: why)`.
 5. **Areas.** Start the isolated crew (`go run ./scripts/verify doctor`, `iso up`, `iso seed --sessions 3`). Run `go run ./scripts/verify map run <area>` for each area in turn, as the time permits. Start after the area of the last maintenance PR (read `gh pr list --state merged --search 'docs(features): map maintenance' --limit 1`).

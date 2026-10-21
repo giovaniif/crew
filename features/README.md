@@ -19,7 +19,6 @@ This folder is the shared memory of what "working" means in crew (ADR [0055](../
 | Notifications | [notifications.md](notifications.md) | CLI |
 | Setup and onboarding | [setup-onboarding.md](setup-onboarding.md) | TUI |
 | nvim | [nvim.md](nvim.md) | TUI |
-| Mac app | [mac-app.md](mac-app.md) | CI only |
 
 ## Format
 

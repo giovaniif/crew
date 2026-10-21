@@ -32,7 +32,6 @@ Claude Code and Codex load an `AGENTS.md` from each directory they work in. Here
 | [scripts/](scripts/AGENTS.md) | `lint-comments`, `lint-agents`, `tdd-check`, `mutate`, `bench-hook.sh`, `dev`, `screenshot`, `web-screenshot`, `install.sh` |
 | [web/](web/AGENTS.md) | the PWA: toolchain, `make web`, the service worker, pairing |
 | [desktop/](desktop/AGENTS.md) | the Tauri 2 app: the `crew-desktop` crate, its window, the `tauri-driver` e2e tests |
-| [macos/](macos/AGENTS.md) | the Mac app: the `CrewKit` package, the app target, `swift test`, `build-app` |
 | [test/e2e/](test/e2e/AGENTS.md) | the core e2e suite and its fakes |
 | [test/integration/](test/integration/AGENTS.md) | daemon-with-real-adapters integration tests |
 
@@ -70,7 +69,7 @@ Write all prose docs and new ADRs in ASD-STE100 Simplified Technical English. Us
 - **Shell out, do not reimplement:** use the `git`, `gh` and `tmux` CLIs. Do not use a Go git library.
 - **Never destroy user work:** cleanup code backs up uncommitted changes before it removes anything. It never deletes branches. It never touches a worktree that a process uses. Each change to cleanup needs tests for these cases.
 - **Do not change the user's setup:** the tmux adapter uses only the `crew` tmux server. Setup commands merge into the `~/.claude` and `~/.codex` config idempotently. They back up the file first, and you can undo them. Tests never touch the real `~/.claude`, `~/.codex` or `~/.config/nvim`.
-- **Mac is the first target platform:** the app is one Tauri 2 app with the React UI of `web/` ([ADR 0057](docs/adr/0057-tauri-apps.md)). Design a UI change for the app on macOS first. Then Linux, Windows, iOS and Android. Use a white, light theme. Do not copy the native macOS look. The TUI also stays. The SwiftUI app in `macos/` gets only bug fixes until its removal.
+- **Mac is the first target platform:** the app is one Tauri 2 app with the React UI of `web/` ([ADR 0057](docs/adr/0057-tauri-apps.md)). Design a UI change for the app on macOS first. Then Linux, Windows, iOS and Android. Use a white, light theme. Do not copy the native macOS look. The TUI also stays.
 
 ## Tests: TDD, enforced by CI
 
