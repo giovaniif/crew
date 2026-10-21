@@ -42,6 +42,9 @@ var (
 		rpc.MethodSessionOptions, rpc.MethodWorkspaceAdd, rpc.MethodWorkspaceRemove, rpc.MethodAutomationRuns,
 		rpc.MethodApprovalList, rpc.MethodApprovalDecide,
 		rpc.MethodClientNative, rpc.MethodShellFocus, rpc.MethodNvimToggle,
+		rpc.MethodConfigGet, rpc.MethodConfigSet, rpc.MethodOnboarding, rpc.MethodOnboardingInstall,
+		rpc.MethodOnboardingRemove, rpc.MethodOnboardingNvim, rpc.MethodOnboardingFinish, rpc.MethodWorkspaceDirs,
+		rpc.MethodDeviceList, rpc.MethodPairCode,
 		rpc.MethodReviewOpen, rpc.MethodReviewViewed, rpc.MethodReviewComment, rpc.MethodReviewSend, rpc.MethodReviewHunk,
 		rpc.MethodSwitch, rpc.MethodPortsKill, rpc.MethodAutomationSave,
 	}
@@ -87,7 +90,7 @@ var authedEndpoints = append([]authedEndpoint{
 	{"POST", "/api/v1/sessions/s1/review/hunk", `{"worktree":"w1","file":{"Path":"a.go"},"hunk":0,"action":"stage"}`},
 	{"POST", "/api/v1/sessions/s1/switch", `{"kind":"model","value":"opus"}`},
 	{"POST", "/api/v1/sessions/s1/kill-dev-servers", ""},
-}, automationOwnerEndpoints...)
+}, append(settingsEndpoints, automationOwnerEndpoints...)...)
 
 func startServer(t *testing.T, f *fakeDaemon, cfg serve.Config) (*serve.Server, *httptest.Server) {
 	t.Helper()
@@ -308,7 +311,6 @@ func TestServeReachesOnlyAllowlistedDaemonMethods(t *testing.T) {
 		{"GET", "/api/v1/review", ""},
 		{"POST", "/api/v1/review/send", `{}`},
 		{"POST", "/api/v1/rpc", `{"method":"ports.kill"}`},
-		{"POST", "/api/v1/devices/k3m9p2qx/revoke", ""},
 		{"GET", "/api/v1/sessions/s1/../../disk", ""},
 		{"DELETE", "/api/v1/workspaces", ""},
 	}

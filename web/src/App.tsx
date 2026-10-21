@@ -14,7 +14,7 @@ import { Install } from "./screens/Install";
 import { NewSession } from "./screens/NewSession";
 import { Pair } from "./screens/Pair";
 import { SessionScreen } from "./screens/Session";
-import { SessionList } from "./screens/SessionList";
+import { DesktopProblem, SessionList } from "./screens/SessionList";
 import { Settings } from "./screens/Settings";
 import { PhoneSession } from "./screens/PhoneSession";
 import { ReviewPane } from "./screens/Review";
@@ -36,6 +36,8 @@ export type AppEnv = {
   visibility?: PageVisibility;
   wide?: Width;
   desktopAuth?: Auth | null;
+  desktopProblem?: string | null;
+  desktopFix?: () => Promise<void>;
   terminal?: TerminalEnv;
   desktop?: DesktopBridge;
 };
@@ -242,6 +244,7 @@ function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut }:
             fetch={env.fetch}
             push={env.push ?? noPush}
             onSignOut={onSignOut}
+            userAgent={env.userAgent}
           />
           {env.desktop && <DesktopAlerts storage={env.storage} />}
         </>
@@ -256,6 +259,13 @@ const refusedNotice =
   "This device was removed from crew, or the server rejected its login. Pair it again with a new code from crew remote pair.";
 
 export function App({ env }: { env: AppEnv }) {
+  if (env.desktopProblem) {
+    return <DesktopProblem host={env.host} problem={env.desktopProblem} fix={env.desktopFix} />;
+  }
+  return <Paired env={env} />;
+}
+
+function Paired({ env }: { env: AppEnv }) {
   const [auth, setAuth] = useState<Auth | null>(() => env.desktopAuth ?? loadAuth(env.storage));
   const [notice, setNotice] = useState("");
   const [code, setCode] = useState(() => (auth ? "" : pairCodeFromHash(env.hash)));

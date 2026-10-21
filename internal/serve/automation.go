@@ -2,7 +2,6 @@ package serve
 
 import (
 	"encoding/json"
-	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -35,25 +34,6 @@ func runAutomation(r *http.Request, d Daemon) (any, error) {
 		return nil, err
 	}
 	return out, nil
-}
-
-func ownerOnly(h func(r *http.Request, d Daemon) (any, error)) func(r *http.Request, d Daemon) (any, error) {
-	return func(r *http.Request, d Daemon) (any, error) {
-		if !fromOwner(r) {
-			return nil, &rpc.Error{Code: codeForbidden, Message: "only the owner device, the app on the computer that runs crew, can do this"}
-		}
-		return h(r, d)
-	}
-}
-
-func fromOwner(r *http.Request) bool {
-	addr := clientAddr(r)
-	host, _, err := net.SplitHostPort(addr)
-	if err != nil {
-		host = addr
-	}
-	ip := net.ParseIP(host)
-	return ip != nil && ip.IsLoopback()
 }
 
 func saveAutomation(r *http.Request, d Daemon) (any, error) {

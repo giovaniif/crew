@@ -25,13 +25,38 @@
         <button type="submit">Connect</button>
         <p id="error" role="alert"></p>
       </form>
+      <section id="problem" hidden>
+        <p id="problem-title"><strong>crew is not running</strong></p>
+        <p id="problem-reason"></p>
+        <button id="fix" type="button">Fix</button>
+      </section>
     </main>
     <script type="module">
       import { serverUrl } from "./server.js";
+      const problem = window.__CREW_DESKTOP_PROBLEM__;
+      if (typeof problem === "string") {
+        document.querySelector("h1").textContent = "crew did not start";
+        document.getElementById("form").hidden = true;
+        document.getElementById("problem").hidden = false;
+        document.getElementById("problem").setAttribute("role", "status");
+        document.getElementById("problem-reason").textContent = problem;
+        const fix = document.getElementById("fix");
+        fix.addEventListener("click", async () => {
+          fix.disabled = true;
+          document.getElementById("problem-title").textContent = "Fixing the daemon";
+          try {
+            await window.__TAURI_INTERNALS__.invoke("fix_daemon");
+          } catch (err) {
+            document.getElementById("problem-title").textContent = "Fix failed";
+            document.getElementById("problem-reason").textContent = String(err);
+            fix.disabled = false;
+          }
+        });
+      }
       const key = "crew.server";
       const saved = (() => { try { return localStorage.getItem(key); } catch { return null; } })();
       const change = new URLSearchParams(location.search).has("change");
-      if (saved && !change) {
+      if (saved && !change && typeof problem !== "string") {
         location.replace(saved);
       }
       const input = document.getElementById("server");
