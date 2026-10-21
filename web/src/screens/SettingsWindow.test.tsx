@@ -80,11 +80,12 @@ describe("the Settings window", () => {
 describe("the app settings", () => {
   it("keeps General in the app store", async () => {
     const { storage } = await open("This app", "General");
-    await userEvent.click(screen.getByRole("checkbox", { name: "Confirm before End session" }));
+    await userEvent.click(screen.getByRole("checkbox", { name: "Ask before I end a session" }));
     const shown = screen.getByRole("spinbutton", { name: "Ended sessions shown" });
     await userEvent.clear(shown);
     await userEvent.type(shown, "25");
-    expect(loadSettings(storage).general).toMatchObject({ confirmOnEnd: false, endedShown: 25 });
+    expect(loadSettings(storage).general).toMatchObject({ endedShown: 25 });
+    expect(storage.getItem("crew.confirmEnd")).toBe("off");
   });
 
   it("keeps Notifications in the app store", async () => {

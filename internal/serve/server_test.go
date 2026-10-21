@@ -45,6 +45,8 @@ var (
 		rpc.MethodConfigGet, rpc.MethodConfigSet, rpc.MethodOnboarding, rpc.MethodOnboardingInstall,
 		rpc.MethodOnboardingRemove, rpc.MethodOnboardingNvim, rpc.MethodOnboardingFinish, rpc.MethodWorkspaceDirs,
 		rpc.MethodDeviceList, rpc.MethodPairCode,
+		rpc.MethodReviewOpen, rpc.MethodReviewViewed, rpc.MethodReviewComment, rpc.MethodReviewSend, rpc.MethodReviewHunk,
+		rpc.MethodSwitch, rpc.MethodPortsKill,
 	}
 )
 
@@ -81,6 +83,13 @@ var authedEndpoints = append([]authedEndpoint{
 	{"POST", "/api/v1/approvals/a1/deny", ""},
 	{"POST", "/api/v1/sessions/s1/shell", ""},
 	{"POST", "/api/v1/sessions/s1/nvim", ""},
+	{"GET", "/api/v1/sessions/s1/review", ""},
+	{"POST", "/api/v1/sessions/s1/review/viewed", `{"mark":{"Worktree":"w1","Path":"a.go","Blob":"b"},"viewed":true}`},
+	{"POST", "/api/v1/sessions/s1/review/comments", `{"path":"a.go","start_line":1,"body":"x"}`},
+	{"POST", "/api/v1/sessions/s1/review/send", ""},
+	{"POST", "/api/v1/sessions/s1/review/hunk", `{"worktree":"w1","file":{"Path":"a.go"},"hunk":0,"action":"stage"}`},
+	{"POST", "/api/v1/sessions/s1/switch", `{"kind":"model","value":"opus"}`},
+	{"POST", "/api/v1/sessions/s1/kill-dev-servers", ""},
 }, settingsEndpoints...)
 
 func startServer(t *testing.T, f *fakeDaemon, cfg serve.Config) (*serve.Server, *httptest.Server) {

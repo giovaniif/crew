@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { Authed, Fetch } from "../api";
 import type { Auth, KeyValue } from "../auth";
+import { confirmEnd, setConfirmEnd } from "../commands";
 import { disablePush, enablePush, type PushEnv } from "../push";
 import { applyTheme, clamp, fontSizes, lineHeights, loadSettings, saveSettings, type AppSettings, type Appearance, type EventAlert, type General, type NotificationSettings } from "../settings";
 import { assignShortcut, comboFor, comboFromEvent, comboLabel, defaultShortcuts, restoreShortcut, shortcutActions, type Shortcuts } from "../shortcuts";
@@ -172,12 +173,20 @@ function NumberField({ label, value, step, onCommit }: { label: string; value: n
   );
 }
 
-function GeneralPane({ general, onChange }: { general: General; onChange: (g: General) => void }) {
+function GeneralPane({ general, storage, onChange }: { general: General; storage: KeyValue; onChange: (g: General) => void }) {
+  const [askEnd, setAskEnd] = useState(() => confirmEnd(storage));
   return (
     <section className="card" aria-label="General">
       <h2>General</h2>
       <NumberField label="Ended sessions shown" value={general.endedShown} onCommit={(n) => onChange({ ...general, endedShown: Math.max(0, Math.round(n)) })} />
-      <Check label="Confirm before End session" checked={general.confirmOnEnd} onChange={(v) => onChange({ ...general, confirmOnEnd: v })} />
+      <Check
+        label="Ask before I end a session"
+        checked={askEnd}
+        onChange={(v) => {
+          setAskEnd(v);
+          setConfirmEnd(storage, v);
+        }}
+      />
       <Check label="Show worktrees in the sidebar" checked={general.showWorktrees} onChange={(v) => onChange({ ...general, showWorktrees: v })} />
       <Check label="Show subagents" checked={general.showSubagents} onChange={(v) => onChange({ ...general, showSubagents: v })} />
     </section>
@@ -364,7 +373,7 @@ export function Settings({ auth, host, installed, fetch, push, onSignOut, storag
             </dl>
           </section>
           <PushCard auth={auth} installed={installed} fetch={fetch} push={push} />
-          <GeneralPane general={settings.general} onChange={(general) => update({ ...settings, general })} />
+          <GeneralPane general={settings.general} storage={storage} onChange={(general) => update({ ...settings, general })} />
           <button type="button" className="secondary" onClick={onSignOut}>
             Sign out
           </button>

@@ -3,7 +3,6 @@ import { defaultShortcuts, type Shortcuts } from "./shortcuts";
 
 export type General = {
   endedShown: number;
-  confirmOnEnd: boolean;
   showWorktrees: boolean;
   showSubagents: boolean;
 };
@@ -45,7 +44,7 @@ export const lineHeights = { min: 1, max: 2 };
 
 export function defaultSettings(): AppSettings {
   return {
-    general: { endedShown: 10, confirmOnEnd: true, showWorktrees: true, showSubagents: false },
+    general: { endedShown: 10, showWorktrees: true, showSubagents: false },
     notifications: {
       permission: { banner: true, sound: true },
       waiting: { banner: true, sound: false },

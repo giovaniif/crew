@@ -16,6 +16,7 @@ type Session struct {
 	Where  string     `json:"where"`
 	Banner string     `json:"banner"`
 	Since  *time.Time `json:"since"`
+	Order  int        `json:"order"`
 }
 
 type Quota struct {
@@ -100,7 +101,6 @@ type BoardPR struct {
 
 type NativeSession struct {
 	Session
-	Order int       `json:"order"`
 	Board []BoardPR `json:"board"`
 }
 
@@ -380,9 +380,6 @@ func (v *View) addEvent(ev domain.SessionEvent) {
 }
 
 func (v *View) orders() map[string]int {
-	if !v.native {
-		return nil
-	}
 	flat := make([]domain.Session, 0, len(v.order))
 	for _, id := range v.order {
 		s := v.sessions[id]
@@ -401,7 +398,7 @@ func (v *View) orders() map[string]int {
 func (v *View) show(s domain.Session, orders map[string]int) NativeSession {
 	d := v.derive(s, orders)
 	v.shown[s.ID] = d
-	out := NativeSession{Session: Session{Session: s, Name: d.name, Where: d.where, Banner: d.banner}, Order: d.order, Board: d.board}
+	out := NativeSession{Session: Session{Session: s, Name: d.name, Where: d.where, Banner: d.banner, Order: d.order}, Board: d.board}
 	if !d.since.IsZero() {
 		since := d.since
 		out.Since = &since
@@ -437,11 +434,11 @@ func (v *View) derive(s domain.Session, orders map[string]int) derived {
 		banner: banner.Body,
 		since:  since,
 	}
+	out.order = -1
+	if i, ok := orders[s.ID]; ok {
+		out.order = i
+	}
 	if v.native {
-		out.order = -1
-		if i, ok := orders[s.ID]; ok {
-			out.order = i
-		}
 		out.board = board(domain.BuildSessionCard(v.tasks[s.TaskID], s, worktrees, nil).PRs)
 	}
 	return out
