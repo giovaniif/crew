@@ -126,6 +126,14 @@ describe("touch targets", () => {
   });
 });
 
+describe("a disabled link button", () => {
+  it("stays a plain link with no filled background", () => {
+    const disabled = rule(".link-button:disabled");
+    expect(disabled.background).toBe("none");
+    expect(disabled.color).toBe("var(--subtext)");
+  });
+});
+
 describe("the open session link", () => {
   it("uses the theme link color", () => {
     expect(rule(".open-session").color).toBe("var(--link)");
