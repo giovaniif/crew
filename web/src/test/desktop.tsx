@@ -16,7 +16,7 @@ export function session(id: string, name: string, extra: Partial<Session> = {}):
   return { ...goldenState().sessions[0], ID: id, name, WorktreeIDs: null, order: undefined, ...extra };
 }
 
-export function desktop(hash = "", wide = true, userAgent = "Mozilla/5.0 (X11; Linux x86_64)", extra: Partial<AppEnv> = {}) {
+export function desktop(hash = "", wide = true, userAgent = "Mozilla/5.0 (X11; Linux x86_64)", extra: Partial<AppEnv> = {}, routes: (server: FakeServer) => void = () => undefined) {
   window.location.hash = hash;
   const sockets = new FakeSockets();
   const storage = new MemoryStorage();
@@ -24,6 +24,7 @@ export function desktop(hash = "", wide = true, userAgent = "Mozilla/5.0 (X11; L
   const server = new FakeServer()
     .on("GET", "/api/v1/hello", { status: 200, body: { api: "v1", build: "v0.12.0+abc" } })
     .on("GET", "/api/v1/workspaces", { status: 200, body: { workspaces: [], last_used: "" } });
+  routes(server);
   const width = new FakeWidth(wide);
   const terminals = new FakeTerminals();
   const env: AppEnv = {
