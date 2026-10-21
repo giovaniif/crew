@@ -81,6 +81,13 @@ describe("Servers", () => {
     expect(await screen.findAllByRole("listitem")).toHaveLength(2);
   });
 
+  it("has no Fix for a server added by its address", async () => {
+    render(<ServersScreen servers={new Servers(withRemote())} />);
+    const byAddress = await screen.findByRole("listitem", { name: "crew.example.ts.net" });
+    expect(within(byAddress).queryByRole("button", { name: "Fix" })).not.toBeInTheDocument();
+    expect(within(byAddress).getByRole("button", { name: "Remove" })).toBeInTheDocument();
+  });
+
   it("shows why a Fix failed", async () => {
     const desktop = withRemote();
     desktop.failures.crew_server_fix = "the daemon still fails: exec format error";
