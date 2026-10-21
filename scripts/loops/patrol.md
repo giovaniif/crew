@@ -33,21 +33,22 @@ Keep Phase A under 20 minutes. Do not wait for slow macOS CI jobs. The next run 
 ## Phase B: one new verified fix
 
 1. **Stack.** `go run ./scripts/verify doctor`, then `go run ./scripts/verify iso up` and `iso seed --sessions 3`.
-2. **Area.** Read the rotation. The `patrol run log` issue has comments `area: <name>`. Take the area in `features/README.md` after the newest one, and comment `area: <name>`.
-3. **Map warm-up**, 15 minutes at most: `go run ./scripts/verify map run <area>`. Fix map drift in its own small PR in this run. A real bug becomes a candidate.
-4. **Explore** like a real user. For the PWA, use both viewports. Look for wrong or stale data, dead or wrong actions, errors and failed API calls, friction and dead ends, layout breaks, missing loading, empty or error states, slow screens, and edge states (dialogs, long text, back and forward, double submit).
-5. **Pick one fix**, about 5 files or 200 lines at most.
+2. **Backlog first.** You own each bug issue that the patrol opened. A bug issue is open and has no open PR that closes it: fix it before you look for a new bug. Find them with `gh issue list --state open --label patrol` and skip the issues with a `Closes #<n>` PR that is open. Take the oldest one. Read the issue, confirm that the bug is still on `origin/main`, and continue at step 7 with it. If it is already fixed, comment the proof and close it. Do the area steps 3 to 6 only when no such issue is open. Each open bug issue is a debt of this loop. Never end a run with a new bug issue that has no PR: when you find a second bug, fix it in the next run, from this step.
+3. **Area.** Read the rotation. The `patrol run log` issue has comments `area: <name>`. Take the area in `features/README.md` after the newest one, and comment `area: <name>`.
+4. **Map warm-up**, 15 minutes at most: `go run ./scripts/verify map run <area>`. Fix map drift in its own small PR in this run. A real bug becomes a candidate.
+5. **Explore** like a real user. For the PWA, use both viewports. Look for wrong or stale data, dead or wrong actions, errors and failed API calls, friction and dead ends, layout breaks, missing loading, empty or error states, slow screens, and edge states (dialogs, long text, back and forward, double submit).
+6. **Pick one fix**, about 5 files or 200 lines at most.
    - Priority: a functional bug, then UX friction, then polish. A fix that only screen readers notice is not eligible.
    - Restate it: what the user sees, why it is wrong, and why it is not deliberate (read `git log -S`, FEATURES.md, ARCHITECTURE.md and the ADRs).
    - Dedupe: search open issues and open PRs (`gh issue list`, `gh pr list --search`) and the `denied:` comments on the `patrol run log` issue. When you mark an issue as a duplicate, link the original first.
    - You can say "nothing qualifies" only after you walked every main flow of the area at both viewports.
-6. **Prove it** with the proof bar of the verify skill:
-   - Open an issue for the bug. Make a branch `<issue-number>-<slug>` from `origin/main` in a new worktree.
+7. **Prove it** with the proof bar of the verify skill:
+   - For a new bug, open an issue with the label `patrol`. For a backlog bug, use its issue. Make a branch `<issue-number>-<slug>` from `origin/main` in a new worktree.
    - Reproduce it on base.
    - Commit the failing test alone. Then commit the fix. Follow the commit rules of the root `AGENTS.md` (no comments, test commit first).
    - Prove it on head, run `go run ./scripts/verify design-check`, then `go run ./scripts/verify evidence verify <bundle>`. It must be `ok`.
-7. **Open the PR** (never a draft) with `Closes #<n>`, a conventional title, and this body: what was wrong and how you found it, zoom crops, then full before and after pairs for each viewport (`verify annotate`, `verify assets push`), the test plan, the output of the Validate commands, and a `## Verification` section from the bundle. End the body with the line `🤖 Generated with [Claude Code](https://claude.com/claude-code)`. Assign the owner and do one babysit pass.
-8. `go run ./scripts/verify iso down`. Run it also after a failure.
+8. **Open the PR** (never a draft) with `Closes #<n>`, a conventional title, and this body: what was wrong and how you found it, zoom crops, then full before and after pairs for each viewport (`verify annotate`, `verify assets push`), the test plan, the output of the Validate commands, and a `## Verification` section from the bundle. End the body with the line `🤖 Generated with [Claude Code](https://claude.com/claude-code)`. Assign the owner and do one babysit pass.
+9. `go run ./scripts/verify iso down`. Run it also after a failure.
 
 ## Commits
 
