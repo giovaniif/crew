@@ -147,6 +147,14 @@ fn the_saved_file_is_private_and_loads_back_with_the_logins() {
 }
 
 #[test]
+fn a_reload_of_the_page_still_sees_the_first_run() {
+    let hub = crew_desktop::hub::Hub::open(temp_file("hub"));
+    assert!(hub.listing().first_run);
+    assert!(hub.listing().first_run);
+    assert_eq!(hub.listing().selected, LOCAL_ID);
+}
+
+#[test]
 fn the_rows_for_the_page_have_no_logins() {
     let mut store = Store::load(&temp_file("rows")).0;
     store.add(Kind::Ssh { host: "box".into() }, Some(serde_json::json!({"token": "secret"})));
