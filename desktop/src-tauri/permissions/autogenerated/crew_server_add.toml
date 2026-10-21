@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-crew-server-add"
+description = "Enables the crew_server_add command without any pre-configured scope."
+commands.allow = ["crew_server_add"]
+
+[[permission]]
+identifier = "deny-crew-server-add"
+description = "Denies the crew_server_add command without any pre-configured scope."
+commands.deny = ["crew_server_add"]

@@ -113,6 +113,7 @@ function watchBuild() {
 }
 
 const root = document.getElementById("root");
+const connectUrl = (window as { __CREW_CONNECT_URL__?: unknown }).__CREW_CONNECT_URL__;
 if (root) {
   createRoot(root).render(
     <StrictMode>
@@ -134,6 +135,7 @@ if (root) {
           desktop: tauriBridge(window),
           desktopAuth: desktopAuth((window as { __CREW_DESKTOP_AUTH__?: unknown }).__CREW_DESKTOP_AUTH__),
           desktopFix: desktopFix(window),
+          connectUrl: typeof connectUrl === "string" ? connectUrl : undefined,
         }}
       />
     </StrictMode>,

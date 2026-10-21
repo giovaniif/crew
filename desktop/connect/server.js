@@ -15,3 +15,25 @@ export function serverUrl(input) {
   }
   return url.origin + "/";
 }
+
+export function savedServers(storage) {
+  let list = null;
+  try {
+    list = JSON.parse(storage.getItem("crew.servers") ?? "null");
+  } catch {
+    list = null;
+  }
+  if (Array.isArray(list)) {
+    return list.filter((s) => typeof s === "string");
+  }
+  const old = storage.getItem("crew.server");
+  return old ? [old] : [];
+}
+
+export function rememberServer(list, url) {
+  return [url, ...list.filter((s) => s !== url)];
+}
+
+export function forgetServer(list, url) {
+  return list.filter((s) => s !== url);
+}

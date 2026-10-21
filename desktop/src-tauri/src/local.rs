@@ -52,9 +52,13 @@ pub struct LocalServe {
 
 impl LocalServe {
     pub fn start(crew: &Path, port: u16) -> io::Result<Self> {
-        let mut command = Command::new(crew);
+        Self::spawn(crew.as_os_str(), &serve_args(port), port)
+    }
+
+    pub fn spawn(program: &OsStr, args: &[String], port: u16) -> io::Result<Self> {
+        let mut command = Command::new(program);
         command
-            .args(serve_args(port))
+            .args(args)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::inherit());
@@ -167,11 +171,18 @@ pub fn pair(crew: &Path, port: u16) -> Result<serde_json::Value, String> {
     if !out.status.success() {
         return Err(String::from_utf8_lossy(&out.stderr).into_owned());
     }
-    let code: serde_json::Value = serde_json::from_slice(&out.stdout).map_err(|e| e.to_string())?;
-    let code = code
-        .get("code")
+    pair_with(port, &pair_code(&out.stdout)?)
+}
+
+pub fn pair_code(output: &[u8]) -> Result<String, String> {
+    let code: serde_json::Value = serde_json::from_slice(output).map_err(|e| e.to_string())?;
+    code.get("code")
         .and_then(|c| c.as_str())
-        .ok_or("no code from crew remote pair")?;
+        .map(str::to_string)
+        .ok_or_else(|| "no code from crew remote pair".to_string())
+}
+
+pub fn pair_with(port: u16, code: &str) -> Result<serde_json::Value, String> {
     let body = serde_json::json!({ "code": code, "name": DEVICE_NAME }).to_string();
     let (status, reply) =
         request(port, "POST", "/api/v1/pair", None, Some(&body)).map_err(|e| e.to_string())?;

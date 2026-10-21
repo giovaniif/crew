@@ -16,9 +16,12 @@ import { NewSession } from "./screens/NewSession";
 import { Pair } from "./screens/Pair";
 import { SessionScreen } from "./screens/Session";
 import { SessionList } from "./screens/SessionList";
+import { FirstRun } from "./screens/FirstRun";
+import { ServersScreen } from "./screens/Servers";
 import { Settings } from "./screens/Settings";
 import { PhoneSession } from "./screens/PhoneSession";
 import { ReviewPane } from "./screens/Review";
+import { Servers } from "./servers";
 import { useStream, useStreamClient, type OpenSocket } from "./stream";
 import { TerminalStore, type TerminalEnv } from "./terminal";
 
@@ -40,6 +43,7 @@ export type AppEnv = {
   desktopFix?: () => Promise<void>;
   terminal?: TerminalEnv;
   desktop?: DesktopBridge;
+  connectUrl?: string;
 };
 
 export type Width = {
@@ -124,6 +128,7 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
   const [hash, setHash] = useState(env.hash);
   const now = useNow(env.now, snapshot.status === "offline" ? 1000 : 30000);
   const api = useMemo(() => ({ fetch, token: auth.token }), [fetch, auth.token]);
+  const servers = useMemo(() => (env.desktop ? new Servers(env.desktop) : undefined), [env.desktop]);
   const terminals = useTerminals(env.terminal, api, modifierKeys(env.userAgent).mac);
   const sessionIds = snapshot.state ? snapshot.state.sessions.map((s) => s.ID).join("\n") : null;
 
@@ -151,10 +156,11 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
   const wide = useWide(env.wide);
   const route = parseRoute(hash);
   const retry = () => client.retryNow();
-  const other = otherScreen(hash, { env, auth, api, now, snapshot, onSignOut, go });
+  const other = otherScreen(hash, { env, auth, api, now, snapshot, onSignOut, go, servers });
   if (wide) {
     return (
       <Desktop
+        servers={servers}
         env={env}
         token={auth.token}
         hash={hash}
@@ -171,6 +177,13 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
   }
   if (route.screen === "new") {
     return <NewSession env={env} token={auth.token} />;
+  }
+  if (hash === "#/servers/add" && servers) {
+    return (
+      <main className="screen">
+        <FirstRun servers={servers} welcome={false} onClose={() => go("#/servers")} />
+      </main>
+    );
   }
   if (route.screen === "session") {
     const phoneSession = snapshot.state?.sessions.find((s) => s.ID === route.id) ?? null;
@@ -214,9 +227,13 @@ type OtherInputs = {
   snapshot: ReturnType<typeof useStream>;
   onSignOut: () => Promise<void>;
   go: (hash: string) => void;
+  servers?: Servers;
 };
 
-function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, go }: OtherInputs): { screen: ReactNode; tab: Tab } | null {
+function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, go, servers }: OtherInputs): { screen: ReactNode; tab: Tab } | null {
+  if (hash === "#/servers" && servers) {
+    return { screen: <ServersScreen servers={servers} />, tab: "settings" };
+  }
   if (hash === "#/disk") {
     return { screen: <Disk api={api} state={snapshot.state} now={now} go={go} />, tab: "sessions" };
   }
@@ -248,6 +265,7 @@ function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, g
             fetch={env.fetch}
             push={env.push ?? noPush}
             onSignOut={onSignOut}
+            connectUrl={env.connectUrl}
             userAgent={env.userAgent}
           />
           {env.desktop && <DesktopAlerts storage={env.storage} />}

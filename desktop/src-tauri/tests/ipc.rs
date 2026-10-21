@@ -1,4 +1,4 @@
-use crew_desktop::ipc::serve_capability;
+use crew_desktop::ipc::{serve_capability, server_capability, tunnel_capability, SERVER_COMMANDS};
 use serde_json::{json, Value};
 use url::Url;
 
@@ -53,4 +53,29 @@ fn the_static_capability_gives_no_remote_origin_ipc() {
     let cap: Value = serde_json::from_str(&text).unwrap();
     assert_eq!(cap.get("remote"), None);
     assert_eq!(cap["permissions"], json!(["core:default", "allow-fix-daemon"]));
+}
+
+fn parsed(text: Option<String>) -> Option<Value> {
+    text.map(|t| serde_json::from_str(&t).unwrap())
+}
+
+#[test]
+fn only_the_local_serve_origin_gets_the_server_commands() {
+    let cap = parsed(server_capability(&Url::parse("http://127.0.0.1:53412/").unwrap())).unwrap();
+    assert_eq!(cap["remote"]["urls"], json!(["http://127.0.0.1:53412"]));
+    assert_eq!(cap["permissions"], json!(SERVER_COMMANDS));
+    assert_eq!(server_capability(&Url::parse("https://crew.example.ts.net/").unwrap()), None);
+}
+
+#[test]
+fn a_page_of_a_remote_server_gets_no_server_command() {
+    let serve = capability("http://127.0.0.1:53412/").unwrap();
+    let tunnel = parsed(tunnel_capability(&Url::parse("http://127.0.0.1:53999/").unwrap())).unwrap();
+    for cap in [&serve, &tunnel] {
+        for command in SERVER_COMMANDS {
+            assert!(!cap["permissions"].as_array().unwrap().contains(&json!(command)), "{command}");
+        }
+    }
+    assert_eq!(tunnel["permissions"], json!(["allow-fix-daemon"]));
+    assert_eq!(tunnel_capability(&Url::parse("https://crew.example.ts.net/").unwrap()), None);
 }
