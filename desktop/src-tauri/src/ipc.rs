@@ -12,10 +12,10 @@ pub fn serve_capability(url: &Url) -> Option<String> {
     let origin = format!("http://{host}:{port}");
     Some(
         serde_json::json!({
-            "identifier": "serve",
-            "windows": ["main"],
+            "identifier": format!("serve-{host}-{port}"),
+            "windows": ["main", "main-*"],
             "remote": { "urls": [origin] },
-            "permissions": ["core:default", "allow-crew-notify", "allow-crew-attention"]
+            "permissions": ["core:default", "allow-crew-notify", "allow-crew-attention", "allow-fix-daemon"]
         })
         .to_string(),
     )

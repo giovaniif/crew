@@ -79,7 +79,7 @@ func New(cfg Config) (*Server, error) {
 }
 
 func (s *Server) routes() []route {
-	return []route{
+	return append([]route{
 		{"GET /api/v1/workspaces", s.workspaces},
 		{"GET /api/v1/session-options", sessionOptions},
 		{"GET /api/v1/automations", listAutomations},
@@ -87,6 +87,8 @@ func (s *Server) routes() []route {
 		{"POST /api/v1/workspaces", addWorkspace},
 		{"POST /api/v1/workspaces/remove", removeWorkspace},
 		{"POST /api/v1/automations/{name}/run", runAutomation},
+		{"POST /api/v1/automations", ownerOnly(saveAutomation)},
+		{"POST /api/v1/automations/runs/{id}/rerun", ownerOnly(rerunAutomation)},
 		{"POST /api/v1/sessions", newSession},
 		{"GET /api/v1/work-items/resolve", resolveWorkItem},
 		{"GET /api/v1/sessions/{id}/messages", messages},
@@ -128,7 +130,7 @@ func (s *Server) routes() []route {
 		{"POST /api/v1/sessions/{id}/fresh", freshMateConversation},
 		{"GET /api/v1/mates/{name}/memory", mateMemory},
 		{"POST /api/v1/mates/{name}/memory", setMateMemory},
-	}
+	}, settingsRoutes()...)
 }
 
 func (s *Server) Handler(fallback http.Handler) http.Handler {
@@ -217,6 +219,10 @@ func (s *Server) check(ctx context.Context, d Daemon, token string) (rpc.Device,
 
 func (s *Server) dial(ctx context.Context) (Daemon, error) {
 	d, err := s.cfg.Dial(ctx)
+	var mismatch *rpc.Error
+	if errors.As(err, &mismatch) && mismatch.Code == rpc.CodeVersionMismatch {
+		return nil, mismatch
+	}
 	if err != nil {
 		return nil, &rpc.Error{Code: rpc.CodeUnavailable, Message: "the crew daemon is not reachable: " + err.Error()}
 	}

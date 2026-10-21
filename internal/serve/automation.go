@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/giovaniif/crew/internal/domain"
 	"github.com/giovaniif/crew/internal/rpc"
@@ -30,6 +31,29 @@ func runAutomation(r *http.Request, d Daemon) (any, error) {
 	p := rpc.AutomationRunParams{Name: r.PathValue("name"), Context: body.Context, WorkItem: body.WorkItem}
 	var out rpc.AutomationRunResult
 	if err := d.Call(r.Context(), rpc.MethodAutomationRun, p, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func saveAutomation(r *http.Request, d Daemon) (any, error) {
+	var p rpc.AutomationSaveParams
+	if err := decodeOne(r, &p, "automation"); err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(p.Automation.Name) == "" {
+		return nil, &rpc.Error{Code: rpc.CodeBadRequest, Message: "the automation needs a name"}
+	}
+	var out domain.Automation
+	if err := d.Call(r.Context(), rpc.MethodAutomationSave, p, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func rerunAutomation(r *http.Request, d Daemon) (any, error) {
+	var out rpc.AutomationRunResult
+	if err := d.Call(r.Context(), rpc.MethodAutomationRun, rpc.AutomationRunParams{Rerun: r.PathValue("id")}, &out); err != nil {
 		return nil, err
 	}
 	return out, nil

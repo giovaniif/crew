@@ -9,11 +9,11 @@ fn capability(url: &str) -> Option<Value> {
 #[test]
 fn the_serve_origin_gets_the_commands_and_nothing_more() {
     let cap = capability("http://127.0.0.1:53412/#/sessions/s1").unwrap();
-    assert_eq!(cap["windows"], json!(["main"]));
+    assert_eq!(cap["windows"], json!(["main", "main-*"]));
     assert_eq!(cap["remote"]["urls"], json!(["http://127.0.0.1:53412"]));
     assert_eq!(
         cap["permissions"],
-        json!(["core:default", "allow-crew-notify", "allow-crew-attention"])
+        json!(["core:default", "allow-crew-notify", "allow-crew-attention", "allow-fix-daemon"])
     );
 }
 
@@ -21,6 +21,13 @@ fn the_serve_origin_gets_the_commands_and_nothing_more() {
 fn localhost_keeps_its_name_and_port() {
     let cap = capability("http://localhost:5179/").unwrap();
     assert_eq!(cap["remote"]["urls"], json!(["http://localhost:5179"]));
+}
+
+#[test]
+fn a_new_serve_port_gets_its_own_capability() {
+    let first = capability("http://127.0.0.1:53412/").unwrap();
+    let second = capability("http://127.0.0.1:53413/").unwrap();
+    assert_ne!(first["identifier"], second["identifier"]);
 }
 
 #[test]
@@ -45,5 +52,5 @@ fn the_static_capability_gives_no_remote_origin_ipc() {
     .unwrap();
     let cap: Value = serde_json::from_str(&text).unwrap();
     assert_eq!(cap.get("remote"), None);
-    assert_eq!(cap["permissions"], json!(["core:default"]));
+    assert_eq!(cap["permissions"], json!(["core:default", "allow-fix-daemon"]));
 }

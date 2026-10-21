@@ -17,7 +17,7 @@ The SwiftUI app has a Browser tab ([ADR 0051](0051-browser-in-mac-app.md)). It w
 - Profiles keep cookies apart. You can import cookies from a different browser and send them to the server.
 - An agent controls the tab through `browser.attach`. When there is no app, the server runs a headless browser, and the tab shows its frames ([ADR 0054](0054-headless-browser-fallback.md)).
 
-The Tauri app shows the UI of `web/` in one webview. That webview loads `crew serve`. It has Tauri IPC: the commands `crew_notify` and `crew_attention`. Before this ADR, `capabilities/default.json` gave IPC to each origin `http://127.0.0.1:*` and `http://localhost:*`. A dev server of a session also has such an origin. Thus a page that an agent makes could call the Tauri commands. This is not safe.
+The Tauri app shows the UI of `web/` in one webview. That webview loads `crew serve`. It has Tauri IPC: the commands `crew_notify`, `crew_attention` and `fix_daemon`. Before this ADR, `capabilities/default.json` gave IPC to each origin `http://127.0.0.1:*` and `http://localhost:*`. A dev server of a session also has such an origin. Thus a page that an agent makes could call the Tauri commands. This is not safe.
 
 ## Decision
 
@@ -40,8 +40,8 @@ The Tauri app shows the UI of `web/` in one webview. That webview loads `crew se
 
 ### IPC only for the origin of crew serve
 
-- `capabilities/default.json` has no `remote` URLs. It gives `core:default` only to the bundled page.
-- At start, the app adds a capability at run time (`ipc::serve_capability`, `src/ipc.rs`). It gives `crew_notify`, `crew_attention` and `core:default` to the window `main` for one origin: the exact origin of `crew serve`, for example `http://127.0.0.1:53412`.
+- `capabilities/default.json` has no `remote` URLs. It gives `core:default` and `fix_daemon` only to the bundled page.
+- Each time the app opens a window on `crew serve`, it adds a capability at run time (`ipc::serve_capability`, `src/ipc.rs`). It gives `crew_notify`, `crew_attention`, `fix_daemon` and `core:default` to the windows `main` and `main-*` for one origin: the exact origin of `crew serve`, for example `http://127.0.0.1:53412`.
 - The app adds this capability only for an `http` origin on `127.0.0.1` or `localhost` with a port. A different `CREW_URL` origin gets no IPC, as before.
 - Thus a dev server on a different port gets no IPC in an iframe or in a different window. `tests/ipc.rs` tests these rules.
 
