@@ -352,3 +352,21 @@ func TestReviewLeavesTheAgentColumnOutWhenNarrow(t *testing.T) {
 		t.Fatalf("the agent column is drawn at 110 columns:\n%s", out)
 	}
 }
+
+func TestReviewTreeShowsTheFolderSoSameNamedFilesDiffer(t *testing.T) {
+	st := fixture(1, 1)
+	diff := "diff --git a/api/main.go b/api/main.go\nindex 1..2 100644\n--- a/api/main.go\n+++ b/api/main.go\n@@ -1 +1 @@\n-a\n+b\n" +
+		"diff --git a/web/main.go b/web/main.go\nindex 1..2 100644\n--- a/web/main.go\n+++ b/web/main.go\n@@ -1 +1 @@\n-a\n+b\n" +
+		"diff --git a/internal/adapters/storage/postgres/migrations/handler.go b/internal/adapters/storage/postgres/migrations/handler.go\nindex 1..2 100644\n--- a/internal/adapters/storage/postgres/migrations/handler.go\n+++ b/internal/adapters/storage/postgres/migrations/handler.go\n@@ -1 +1 @@\n-a\n+b\n"
+	rv := &fakeReviewer{reply: rpc.Review{Worktrees: []domain.WorktreeReview{{Worktree: st.Worktrees[0], Files: domain.ParseDiff(diff)}}}}
+	m := tui.New(tui.Options{Theme: tui.Latte(), Now: clock, Review: rv})
+	m = update(m, tea.WindowSizeMsg{Width: 150, Height: 40})
+	m = update(m, tui.StateMsg(st))
+	m = drive(m, key("r"), key("n"))
+	out := screen(m)
+	for _, want := range []string{"M api/main.go", "M web/main.go", "…", "migrations/handler.go"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("tree misses %q:\n%s", want, out)
+		}
+	}
+}
