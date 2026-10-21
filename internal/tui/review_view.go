@@ -317,6 +317,21 @@ func statusColor(t Theme, s domain.FileStatus) string {
 	return t.Peach
 }
 
+func treeName(file string, room int) [2]string {
+	dir, base := path.Split(file)
+	if dir == "" {
+		return [2]string{"", base}
+	}
+	if free := room - ansi.StringWidth(base); ansi.StringWidth(dir) > free {
+		if free < 2 {
+			return [2]string{"", base}
+		}
+		r := []rune(dir)
+		dir = "…" + string(r[len(r)-(free-1):])
+	}
+	return [2]string{dir, base}
+}
+
 func (m Model) treeLines(width, height int) ([]string, []int) {
 	t := m.opts.Theme
 	p := m.paint
@@ -354,8 +369,9 @@ func (m Model) treeLines(width, height int) ([]string, []int) {
 		if f.file.Deleted == 0 {
 			stat = fmt.Sprintf("+%d ", f.file.Added)
 		}
-		rows = append(rows, p.cellRight(width, bg,
-			[]seg{mark, {text: string(f.file.Status) + " ", fg: statusColor(t, f.file.Status), bold: true}, {text: path.Base(f.file.Path)}},
+		lead := []seg{mark, {text: string(f.file.Status) + " ", fg: statusColor(t, f.file.Status), bold: true}}
+		name := treeName(f.file.Path, width-ansi.StringWidth(stat)-ansi.StringWidth(mark.text)-3)
+		rows = append(rows, p.cellRight(width, bg, append(lead, seg{text: name[0], fg: t.Subtext}, seg{text: name[1]}),
 			[]seg{{text: stat, fg: t.Subtext}}))
 		for len(files) < len(rows)-1 {
 			files = append(files, -1)
