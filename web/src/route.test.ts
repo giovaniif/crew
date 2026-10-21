@@ -11,4 +11,9 @@ describe("parseRoute", () => {
     expect(parseRoute("")).toEqual({ screen: "list" });
     expect(parseRoute("#/new/extra")).toEqual({ screen: "list" });
   });
+
+  it("opens a session on its shell tab", () => {
+    expect(parseRoute("#/sessions/s1/shell")).toEqual({ screen: "session", id: "s1", tab: "shell" });
+    expect(parseRoute("#/sessions/s1/other")).toEqual({ screen: "list" });
+  });
 });
