@@ -142,6 +142,12 @@ The phone app: a PWA that `crew serve` embeds and serves at `/` (ADR [0046](../d
   - Model… and Effort… show the choices of the harness from `GET /api/v1/session-options`, then post `…/switch`. Kill dev servers posts `…/kill-dev-servers`. serve finds the process groups, so the app never sends one.
   - End session asks first while Settings has "Ask before I end a session" on (the default). The value is `crew.confirmEnd` in `localStorage` (`off` turns it off).
   - A failed command shows the message of the daemon in a `role="alert"` note. Tests: `npm test -- SessionCommands`.
+- **Servers** (desktop app only, issue #522). `src/servers.ts` has the steps of the Add a server flow (the same as the Mac app), the SSH target check and `Servers`, which calls the `crew_server*` commands (see [desktop/](../desktop/AGENTS.md)).
+  - The chip in the sidebar shows the current server. Its menu switches servers and has Add a server… and Manage servers…. A page of a remote server has no IPC, so it has no chip. The tray menu has Open This computer.
+  - `#/servers` (`screens/Servers.tsx`) lists the servers with Open, Fix and Remove. You cannot remove This computer. A server that you added by its address has no Fix.
+  - `#/servers/add` and the first start of the app show `screens/FirstRun.tsx` in a sheet: Welcome, Where agents run, Server, Set up, Workspace, Done. This computer skips Server. Only the first start shows Welcome.
+  - On mobile, `AppEnv.connectUrl` (`window.__CREW_CONNECT_URL__`) adds Change server to Settings and to the pairing screen.
+  - Tests: `npm test -- FirstRun Servers`.
 - `src/screens/`: one component for each screen. `src/theme.css`: the Latte palette as CSS variables, and Mocha under `prefers-color-scheme: dark`, and IBM Plex Sans and JetBrains Mono from `@fontsource`.
 - `src/test/`: test helpers (`FakeServer`, `MemoryStorage`, the Vitest setup). tdd-check treats them as port fakes.
 
