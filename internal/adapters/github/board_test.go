@@ -25,7 +25,7 @@ func TestPRBoardParseBoardReadsEverythingTheBoardShows(t *testing.T) {
 	want := map[string][]domain.PullRequest{
 		"r0": {
 			{
-				Number: 12, Title: "Add login", URL: "https://github.com/o/api/pull/12", Head: "feat", Author: "ana", State: domain.PROpen,
+				Number: 12, Title: "Add login", URL: "https://github.com/o/api/pull/12", Head: "feat", Author: "ana", State: domain.PROpen, Draft: true,
 				Checks: domain.CheckFailing, ReviewDecision: domain.ReviewChangesRequested, Mergeable: domain.MergeConflicting,
 				UnresolvedThreads: 2, BotComments: 4,
 				Failing: []domain.FailingCheck{
@@ -270,5 +270,12 @@ func TestPRBoardFinderKeepsAnEmptyRepoAsASuccess(t *testing.T) {
 	}
 	if prs, ok := got["/w/a"]; !ok || len(prs) != 0 {
 		t.Errorf("got %v, want an empty answer for the repo", got)
+	}
+}
+
+func TestPRBoardQueryAsksIfAPRIsADraft(t *testing.T) {
+	query, _ := boardQuery([]repoRef{{"o", "api"}})
+	if !strings.Contains(query, " isDraft ") {
+		t.Errorf("query does not ask for isDraft:\n%s", query)
 	}
 }

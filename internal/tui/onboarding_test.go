@@ -157,6 +157,20 @@ func TestSetupShowsAnInstallFailureAndStays(t *testing.T) {
 	mustShow(t, screen(m), "✗ settings.json is not valid JSON", "Claude Code")
 }
 
+func TestSetupOmpStepSaysACrewHookFile(t *testing.T) {
+	m, _ := setupModel(t, freshMachine())
+	for _, k := range []tea.KeyPressMsg{keyDown, keyDown, keySpace, keyEnter} {
+		m = pressCmd(m, k)
+	}
+	for range 4 {
+		if strings.Contains(screen(m), "hook file of its own") {
+			break
+		}
+		m = pressCmd(m, keyEnter)
+	}
+	mustShow(t, screen(m), "Writes a crew hook file of its own.")
+}
+
 func TestSetupNvimStep(t *testing.T) {
 	cases := []struct {
 		name string

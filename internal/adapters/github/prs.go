@@ -138,7 +138,7 @@ func parseRemote(url string) (owner, name string, ok bool) {
 const boardFragment = `
     pullRequests(first: %d, orderBy: {field: UPDATED_AT, direction: DESC}, states: [OPEN, MERGED, CLOSED]) {
       nodes {
-        number title url headRefName isCrossRepository state reviewDecision mergeable author { login }
+        number title url headRefName isCrossRepository state isDraft reviewDecision mergeable author { login }
         reviewThreads(first: 100) { nodes { isResolved comments(first: 1) { nodes { author { __typename } createdAt } } } }
         comments(last: 50) { nodes { author { __typename } createdAt } }
         reviews(last: 50) { nodes { author { __typename } submittedAt } }
@@ -192,6 +192,7 @@ type ghPR struct {
 	Head           string `json:"headRefName"`
 	CrossRepo      bool   `json:"isCrossRepository"`
 	State          string `json:"state"`
+	Draft          bool   `json:"isDraft"`
 	ReviewDecision string `json:"reviewDecision"`
 	Mergeable      string `json:"mergeable"`
 	Author         *struct {
@@ -259,7 +260,7 @@ func parseBoard(out []byte, aliases []string) (map[string][]domain.PullRequest, 
 
 func (p ghPR) toDomain() domain.PullRequest {
 	pr := domain.PullRequest{
-		Number: p.Number, Title: p.Title, URL: p.URL, Head: p.Head, State: domain.PRState(p.State),
+		Number: p.Number, Title: p.Title, URL: p.URL, Head: p.Head, State: domain.PRState(p.State), Draft: p.Draft,
 		ReviewDecision: domain.ReviewDecision(p.ReviewDecision),
 	}
 	if p.Author != nil {

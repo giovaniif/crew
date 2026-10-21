@@ -98,6 +98,8 @@ Unknown paths under `/api/` answer `not_found`.
 | `GET /api/v1/disk` | yes | `disk.view`, `subscribe` | → the `DiskView` (tiles, `rows`, `recent`) and `ports` `[{"port","pgid","command","worktree","session"}]`, from the worktrees of one snapshot, because the stream drops `Ports` |
 | `POST /api/v1/cleanup/worktree` | owner | `cleanup.worktree` | `{"path","backup"}` (`path` not blank, no other keys) → the `CleanupItem` with its `outcome`. The daemon applies the cleanup rules again. It never removes a `keep` worktree, and it removes a dirty worktree only with `backup` |
 | `POST /api/v1/ports/kill` | owner | `ports.kill` | `{"pgids"}` (not empty) → `{"killed"}`; the daemon stops only process groups that hold a listed port |
+| `GET /api/v1/sessions/{id}/browser` | yes | `browser.headless.view` | → `{"live","png","width","height"}`, the last screenshot of the headless tab of the session; `{"live":false}` when the session has no headless tab |
+| `POST /api/v1/browser/cookies` | owner | `browser.cookies.import` | `{"file"}` (the text of a Netscape `cookies.txt`, a JSON cookie list or a Playwright `storageState`, no other keys) → `{"imported","total"}`; serve parses the file with `domain.ParseCookieFile`. A file that does not parse is `bad_request` |
 | `GET /api/v1/config` | owner | `config.get` | → `{"path","values"}`, the settings of `config.toml` that crew can change |
 | `POST /api/v1/config` | owner | `config.set` | `{"key","value"}` (`key` not blank, no other keys; an empty `value` removes the key) → `{"path","values"}` |
 | `GET /api/v1/onboarding` | owner | `onboarding.status` | → `{"done","harnesses":{"<harness>":{"installed","file"}},"nvim":{"on_path","configured","config_file","plugin_dir","plugin_found"}}` |
