@@ -21,15 +21,21 @@ function expiresIn(at: string, now: number): string {
 function Card({ api, approval, now }: { api: Authed; approval: Approval; now: number }) {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState("");
+  const [failed, setFailed] = useState("");
 
   async function decide(approve: boolean) {
     setBusy(true);
+    setFailed("");
     try {
       await decideApproval(api, approval.ID, approve);
       setDone(approve ? "Approved. The session tries it again." : "Denied. The session is told no.");
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      setDone(err instanceof ApiError && (err.code === "stale" || err.code === "not_found") ? "This approval is gone: " + message : message);
+      if (err instanceof ApiError && (err.code === "stale" || err.code === "not_found")) {
+        setDone("This approval is gone: " + message);
+      } else {
+        setFailed(message);
+      }
     } finally {
       setBusy(false);
     }
@@ -48,6 +54,7 @@ function Card({ api, approval, now }: { api: Authed; approval: Approval; now: nu
       </p>
       <pre className="approval-input">{approval.Action.Input}</pre>
       <a className="open-session" href={"#/sessions/" + encodeURIComponent(approval.SessionID)}>Open session</a>
+      {failed && <p role="alert">{failed}</p>}
       {done ? (
         <p role="status">{done}</p>
       ) : (
