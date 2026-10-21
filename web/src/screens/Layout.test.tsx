@@ -7,7 +7,7 @@ afterEach(() => {
   window.location.hash = "";
 });
 
-const tabs = ["Chat", "Terminal", "Review", "Shell", "nvim"];
+const tabs = ["Chat", "Terminal", "Review", "Shell", "nvim", "Browser"];
 
 describe("the layout", () => {
   it("shows the sidebar, the toolbar and the main column on a wide screen", () => {
