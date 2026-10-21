@@ -41,6 +41,15 @@ go run ./scripts/verify tui drive --restart --out-dir /tmp/crew-verify-map/revie
 
 Expect: the card under the agent column ends with `sent as one prompt` on its own line, never a bare `sent` (#491).
 
+### the file tree shows each file's folder
+
+```sh
+for d in api-2 web-2; do rm -rf /tmp/seed/$d && mkdir -p /tmp/seed/$d/cmd/tool && git -C /tmp/seed/$d init -q -b main && printf 'package main\n' > /tmp/seed/$d/main.go && printf 'package main\n' > /tmp/seed/$d/cmd/tool/main.go && git -C /tmp/seed/$d add . && git -C /tmp/seed/$d -c user.email=t@t -c user.name=t commit -qm TEST-init && printf 'package main\n\nfunc TEST() {}\n' | tee /tmp/seed/$d/main.go > /tmp/seed/$d/cmd/tool/main.go; done
+go run ./scripts/verify tui drive --restart --out-dir /tmp/crew-verify-map/review --steps '[{"expect":"seeded change 1","timeout":8000},{"keys":"r"},{"expect":"REVIEW","timeout":5000},{"expect":"cmd/tool/main.go","timeout":4000},{"shot":"tree-dirs.png"}]'
+```
+
+Expect: `cmd/tool/main.go` and `main.go` are two different rows, never two bare `main.go` rows (#584).
+
 ### diff, comments and send on a real repo (manual: the seeded worktrees are not repos; the review needs a session on a temp repo with changes, see internal/adapters/git tests)
 
 ### crew review comment, scope and send from the CLI (manual: it needs a real repo diff and a live harness to receive the send)
