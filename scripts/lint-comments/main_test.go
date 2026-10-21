@@ -81,6 +81,9 @@ func TestRunExitCode(t *testing.T) {
 		{"Swift build output", map[string]string{"macos/.build/x/a.swift": "// generated\n"}, 0},
 		{"web dependencies", map[string]string{"web/node_modules/x/index.js": "/* vendored */\n"}, 0},
 		{"built web app", map[string]string{"internal/serve/dist/assets/app.js": "/*! license */\nexport{};\n"}, 0},
+		{"Rust build output", map[string]string{"desktop/src-tauri/target/debug/build/x/out/a.rs.js": "// generated\n"}, 0},
+		{"Android build output", map[string]string{"desktop/src-tauri/gen/android/app/build/intermediates/a.js": "// generated\n"}, 0},
+		{"Gradle cache", map[string]string{"desktop/src-tauri/gen/android/.gradle/a.sh": "#!/bin/sh\n# generated\n"}, 0},
 		{"go fixture in testdata", map[string]string{"testdata/fixture.go": "// fixture input\npackage f\n"}, 0},
 	}
 	for _, tt := range tests {

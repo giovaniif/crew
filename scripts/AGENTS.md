@@ -8,7 +8,7 @@ Repo tooling. The repo-wide rules are in the [root AGENTS.md](../AGENTS.md).
   - TypeScript and JavaScript (`.ts`, `.tsx`, `.mts`, `.cts`, `.js`, `.jsx`, `.mjs`, `.cjs`), and CSS.
   - Swift (`//`, `///` and nested `/* */`). It skips multi-line `"""` strings.
 
-  Only tool directives pass. In TypeScript, that is a triple-slash `/// <reference ...>`. In Swift, it is the `// swift-tools-version:` line. It does not parse JSX text. Thus, to put a `//` in text between tags, use a string expression. It walks `.github/` but no other dot dir. It skips `vendor/`, `node_modules/`, the root `bin/`, every `dist/` (thus the built app in `internal/serve/dist`), and Go files under `testdata/`. See [ADR 0044](../docs/adr/0044-no-comments.md). Its fixtures are in its `testdata/` as `*.<ext>.txt`, so that no other tool reads them.
+  Only tool directives pass. In TypeScript, that is a triple-slash `/// <reference ...>`. In Swift, it is the `// swift-tools-version:` line. It does not parse JSX text. Thus, to put a `//` in text between tags, use a string expression. It walks `.github/` but no other dot dir. It skips `vendor/`, `node_modules/`, the root `bin/`, every `dist/` (thus the built app in `internal/serve/dist`), every `target/` and `build/` (thus the desktop and Android build output), and Go files under `testdata/`. See [ADR 0044](../docs/adr/0044-no-comments.md). Its fixtures are in its `testdata/` as `*.<ext>.txt`, so that no other tool reads them.
 - **`lint-agents`** (`make lint`): fails when one of these conditions is true:
   - The root `AGENTS.md` is longer than 150 lines (`-max n`).
   - A scoped `AGENTS.md` has no `CLAUDE.md` symlink to it beside it.
