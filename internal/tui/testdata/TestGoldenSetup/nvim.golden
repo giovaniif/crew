@@ -9,7 +9,8 @@
       nvim loads every file in plugin/ at startup, whatever else your config uses    
       (init.lua, init.vim, lazy.nvim), so nothing of yours is edited.                
      
-        -- crew: written by crew setup nvim; crew setup nvim --remove deletes this file.
+        -- crew: written by crew setup nvim; crew setup nvim --remove deletes this
+        file.
         local dir = '/Users/me/.local/share/crew/nvim'
         vim.opt.runtimepath:prepend(dir)
         dofile(dir .. '/plugin/crew.lua')

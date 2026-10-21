@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/charmbracelet/x/exp/golden"
 
 	"github.com/giovaniif/crew/internal/domain"
@@ -303,5 +304,25 @@ func TestAlreadySetUpMachinesSkipTheWalkthroughAndRecordIt(t *testing.T) {
 	}
 	if strings.Contains(screen(m), "Set up crew") {
 		t.Fatalf("walkthrough shown:\n%s", screen(m))
+	}
+}
+
+func TestSetupNvimStepKeepsTheSnippetInsideTheWidth(t *testing.T) {
+	long := "/tmp/crew-iso-3487862116/home/.local/share/crew/nvim"
+	for _, n := range []domain.NvimSetup{
+		{OnPath: true, PluginDir: long, ConfigFile: "/c/init.lua"},
+		{OnPath: true, PluginDir: long, PluginFound: true, ConfigFile: "/tmp/crew-iso-3487862116/home/.config/nvim/plugin/crew.lua"},
+	} {
+		o := freshMachine()
+		o.Nvim = n
+		m, _ := setupModel(t, o)
+		m = pressCmd(pressCmd(m, keySpace), keyEnter)
+		out := screen(m)
+		for _, l := range strings.Split(out, "\n") {
+			if w := ansi.StringWidth(l); w > 90 {
+				t.Errorf("line is %d cells wide in 90:\n%s", w, l)
+			}
+		}
+		mustShow(t, strings.Join(strings.Fields(out), ""), strings.ReplaceAll(long, " ", ""))
 	}
 }
