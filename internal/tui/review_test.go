@@ -370,3 +370,18 @@ func TestReviewTreeShowsTheFolderSoSameNamedFilesDiffer(t *testing.T) {
 		}
 	}
 }
+
+func TestReviewDoesNotSayNoChangesWhenEachWorktreeFailed(t *testing.T) {
+	st := fixture(1, 2)
+	rv := &fakeReviewer{reply: rpc.Review{Worktrees: []domain.WorktreeReview{
+		{Worktree: st.Worktrees[0], Err: domain.ErrNoDefaultBranch.Error()},
+		{Worktree: st.Worktrees[1], Err: domain.ErrNoDefaultBranch.Error()},
+	}}}
+	m := tui.New(tui.Options{Theme: tui.Latte(), Now: clock, Review: rv})
+	m = update(m, tea.WindowSizeMsg{Width: 150, Height: 40})
+	m = drive(m, tui.StateMsg(st), key("r"))
+	out := screen(m)
+	if !strings.Contains(out, "has no origin") || strings.Contains(out, "no changes") {
+		t.Errorf("a worktree that failed has unknown changes, not no changes:\n%s", out)
+	}
+}
