@@ -47,6 +47,7 @@ var (
 		rpc.MethodDeviceList, rpc.MethodPairCode,
 		rpc.MethodReviewOpen, rpc.MethodReviewViewed, rpc.MethodReviewComment, rpc.MethodReviewSend, rpc.MethodReviewHunk,
 		rpc.MethodSwitch, rpc.MethodPortsKill, rpc.MethodAutomationSave, rpc.MethodDiskView, rpc.MethodCleanupWorktree,
+		rpc.MethodBrowserHeadlessView, rpc.MethodBrowserCookiesImport,
 	}
 )
 
@@ -93,6 +94,8 @@ var authedEndpoints = append([]authedEndpoint{
 	{"POST", "/api/v1/sessions/s1/review/hunk", `{"worktree":"w1","file":{"Path":"a.go"},"hunk":0,"action":"stage"}`},
 	{"POST", "/api/v1/sessions/s1/switch", `{"kind":"model","value":"opus"}`},
 	{"POST", "/api/v1/sessions/s1/kill-dev-servers", ""},
+	{"GET", "/api/v1/sessions/s1/browser", ""},
+	{"POST", "/api/v1/browser/cookies", `{"file":"example.com\tFALSE\t/\tFALSE\t0\tsid\tabc"}`},
 }, append(settingsEndpoints, automationOwnerEndpoints...)...)
 
 func startServer(t *testing.T, f *fakeDaemon, cfg serve.Config) (*serve.Server, *httptest.Server) {

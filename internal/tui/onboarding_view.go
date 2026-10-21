@@ -30,7 +30,7 @@ type harnessCopy struct{ change, undo string }
 var harnessCopies = map[domain.Harness]harnessCopy{
 	domain.HarnessClaude: {"Adds the crew hooks and wraps your status line. Your own hooks and status line keep running.", "crew setup claude --remove"},
 	domain.HarnessCodex:  {"Adds the crew hooks. Your other hooks stay as they are.", "crew setup codex --remove"},
-	domain.HarnessOmp:    {"Writes an crew hook file of its own. A file at that path that crew did not write is left alone.", "crew setup omp --remove"},
+	domain.HarnessOmp:    {"Writes a crew hook file of its own. A file at that path that crew did not write is left alone.", "crew setup omp --remove"},
 }
 
 func (m Model) setupScreen() string {

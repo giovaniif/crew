@@ -47,6 +47,9 @@ func (p PullRequest) Blockers() []string {
 		return nil
 	}
 	var out []string
+	if p.Draft {
+		out = append(out, "draft")
+	}
 	switch p.Checks {
 	case CheckFailing:
 		out = append(out, "checks failing")
