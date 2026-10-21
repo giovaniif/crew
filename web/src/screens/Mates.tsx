@@ -817,11 +817,12 @@ export function NewMate({ api }: { api: Authed }) {
               </p>
             ))}
           </section>
+          {mate.prompt.trim() === "" && <p className="mate-error">Write a personality prompt or pick a preset.</p>}
           <div className="mate-actions">
             <button type="button" onClick={() => setStep(0)}>
               Back
             </button>
-            <button type="button" className="primary" disabled={mate.prompt.trim() === "" && lines.length === 0} onClick={() => setStep(2)}>
+            <button type="button" className="primary" disabled={mate.prompt.trim() === ""} onClick={() => setStep(2)}>
               Next: brains
             </button>
           </div>
