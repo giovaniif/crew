@@ -47,11 +47,12 @@ describe("the desktop sidebar", () => {
     expect(rows[1]).toHaveTextContent("⌘2");
   });
 
-  it("shows Ctrl in the shortcuts on Linux and Windows", () => {
+  it("shows Ctrl+Shift in the shortcuts on Linux and Windows", () => {
     const { live } = desktop();
     live();
     const rows = within(screen.getByRole("region", { name: "Sessions" })).getAllByRole("link");
-    expect(rows[0]).toHaveTextContent("Ctrl+1");
+    expect(rows[0]).toHaveAttribute("aria-keyshortcuts", "Control+Shift+1");
+    expect(rows[0]).toHaveTextContent("Ctrl+Shift+1");
   });
 
   it("has a Mates entry and the limits meters", () => {

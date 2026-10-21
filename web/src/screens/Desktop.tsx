@@ -8,7 +8,10 @@ import type { Session, StreamClient, StreamSnapshot } from "../stream";
 import { Brand } from "./Brand";
 import { BrowserPane, type BrowserStore } from "./Browser";
 import { NewSession } from "./NewSession";
+import { ReviewPane } from "./Review";
 import { SessionScreen } from "./Session";
+import { TerminalPane } from "./Terminal";
+import type { TerminalStore } from "../terminal";
 import { SessionCommands, type MenuPoint } from "./SessionCommands";
 import { Connection, Limits, sessionHref, sessionTitle } from "./SessionList";
 
@@ -19,6 +22,7 @@ export type PaneProps = {
   onRetry: () => void;
   client: StreamClient;
   api: Authed;
+  terminals: TerminalStore | null;
   host: string;
   browsers: BrowserStore;
 };
@@ -34,10 +38,10 @@ function Placeholder({ title }: { title: string }) {
 
 export const panes: Record<MainTab, (props: PaneProps) => ReactNode> = {
   chat: (p) => <SessionScreen key={p.session.ID} id={p.session.ID} snapshot={p.snapshot} now={p.now} onRetry={p.onRetry} client={p.client} api={p.api} />,
-  terminal: () => <Placeholder title="Terminal" />,
-  review: () => <Placeholder title="Review" />,
-  shell: () => <Placeholder title="Shell" />,
-  nvim: () => <Placeholder title="nvim" />,
+  terminal: (p) => <TerminalPane store={p.terminals} session={p.session} kind="agent" />,
+  review: (p) => <ReviewPane key={p.session.ID} session={p.session.ID} sessionState={p.session.State} api={p.api} />,
+  shell: (p) => <TerminalPane store={p.terminals} session={p.session} kind="shell" />,
+  nvim: (p) => <TerminalPane store={p.terminals} session={p.session} kind="nvim" />,
   browser: (p) => <BrowserPane key={p.session.ID} session={p.session.ID} worktrees={p.snapshot.state?.worktrees ?? []} host={p.host} store={p.browsers} />,
 };
 
@@ -212,10 +216,11 @@ export type DesktopProps = {
   onRetry: () => void;
   client: StreamClient;
   api: Authed;
+  terminals?: TerminalStore | null;
   other: ReactNode;
 };
 
-export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, api, other }: DesktopProps) {
+export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, api, terminals = null, other }: DesktopProps) {
   const [tab, setTab] = useState<MainTab>("chat");
   const browsers = useRef<BrowserStore>(new Map());
   const [menu, setMenu] = useState<(MenuPoint & { id: string }) | null>(null);
@@ -228,7 +233,7 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const action = keyAction(e);
+      const action = keyAction(e, keys.mac);
       if (!action) {
         return;
       }
@@ -246,6 +251,10 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
         go("#/new");
         return;
       }
+      if (action.kind === "tab") {
+        setTab(action.tab);
+        return;
+      }
       const next = nextNeeding(rows.live, selectedId);
       if (next) {
         go(sessionHref(next.ID));
@@ -253,7 +262,7 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [rows.live, selectedId, go]);
+  }, [rows.live, selectedId, go, keys.mac]);
 
   let main: ReactNode;
   if (other) {
@@ -265,7 +274,7 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
           {session ? <SessionCommands key={session.ID} api={api} session={session} storage={env.storage} button /> : null}
         </Toolbar>
         <section className={"pane pane-" + tab} role="tabpanel" id={"pane-" + tab} aria-labelledby={"tab-" + tab}>
-          {session ? panes[tab]({ session, snapshot, now, onRetry, client, api, host: env.host, browsers: browsers.current }) : <Placeholder title="Terminal" />}
+          {session ? panes[tab]({ session, snapshot, now, onRetry, client, api, terminals, host: env.host, browsers: browsers.current }) : <Placeholder title="Terminal" />}
         </section>
       </>
     );
