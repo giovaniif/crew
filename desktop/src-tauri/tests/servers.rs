@@ -10,7 +10,7 @@ use crew_desktop::servers::{
 fn a_remote_page_cannot_call_the_server_commands() {
     for permission in crew_desktop::hub::REMOTE_PERMISSIONS {
         assert!(
-            ["allow-crew-notify", "allow-crew-attention", "allow-crew-server-auth"].contains(permission),
+            ["allow-crew-notify", "allow-crew-attention", "allow-crew-server-auth", "allow-crew-server-open"].contains(permission),
             "{permission}"
         );
     }
@@ -35,6 +35,16 @@ fn only_the_page_of_the_local_crew_serve_is_trusted() {
     assert!(hub.trusted(&url("http://127.0.0.1:4000/#/servers")));
     assert!(!hub.trusted(&url("http://127.0.0.1:5000/")));
     assert!(!hub.trusted(&url("https://crew.example.ts.net/")));
+}
+
+#[test]
+fn a_remote_page_can_only_open_this_computer() {
+    let mut hub = crew_desktop::hub::Hub::open(temp_file("open"));
+    let url = |s: &str| url::Url::parse(s).unwrap();
+    hub.local = Some((url("http://127.0.0.1:4000/"), None));
+    assert!(hub.may_open(&url("https://crew.example.ts.net/"), LOCAL_ID));
+    assert!(!hub.may_open(&url("https://crew.example.ts.net/"), "ssh:box"));
+    assert!(hub.may_open(&url("http://127.0.0.1:4000/"), "ssh:box"));
 }
 
 fn temp_file(name: &str) -> PathBuf {
