@@ -1,9 +1,10 @@
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { browserAddress, portLinks, tabLabel } from "../browser";
 import type { Worktree } from "../stream";
 import { desktop, goldenState } from "../test/desktop";
+import type { FakeServer } from "../test/fake-server";
 
 afterEach(() => {
   window.location.hash = "";
@@ -74,11 +75,15 @@ function withPorts(ports: number[]) {
   return state;
 }
 
-async function openBrowser(ports: number[]) {
-  const { live } = desktop("#/sessions/s1");
+const notLive = (server: FakeServer) => {
+  server.on("GET", "/api/v1/sessions/s1/browser", { status: 200, body: { live: false } });
+};
+
+async function openBrowser(ports: number[], routes: (server: FakeServer) => void = notLive) {
+  const { live, server } = desktop("#/sessions/s1", true, undefined, {}, routes);
   live(withPorts(ports));
   await userEvent.click(await screen.findByRole("tab", { name: "Browser" }));
-  return screen.getByRole("tabpanel");
+  return { pane: screen.getByRole("tabpanel"), server };
 }
 
 describe("the Browser tab", () => {
@@ -91,7 +96,7 @@ describe("the Browser tab", () => {
   });
 
   it("opens the first port of the session and links each port", async () => {
-    const pane = await openBrowser([5173, 3000]);
+    const { pane } = await openBrowser([5173, 3000]);
     expect(within(pane).getByRole("textbox", { name: "Address" })).toHaveValue("http://crew.example.ts.net:3000/");
     const frame = within(pane).getByTitle("Page");
     expect(frame).toHaveAttribute("src", "http://crew.example.ts.net:3000/");
@@ -102,7 +107,7 @@ describe("the Browser tab", () => {
   });
 
   it("goes to an address with the address rules", async () => {
-    const pane = await openBrowser([3000]);
+    const { pane } = await openBrowser([3000]);
     const address = within(pane).getByRole("textbox", { name: "Address" });
     await userEvent.clear(address);
     await userEvent.type(address, "localhost:8080/admin{Enter}");
@@ -111,7 +116,7 @@ describe("the Browser tab", () => {
   });
 
   it("refuses an address that the rules do not accept", async () => {
-    const pane = await openBrowser([3000]);
+    const { pane } = await openBrowser([3000]);
     const address = within(pane).getByRole("textbox", { name: "Address" });
     await userEvent.clear(address);
     await userEvent.type(address, "javascript:alert(1){Enter}");
@@ -120,7 +125,7 @@ describe("the Browser tab", () => {
   });
 
   it("opens a port in a new tab and closes tabs", async () => {
-    const pane = await openBrowser([3000, 5173]);
+    const { pane } = await openBrowser([3000, 5173]);
     await userEvent.click(within(pane).getByRole("button", { name: "api :5173" }));
     const tabs = within(pane).getByRole("tablist", { name: "Browser tabs" });
     expect(within(tabs).getAllByRole("tab").map((t) => t.textContent)).toEqual(["crew.example.ts.net:3000", "crew.example.ts.net:5173"]);
@@ -132,14 +137,53 @@ describe("the Browser tab", () => {
   });
 
   it("shows an empty tab when the session has no ports", async () => {
-    const pane = await openBrowser([]);
+    const { pane } = await openBrowser([]);
     expect(within(pane).getByRole("textbox", { name: "Address" })).toHaveValue("");
     expect(within(pane).queryByTitle("Page")).toBeNull();
     expect(within(pane).getByText("No process in the worktrees of this session listens on a TCP port.")).toBeInTheDocument();
   });
 
-  it("tells which features of the Mac browser are not available yet", async () => {
-    const pane = await openBrowser([3000]);
-    expect(within(pane).getByRole("note")).toHaveTextContent("Profiles, cookie import, Send cookies to the server, agent control and the headless view of the server are not available yet.");
+  it("tells which features of the Mac browser are not available", async () => {
+    const { pane } = await openBrowser([3000]);
+    expect(within(pane).getByRole("note")).toHaveTextContent("Profiles and agent control of this tab are not available. An agent uses the headless browser of the server.");
+  });
+
+  it("shows the headless browser of the server read-only while it is live", async () => {
+    const { pane } = await openBrowser([3000], (server) => {
+      server.on("GET", "/api/v1/sessions/s1/browser", { status: 200, body: { live: true, png: "iVBORw0KGgo=", width: 1280, height: 800 } });
+    });
+    const tabs = within(pane).getByRole("tablist", { name: "Browser tabs" });
+    await userEvent.click(await within(tabs).findByRole("tab", { name: "Server browser" }));
+    const frame = within(pane).getByRole("img", { name: "The headless browser of the server" });
+    expect(frame).toHaveAttribute("src", "data:image/png;base64,iVBORw0KGgo=");
+    expect(within(pane).queryByTitle("Page")).toBeNull();
+    expect(within(pane).queryByRole("textbox", { name: "Address" })).toBeNull();
+    expect(within(pane).getByText("Read-only. An agent controls this browser.")).toBeInTheDocument();
+  });
+
+  it("shows no server browser tab when the session has no headless tab", async () => {
+    const { pane, server } = await openBrowser([3000]);
+    await waitFor(() => expect(server.calls.some((c) => c.path === "/api/v1/sessions/s1/browser")).toBe(true));
+    expect(within(pane).queryByRole("tab", { name: "Server browser" })).toBeNull();
+  });
+
+  it("sends a cookie file to the server browser", async () => {
+    const { pane, server } = await openBrowser([3000], (server) => {
+      notLive(server);
+      server.on("POST", "/api/v1/browser/cookies", { status: 200, body: { imported: 2, total: 5 } });
+    });
+    const text = "example.com\tFALSE\t/\tFALSE\t0\tsid\tabc\n";
+    await userEvent.upload(within(pane).getByLabelText("Send cookies to the server"), new File([text], "cookies.txt", { type: "text/plain" }));
+    expect(await within(pane).findByRole("status")).toHaveTextContent("Sent 2 cookies to the server browser. It has 5 cookies.");
+    expect(server.calls.find((c) => c.path === "/api/v1/browser/cookies")?.body).toEqual({ file: text });
+  });
+
+  it("shows why the server refused the cookie file", async () => {
+    const { pane } = await openBrowser([3000], (server) => {
+      notLive(server);
+      server.on("POST", "/api/v1/browser/cookies", { status: 403, body: { error: { code: "forbidden", message: "only the owner device can do this" } } });
+    });
+    await userEvent.upload(within(pane).getByLabelText("Send cookies to the server"), new File(["[]"], "cookies.json", { type: "application/json" }));
+    expect(await within(pane).findByRole("alert")).toHaveTextContent("only the owner device can do this");
   });
 });
