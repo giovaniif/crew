@@ -16,10 +16,10 @@ The Tauri 2 app for desktop and mobile ([ADR 0057](../docs/adr/0057-tauri-apps.m
   - The web app finds `window.__TAURI_INTERNALS__` and calls two commands. `crew_notify {banner}` posts a banner with the notification plugin. `crew_attention {menu}` makes the tray menu again and sets the badge.
   - The tray menu shows Needs you, Done · unread, Working, the quota meters, New session…, Open crew and Quit crew. A session item opens `#/sessions/<id>` in the window.
   - The badge is the number of sessions that need you (`set_badge_count`: the macOS Dock and Linux Unity launchers). At 0 there is no badge.
-  - `build.rs` declares the two commands (`AppManifest`). `capabilities/default.json` allows them for the remote origins `http://127.0.0.1:*` and `http://localhost:*`. A different `CREW_URL` origin gets no tray or banners.
+  - `build.rs` declares the commands (`AppManifest`). `capabilities/default.json` has no remote origins. It gives `core:default` and `fix_daemon` only to the bundled page. Each time the app opens a window on `crew serve`, `src/ipc.rs` adds a capability that allows `crew_notify`, `crew_attention` and `fix_daemon` to the windows `main` and `main-*` only for the exact origin of `crew serve` (`http://127.0.0.1:<port>` or `http://localhost:<port>`). Thus a dev server in the Browser tab gets no IPC ([ADR 0059](../docs/adr/0059-tauri-browser-tab.md)). A different `CREW_URL` origin gets no tray or banners. `tests/ipc.rs` tests these rules.
   - The rules (which banners, the settings, the menu rows) are in `web/src/desktopAttention.ts` (see [web/](../web/AGENTS.md)). `tests/attention.rs` tests the menu entries, their actions and the badge.
   - If there is no `crew` or `crew serve` does not start, the window loads the bundled page (`connect/index.html`) with `window.__CREW_DESKTOP_PROBLEM__` (the reason). The page then shows "crew did not start", the reason and Fix, not the connect form.
-  - Fix is the Tauri command `fix_daemon` (declared in `build.rs`, allowed in `capabilities/default.json`). It runs `crew setup daemon`, then `crew setup daemon --check` (`local::fix_daemon`). A failed setup or a `failing` check returns the `reason` of the check, else the error output of the setup. Then it starts `crew serve` again if it is not alive (on the same port), or, after a failed start, starts and pairs a new one and opens a new window (`main-<n>`). The web app calls it from the connection banner (see [web/](../web/AGENTS.md)).
+  - Fix is the Tauri command `fix_daemon` (declared in `build.rs`, allowed for the bundled page in `capabilities/default.json` and for the origin of `crew serve` by `src/ipc.rs`). It runs `crew setup daemon`, then `crew setup daemon --check` (`local::fix_daemon`). A failed setup or a `failing` check returns the `reason` of the check, else the error output of the setup. Then it starts `crew serve` again if it is not alive (on the same port), or, after a failed start, starts and pairs a new one and opens a new window (`main-<n>`). The web app calls it from the connection banner (see [web/](../web/AGENTS.md)).
   - With `CREW_URL`, Fix runs only `crew setup daemon` on this computer. The app has no list of remote servers yet, so it cannot run the SSH setup.
   - `cargo test --manifest-path desktop/src-tauri/Cargo.toml` runs `tests/local.rs` (the port choice, the `crew` lookup and the `serve` arguments) and `tests/fix.rs` (Fix with a fake `crew` script, Unix only).
   - On mobile, the window loads the bundled connect page (`build.frontendDist` is `../connect`). `tests/start.rs` tests that mobile opens the bundled page. The user types the address of a remote `crew serve`. The page keeps it and opens it. Then the pairing of the PWA starts ([ADR 0046](../docs/adr/0046-remote-app.md)).
@@ -28,6 +28,14 @@ The Tauri 2 app for desktop and mobile ([ADR 0057](../docs/adr/0057-tauri-apps.m
   - `tauri.android.conf.json` sets `version` to `0.0.1`, because Android does not accept `0.0.0`.
   - `gen/android/` is the output of `npx tauri android init`, with the comments removed. The bundle id is `sh.giovani.crew`.
   - The icons come from `macos/AppIcon.png`. Run `npx tauri icon ../macos/AppIcon.png -o src-tauri/icons` to make them again. Keep only the desktop files.
+- Update (`src/update.rs`, desktop only):
+  - At launch and each 6 h, the app gets `latest.json` from the `updater` branch (`plugins.updater.endpoints` in `tauri.conf.json`). The release workflow writes this file for each tag, also for a prerelease. Thus the app also offers `v0.1.0-beta.*` releases.
+  - `newer` compares the versions as semver, with prereleases (`0.1.0-beta.2` < `0.1.0-beta.10` < `0.1.0`).
+  - If a newer version is available, the app shows a dialog (`prompt`). It installs only when the user selects Install and restart. Then it stops `crew serve`, runs `crew daemon stop` and restarts. The bundle has `crew`, so the update replaces `crew` together with the app. The new `crew` starts a new daemon.
+  - Debug builds and `CREW_NO_UPDATE_CHECK=1` do not check.
+  - `tests/update.rs` tests the version compare, the prompt and the steps after the answer.
+  - The public key is `plugins.updater.pubkey`. The private key and its password are the repo secrets `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. Do not put them in the repo.
+  - The Windows build removes the prerelease part from its version, because the MSI does not accept it. Thus Windows does not get a prerelease update of the same core version.
 - `connect/`: the connect page (`index.html`, `server.js`) and its test (`node --test desktop/connect/server.test.mjs`).
 - `package.json`: the Tauri CLI (`npx tauri`).
 - `e2e/`: the WebDriver tests (`*.test.mjs`, `node --test`) and `e2e/run`.
@@ -80,3 +88,5 @@ The `desktop` job of `release.yml` makes the packages for each tag, on `workflow
 - It sets the version from the tag with `--config`.
 - On macOS, it signs and notarizes the app when the `APPLE_*` secrets exist. It writes `APPLE_API_KEY_P8` to a temporary `AuthKey.p8` for `APPLE_API_KEY_PATH`. Without the secrets, the build is not signed.
 - It runs `crew version` from each macOS and Linux package and compares the tag. It uploads the packages to the release only for a tag.
+- When the `TAURI_SIGNING_PRIVATE_KEY` secret exists, it sets `bundle.createUpdaterArtifacts` and signs the update bundles (`.app.tar.gz`, `.AppImage`, `.deb`, `.msi`, `.exe`, each with a `.sig`). A tag build without the secret fails.
+- The `updater` job makes `latest.json` from the signatures, verifies each signature with `minisign` and the public key, and uploads `latest.json` as the `latest-json` artifact. For a tag, it also uploads `latest.json` to the release and force-pushes it to the `updater` branch.

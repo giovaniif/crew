@@ -2268,6 +2268,209 @@ button.danger {
   box-shadow: 0 12px 40px var(--shadow-deep);
 }
 
+.disk {
+  padding: 20px 24px;
+  box-sizing: border-box;
+  max-width: 100vw;
+  min-width: 0;
+  background: var(--paper);
+  color: var(--text);
+}
+
+.disk-head h1 {
+  font-size: 1.25rem;
+  margin: 0 0 16px;
+}
+
+.disk-tiles {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.disk-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--mantle);
+}
+
+.disk-tile-title {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--subtext);
+}
+
+.disk-tile-value {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.disk-tile-value.tone-green::before,
+.disk-state::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--overlay);
+  vertical-align: middle;
+}
+
+.disk-tile-value.tone-green::before,
+.disk-state.tone-green::before {
+  background: var(--green);
+}
+
+.disk-state.tone-peach::before {
+  background: var(--peach);
+}
+
+.disk-state.tone-blue::before {
+  background: var(--blue);
+}
+
+.disk-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--surface);
+}
+
+.disk-tabs button {
+  min-height: 44px;
+  padding: 0 14px;
+  background: none;
+  color: var(--subtext);
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+}
+
+.disk-tabs button[aria-selected="true"] {
+  color: var(--text);
+  border-bottom-color: var(--blue);
+  font-weight: 600;
+}
+
+.disk-pane {
+  overflow-x: auto;
+}
+
+.disk-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.disk-table th {
+  text-align: left;
+  font-weight: 500;
+  font-size: 0.75rem;
+  color: var(--subtext);
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--surface);
+}
+
+.disk-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--mantle);
+  vertical-align: middle;
+}
+
+.disk-table .mono {
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.disk-state {
+  white-space: nowrap;
+}
+
+.disk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.disk-actions button {
+  min-height: 44px;
+  padding: 0 12px;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.disk-kill {
+  min-height: 44px;
+  padding: 0 12px;
+  font-size: 0.8125rem;
+}
+
+.disk-button {
+  background: var(--mantle);
+  color: var(--text);
+  border: 1px solid var(--surface);
+}
+
+.disk-danger {
+  background: var(--mantle);
+  color: var(--red);
+  border: 1px solid var(--surface);
+}
+
+.disk-note {
+  margin: 0 0 12px;
+  color: var(--text);
+}
+
+.automations-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.automation-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.automation-filters label {
+  flex: 1 1 8rem;
+}
+
+.automation-filters label:first-child {
+  flex: 2 1 14rem;
+}
+
+.automation-detail {
+  margin-top: 8px;
+  padding: 12px;
+  background: var(--paper);
+  border: 1px solid var(--surface);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.detail-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.detail-tabs button {
+  min-height: 44px;
 .settings-layout {
   display: flex;
   flex-direction: column;
@@ -2306,11 +2509,17 @@ button.danger {
   font-weight: 500;
 }
 
+.detail-tabs button[aria-selected="true"] {
 .settings-nav button[aria-current="page"] {
   background: var(--blue);
   color: var(--on-accent);
 }
 
+.automation-detail .fact {
+  display: contents;
+}
+
+.automation-prompt {
 .settings-pane {
   display: flex;
   flex-direction: column;
@@ -2328,6 +2537,23 @@ button.danger {
   padding: 10px 12px;
   background: var(--mantle);
   border-radius: 8px;
+  white-space: pre-wrap;
+  font-family: var(--mono);
+  font-size: 14px;
+}
+
+.automation-form {
+  padding: 12px;
+  background: var(--mantle);
+  border-radius: var(--radius);
+}
+
+.automation-form h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.automation-form .check {
   color: var(--subtext);
 }
 
@@ -2439,6 +2665,9 @@ button.danger {
   min-height: 44px;
 }
 
+.rerun {
+  min-height: 44px;
+  padding: 6px 12px;
 .check input {
   width: 20px;
   height: 20px;
@@ -3134,6 +3363,132 @@ tr.picked td.diff-ln {
 .phone-pane .chat-screen {
   width: 100%;
   height: 100%;
+}
+
+.browser {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 12px 12px;
+}
+
+.browser-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.browser-tab {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 8px;
+  background: var(--mantle);
+}
+
+.browser-tabs button {
+  font: inherit;
+  font-size: 13px;
+  min-height: 28px;
+  padding: 2px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--subtext);
+  cursor: pointer;
+}
+
+.browser-tab button[aria-selected="true"] {
+  background: var(--paper);
+  color: var(--text);
+  box-shadow: 0 1px 2px var(--shadow-soft);
+}
+
+.browser-tabs .browser-close {
+  padding: 2px 8px;
+}
+
+.browser-bar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.browser-bar input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-family: var(--mono);
+  font-size: 13px;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid var(--surface);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--text);
+}
+
+.browser-external {
+  font-size: 13px;
+  color: var(--link);
+  white-space: nowrap;
+}
+
+.browser-refused {
+  margin: 0;
+  font-size: 13px;
+  color: var(--red);
+}
+
+.browser-ports {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.browser-ports button {
+  font: inherit;
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 3px 10px;
+  border: 1px solid var(--surface);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.browser-page {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  border: 1px solid var(--surface);
+  border-radius: var(--radius);
+  background: var(--paper);
+  overflow: hidden;
+}
+
+.browser-page iframe {
+  flex: 1;
+  border: 0;
+  background: #ffffff;
+}
+
+.browser-empty {
+  margin: auto;
+  padding: 16px;
+  text-align: center;
+}
+
+.browser-note {
+  margin: 0;
+  font-size: 12px;
 }
 
 .chat-bar .mate-bar-who {

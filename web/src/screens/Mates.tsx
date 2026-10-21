@@ -122,10 +122,6 @@ function useAskingMates(api: Authed): string[] {
   return names;
 }
 
-function firstLine(prompt: string): string {
-  return prompt.split("\n")[0].trim();
-}
-
 function KillSwitch({ api, stopped }: { api: Authed; stopped: boolean }) {
   const [asking, setAsking] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -428,12 +424,11 @@ export function Mates({ api, now, board }: { api: Authed; now: number; board?: M
         {shown.map((card) => {
           const { row, def } = card;
           return (
-            <a key={row.name} className="mate-card" href={"#/mates/" + encodeURIComponent(row.name)} aria-label={row.name + ", " + stateWords[card.face]}>
+            <a key={row.name} className="mate-card" href={"#/mates/" + encodeURIComponent(row.name)} aria-label={row.name + ", " + card.status}>
               <MateFace name={row.name} avatar={row.avatar || def?.avatar} color={row.color || def?.color} state={card.face} px={64} />
               <strong className="mate-name">{row.name}</strong>
-              <StateWord state={card.face} />
               <span className={"mate-live" + (card.live > 0 ? " on" : "")}>{card.liveLabel}</span>
-              {def && <span className="mate-tag">{firstLine(def.prompt)}</span>}
+              {card.tagline && <span className="mate-tag">{card.tagline}</span>}
               <span className="mate-status">{card.status}</span>
             </a>
           );

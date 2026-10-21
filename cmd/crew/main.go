@@ -33,7 +33,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stdout, version.String())
 		return 0
 	case cmd == "version":
-		return runVersion(version.Version, buildCommit(), latestRelease, stdout)
+		return runVersion(version.Version, buildCommit(), latestRelease, runningInAppBundle(), stdout)
 	case cmd == "hook":
 		home, _ := rpc.Home()
 		return runHook(args[1:], os.Stdin, stdout, home, os.Getenv("TMUX_PANE"))

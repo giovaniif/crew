@@ -1,4 +1,5 @@
 import type { ToneAxis } from "./faces";
+import type { CleanupItem, DiskView } from "./disk";
 import type { Message } from "./stream";
 
 export type Hello = {
@@ -304,9 +305,20 @@ export type Automation = {
   prompt: string;
   schedule?: string;
   on?: string[];
+  timezone?: string;
+  precheck?: string;
+  session?: string;
   enabled: boolean;
   source: string;
 };
+
+export function saveAutomation(a: Authed, automation: Omit<Automation, "source">): Promise<Automation> {
+  return authedRequest<Automation>(a, "/api/v1/automations", "POST", { automation });
+}
+
+export function rerunAutomation(a: Authed, run: string): Promise<{ run: AutomationRun }> {
+  return authedRequest<{ run: AutomationRun }>(a, "/api/v1/automations/runs/" + encodeURIComponent(run) + "/rerun", "POST");
+}
 
 export type AutomationList = { automations: Automation[]; problems?: string[] };
 
@@ -418,6 +430,22 @@ export function mateMemory(a: Authed, name: string): Promise<MateMemory> {
 
 export function setMateMemory(a: Authed, name: string, text: string): Promise<MateMemory> {
   return authedRequest<MateMemory>(a, matePath(name, "memory"), "POST", { text });
+}
+
+export function diskView(a: Authed): Promise<DiskView> {
+  return authedRequest<DiskView>(a, "/api/v1/disk");
+}
+
+export function cleanupWorktree(a: Authed, path: string, backup: boolean): Promise<CleanupItem> {
+  return authedRequest<CleanupItem>(a, "/api/v1/cleanup/worktree", "POST", { path, backup });
+}
+
+export function killPorts(a: Authed, pgids: number[]): Promise<{ killed: number[] }> {
+  return authedRequest<{ killed: number[] }>(a, "/api/v1/ports/kill", "POST", { pgids });
+}
+
+export function openShell(a: Authed, session: string, worktree: string): Promise<{ pane: string }> {
+  return authedRequest<{ pane: string }>(a, sessionPath(session, "/shell"), "POST", { worktree });
 }
 
 export function startFresh(a: Authed, session: string, sameWorktree: boolean): Promise<{ ID: string }> {

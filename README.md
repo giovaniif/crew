@@ -165,7 +165,11 @@ The Windows package has no `crew` binary, because `crew` does not build for Wind
 
 ### Upgrade
 
-`crew version` prints the installed version. At most one time each day, it also checks GitHub for a newer release. To stop this check, set `CREW_NO_UPDATE_CHECK=1`. crew never updates itself. To upgrade, run the install script again. Then stop the old daemon, so that the new binary starts its own daemon:
+`crew version` prints the installed version. At most one time each day, it also checks GitHub for a newer release. To stop this check, set `CREW_NO_UPDATE_CHECK=1`. The `crew` binary does not update itself.
+
+If you use the desktop app, the app updates itself and its `crew` binary. At launch and each 6 h, it looks for a newer release, also a prerelease. It asks you before it installs. Then it stops the crew daemon and restarts, so that the new `crew` starts a new daemon. A `crew` in the app bundle tells you to accept the update in the app.
+
+If you installed `crew` with the install script, run the install script again to upgrade. Then stop the old daemon, so that the new binary starts its own daemon:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/giovaniif/crew/main/scripts/install.sh | sh
