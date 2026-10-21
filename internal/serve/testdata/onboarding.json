@@ -1,0 +1,20 @@
+{
+  "done": true,
+  "harnesses": {
+    "claude": {
+      "installed": true,
+      "file": "/home/me/.claude/settings.json"
+    },
+    "codex": {
+      "installed": false,
+      "file": "/home/me/.codex/hooks.json"
+    }
+  },
+  "nvim": {
+    "on_path": true,
+    "configured": false,
+    "config_file": "/home/me/.config/nvim/init.lua",
+    "plugin_dir": "/home/me/.crew/nvim",
+    "plugin_found": true
+  }
+}
