@@ -56,3 +56,4 @@ go run ./scripts/verify iso down
 
 - Never press `d` or `b` here on real repos.
 - The seeded worktrees do not exist on disk, so their sizes show `missing` ([#417](https://github.com/giovaniif/crew/issues/417), fixed).
+- RECENTLY CLEANED reads `cleanup.log`. An entry that is not from today shows its date ([#593](https://github.com/giovaniif/crew/issues/593), fixed). No recipe: map recipes do not get the `CREW_HOME` of the isolated crew, so they cannot add an old entry. `TestWorktreesRecentlyCleanedShowsTheDateOfAnOlderCleanup` covers it.
