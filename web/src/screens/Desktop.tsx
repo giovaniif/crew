@@ -116,6 +116,11 @@ function Sidebar({ env, snapshot, now, onRetry, selected, hash, keys }: { env: A
             </a>
           </li>
           <li>
+            <a href="#/disk" aria-current={mark("#/disk")}>
+              Disk
+            </a>
+          </li>
+          <li>
             <a href="#/settings" aria-current={mark("#/settings")}>
               Settings
             </a>
@@ -209,6 +214,13 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
   const sessions = snapshot.state?.sessions ?? [];
   const rows = sidebarRows(sessions);
   const session = sessions.find((s) => s.ID === selectedId) ?? null;
+  const routeTab = route.screen === "session" ? route.tab : undefined;
+
+  useEffect(() => {
+    if (routeTab) {
+      setTab(routeTab);
+    }
+  }, [routeTab, selectedId]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

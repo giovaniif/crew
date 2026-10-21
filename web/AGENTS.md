@@ -99,6 +99,12 @@ The phone app: a PWA that `crew serve` embeds and serves at `/` (ADR [0046](../d
   - A session that Start fresh made has `Mate.FreshFrom` (the old session id). The chat loads the newest page of the old session one time. It shows those messages above a dashed divider "Earlier conversation ended · handoff saved to memory", the same as the Mac app. A session with no `FreshFrom` shows no divider.
 - Tests: `npm test -- Mates faces`.
 - `#/approvals` (`screens/Approvals.tsx`) shows a card for each pending approval of a mate (`GET /api/v1/approvals`): the mate, the action, who asked, the tool, the exact input, the time until it expires and a link to the session. Approve and Deny post `/api/v1/approvals/<id>/approve|deny`, then the card shows the result. A 409 `stale` or a `not_found` shows "This approval is gone". The push of an approval opens this screen. Tests: `npm test -- Approvals`.
+- `#/disk` (`screens/Disk.tsx`) is the worktrees and disk window of the Mac app (issue #520). The sidebar of the desktop layout links to it. The phone layout shows it too.
+  - `src/disk.ts` holds the pure rules, the same as `Disk.swift`: `diskTiles`, `diskRows` (the state Open, Merged · clean, Merged · dirty, Detached or No PR, and what cleanup does), `diskActions`, `diskPorts`, `diskRecent` and `pollDelay`.
+  - It loads `GET /api/v1/disk` every 2 s while a size is pending, else every 10 s.
+  - Each destructive action (Remove…, Back up and remove…, Kill…) asks first. A `keep` row offers no removal. A `backup_then_ask` row offers only Back up and remove. The daemon applies the cleanup rules again.
+  - Go to session opens `#/sessions/<id>`. Open shell posts `…/shell` with the worktree, then opens `#/sessions/<id>/shell`, which selects the Shell tab.
+  - Tests: `npm test -- Disk`.
 - `#/settings` shows Settings (server, this device, Enable notifications, sign out). A tab bar under the session list and Settings switches between them.
 - **Desktop layout** (issue #514, ADR [0057](../docs/adr/0057-tauri-apps.md)). `AppEnv.wide` (`matchMedia("(min-width: 900px)")` in `main.tsx`, `FakeWidth` in tests) selects it. A narrow window keeps the phone layout.
   - `screens/Desktop.tsx` has the sidebar (sessions in the daemon order, `order` when the stream has it, else the sessions that need you first; an Ended group; Mates, Approvals, Automations, Settings; the limits), the toolbar (the tabs Chat, Terminal, Review, Shell and nvim) and the main column.
