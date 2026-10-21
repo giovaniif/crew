@@ -107,8 +107,25 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
+      - id: ndk-cache
+        uses: actions/cache@v4
+        with:
+          path: /usr/local/lib/android/sdk/ndk/${{ env.NDK_VERSION }}
+          key: ndk-${{ runner.os }}-${{ env.NDK_VERSION }}
+      - if: steps.ndk-cache.outputs.cache-hit != 'true'
+        run: |
+          for attempt in 1 2 3; do
+            if "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK_VERSION" && [ -f "$ANDROID_HOME/ndk/$NDK_VERSION/source.properties" ]; then
+              exit 0
+            fi
+            echo "sdkmanager: NDK install attempt $attempt failed"
+            rm -rf "$ANDROID_HOME/ndk/$NDK_VERSION"
+            sleep $((attempt * 15))
+          done
+          exit 1
       - run: |
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK_VERSION"
+          test "$ANDROID_HOME" = /usr/local/lib/android/sdk
+          test -f "$ANDROID_HOME/ndk/$NDK_VERSION/source.properties"
           echo "NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -145,6 +162,7 @@ jobs:
           target: google_apis
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
           disable-animations: true
+          emulator-boot-timeout: 600
           script: desktop/android-smoke
 
   desktop-macos:
