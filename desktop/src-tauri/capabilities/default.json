@@ -1,8 +1,5 @@
 {
   "identifier": "default",
   "windows": ["main"],
-  "remote": {
-    "urls": ["http://127.0.0.1:*", "http://localhost:*"]
-  },
-  "permissions": ["core:default", "allow-crew-notify", "allow-crew-attention"]
+  "permissions": ["core:default"]
 }

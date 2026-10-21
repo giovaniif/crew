@@ -1,4 +1,5 @@
 pub mod attention;
+pub mod ipc;
 pub mod local;
 
 use std::path::PathBuf;
@@ -223,6 +224,9 @@ pub fn run() {
                     })
                 }
             };
+            if let Some(capability) = ipc::serve_capability(&started.url) {
+                app.add_capability(capability)?;
+            }
             let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::External(started.url));
             #[cfg(desktop)]
             let window = window

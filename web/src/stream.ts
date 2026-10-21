@@ -48,8 +48,10 @@ export type Worktree = {
   PR: PullRequest | null;
   SubtaskSlug: string;
   SessionID: string;
-  Ports: null;
+  Ports: ListenPort[] | null;
 };
+
+export type ListenPort = { Port: number; PID: number; PGID: number; Command: string };
 
 export type RateLimit = {
   Window: string;

@@ -16,7 +16,7 @@ The Tauri 2 app for desktop and mobile ([ADR 0057](../docs/adr/0057-tauri-apps.m
   - The web app finds `window.__TAURI_INTERNALS__` and calls two commands. `crew_notify {banner}` posts a banner with the notification plugin. `crew_attention {menu}` makes the tray menu again and sets the badge.
   - The tray menu shows Needs you, Done · unread, Working, the quota meters, New session…, Open crew and Quit crew. A session item opens `#/sessions/<id>` in the window.
   - The badge is the number of sessions that need you (`set_badge_count`: the macOS Dock and Linux Unity launchers). At 0 there is no badge.
-  - `build.rs` declares the two commands (`AppManifest`). `capabilities/default.json` allows them for the remote origins `http://127.0.0.1:*` and `http://localhost:*`. A different `CREW_URL` origin gets no tray or banners.
+  - `build.rs` declares the two commands (`AppManifest`). `capabilities/default.json` has no remote origins. At start, `src/ipc.rs` adds a capability that allows the two commands only for the exact origin of `crew serve` (`http://127.0.0.1:<port>` or `http://localhost:<port>`). Thus a dev server in the Browser tab gets no IPC ([ADR 0059](../docs/adr/0059-tauri-browser-tab.md)). A different `CREW_URL` origin gets no tray or banners. `tests/ipc.rs` tests these rules.
   - The rules (which banners, the settings, the menu rows) are in `web/src/desktopAttention.ts` (see [web/](../web/AGENTS.md)). `tests/attention.rs` tests the menu entries, their actions and the badge.
   - If there is no `crew` or `crew serve` does not start, the window loads `http://127.0.0.1:7420/`.
   - `cargo test --manifest-path desktop/src-tauri/Cargo.toml` runs `tests/local.rs`: the port choice, the `crew` lookup and the `serve` arguments.

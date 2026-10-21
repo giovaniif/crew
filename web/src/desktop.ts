@@ -1,6 +1,6 @@
 import type { Session, StreamState } from "./stream";
 
-export type MainTab = "chat" | "terminal" | "review" | "shell" | "nvim";
+export type MainTab = "chat" | "terminal" | "review" | "shell" | "nvim" | "browser";
 
 export type TabSpec = { id: MainTab; title: string; needs: string | null };
 
@@ -10,6 +10,7 @@ export const mainTabs: TabSpec[] = [
   { id: "review", title: "Review", needs: "Start or select a session to review its changes" },
   { id: "shell", title: "Shell", needs: "Start or select a session to open a shell in its worktree" },
   { id: "nvim", title: "nvim", needs: "Start or select a session to open nvim in its worktree" },
+  { id: "browser", title: "Browser", needs: "Start or select a session to open its browser" },
 ];
 
 export type SidebarRows = { live: Session[]; ended: Session[] };
