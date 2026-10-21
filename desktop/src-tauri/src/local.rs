@@ -80,6 +80,14 @@ impl LocalServe {
         false
     }
 
+    pub fn alive(&mut self) -> bool {
+        matches!(self.child.try_wait(), Ok(None))
+            && matches!(
+                request(self.port, "GET", "/api/v1/hello", None, None),
+                Ok((200, _))
+            )
+    }
+
     pub fn stop(&mut self) {
         let _ = self.child.kill();
         let _ = self.child.wait();
@@ -172,4 +180,48 @@ pub fn pair(crew: &Path, port: u16) -> Result<serde_json::Value, String> {
     }
     let paired: serde_json::Value = serde_json::from_str(&reply).map_err(|e| e.to_string())?;
     Ok(serde_json::json!({ "token": paired["token"], "device": paired["device"] }))
+}
+
+fn daemon_check(crew: &Path) -> (bool, String) {
+    let Ok(out) = Command::new(crew)
+        .args(["setup", "daemon", "--check"])
+        .stdin(Stdio::null())
+        .output()
+    else {
+        return (false, String::new());
+    };
+    let Ok(check) = serde_json::from_slice::<serde_json::Value>(&out.stdout) else {
+        return (false, String::new());
+    };
+    let failing = check
+        .get("failing")
+        .and_then(|f| f.as_bool())
+        .unwrap_or(false);
+    let reason = check
+        .get("reason")
+        .and_then(|r| r.as_str())
+        .unwrap_or("")
+        .trim()
+        .to_string();
+    (failing, reason)
+}
+
+pub fn fix_daemon(crew: &Path) -> Result<(), String> {
+    let out = Command::new(crew)
+        .args(["setup", "daemon"])
+        .stdin(Stdio::null())
+        .output()
+        .map_err(|e| format!("run {}: {e}", crew.display()))?;
+    let (failing, reason) = daemon_check(crew);
+    if out.status.success() && !failing {
+        return Ok(());
+    }
+    if !reason.is_empty() {
+        return Err(reason);
+    }
+    let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
+    if !stderr.is_empty() {
+        return Err(stderr);
+    }
+    Err("crew setup daemon failed".to_string())
 }

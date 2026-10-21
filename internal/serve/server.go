@@ -79,7 +79,7 @@ func New(cfg Config) (*Server, error) {
 }
 
 func (s *Server) routes() []route {
-	return []route{
+	return append([]route{
 		{"GET /api/v1/workspaces", s.workspaces},
 		{"GET /api/v1/session-options", sessionOptions},
 		{"GET /api/v1/automations", listAutomations},
@@ -102,6 +102,11 @@ func (s *Server) routes() []route {
 		{"POST /api/v1/sessions/{id}/answer", sessionAction(rpc.MethodSessionAnswer, answerParams)},
 		{"POST /api/v1/sessions/{id}/shell", sessionAction(rpc.MethodShellFocus, shellParams)},
 		{"POST /api/v1/sessions/{id}/nvim", sessionAction(rpc.MethodNvimToggle, nvimParams)},
+		{"GET /api/v1/sessions/{id}/review", openReview},
+		{"POST /api/v1/sessions/{id}/review/viewed", sessionAction(rpc.MethodReviewViewed, viewedParams)},
+		{"POST /api/v1/sessions/{id}/review/comments", sessionAction(rpc.MethodReviewComment, commentParams)},
+		{"POST /api/v1/sessions/{id}/review/send", sessionAction(rpc.MethodReviewSend, reviewSendParams)},
+		{"POST /api/v1/sessions/{id}/review/hunk", sessionAction(rpc.MethodReviewHunk, hunkParams)},
 		{"POST /api/v1/sessions/{id}/switch", sessionAction(rpc.MethodSwitch, switchParams)},
 		{"POST /api/v1/sessions/{id}/kill-dev-servers", killDevServers},
 		{"GET /api/v1/push/key", pushKey},
@@ -126,7 +131,7 @@ func (s *Server) routes() []route {
 		{"POST /api/v1/cleanup/worktree", ownerOnly(cleanupWorktree)},
 		{"POST /api/v1/ports/kill", ownerOnly(killPorts)},
 		{"POST /api/v1/mates/{name}/memory", setMateMemory},
-	}
+	}, settingsRoutes()...)
 }
 
 func (s *Server) Handler(fallback http.Handler) http.Handler {
@@ -215,6 +220,10 @@ func (s *Server) check(ctx context.Context, d Daemon, token string) (rpc.Device,
 
 func (s *Server) dial(ctx context.Context) (Daemon, error) {
 	d, err := s.cfg.Dial(ctx)
+	var mismatch *rpc.Error
+	if errors.As(err, &mismatch) && mismatch.Code == rpc.CodeVersionMismatch {
+		return nil, mismatch
+	}
 	if err != nil {
 		return nil, &rpc.Error{Code: rpc.CodeUnavailable, Message: "the crew daemon is not reachable: " + err.Error()}
 	}

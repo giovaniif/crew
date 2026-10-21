@@ -128,6 +128,14 @@ export async function interrupt(a: Authed, session: string): Promise<void> {
   await authedRequest<unknown>(a, sessionPath(session, "/interrupt"), "POST");
 }
 
+export async function sessionPane(a: Authed, session: string, kind: "shell" | "nvim"): Promise<string> {
+  const res = await authedRequest<{ pane?: unknown }>(a, sessionPath(session, "/" + kind), "POST", {});
+  if (typeof res?.pane !== "string" || !res.pane) {
+    throw new ApiError(0, "failed", "The server did not give a pane.");
+  }
+  return res.pane;
+}
+
 export type PromptChoice = {
   id: string;
   label: string;
@@ -431,6 +439,99 @@ export function openShell(a: Authed, session: string, worktree: string): Promise
 
 export function startFresh(a: Authed, session: string, sameWorktree: boolean): Promise<{ ID: string }> {
   return authedRequest<{ ID: string }>(a, sessionPath(session, "/fresh"), "POST", { same_worktree: sameWorktree });
+}
+
+export type ConfigValues = { path: string; values: Record<string, string> };
+
+export type HarnessSetup = { installed: boolean; file: string; backup?: string; err?: string };
+
+export type NvimSetup = { on_path: boolean; configured: boolean; config_file: string; plugin_dir: string; plugin_found: boolean };
+
+export type Onboarding = { done: boolean; harnesses: Record<string, HarnessSetup>; nvim: NvimSetup };
+
+export type DirChild = { Name: string; Path: string };
+
+export type PairCode = { code: string; expires_at: string };
+
+export type HarnessChoices = { harness: string; name?: string; models?: string[]; efforts?: string[]; default_model?: string; default_effort?: string };
+
+export function getConfig(a: Authed): Promise<ConfigValues> {
+  return authedRequest<ConfigValues>(a, "/api/v1/config");
+}
+
+export function setConfig(a: Authed, key: string, value: string): Promise<ConfigValues> {
+  return authedRequest<ConfigValues>(a, "/api/v1/config", "POST", { key, value });
+}
+
+export function getOnboarding(a: Authed): Promise<Onboarding> {
+  return authedRequest<Onboarding>(a, "/api/v1/onboarding");
+}
+
+export function setHooks(a: Authed, harness: string, install: boolean): Promise<HarnessSetup> {
+  return authedRequest<HarnessSetup>(a, "/api/v1/onboarding/" + (install ? "install" : "remove"), "POST", { harness });
+}
+
+export function setUpNvim(a: Authed): Promise<NvimSetup> {
+  return authedRequest<NvimSetup>(a, "/api/v1/onboarding/nvim", "POST");
+}
+
+export function workspaceDirs(a: Authed, path: string): Promise<{ dirs: DirChild[] | null }> {
+  return authedRequest<{ dirs: DirChild[] | null }>(a, "/api/v1/workspaces/dirs?path=" + encodeURIComponent(path));
+}
+
+export function listDevices(a: Authed): Promise<{ devices: Device[] }> {
+  return authedRequest<{ devices: Device[] }>(a, "/api/v1/devices");
+}
+
+export async function revokeDevice(a: Authed, id: string): Promise<void> {
+  await authedRequest<unknown>(a, "/api/v1/devices/" + encodeURIComponent(id) + "/revoke", "POST");
+}
+
+export function newPairCode(a: Authed): Promise<PairCode> {
+  return authedRequest<PairCode>(a, "/api/v1/pair/code", "POST");
+}
+
+export const unknownMethodNote = "This server does not have this setting. Update crew on the server to change it here.";
+export const ownerNote = "Only the owner device, the app on the computer that runs crew, can change this.";
+
+export function groupNote(err: unknown): string {
+  if (err instanceof ApiError && err.code === "unknown_method") {
+    return unknownMethodNote;
+  }
+  if (err instanceof ApiError && err.code === "forbidden") {
+    return ownerNote;
+  }
+  return err instanceof Error ? err.message : String(err);
+}
+
+export function openReview(a: Authed, session: string, scope: string, worktree: string): Promise<unknown> {
+  const q = new URLSearchParams();
+  if (scope) {
+    q.set("scope", scope);
+  }
+  if (worktree) {
+    q.set("worktree", worktree);
+  }
+  const query = q.toString();
+  return authedRequest<unknown>(a, sessionPath(session, "/review" + (query ? "?" + query : "")));
+}
+
+export async function markViewed(a: Authed, session: string, mark: { Worktree: string; Path: string; Blob: string }, viewed: boolean): Promise<void> {
+  await authedRequest<unknown>(a, sessionPath(session, "/review/viewed"), "POST", { mark, viewed });
+}
+
+export type ReviewCommentBody = { worktree: string; path: string; start_line: number; end_line: number; code: string; body: string; removed: boolean };
+
+export function addReviewComment(a: Authed, session: string, body: ReviewCommentBody): Promise<unknown> {
+  return authedRequest<unknown>(a, sessionPath(session, "/review/comments"), "POST", body);
+}
+
+export function sendReview(a: Authed, session: string, note: string): Promise<unknown> {
+  return authedRequest<unknown>(a, sessionPath(session, "/review/send"), "POST", { note });
+}
+
+export async function applyHunk(a: Authed, session: string, body: { worktree: string; file: unknown; hunk: number; action: "stage" | "revert" }): Promise<void> {
+  await authedRequest<unknown>(a, sessionPath(session, "/review/hunk"), "POST", body);
 }
 
 export type SwitchKind = "model" | "effort";

@@ -8,7 +8,7 @@ Read these first: the root `AGENTS.md`, `scripts/AGENTS.md`, `docs/adr/0055-agen
 2. Find the open issue with the title `patrol run log` (`gh issue list --state open --search 'in:title "patrol run log"'`). If there is none, make it.
 3. Read its comments. If the newest `run-start <UTC>` comment is less than 55 minutes old and no `run-end` comment comes after it, stop now. Write nothing.
 4. Else, comment `run-start <UTC>` with the real time.
-5. At the end, also after a failure, comment `run-end <UTC>` with a summary of 1 to 5 lines: the PRs that you merged, opened or closed, and the issues that you opened.
+5. At the end, also after a failure, comment `run-end <UTC>` with a summary of 1 to 5 lines: the PRs that you queued, opened or closed, and the issues that you opened.
 
 ## Phase A: in-flight PRs
 
@@ -23,8 +23,8 @@ For each one, in its own new worktree (never this one for two PRs):
    - "no": close the PR. Record the reason and a fingerprint (`route + element + issue`) in a comment on the `patrol run log` issue as `denied: <fingerprint> <reason>`. Never propose it again.
    - Other text is feedback. Apply it.
 2. Do one babysit pass (the babysit skill).
-3. When `go run ./scripts/land check <pr>` gives `landable: true`, run `go run ./scripts/land merge <pr>`. This is step 9 of the root `AGENTS.md`. Do not wait for the owner. If the PR has no verdict for its head, a fresh subagent (not you, the author) verifies it with the verify skill and posts `go run ./scripts/land verdict` first.
-4. A PR that is stacked on another PR: when the base merges, change its base to `main` and update the branch.
+3. When `go run ./scripts/land check <pr>` gives `landable: true`, run `go run ./scripts/land merge <pr>`. It adds the `queue` label, and the merge queue merges the PR (ADR 0058). This is step 9 of the root `AGENTS.md`. Never merge a PR yourself and never update its branch. Do not wait for the owner. If the PR has no verdict for its head, a fresh subagent (not you, the author) verifies it with the verify skill and posts `go run ./scripts/land verdict` first.
+4. A PR that is stacked on another PR: when the base merges, change its base to `main`. The merge queue updates the branch.
 
 Then run `go run ./scripts/land watch <pr>` on each agent PR that merged in the last 48 hours. A red check on a merge commit is a regression: open a revert PR, label the issue, and tell the owner (see Notifications).
 
@@ -65,5 +65,5 @@ You post with the owner's `gh` account, so GitHub does not notify the owner of y
 ## Never
 
 - Never touch the real `~/.crew`, `~/.claude`, `~/.codex`, `~/.config/nvim` or the `crew` tmux server. Use only the isolated crew.
-- Never merge a PR that `land check` does not call landable. Never use `--admin`. Never force-push `main`.
+- Never merge a PR yourself. Add the `queue` label only to a PR that `land check` calls landable. Never use `--admin`. Never force-push `main`.
 - Never edit `scripts/loops/` from this loop.
