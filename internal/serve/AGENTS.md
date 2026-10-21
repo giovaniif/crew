@@ -160,6 +160,7 @@ The `/` fallback: `Handler(fallback)` mounts `fallback` at `/`. `Handler(nil)` s
   |---|---|---|
   | 4401 `CloseUnauthorized` | the daemon refused the token, or the device was revoked | confirms with an authed GET before it forgets the login (see [web/](../../web/AGENTS.md)) |
   | 4400 `CloseBadHandshake` | the first frame was late, not JSON, or had no token | retries |
+  | 4502 `CloseBuildMismatch` | the daemon runs a different build (`version_mismatch`); the reason tells the two builds | stops and shows Build mismatch with Reconnect |
   | 1013 | the daemon went away, or could not be reached to check the token | retries |
   | 1001 | serve is stopping (also while a stream waits for its token) | retries |
   | 1011 | a write failed | retries |

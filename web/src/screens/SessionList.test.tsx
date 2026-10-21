@@ -99,11 +99,11 @@ describe("the session list", () => {
     const { sockets } = setup();
     live(sockets);
     sockets.last.drop(1013, "the crew daemon went away");
-    expect(screen.getByRole("status")).toHaveTextContent(/Offline/);
+    expect(screen.getByRole("status")).toHaveTextContent(/No crew daemon · retrying/);
     expect(screen.getByRole("link", { name: /fix the login redirect/ })).toBeInTheDocument();
     await waitFor(() => expect(sockets.opened).toHaveLength(2));
     live(sockets);
-    expect(screen.queryByText(/Offline/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/No crew daemon/)).not.toBeInTheDocument();
   });
 
   it("reconnects at once from the offline state when asked", async () => {
