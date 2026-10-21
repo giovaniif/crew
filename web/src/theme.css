@@ -1790,6 +1790,11 @@ button.danger {
   padding: 0 4px;
 }
 
+.link-button:disabled {
+  background: none;
+  color: var(--subtext);
+}
+
 .mem {
   font: 12.5px/1.55 var(--mono);
   background: var(--mantle);
