@@ -27,7 +27,7 @@ The Tauri 2 app for desktop and mobile ([ADR 0057](../docs/adr/0057-tauri-apps.m
   - A `url` server: Rust pairs with `POST /api/v1/pair` (`ureq`, desktop only). The app adds a capability for the origin of the server at run time (`add_capability`), so that its page can call the commands.
   - The page gets its login from `crew_server_auth`. The command gives only the login of the server that has the origin of the page.
   - The commands are `crew_servers`, `crew_ssh_hosts`, `crew_server_add`, `crew_server_open` (connect, select, `navigate`), `crew_server_remove`, `crew_server_fix` and `crew_server_workspace`. `crew_server_fix` runs `crew setup daemon` on this computer or over SSH. A `url` server has no Fix, because the app has no SSH access to it.
-  - When the app starts, it opens this computer. If an other server is selected, it then connects to that server and opens it.
+  - When the app starts, it opens this computer. If a different server is selected, it then connects to that server and opens it.
   - The first start (no `servers.json`) sets `first_run`. The web app then shows the Add a server flow (see [web/](../web/AGENTS.md)).
   - `tests/servers.rs` tests the store, the SSH command lines, the hosts, the target check and the check output.
   - `cargo test --manifest-path desktop/src-tauri/Cargo.toml` runs `tests/local.rs`: the port choice, the `crew` lookup and the `serve` arguments.
