@@ -52,7 +52,6 @@ var commands = map[string]func(e *env, args []string, r *result){
 	"iso":          iso,
 	"tui":          tui,
 	"web":          web,
-	"mac":          mac,
 	"map":          mapCmd,
 	"evidence":     evidence,
 	"design-check": designCheck,
