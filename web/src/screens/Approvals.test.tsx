@@ -89,6 +89,19 @@ describe("Approvals", () => {
     expect(await within(card).findByRole("status")).toHaveTextContent("This approval is gone: the approval expired");
   });
 
+  it("keeps the buttons after a failed decision, so you can try again", async () => {
+    const { server, env } = setup();
+    server.on("POST", "/api/v1/approvals/a1/approve", { status: 500, body: { error: { code: "internal", message: "the daemon is busy" } } });
+    render(<App env={env} />);
+    const card = await screen.findByRole("listitem", { name: "helper: create pr" });
+    await userEvent.click(within(card).getByRole("button", { name: "Approve" }));
+    expect(await within(card).findByRole("alert")).toHaveTextContent("the daemon is busy");
+    server.on("POST", "/api/v1/approvals/a1/approve", { status: 200, body: {} });
+    await userEvent.click(within(card).getByRole("button", { name: "Approve" }));
+    expect(await within(card).findByRole("status")).toHaveTextContent("Approved. The session tries it again.");
+    expect(within(card).queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("says when nothing waits", async () => {
     const { env } = setup([]);
     render(<App env={env} />);
