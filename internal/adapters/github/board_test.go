@@ -25,7 +25,7 @@ func TestPRBoardParseBoardReadsEverythingTheBoardShows(t *testing.T) {
 	want := map[string][]domain.PullRequest{
 		"r0": {
 			{
-				Number: 12, Title: "Add login", URL: "https://github.com/o/api/pull/12", Head: "feat", Author: "ana", State: domain.PROpen,
+				Number: 12, Title: "Add login", URL: "https://github.com/o/api/pull/12", Head: "feat", Author: "ana", State: domain.PROpen, Draft: true,
 				Checks: domain.CheckFailing, ReviewDecision: domain.ReviewChangesRequested, Mergeable: domain.MergeConflicting,
 				UnresolvedThreads: 2, BotComments: 4,
 				Failing: []domain.FailingCheck{
@@ -38,6 +38,22 @@ func TestPRBoardParseBoardReadsEverythingTheBoardShows(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got %+v\nwant %+v", got, want)
+	}
+}
+
+func TestPRBoardSkipsAPRFromAForkWithTheSameHeadName(t *testing.T) {
+	if !strings.Contains(boardFragment, "isCrossRepository") {
+		t.Errorf("the board query does not ask whether a PR comes from a fork")
+	}
+	out := `{"data":{"r0":{"pullRequests":{"nodes":[
+		{"number":2,"title":"fork","url":"u2","headRefName":"main","state":"OPEN","isCrossRepository":true},
+		{"number":1,"title":"own","url":"u1","headRefName":"main","state":"OPEN","isCrossRepository":false}]}}}}`
+	got, err := parseBoard([]byte(out), []string{"r0"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if prs := got["r0"]; len(prs) != 1 || prs[0].Number != 1 {
+		t.Errorf("got %+v, want only PR 1", prs)
 	}
 }
 
@@ -254,5 +270,12 @@ func TestPRBoardFinderKeepsAnEmptyRepoAsASuccess(t *testing.T) {
 	}
 	if prs, ok := got["/w/a"]; !ok || len(prs) != 0 {
 		t.Errorf("got %v, want an empty answer for the repo", got)
+	}
+}
+
+func TestPRBoardQueryAsksIfAPRIsADraft(t *testing.T) {
+	query, _ := boardQuery([]repoRef{{"o", "api"}})
+	if !strings.Contains(query, " isDraft ") {
+		t.Errorf("query does not ask for isDraft:\n%s", query)
 	}
 }

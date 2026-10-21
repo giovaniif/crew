@@ -444,6 +444,16 @@ export function killPorts(a: Authed, pgids: number[]): Promise<{ killed: number[
   return authedRequest<{ killed: number[] }>(a, "/api/v1/ports/kill", "POST", { pgids });
 }
 
+export type HeadlessView = { live: boolean; png?: string; width?: number; height?: number };
+
+export function headlessView(a: Authed, session: string): Promise<HeadlessView> {
+  return authedRequest<HeadlessView>(a, sessionPath(session, "/browser"));
+}
+
+export function sendCookies(a: Authed, file: string): Promise<{ imported: number; total: number }> {
+  return authedRequest<{ imported: number; total: number }>(a, "/api/v1/browser/cookies", "POST", { file });
+}
+
 export function openShell(a: Authed, session: string, worktree: string): Promise<{ pane: string }> {
   return authedRequest<{ pane: string }>(a, sessionPath(session, "/shell"), "POST", { worktree });
 }
