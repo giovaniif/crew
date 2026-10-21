@@ -72,6 +72,16 @@ describe("the session list", () => {
     expect(screen.queryByRole("region", { name: "Needs you" })).not.toBeInTheDocument();
   });
 
+  it("marks a muted session so the user can tell that it sends no banners", () => {
+    const { sockets } = setup();
+    const state = goldenState();
+    live(sockets, { ...state, sessions: state.sessions.map((s) => ({ ...s, Muted: s.State === "done" })) });
+    const done = within(screen.getByRole("region", { name: "Done" }));
+    expect(within(done.getByRole("link", { name: /add retries/ })).getByText("muted")).toBeInTheDocument();
+    const working = within(screen.getByRole("region", { name: "Working" }));
+    expect(working.getByRole("link", { name: /fix the login redirect/ })).not.toHaveTextContent("muted");
+  });
+
   it("moves a session that asks for permission to Needs you without a reload", () => {
     const { sockets } = setup();
     live(sockets);
