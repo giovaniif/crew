@@ -544,15 +544,23 @@ func (m Model) recentLines() []string {
 	if len(recent) == 0 {
 		return append(out, m.line(false, []piece{{s.dim, " nothing yet"}}, nil))
 	}
-	loc := m.opts.Now().Location()
+	now := m.opts.Now()
 	for _, r := range recent[:min(len(recent), recentShown)] {
 		out = append(out, m.line(false, []piece{
-			{s.dim, " " + r.At.In(loc).Format("15:04") + "  "},
+			{s.dim, " " + cleanedAt(r.At, now) + "  "},
 			{s.bold, filepath.Base(r.Path) + "  "},
 			{s.sub, cleanText(r.Outcome)},
 		}, nil))
 	}
 	return out
+}
+
+func cleanedAt(at, now time.Time) string {
+	at = at.In(now.Location())
+	if y, mo, d := at.Date(); y == now.Year() && mo == now.Month() && d == now.Day() {
+		return at.Format("15:04")
+	}
+	return at.Format("Jan 2 15:04")
 }
 
 func (m Model) diskFooter() []string {
