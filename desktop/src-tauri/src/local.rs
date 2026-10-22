@@ -1,4 +1,4 @@
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::io::{self, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
@@ -41,6 +41,67 @@ pub fn serve_args(port: u16) -> Vec<String> {
     ]
 }
 
+pub const FALLBACK_DIRS: [&str; 2] = ["/usr/local/bin", "/opt/homebrew/bin"];
+
+pub fn serve_path(parent: Option<&OsStr>, login: Option<String>, home: Option<&Path>) -> OsString {
+    let mut dirs: Vec<PathBuf> = Vec::new();
+    let mut add = |dir: PathBuf| {
+        if !dir.as_os_str().is_empty() && !dirs.contains(&dir) {
+            dirs.push(dir);
+        }
+    };
+    if let Some(login) = login {
+        std::env::split_paths(&login).for_each(&mut add);
+    }
+    if let Some(parent) = parent {
+        std::env::split_paths(parent).for_each(&mut add);
+    }
+    if let Some(home) = home {
+        add(home.join(".local/bin"));
+    }
+    FALLBACK_DIRS.iter().map(PathBuf::from).for_each(&mut add);
+    std::env::join_paths(dirs).unwrap_or_else(|_| parent.map(OsStr::to_os_string).unwrap_or_default())
+}
+
+pub fn login_path(shell: &Path, timeout: Duration) -> Option<String> {
+    let mut child = Command::new(shell)
+        .args(["-lc", "printf %s \"$PATH\""])
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .ok()?;
+    let end = Instant::now() + timeout;
+    loop {
+        match child.try_wait() {
+            Ok(Some(status)) if status.success() => break,
+            Ok(None) if Instant::now() < end => std::thread::sleep(Duration::from_millis(20)),
+            _ => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return None;
+            }
+        }
+    }
+    let mut out = String::new();
+    child.stdout.take()?.read_to_string(&mut out).ok()?;
+    let path = out.trim().to_string();
+    (!path.is_empty()).then_some(path)
+}
+
+pub fn child_path() -> OsString {
+    static PATH: std::sync::OnceLock<OsString> = std::sync::OnceLock::new();
+    PATH.get_or_init(read_child_path).clone()
+}
+
+fn read_child_path() -> OsString {
+    let login = std::env::var_os("SHELL")
+        .filter(|s| !s.is_empty())
+        .and_then(|shell| login_path(Path::new(&shell), Duration::from_secs(3)));
+    let home = std::env::var_os("HOME").map(PathBuf::from);
+    serve_path(std::env::var_os("PATH").as_deref(), login, home.as_deref())
+}
+
 pub fn base_url(port: u16) -> String {
     format!("http://127.0.0.1:{port}/")
 }
@@ -52,13 +113,19 @@ pub struct LocalServe {
 
 impl LocalServe {
     pub fn start(crew: &Path, port: u16) -> io::Result<Self> {
-        Self::spawn(crew.as_os_str(), &serve_args(port), port)
+        let mut command = Command::new(crew);
+        command.args(serve_args(port)).env("PATH", child_path());
+        Self::run(command, port)
     }
 
     pub fn spawn(program: &OsStr, args: &[String], port: u16) -> io::Result<Self> {
         let mut command = Command::new(program);
+        command.args(args);
+        Self::run(command, port)
+    }
+
+    fn run(mut command: Command, port: u16) -> io::Result<Self> {
         command
-            .args(args)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::inherit());
@@ -165,6 +232,7 @@ pub fn token_works(port: u16, auth: &serde_json::Value) -> bool {
 pub fn pair(crew: &Path, port: u16) -> Result<serde_json::Value, String> {
     let out = Command::new(crew)
         .args(["remote", "pair", "--json", "--name", DEVICE_NAME])
+        .env("PATH", child_path())
         .stdin(Stdio::null())
         .output()
         .map_err(|e| e.to_string())?;
@@ -196,6 +264,7 @@ pub fn pair_with(port: u16, code: &str) -> Result<serde_json::Value, String> {
 fn daemon_check(crew: &Path) -> (bool, String) {
     let Ok(out) = Command::new(crew)
         .args(["setup", "daemon", "--check"])
+        .env("PATH", child_path())
         .stdin(Stdio::null())
         .output()
     else {
@@ -220,6 +289,7 @@ fn daemon_check(crew: &Path) -> (bool, String) {
 pub fn fix_daemon(crew: &Path) -> Result<(), String> {
     let out = Command::new(crew)
         .args(["setup", "daemon"])
+        .env("PATH", child_path())
         .stdin(Stdio::null())
         .output()
         .map_err(|e| format!("run {}: {e}", crew.display()))?;

@@ -6,6 +6,7 @@ import { decodeReview } from "../review";
 import { desktop } from "../test/desktop";
 import { FakeServer } from "../test/fake-server";
 import { ReviewPane } from "./Review";
+import { pick } from "../test/pick";
 
 const golden = (name: string): Record<string, unknown> => JSON.parse(readFileSync(new URL("../../../internal/serve/testdata/" + name, import.meta.url), "utf8"));
 
@@ -65,7 +66,7 @@ describe("the Review tab", () => {
 
   it("shows one worktree from the worktree menu", async () => {
     const { pane, server } = await openReview();
-    await userEvent.selectOptions(within(pane).getByRole("combobox", { name: "Worktree" }), "web@42-fix");
+    await pick(userEvent.setup(), within(pane).getByRole("combobox", { name: "Worktree" }), "web@42-fix");
     const tree = within(pane).getByRole("navigation", { name: "Changed files" });
     expect(within(tree).getAllByRole("heading").map((h) => h.textContent)).toEqual(["web@42-fix"]);
     expect(server.calls.map((c) => c.path)).toContain(reviewPath + "?scope=branch&worktree=w2");

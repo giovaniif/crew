@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { Automation, AutomationRun } from "../api";
 import { automationOf, automationRows, draftOf, type AutomationQuery } from "../automations";
 import { desktop } from "../test/desktop";
+import { pick } from "../test/pick";
 
 afterEach(() => {
   window.location.hash = "";
@@ -73,7 +74,7 @@ describe("the Automations window", () => {
     expect(screen.queryByRole("listitem", { name: "fix-ci" })).not.toBeInTheDocument();
     expect(screen.getByRole("listitem", { name: "deps" })).toBeInTheDocument();
     await userEvent.clear(screen.getByRole("searchbox", { name: "Search automations" }));
-    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Last outcome" }), "failed");
+    await pick(userEvent.setup(), screen.getByRole("combobox", { name: "Last outcome" }), "Failed");
     expect(screen.getAllByRole("listitem").map((li) => li.getAttribute("aria-label")).filter(Boolean)).toEqual(["fix-ci"]);
   });
 

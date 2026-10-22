@@ -1,0 +1,381 @@
+.settings-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.settings-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings-nav-title {
+  margin: 8px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--subtext);
+}
+
+.settings-nav {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.settings-nav button {
+  min-height: 44px;
+  padding: 8px 14px;
+  background: var(--mantle);
+  color: var(--text);
+  font-weight: 500;
+}
+
+.detail-tabs button[aria-selected="true"] {
+  background: var(--blue);
+  color: var(--on-accent);
+}
+
+.settings-nav button[aria-current="page"] {
+  background: var(--blue);
+  color: var(--on-accent);
+}
+
+.settings-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.settings-group h3 {
+  margin: 16px 0 8px;
+  font-size: 15px;
+}
+
+.settings-note {
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--mantle);
+  border-radius: 8px;
+  white-space: pre-wrap;
+  font-family: var(--mono);
+  font-size: 14px;
+}
+
+.settings-notice {
+  color: var(--subtext);
+}
+
+.server-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.server-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  text-align: left;
+}
+
+.server-row-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.server-row-text h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.server-row-text p {
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.server-row-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.alert-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+}
+
+.alert-row > span {
+  min-width: 8rem;
+  font-weight: 600;
+}
+
+.settings-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--surface);
+  overflow-wrap: anywhere;
+}
+
+.settings-list li > :first-child {
+  flex: 1 1 12rem;
+}
+
+.settings-list li > .swatch {
+  flex: none;
+}
+
+.settings-list button {
+  min-height: 44px;
+  width: auto;
+  margin-top: 0;
+}
+
+.card .settings-list button {
+  width: auto;
+  margin-top: 0;
+}
+
+.path-field,
+.settings-row,
+.agent-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.agent-settings {
+  border: 1px solid var(--surface);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin: 0 0 12px;
+}
+
+.agent-settings legend {
+  font-weight: 600;
+  padding: 0 4px;
+}
+
+.folders {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  border: 1px solid var(--surface);
+  border-radius: 8px;
+  background: var(--paper);
+  max-height: 14rem;
+  overflow-y: auto;
+}
+
+.folders li {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.folders li:hover {
+  background: var(--selected);
+}
+
+.theme-colors li label {
+  flex: 1;
+}
+
+.swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid var(--surface);
+  flex: none;
+}
+
+.pair-code code {
+  font-size: 20px;
+  letter-spacing: 0.12em;
+}
+
+.shortcuts {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.shortcuts th,
+.shortcuts td {
+  text-align: left;
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--surface);
+  font-weight: 400;
+}
+
+.shortcut-actions {
+  white-space: nowrap;
+}
+
+.shortcut-actions button {
+  min-height: 44px;
+  width: auto;
+  margin: 0 0 0 4px;
+  padding: 6px 10px;
+  background: transparent;
+  color: var(--link);
+  font-weight: 500;
+}
+
+.server-row-buttons button {
+  margin-top: 0;
+  width: auto;
+}
+
+.server-row > [role="status"],
+.server-row > [role="alert"] {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.server-chip {
+  position: relative;
+}
+
+.chip-button {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 12px;
+  border: 1px solid var(--surface);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--text);
+  font: inherit;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chip-button::after {
+  content: "▾";
+  margin-left: auto;
+  color: var(--subtext);
+}
+
+.chip-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  background: var(--paper);
+  border: 1px solid var(--surface);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px var(--shadow-deep);
+  z-index: 5;
+}
+
+.chip-menu button {
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chip-menu button:hover,
+.chip-menu button[aria-checked="true"] {
+  background: var(--selected);
+}
+
+.chip-menu [role="menuitemradio"][aria-checked="true"]::before {
+  content: "✓ ";
+}
+
+.change-server {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: 8px;
+  color: var(--link);
+  font-weight: 500;
+}
+
+.card .shortcut-actions button {
+  width: auto;
+  margin: 0 0 0 4px;
+}
+
+@media (min-width: 900px) {
+  .main-other .settings-screen {
+    max-width: 60rem;
+  }
+
+  .settings-layout {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .settings-groups {
+    flex: none;
+    width: 12rem;
+    position: sticky;
+    top: 0;
+  }
+
+  .settings-nav {
+    flex-direction: column;
+  }
+
+  .settings-nav button {
+    width: 100%;
+    text-align: left;
+    background: transparent;
+  }
+
+  .settings-pane {
+    flex: 1;
+  }
+}
+
+@media (max-width: 600px) {
+  .shortcuts tr {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .shortcuts th {
+    flex: 1 1 100%;
+    border-bottom: 0;
+  }
+}

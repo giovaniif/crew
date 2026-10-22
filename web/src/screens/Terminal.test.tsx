@@ -95,7 +95,7 @@ describe("the Terminal tab", () => {
     const d = open();
     await userEvent.click(tab("Terminal"));
     d.terminals.socket("%5").drop(4404, "no pane");
-    expect(within(panel("Terminal")).getByRole("status")).toHaveTextContent("The pane is gone");
+    expect(within(panel("Terminal")).getByRole("status")).toHaveTextContent("This session's pane closed");
   });
 
   it("says when tmux is not available", async () => {

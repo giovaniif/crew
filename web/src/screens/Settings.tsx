@@ -5,6 +5,7 @@ import { confirmEnd, setConfirmEnd } from "../commands";
 import { disablePush, enablePush, type PushEnv } from "../push";
 import { applyTheme, clamp, fontSizes, lineHeights, loadSettings, saveSettings, type AppSettings, type Appearance, type EventAlert, type General, type NotificationSettings } from "../settings";
 import { assignShortcut, comboFor, comboFromEvent, comboLabel, defaultShortcuts, restoreShortcut, shortcutActions, type Shortcuts } from "../shortcuts";
+import { Checkbox, Select, Stepper } from "../ui";
 import { Brand } from "./Brand";
 import { AgentsGroup, ServerAppearanceGroup, ServerNotificationsGroup, WorkspacesGroup } from "./ServerSettings";
 
@@ -36,9 +37,10 @@ export type SettingsProps = {
   storage: KeyValue;
   userAgent: string;
   connectUrl?: string;
+  desktop?: boolean;
 };
 
-function PushCard({ auth, installed, fetch, push }: Pick<SettingsProps, "auth" | "installed" | "fetch" | "push">) {
+function PushCard({ auth, installed, fetch, push, desktop }: Pick<SettingsProps, "auth" | "installed" | "fetch" | "push" | "desktop">) {
   const [notify, setNotify] = useState<Notify>(() => {
     if (!push.supported) {
       return { state: "idle" };
@@ -86,14 +88,14 @@ function PushCard({ auth, installed, fetch, push }: Pick<SettingsProps, "auth" |
   return (
     <section className="card" aria-label="Notifications">
       <h2>Notifications</h2>
-      {!installed && (
+      {!installed && !desktop && (
         <p className="muted">
           On iPhone and iPad, notifications work only in the app opened from the Home Screen. Add crew to your Home Screen,
           then open it from there.
         </p>
       )}
       {!push.supported ? (
-        <p className="muted">This browser cannot show notifications from crew.</p>
+        !desktop && <p className="muted">This browser cannot show notifications from crew.</p>
       ) : (
         <>
           <p className="muted">Get a notification when a session needs you, waits for an answer or finishes.</p>
@@ -130,25 +132,16 @@ function PushCard({ auth, installed, fetch, push }: Pick<SettingsProps, "auth" |
 
 function Check({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
-    <label className="check">
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-      {label}
-    </label>
+    <Checkbox label={label} checked={checked} onChange={onChange} />
   );
 }
 
 function Pick<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: [T, string][]; onChange: (v: T) => void }) {
   return (
-    <label>
+    <div className="ui-field">
       {label}
-      <select value={value} onChange={(e) => onChange(e.target.value as T)}>
-        {options.map(([v, title]) => (
-          <option key={v} value={v}>
-            {title}
-          </option>
-        ))}
-      </select>
-    </label>
+      <Select label={label} value={value} onChange={onChange} options={options.map(([v, title]) => ({ value: v, label: title }))} />
+    </div>
   );
 }
 
@@ -156,21 +149,21 @@ function NumberField({ label, value, step, onCommit }: { label: string; value: n
   const [text, setText] = useState(String(value));
   useEffect(() => setText(String(value)), [value]);
   return (
-    <label>
+    <div className="ui-field">
       {label}
-      <input
-        type="number"
+      <Stepper
+        label={label}
         step={step}
         value={text}
-        onChange={(e) => {
-          setText(e.target.value);
-          if (e.target.value !== "" && !Number.isNaN(Number(e.target.value))) {
-            onCommit(Number(e.target.value));
+        onChange={(next) => {
+          setText(next);
+          if (next !== "" && !Number.isNaN(Number(next))) {
+            onCommit(Number(next));
           }
         }}
         onBlur={() => setText(String(value))}
       />
-    </label>
+    </div>
   );
 }
 
@@ -339,7 +332,7 @@ function GroupNav({ label, groups, current, onPick }: { label: string; groups: {
   );
 }
 
-export function Settings({ auth, host, installed, fetch, push, onSignOut, storage, userAgent, connectUrl }: SettingsProps) {
+export function Settings({ auth, host, installed, fetch, push, onSignOut, storage, userAgent, connectUrl, desktop }: SettingsProps) {
   const [group, setGroup] = useState<GroupId>("general");
   const [settings, setSettings] = useState<AppSettings>(() => loadSettings(storage));
   const api: Authed = { fetch, token: auth.token };
@@ -378,7 +371,7 @@ export function Settings({ auth, host, installed, fetch, push, onSignOut, storag
               <dd>{auth.device.id}</dd>
             </dl>
           </section>
-          <PushCard auth={auth} installed={installed} fetch={fetch} push={push} />
+          {!(desktop && !push.supported) && <PushCard auth={auth} installed={installed} fetch={fetch} push={push} desktop={desktop} />}
           <GeneralPane general={settings.general} storage={storage} onChange={(general) => update({ ...settings, general })} />
           <button type="button" className="secondary" onClick={onSignOut}>
             Sign out

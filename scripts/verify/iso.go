@@ -24,6 +24,9 @@ type isoState struct {
 	Token     string          `json:"token"`
 	Device    json.RawMessage `json:"device"`
 	Env       []string        `json:"env"`
+	Session   string          `json:"session,omitempty"`
+	Pane      string          `json:"pane,omitempty"`
+	Worktree  string          `json:"worktree,omitempty"`
 	Started   time.Time       `json:"started"`
 }
 
@@ -105,7 +108,8 @@ func isoEnv(e *env, home, socket string) []string {
 var pairCode = regexp.MustCompile(`Code ([A-Z0-9]+),`)
 
 func isoUp(e *env, args []string, r *result) {
-	if _, ok := parse(args, nil, nil, r); !ok {
+	o, ok := parse(args, nil, []string{"session"}, r)
+	if !ok {
 		return
 	}
 	if st, err := loadIso(e); err == nil {
@@ -126,7 +130,7 @@ func isoUp(e *env, args []string, r *result) {
 	for _, f := range []string{"onboarded", "e2e/claude.steps", "e2e/codex.steps"} {
 		_ = os.WriteFile(filepath.Join(home, f), nil, 0o644)
 	}
-	ok := false
+	ok = false
 	defer func() {
 		if !ok {
 			stopIso(e, st)
@@ -172,6 +176,12 @@ func isoUp(e *env, args []string, r *result) {
 		r.fail("cannot pair a device: "+err.Error(), "read "+filepath.Join(home, "daemon.log"))
 		return
 	}
+	if o.bools["session"] {
+		if err := startSession(e, &st); err != nil {
+			r.fail("cannot start the live session: "+err.Error(), "read "+filepath.Join(home, "daemon.log"))
+			return
+		}
+	}
 	if err := saveIso(e, st); err != nil {
 		r.fail("cannot save the state: "+err.Error(), "check "+e.state)
 		return
@@ -193,6 +203,75 @@ func isoReport(st isoState, r *result) {
 	r.set("serve_url", st.ServeURL)
 	r.set("web_url", st.WebURL)
 	r.set("env", st.Env)
+	if st.Session != "" {
+		r.set("session", st.Session)
+		r.set("pane", st.Pane)
+		r.set("worktree", st.Worktree)
+	}
+}
+
+const chatScript = `transcript="$CREW_E2E/chat-$$.jsonl"
+: >"$transcript"
+hook() { printf '%%s' "$2" | %[1]s hook --harness claude --event "$1"; }
+esc() { printf '%%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
+hook SessionStart "{\"cwd\":\"$PWD\",\"transcript_path\":\"$transcript\"}"
+echo "TEST fake claude: type a message and press Enter" >/dev/tty
+n=0
+while IFS= read -r msg </dev/tty; do
+	n=$((n + 1))
+	text=$(esc "$msg")
+	at=$(date -u +%%Y-%%m-%%dT%%H:%%M:%%SZ)
+	printf '{"type":"user","uuid":"u%%s","promptId":"p%%s","timestamp":"%%s","message":{"content":"%%s"}}\n' "$n" "$n" "$at" "$text" >>"$transcript"
+	hook UserPromptSubmit "{\"prompt\":\"$text\",\"transcript_path\":\"$transcript\"}"
+	printf '{"type":"assistant","uuid":"a%%s","timestamp":"%%s","message":{"content":[{"type":"text","text":"TEST echo: %%s"}]}}\n' "$n" "$at" "$text" >>"$transcript"
+	echo "TEST echo: $msg" >/dev/tty
+	hook Stop "{\"last_assistant_message\":\"TEST echo: $text\",\"transcript_path\":\"$transcript\"}"
+done
+`
+
+var sessionLine = regexp.MustCompile(`session (\S+) on pane (\S+)`)
+
+func startSession(e *env, st *isoState) error {
+	repo := filepath.Join(st.Home, "TEST-live")
+	git := func(a ...string) error {
+		out, errs, code := e.sys.exec(cmd{env: append(append([]string{}, st.Env...), "GIT_AUTHOR_NAME=TEST", "GIT_AUTHOR_EMAIL=test@invalid", "GIT_COMMITTER_NAME=TEST", "GIT_COMMITTER_EMAIL=test@invalid"), name: "git", args: append([]string{"-C", repo}, a...)})
+		if code != 0 {
+			return fmt.Errorf("git %s: %s", a[0], strings.TrimSpace(out+errs))
+		}
+		return nil
+	}
+	if err := os.MkdirAll(repo, 0o755); err != nil {
+		return err
+	}
+	if err := git("init", "-q", "-b", "main"); err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(repo, "README.md"), []byte("TEST live session\n"), 0o644); err != nil {
+		return err
+	}
+	if err := git("add", "README.md"); err != nil {
+		return err
+	}
+	if err := git("commit", "-q", "-m", "TEST init"); err != nil {
+		return err
+	}
+	script := filepath.Join(st.Home, "chat.sh")
+	if err := os.WriteFile(script, []byte(fmt.Sprintf(chatScript, st.Bin)), 0o755); err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(st.Home, "e2e", "claude.steps"), []byte("run sh "+script+" chat\n"), 0o644); err != nil {
+		return err
+	}
+	out, errs, code := e.sys.exec(cmd{dir: repo, env: st.Env, name: st.Bin, args: []string{"new", "--workspace", repo, "TEST live session"}})
+	if code != 0 {
+		return fmt.Errorf("crew new: %s", strings.TrimSpace(out+errs))
+	}
+	m := sessionLine.FindStringSubmatch(out)
+	if m == nil {
+		return errors.New("no session in the crew new output")
+	}
+	st.Session, st.Pane, st.Worktree = m[1], m[2], repo
+	return nil
 }
 
 func waitHTTP(e *env, url string) bool {
