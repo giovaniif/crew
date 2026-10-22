@@ -41,3 +41,14 @@ func TestRunApprovalRejectsBadArguments(t *testing.T) {
 		}
 	}
 }
+
+func TestApprovalArgumentsRefuseAHelpFlagAsTheID(t *testing.T) {
+	for _, args := range [][]string{{"approve", "--help"}, {"approve", "-h"}, {"deny", "--help"}, {"deny", "-h"}} {
+		if approvalArgsOK(args) {
+			t.Errorf("approvalArgsOK(%v) = true, want false", args)
+		}
+	}
+	if !approvalArgsOK([]string{"approve", "ap-1"}) {
+		t.Error("approvalArgsOK(approve ap-1) = false, want true")
+	}
+}
