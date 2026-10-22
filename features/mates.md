@@ -50,6 +50,14 @@ go run ./scripts/verify iso crew --expect "TEST original prompt" -- mate show te
 go run ./scripts/verify iso crew -- mate remove test-taken
 ```
 
+### a help flag in the place of the name prints the usage
+
+```sh
+{ go run ./scripts/verify iso crew -- mate show --help || true; } | grep -q 'usage: crew mate'
+{ go run ./scripts/verify iso crew -- mate set -h || true; } | grep -q 'usage: crew mate'
+{ go run ./scripts/verify iso crew -- mate set test-help --help || true; } | grep -q 'usage: crew mate'
+```
+
 ## Cleanup
 
 ```sh
