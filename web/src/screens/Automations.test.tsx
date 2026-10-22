@@ -67,6 +67,19 @@ describe("Automations", () => {
     expect(deps).toHaveTextContent("paused");
   });
 
+  it("refuses a new automation with the name of one that exists, so Save cannot replace it", async () => {
+    const { env } = setup("#/automations");
+    render(<App env={env} />);
+    await screen.findByRole("listitem", { name: "fix-ci" });
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "New automation" }));
+    const form = screen.getByRole("form", { name: "New automation" });
+    await user.type(within(form).getByLabelText("Name"), "fix-ci");
+    await user.type(within(form).getByLabelText("Prompt"), "TEST prompt");
+    expect(within(form).getByText("An automation named fix-ci exists.")).toBeInTheDocument();
+    expect(within(form).getByRole("button", { name: "Save" })).toBeDisabled();
+  });
+
   it("shows the outcome of the last run of each automation", async () => {
     const { env } = setup("#/automations");
     render(<App env={env} />);

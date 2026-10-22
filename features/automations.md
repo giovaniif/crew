@@ -69,6 +69,15 @@ go run ./scripts/verify web drive /#/automations --viewport both --out-dir /tmp/
 
 Expect: the problem of `TEST-bad` shows above the list, as `crew automation list` prints it (#647).
 
+### PWA New automation refuses the name of an automation that exists
+
+```sh
+printf '\n[[automation]]\nname = "test-taken"\nagent = "claude"\ntarget = "workspace"\nprompt = "TEST original prompt"\n' >> "$(jq -r .home "${VERIFY_HOME:-/tmp/crew-verify-$(id -u)}/iso.json")/config.toml"
+go run ./scripts/verify web drive /#/automations --viewport both --out-dir /tmp/crew-verify-map/automations --steps '[{"click":{"role":"button","name":"New automation"}},{"fill":{"label":"Name"},"value":"test-taken"},{"fill":{"label":"Prompt"},"value":"TEST new prompt"},{"expect":{"text":"An automation named test-taken exists."}},{"shot":"new-taken.png"}]'
+```
+
+Expect: Save stays disabled, so the existing automation keeps its prompt ([#693](https://github.com/giovaniif/crew/issues/693)).
+
 ### run an automation from config (manual: needs an [[automation]] table in the isolated config.toml and a harness that runs turns; the fake claude does not)
 
 ## Cleanup

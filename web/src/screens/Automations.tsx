@@ -162,11 +162,12 @@ function Field({ label, value, onChange, multi }: { label: string; value: string
   );
 }
 
-function EditForm({ api, title, initial, fixedName, onSaved, onCancel }: { api: Authed; title: string; initial: AutomationDraft; fixedName: boolean; onSaved: () => void; onCancel: () => void }) {
+function EditForm({ api, title, initial, fixedName, taken = [], onSaved, onCancel }: { api: Authed; title: string; initial: AutomationDraft; fixedName: boolean; taken?: string[]; onSaved: () => void; onCancel: () => void }) {
   const [d, setD] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
   const set = (key: keyof AutomationDraft) => (v: string) => setD({ ...d, [key]: v });
+  const nameTaken = !fixedName && taken.includes(d.name.trim());
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -186,6 +187,7 @@ function EditForm({ api, title, initial, fixedName, onSaved, onCancel }: { api: 
     <form className="automation-form" aria-label={title} onSubmit={submit}>
       <h2>{title}</h2>
       {fixedName ? null : <Field label="Name" value={d.name} onChange={set("name")} />}
+      {nameTaken ? <p className="mate-error">An automation named {d.name.trim()} exists.</p> : null}
       <label>
         Agent
         <select value={d.agent} onChange={(e) => setD({ ...d, agent: e.target.value })}>
@@ -214,7 +216,7 @@ function EditForm({ api, title, initial, fixedName, onSaved, onCancel }: { api: 
         <button type="button" className="secondary" onClick={onCancel}>
           Cancel
         </button>
-        <button type="submit" disabled={busy || !d.name.trim() || !d.prompt.trim()}>
+        <button type="submit" disabled={busy || nameTaken || !d.name.trim() || !d.prompt.trim()}>
           Save
         </button>
       </div>
@@ -336,7 +338,7 @@ export function Automations({ api }: { api: Authed }) {
         </button>
       </div>
       {creating ? (
-        <EditForm api={api} title="New automation" initial={newDraft()} fixedName={false} onCancel={() => setCreating(false)} onSaved={() => (setCreating(false), reload())} />
+        <EditForm api={api} title="New automation" initial={newDraft()} fixedName={false} taken={(list ?? []).map((a) => a.name)} onCancel={() => setCreating(false)} onSaved={() => (setCreating(false), reload())} />
       ) : null}
       <div className="automation-filters">
         <label>
