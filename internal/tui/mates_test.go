@@ -336,6 +336,28 @@ func TestNewMateFlowShowsARefusalAndStaysOpen(t *testing.T) {
 	}
 }
 
+func TestNewMateFlowRefusesATakenOrBadNameAtTheFaceStep(t *testing.T) {
+	cases := []struct{ name, want string }{
+		{"helper", "A mate named helper exists."},
+		{"no way", "Use up to 32 letters, digits, - and _."},
+	}
+	for _, tc := range cases {
+		for _, next := range []tea.KeyPressMsg{key("enter"), ctrl('n')} {
+			m, c := matesModel(t, withLocalMates(fixture(1, 0)))
+			m = press(m, "a")
+			m = typeText(m, tc.name)
+			m = pressCmd(m, next)
+			out := screen(m)
+			if !strings.Contains(out, tc.want) || !strings.Contains(out, "1 face") || strings.Contains(out, "Added to the prompt") {
+				t.Errorf("%q with %s:\n%s", tc.name, next.String(), out)
+			}
+			if got := callsOf(c, rpc.MethodMateSet); len(got) != 0 {
+				t.Errorf("mate.set calls %+v", got)
+			}
+		}
+	}
+}
+
 func TestNewMateFlowTakesShiftedLetters(t *testing.T) {
 	m, _ := matesModel(t, withLocalMates(fixture(1, 0)))
 	m = press(m, "a")

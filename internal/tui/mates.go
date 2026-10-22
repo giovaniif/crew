@@ -431,6 +431,20 @@ func (cr *mateCreate) move(d int) {
 	}
 }
 
+func (m Model) mateNameProblem(cr mateCreate) string {
+	name := strings.TrimSpace(cr.name)
+	switch {
+	case cr.step != 0 || name == "":
+		return ""
+	case !domain.ValidMateName(name):
+		return "Use up to 32 letters, digits, - and _."
+	}
+	if _, ok := m.mateDefs[name]; ok {
+		return "A mate named " + name + " exists."
+	}
+	return ""
+}
+
 func (m Model) createKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	p := *m.mp
 	cr := *p.create
@@ -440,6 +454,9 @@ func (m Model) createKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "esc":
 		p.create = nil
 	case "ctrl+n":
+		if cr.err = m.mateNameProblem(cr); cr.err != "" {
+			break
+		}
 		cr.step, cr.field = min(cr.step+1, 2), 0
 	case "ctrl+p":
 		cr.step, cr.field = max(cr.step-1, 0), 0
@@ -456,6 +473,9 @@ func (m Model) createKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			*t = dropLast(*t)
 		}
 	case "enter":
+		if cr.err = m.mateNameProblem(cr); cr.err != "" {
+			break
+		}
 		if cr.step < 2 {
 			cr.step, cr.field = cr.step+1, 0
 			break

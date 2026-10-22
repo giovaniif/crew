@@ -60,6 +60,15 @@ go run ./scripts/verify web drive /#/automations --viewport both --out-dir /tmp/
 
 Expect: only the selected tab is blue, the facts show as a grid, and the form is in a panel with a small Enabled checkbox next to its label (#595).
 
+### PWA shows config problems
+
+```sh
+printf '\n[[automation]]\nname = "TEST-bad"\nagent = "nope"\ntarget = "workspace"\nprompt = "TEST prompt"\n' >> "$(jq -r .home "${VERIFY_HOME:-/tmp/crew-verify-$(id -u)}/iso.json")/config.toml"
+go run ./scripts/verify web drive /#/automations --viewport both --out-dir /tmp/crew-verify-map/automations --steps '[{"expect":{"text":"agent must be one of","exact":false}},{"shot":"problems.png"}]'
+```
+
+Expect: the problem of `TEST-bad` shows above the list, as `crew automation list` prints it (#647).
+
 ### run an automation from config (manual: needs an [[automation]] table in the isolated config.toml and a harness that runs turns; the fake claude does not)
 
 ## Cleanup

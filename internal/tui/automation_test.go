@@ -74,3 +74,16 @@ func TestAutomationHelpListsTheKey(t *testing.T) {
 		t.Errorf("help:\n%s", out)
 	}
 }
+
+func TestAutomationKeyWithOnlyBrokenAutomationsShowsTheProblem(t *testing.T) {
+	m, c := namingModel(t, domain.Task{ID: "t1", Text: "tidy"})
+	c.autoProblems = []string{`config.toml: automation "bad": agent must be one of [claude codex omp]`}
+	m = pressCmd(m, key("a"))
+	out := screen(m)
+	if !strings.Contains(out, `automation "bad": agent`) {
+		t.Fatalf("a should show the config problem:\n%s", out)
+	}
+	if strings.Contains(out, "no automations") {
+		t.Errorf("a broken automation is not a missing one:\n%s", out)
+	}
+}

@@ -1,53 +1,159 @@
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/images/brand/crew-wordmark-mocha.svg">
-    <img src="docs/images/brand/crew-wordmark.svg" alt="crew" width="280">
-  </picture>
-</p>
-
-<p align="center"><b>Run a crew of coding agents in parallel. Review their work like a PR. Step in only when they need you.</b></p>
+<h1 align="center">
+  <img src="desktop/src-tauri/icons/128x128.png" alt="" width="64" valign="middle"> crew
+</h1>
 
 <p align="center">
-  <a href="https://github.com/giovaniif/crew/releases"><img alt="Release" src="https://img.shields.io/github/v/release/giovaniif/crew?include_prereleases&label=release"></a>
+  <a href="https://github.com/giovaniif/crew/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/giovaniif/crew?style=flat&label=%E2%98%85&color=08C"></a>
+  <a href="https://github.com/giovaniif/crew/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/giovaniif/crew?include_prereleases&label=release&color=08C"></a>
   <a href="https://github.com/giovaniif/crew/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/giovaniif/crew/actions/workflows/ci.yml/badge.svg"></a>
+  <img alt="Platforms: macOS, Linux, iOS and Android" src="https://img.shields.io/badge/macOS%20%7C%20Linux%20%7C%20iOS%20%7C%20Android-4493F8?style=flat">
+  <a href="#phone"><img alt="iOS on TestFlight" src="https://img.shields.io/badge/iOS-TestFlight-black?style=flat&logo=apple&logoColor=white"></a>
+  <a href="https://github.com/giovaniif/crew/actions/workflows/ci.yml?query=branch%3Amain"><img alt="Android debug APK from CI" src="https://img.shields.io/badge/Android-debug%20APK-black?style=flat&logo=android&logoColor=white"></a>
 </p>
 
-<img src="docs/images/readme/desktop-chat.png" alt="The crew desktop app with sessions in the sidebar and the chat of an agent">
+<p align="center">
+  <strong>Run a crew of coding agents in parallel. Review their work like a PR.</strong><br>
+  Give each task to a session in its own worktree, or to a <b>mate</b>: a crew personality with its own tone and memory, in the app or in Slack.
+</p>
 
-crew runs Claude Code and Codex sessions side by side, each in its own git worktree. It tells you which session needs you, shows each change in a local, PR-style review, and removes the worktree when its PR merges. Use it from the desktop app (macOS and Linux), the terminal (TUI) or your phone.
+<h3 align="center"><a href="https://github.com/giovaniif/crew/releases"><ins>Download crew</ins></a></h3>
+
+<p align="center">
+  <img src="docs/images/readme/desktop-chat.png" alt="The crew desktop app with sessions in the sidebar and the chat of an agent" width="960">
+</p>
 
 ## Features
 
-- **Parallel agents, no mess.** Each session works in its own worktree. crew removes the worktree when the PR merges. It never deletes a branch, and it backs up uncommitted work first.
-- **Attention.** The sidebar shows the state of each session: ◆ permission, ● waiting, ◌ running, ✓ done. A session that needs you goes to the top, with a notification on your computer or your phone. The quota bar shows the Claude and Codex limits.
-- **Review like a PR.** See the last turn, the uncommitted changes or the whole branch. Comment on lines, stage or revert one hunk, and send all comments to the agent as one prompt.
-- **New sessions.** Select a workspace, a task (a PR URL or text), the agent, the model and the effort. crew makes the worktree and runs the setup recipe of the repo (`.crew.toml`).
-- **Automations.** Define `[[automation]]` tables in `config.toml` or in `.crew.toml`. Run them by hand, on a schedule or on an event such as a failed CI.
-- **Browser.** Agents control a browser for each session with `crew browser`. When no desktop app is connected, the daemon can use a headless Chromium ([ADR 0054](docs/adr/0054-headless-browser-fallback.md)).
-- **Disk and cleanup.** See the size and state of each worktree, the dev servers on its ports, and what cleanup will do and when.
-- **Terminal and nvim.** All of crew also works in the TUI. The nvim plugin sends review comments from nvim.
-- **Phone.** `crew serve` gives the same app to your phone. See [docs/remote-app.md](docs/remote-app.md).
+<table>
+<tr>
+<td colspan="2">
 
-<p>
-  <img src="docs/images/readme/desktop-review.png" alt="The review view with the changed files, a diff and a draft comment" width="49%">
-  <img src="docs/images/readme/desktop-new-session.png" alt="The new-session dialog" width="49%">
-  <img src="docs/images/readme/desktop-automations.png" alt="The automations screen" width="49%">
-  <img src="docs/images/readme/desktop-disk.png" alt="The worktrees and disk screen" width="49%">
-</p>
+### Mates: your crew, with a personality
 
-<p>
-  <img src="docs/images/readme/phone-sessions.png" alt="The phone app session list" width="240">
-  <img src="docs/images/readme/phone-chat.png" alt="The phone app chat" width="240">
-  <img src="docs/images/readme/tui-sidebar.png" alt="The crew TUI sidebar with six sessions" width="420">
-</p>
+A mate is a named personality of crew. Each mate has its own prompt, tone, agent, model, repos and memory file. Start a new conversation with a mate at any time. It keeps its personality and its notes. Mates work in the app with no Slack setup. Connect a mate to Slack, and your team can mention it in a thread. Each thread becomes a session.
+
+- **Tone controls:** set terse or chatty, cautious or bold, formal or playful. Each step adds one sentence to the prompt.
+- **Memory:** the mate writes decisions and facts to its own `memory.md`. You can edit or clear it. "Start fresh" writes a handoff, then starts a new conversation.
+- **Safe-action gate:** in Slack, a dangerous action from a person who is not the owner stops in the hook, not in the prompt. The owner approves or denies it in Slack, on the phone or in the app. A kill switch stops all mates.
+- **Everywhere:** the Mates page in the desktop and phone apps, `C` in the TUI, and `crew mate add`, `crew mate new` and `crew mate slack` in the CLI.
+
+[Docs →](docs/adr/0056-local-mates.md) · [Slack and the gate →](docs/adr/0053-mates.md)
+
+<img src="docs/images/readme/desktop-mates.png" alt="The Mates page with four mates and their states" width="49%"> <img src="docs/images/readme/desktop-mate.png" alt="A mate with its tags, conversations and memory" width="49%">
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+### Parallel agents in worktrees
+
+Start Claude Code, Codex or Oh My Pi sessions side by side. Each session works in its own git worktree, so the agents never change the same files.
+
+[Docs →](FEATURES.md)
+
+<img src="docs/images/readme/desktop-chat.png" alt="A session chat in the crew desktop app" width="100%">
+
+</td>
+<td width="50%" valign="top">
+
+### Review like a PR
+
+See the last turn, the uncommitted changes or the whole branch. Comment on lines, stage or revert one hunk, and send all comments to the agent as one prompt.
+
+[Docs →](docs/adr/0028-review-comments-and-hunks.md)
+
+<img src="docs/images/readme/desktop-review.png" alt="The review view with changed files and a draft comment" width="100%">
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+### Your phone, paired
+
+`crew serve` gives the same app to your phone: iOS, Android or a PWA. Pair it with a code from `crew remote pair`. A session that needs you sends a push notification.
+
+[Docs →](docs/remote-app.md)
+
+<img src="docs/images/readme/phone-sessions.png" alt="The phone app session list" width="100%">
+
+</td>
+<td width="50%" valign="top">
+
+### New session in seconds
+
+Select a workspace, a task (a PR URL or text), the agent, the model and the effort. crew makes the worktree and runs the setup recipe of the repo (`.crew.toml`).
+
+[Docs →](docs/getting-started.md)
+
+<img src="docs/images/readme/desktop-new-session.png" alt="The new-session dialog" width="100%">
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+### Automations
+
+Define `[[automation]]` tables in `config.toml` or `.crew.toml`. Run them by hand, on a schedule or on an event such as a failed CI.
+
+[Docs →](docs/adr/0050-automations.md)
+
+<img src="docs/images/readme/desktop-automations.png" alt="The automations screen" width="100%">
+
+</td>
+<td width="50%" valign="top">
+
+### Disk and safe cleanup
+
+See the size of each worktree and the dev servers on its ports. crew removes a worktree when its PR merges. It never deletes a branch, and it backs up uncommitted work first.
+
+[Docs →](docs/adr/0021-worktree-cleanup.md)
+
+<img src="docs/images/readme/desktop-disk.png" alt="The worktrees and disk screen" width="100%">
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+### Terminal and nvim
+
+All of crew also works in the TUI. The sidebar puts the session that needs you at the top. The nvim plugin sends review comments from nvim.
+
+[TUI →](internal/tui/AGENTS.md) · [nvim →](nvim/AGENTS.md)
+
+<img src="docs/images/readme/tui-sidebar.png" alt="The crew TUI sidebar with six sessions" width="100%">
+
+</td>
+<td width="50%" valign="top">
+
+### Browser tab and CLI
+
+Agents control a browser for each session with `crew browser`. With no desktop app, the daemon uses a headless Chromium. The `crew` CLI does all of the other steps from a script.
+
+[Docs →](docs/adr/0059-tauri-browser-tab.md) · [CLI →](cmd/crew/AGENTS.md)
+
+<img src="docs/images/readme/tui-new-session.png" alt="The crew TUI new-session form" width="100%">
+
+</td>
+</tr>
+</table>
+
+**Also in the box:** the quota bar for the Claude and Codex limits, the session states (◆ permission, ● waiting, ◌ running, ✓ done), notifications on your computer and your phone, and a desktop app that updates itself.
+
+## Supported agents
+
+<kbd>Claude Code</kbd> <kbd>Codex</kbd> <kbd>Oh My Pi (omp)</kbd>
 
 ## Install
 
-crew runs on macOS and Linux. Windows is not supported. You need `tmux`, `git` and the GitHub CLI (`gh`, signed in). You also need Claude Code, the Codex CLI or both. For the nvim integration, you need Neovim 0.10+. For `:CrewDiff`, you also need [diffview.nvim](https://github.com/sindrets/diffview.nvim).
+crew runs on macOS and Linux. Windows is not supported. You need `tmux`, `git` and the GitHub CLI (`gh`, signed in). You also need at least one agent from the list above. For the nvim integration, you need Neovim 0.10+.
 
 ### Desktop app
 
-Get the package from [GitHub Releases](https://github.com/giovaniif/crew/releases). Each package holds the matching `crew` binary, and the app starts its own `crew serve`. You do not need to install the CLI first.
+Get the package from [GitHub Releases](https://github.com/giovaniif/crew/releases). Each package holds the matching `crew` binary, and the app starts its own `crew serve`.
 
 | OS | File | Install |
 |---|---|---|
@@ -80,8 +186,6 @@ The script downloads the tarball for your OS and CPU (macOS or Linux, amd64 or a
 crew version   # crew v0.1.0-beta.1 (commit abc1234)
 ```
 
-Optional, on macOS: `brew install terminal-notifier`. Then a click on a banner shows your terminal on that session.
-
 ### Upgrade
 
 The desktop app updates itself and its `crew` binary. At launch and each 6 h, it looks for a newer release. It asks you before it installs.
@@ -93,8 +197,6 @@ curl -fsSL https://raw.githubusercontent.com/giovaniif/crew/main/scripts/install
 crew daemon stop
 crew
 ```
-
-The alpha releases had another name. The first start of `crew` moves your old state to `~/.crew` one time, and writes one line for each step.
 
 ## Quick start
 

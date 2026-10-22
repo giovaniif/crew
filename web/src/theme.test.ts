@@ -121,7 +121,7 @@ describe("the mate card", () => {
 });
 
 describe("touch targets", () => {
-  it.each([".session-card", ".back", ".retry", ".new-session", ".choice", ".interrupt", ".queued-action", ".permission-choice", ".load-older", ".tool summary", ".automation-row button", ".run-actions button", ".approval-actions button", ".kill-actions button", ".mate-actions button", ".mate-threads a", ".open-session", ".term-retry", ".phone-views button", ".settings-nav button", ".folders li", ".shortcut-actions button", ".settings-list button", ".disk-actions button", ".disk-tabs button", ".disk-kill", ".where-choice", ".first-run-buttons button", ".first-run-body .fields button", ".server-row-buttons button", ".chip-button", ".chip-menu button", ".change-server"])("%s is at least 44px tall", (selector) => {
+  it.each([".session-card", ".back", ".retry", ".new-session", ".choice", ".interrupt", ".queued-action", ".permission-choice", ".load-older", ".tool summary", ".automation-row button", ".run-actions button", ".approval-actions button", ".kill-actions button", ".mate-actions button", ".mate-threads a", ".open-session", ".term-retry", ".phone-views button", ".settings-nav button", ".folders li", ".shortcut-actions button", ".settings-list button", ".disk-actions button", ".disk-tabs button", ".disk-kill", ".where-choice", ".first-run-buttons button", ".first-run-body .fields button", ".server-row-buttons button", ".chip-button", ".chip-menu button", ".change-server", ".swatches .swatch"])("%s is at least 44px tall", (selector) => {
     expect(parseInt(rule(selector)["min-height"] ?? "0", 10)).toBeGreaterThanOrEqual(44);
   });
 });
@@ -196,5 +196,20 @@ describe("the sidebar shortcut hint", () => {
     expect(rule('.side-row[aria-current="page"] kbd.on-demand').display).toBe("inline");
     expect(rule(".side-row:hover kbd.on-demand").display).toBe("inline");
     expect(rule(".side-row:focus-visible kbd.on-demand").display).toBe("inline");
+  });
+});
+
+describe("a mate color swatch", () => {
+  it("is a circle of the same width and height", () => {
+    const swatch = rule(".swatches .swatch");
+    expect(swatch.width).toBe("44px");
+    expect(swatch.height).toBe("44px");
+    expect(swatch["min-width"]).toBe("44px");
+    expect(swatch.flex).toBe("none");
+    expect(swatch["border-radius"]).toBe("50%");
+  });
+
+  it("wraps a long word in the automation prompt", () => {
+    expect(rule(".automation-prompt")["overflow-wrap"]).toBe("anywhere");
   });
 });
