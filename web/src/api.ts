@@ -308,6 +308,8 @@ export type Automation = {
   timezone?: string;
   precheck?: string;
   session?: string;
+  browser?: string;
+  filter?: { repo?: string; branch?: string; author?: string };
   enabled: boolean;
   source: string;
 };

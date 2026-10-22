@@ -61,10 +61,11 @@ export type AutomationDraft = {
   precheck: string;
   session: string;
   enabled: boolean;
+  kept: Pick<Automation, "browser" | "filter">;
 };
 
 export function newDraft(): AutomationDraft {
-  return { name: "", agent: "claude", model: "", effort: "", target: "new-worktree", prompt: "", schedule: "", timezone: "", on: "", precheck: "", session: "fresh", enabled: true };
+  return { name: "", agent: "claude", model: "", effort: "", target: "new-worktree", prompt: "", schedule: "", timezone: "", on: "", precheck: "", session: "fresh", enabled: true, kept: {} };
 }
 
 export function draftOf(a: Automation): AutomationDraft {
@@ -81,6 +82,7 @@ export function draftOf(a: Automation): AutomationDraft {
     precheck: a.precheck ?? "",
     session: a.session ?? "fresh",
     enabled: a.enabled,
+    kept: { browser: a.browser, filter: a.filter },
   };
 }
 
@@ -88,6 +90,12 @@ export type SavedAutomation = Omit<Automation, "source">;
 
 export function automationOf(d: AutomationDraft): SavedAutomation {
   const out: Record<string, unknown> = { name: d.name.trim(), agent: d.agent };
+  if (d.kept.browser) {
+    out.browser = d.kept.browser;
+  }
+  if (d.kept.filter) {
+    out.filter = d.kept.filter;
+  }
   const set = (key: string, value: string) => {
     if (value.trim()) {
       out[key] = value.trim();
