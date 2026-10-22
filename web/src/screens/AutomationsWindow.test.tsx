@@ -45,6 +45,12 @@ describe("the automation rows", () => {
   it("turns a draft back into the automation it came from", () => {
     expect(automationOf(draftOf(list[0]))).toEqual({ name: "fix-ci", agent: "claude", target: "new-worktree", prompt: "Fix the CI of {{work_item}}.", on: ["pr.ci_failed"], enabled: true, session: "fresh" });
   });
+
+  it("keeps the fields that the form does not show", () => {
+    const a: Automation = { name: "review", agent: "claude", prompt: "Review it.", browser: "headless", filter: { branch: "feat/*" }, enabled: true, source: "/h/config.toml" };
+    const d = { ...draftOf(a), prompt: "Review it again." };
+    expect(automationOf(d)).toMatchObject({ prompt: "Review it again.", browser: "headless", filter: { branch: "feat/*" } });
+  });
 });
 
 async function open() {
