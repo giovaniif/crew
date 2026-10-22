@@ -23,7 +23,8 @@ import {
   type PairCode,
   type WorkspaceInfo,
 } from "../api";
-import { Select, Stepper } from "../ui";
+import { Button, Dialog, Menu, Select, Stepper } from "../ui";
+import { Group, Opt, ServerTag } from "./SettingsRows";
 
 type Loaded<T> = { state: "loading" } | { state: "ready"; value: T } | { state: "failed"; note: string };
 
@@ -78,12 +79,14 @@ function Note({ text }: { text: string }) {
   return <p className="settings-note">{text}</p>;
 }
 
-function Group({ title, children }: { title: string; children: ReactNode }) {
+function Heading({ title, server, children }: { title: string; server?: boolean; children?: ReactNode }) {
   return (
-    <section className="card settings-group" aria-label={title}>
-      <h2>{title}</h2>
+    <h2 className="set-title">
+      {title}
+      {server ? <ServerTag /> : null}
+      <span className="spacer" />
       {children}
-    </section>
+    </h2>
   );
 }
 
@@ -118,15 +121,49 @@ function useFolders(api: Authed, text: string, home: string): string[] {
   return folders;
 }
 
-export function WorkspacesGroup({ api }: { api: Authed }) {
-  const load = useCallback(
-    async () => {
-      const [list, options] = await Promise.all([listWorkspaces(api.fetch, api.token), sessionOptions(api.fetch, api.token).catch(() => ({ home: "" }))]);
-      return { list, home: options.home ?? "" };
-    },
-    [api],
+function RowMenu({ label, items, onPick }: { label: string; items: { value: string; label: string }[]; onPick: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="ui-anchor">
+      <Button variant="icon" aria-label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
+        ⋯
+      </Button>
+      {open ? (
+        <Menu
+          label={label}
+          items={items}
+          className="row-menu"
+          onClose={() => setOpen(false)}
+          onPick={(v) => {
+            setOpen(false);
+            onPick(v);
+          }}
+        />
+      ) : null}
+    </span>
   );
+}
+
+function Confirm({ title, action, onConfirm, onClose }: { title: string; action: string; onConfirm: () => void; onClose: () => void }) {
+  return (
+    <Dialog title={title} onClose={onClose}>
+      <div className="dialog-actions">
+        <Button onClick={onClose}>Cancel</Button>
+        <Button variant="danger" onClick={onConfirm}>
+          {action}
+        </Button>
+      </div>
+    </Dialog>
+  );
+}
+
+export function WorkspacesGroup({ api }: { api: Authed }) {
+  const load = useCallback(async () => {
+    const [list, options] = await Promise.all([listWorkspaces(api.fetch, api.token), sessionOptions(api.fetch, api.token).catch(() => ({ home: "" }))]);
+    return { list, home: options.home ?? "" };
+  }, [api]);
   const [loaded, reload] = useLoad(load);
+  const [adding, setAdding] = useState(false);
   const [text, setText] = useState("");
   const [removing, setRemoving] = useState("");
   const { run, view } = useFeedback();
@@ -139,68 +176,72 @@ export function WorkspacesGroup({ api }: { api: Authed }) {
     const path = expandPath(text, home);
     if (await run(async () => "Added " + (await addWorkspace(api.fetch, api.token, path)).Root)) {
       setText("");
+      setAdding(false);
       reload();
     }
   };
   const remove = async (root: string) => {
+    setRemoving("");
     if (await run(async () => (await removeWorkspace(api.fetch, api.token, root), "Removed " + root))) {
-      setRemoving("");
       reload();
     }
   };
 
   return (
-    <Group title="Workspaces">
+    <>
+      <Heading title="Workspaces" server>
+        <Button variant="primary" className="sm" onClick={() => setAdding(!adding)}>
+          Add a folder…
+        </Button>
+      </Heading>
       {loaded.state === "failed" ? <Note text={loaded.note} /> : null}
-      {loaded.state === "ready" ? (
-        <>
-          <ul className="settings-list">
-            {known.map((w: WorkspaceInfo) => (
-              <li key={w.Root}>
-                <span className="mono">{w.Root}</span>
-                <span className="muted">{w.Kind === "orchestration" ? "orchestration root" : "single repo"}</span>
-                {removing === w.Root ? (
-                  <button type="button" className="secondary" onClick={() => remove(w.Root)}>
-                    {"Remove " + w.Root}
-                  </button>
-                ) : (
-                  <button type="button" className="secondary" onClick={() => setRemoving(w.Root)}>
-                    Remove
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
-          <div className="path-field">
-            <label htmlFor="workspace-path">Workspace path</label>
-            <input
-              id="workspace-path"
-              role="combobox"
-              aria-expanded={shown.length > 0}
-              aria-controls="workspace-folders"
-              aria-autocomplete="list"
-              autoComplete="off"
-              placeholder="~/code/api"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-            />
-            {shown.length > 0 ? (
-              <ul id="workspace-folders" role="listbox" aria-label="Folders" className="folders">
-                {shown.map((f) => (
-                  <li key={f} role="option" aria-selected={false} tabIndex={-1} onClick={() => setText(f)} onKeyDown={(e) => e.key === "Enter" && setText(f)}>
-                    {f}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            <button type="button" disabled={!text.trim()} onClick={add}>
-              Add workspace
-            </button>
-          </div>
-        </>
+      {adding ? (
+        <div className="path-field">
+          <label htmlFor="workspace-path" className="visually-hidden">
+            Workspace path
+          </label>
+          <input
+            id="workspace-path"
+            className="ui input"
+            role="combobox"
+            aria-expanded={shown.length > 0}
+            aria-controls="workspace-folders"
+            aria-autocomplete="list"
+            autoComplete="off"
+            autoFocus
+            placeholder="~/code/api"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && text.trim() && add()}
+          />
+          <Button variant="primary" disabled={!text.trim()} onClick={add}>
+            Add workspace
+          </Button>
+          {shown.length > 0 ? (
+            <ul id="workspace-folders" role="listbox" aria-label="Folders" className="ui menu folders">
+              {shown.map((f) => (
+                <li key={f} className="item" role="option" aria-selected={false} tabIndex={-1} onClick={() => setText(f)} onKeyDown={(e) => e.key === "Enter" && setText(f)}>
+                  {f}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
+      {loaded.state === "ready" && known.length > 0 ? (
+        <ul className="group" aria-label="Workspaces">
+          {known.map((w: WorkspaceInfo) => (
+            <li key={w.Root} className="opt" aria-label={w.Root}>
+              <span className="mono grow">{w.Root}</span>
+              <span className="muted">{w.Kind === "orchestration" ? "orchestration root" : "git repo"}</span>
+              <RowMenu label={"More for " + w.Root} items={[{ value: "remove", label: "Remove" }]} onPick={() => setRemoving(w.Root)} />
+            </li>
+          ))}
+        </ul>
       ) : null}
       {view}
-    </Group>
+      {removing ? <Confirm title={"Remove " + removing + "?"} action="Remove" onClose={() => setRemoving("")} onConfirm={() => remove(removing)} /> : null}
+    </>
   );
 }
 
@@ -260,80 +301,89 @@ export function AgentsGroup({ api }: { api: Authed }) {
   };
 
   if (loaded.state !== "ready") {
-    return <Group title="Agents">{loaded.state === "failed" ? <Note text={loaded.note} /> : null}</Group>;
+    return (
+      <>
+        <Heading title="Agents" server />
+        {loaded.state === "failed" ? <Note text={loaded.note} /> : null}
+      </>
+    );
   }
   const { harnesses, onboarding, configNote } = loaded.value;
   const value = (key: string) => config?.values[key] ?? "";
   return (
-    <Group title="Agents">
+    <>
+      <Heading title="Agents" server />
       {configNote ? <Note text={configNote} /> : null}
       {harnesses.map((h) => {
         const setup = onboarding.harnesses[h.harness];
         return (
-          <fieldset key={h.harness} className="agent-settings">
-            <legend>{harnessName(h)}</legend>
-            <p className="muted">{setup?.installed ? "Hooks installed in " + setup.file : "Hooks not installed"}</p>
-            <div className="settings-actions">
-              {setup?.installed ? (
-                <button type="button" className="secondary" onClick={() => hooks(h.harness, false)}>
-                  Remove hooks
-                </button>
-              ) : (
-                <button type="button" onClick={() => hooks(h.harness, true)}>
-                  Install hooks
-                </button>
-              )}
+          <section key={h.harness} className="set-section" role="group" aria-label={harnessName(h)}>
+            <div className="gtitle">{harnessName(h).toUpperCase()}</div>
+            <div className="group">
+              <Opt lead={<span className={"dot" + (setup?.installed ? " ok" : "")} />} title="Hooks" sub={setup?.installed ? "Hooks installed in " + setup.file : "Hooks not installed"}>
+                {setup?.installed ? (
+                  <Button className="sm" onClick={() => hooks(h.harness, false)}>
+                    Remove hooks
+                  </Button>
+                ) : (
+                  <Button variant="primary" className="sm" onClick={() => hooks(h.harness, true)}>
+                    Install hooks
+                  </Button>
+                )}
+              </Opt>
+              {config ? (
+                <>
+                  <Opt title="Default model">
+                    <Select
+                      label="Default model"
+                      value={value("defaults." + h.harness + ".model")}
+                      onChange={(v) => save("defaults." + h.harness + ".model", v)}
+                      options={[{ value: "", label: "default" + (h.default_model ? " (" + h.default_model + ")" : "") }, ...(h.models ?? []).map((m) => ({ value: m, label: m }))]}
+                    />
+                  </Opt>
+                  <Opt title="Default effort">
+                    <Select
+                      label="Default effort"
+                      value={value("defaults." + h.harness + ".effort")}
+                      onChange={(v) => save("defaults." + h.harness + ".effort", v)}
+                      options={[{ value: "", label: "default" + (h.default_effort ? " (" + h.default_effort + ")" : "") }, ...(h.efforts ?? []).map((m) => ({ value: m, label: m }))]}
+                    />
+                  </Opt>
+                </>
+              ) : null}
             </div>
-            {config ? (
-              <>
-                <div className="ui-field">
-                  Default model
-                  <Select
-                    label="Default model"
-                    value={value("defaults." + h.harness + ".model")}
-                    onChange={(v) => save("defaults." + h.harness + ".model", v)}
-                    options={[{ value: "", label: "default" + (h.default_model ? " (" + h.default_model + ")" : "") }, ...(h.models ?? []).map((m) => ({ value: m, label: m }))]}
-                  />
-                </div>
-                <div className="ui-field">
-                  Default effort
-                  <Select
-                    label="Default effort"
-                    value={value("defaults." + h.harness + ".effort")}
-                    onChange={(v) => save("defaults." + h.harness + ".effort", v)}
-                    options={[{ value: "", label: "default" + (h.default_effort ? " (" + h.default_effort + ")" : "") }, ...(h.efforts ?? []).map((m) => ({ value: m, label: m }))]}
-                  />
-                </div>
-              </>
-            ) : null}
-          </fieldset>
+          </section>
         );
       })}
-      {config ? (
-        <div className="settings-row">
-          <div className="ui-field">
-            Fallback threshold (%)
+      <Group label="Options" title="OPTIONS">
+        {config ? (
+          <Opt title="Fallback threshold (%)" sub="Switch to the fallback agent at this limit use">
             <Stepper label="Fallback threshold (%)" min={0} max={100} value={threshold} onChange={setThreshold} />
-          </div>
-          <button type="button" onClick={() => save("fallback.threshold", threshold)}>
-            Save threshold
-          </button>
-        </div>
-      ) : null}
-      <p className="muted">
-        {onboarding.nvim.configured
-          ? "nvim is set up in " + onboarding.nvim.config_file
-          : onboarding.nvim.on_path
-            ? "nvim is not set up for crew"
-            : "nvim is not installed on the server"}
-      </p>
-      {onboarding.nvim.on_path && !onboarding.nvim.configured ? (
-        <button type="button" onClick={nvim}>
-          Set up nvim
-        </button>
-      ) : null}
+            <Button className="sm" onClick={() => save("fallback.threshold", threshold)}>
+              Save threshold
+            </Button>
+          </Opt>
+        ) : null}
+        <Opt
+          lead={<span className={"dot" + (onboarding.nvim.configured ? " ok" : "")} />}
+          title="nvim"
+          sub={
+            onboarding.nvim.configured
+              ? "nvim is set up in " + onboarding.nvim.config_file
+              : onboarding.nvim.on_path
+                ? "nvim is not set up for crew"
+                : "nvim is not installed on the server"
+          }
+        >
+          {onboarding.nvim.on_path && !onboarding.nvim.configured ? (
+            <Button className="sm" onClick={nvim}>
+              Set up nvim
+            </Button>
+          ) : null}
+        </Opt>
+      </Group>
       {view}
-    </Group>
+    </>
   );
 }
 
@@ -342,15 +392,18 @@ function when(iso: string): string {
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleString();
 }
 
-export function ServerNotificationsGroup({ api, self }: { api: Authed; self: string }) {
+const awayChoices: [string, string][] = [
+  ["1m", "1 min"],
+  ["2m", "2 min"],
+  ["5m", "5 min"],
+  ["10m", "10 min"],
+  ["30m", "30 min"],
+];
+
+export function PushDelayRow({ api }: { api: Authed }) {
   const loadConfig = useCallback(() => getConfig(api), [api]);
-  const loadDevices = useCallback(() => listDevices(api), [api]);
   const [config] = useLoad(loadConfig);
-  const [devices, reloadDevices] = useLoad(loadDevices);
   const [away, setAway] = useState("");
-  const [revoking, setRevoking] = useState("");
-  const [code, setCode] = useState<PairCode | null>(null);
-  const delay = useFeedback();
   const { run, view } = useFeedback();
 
   useEffect(() => {
@@ -359,61 +412,80 @@ export function ServerNotificationsGroup({ api, self }: { api: Authed; self: str
     }
   }, [config]);
 
+  const options = awayChoices.map(([value, label]) => ({ value, label }));
+  if (away && !awayChoices.some(([v]) => v === away)) {
+    options.push({ value: away, label: away });
+  }
+  return (
+    <>
+      <Opt title="Push to my phone after I'm away for" server sub={config.state === "failed" ? config.note : undefined}>
+        {config.state === "ready" ? (
+          <Select
+            label="Push to my phone after I'm away for"
+            value={away}
+            placeholder="default"
+            options={options}
+            onChange={(v) => {
+              setAway(v);
+              run(async () => "Saved push.away_after in " + (await setConfig(api, "push.away_after", v)).path);
+            }}
+          />
+        ) : null}
+      </Opt>
+      {view}
+    </>
+  );
+}
+
+export function DevicesGroup({ api, self }: { api: Authed; self: string }) {
+  const loadDevices = useCallback(() => listDevices(api), [api]);
+  const [devices, reloadDevices] = useLoad(loadDevices);
+  const [revoking, setRevoking] = useState<Device | null>(null);
+  const [code, setCode] = useState<PairCode | null>(null);
+  const { run, view } = useFeedback();
+
   const revoke = async (d: Device) => {
+    setRevoking(null);
     if (await run(async () => (await revokeDevice(api, d.id), "Revoked " + d.name))) {
-      setRevoking("");
       reloadDevices();
     }
   };
 
   return (
-    <Group title="Notifications">
-      {config.state === "failed" ? <Note text={config.note} /> : null}
-      {config.state === "ready" ? (
-        <div className="settings-row">
-          <label>
-            Push after I am away for
-            <input type="text" value={away} placeholder="2m" onChange={(e) => setAway(e.target.value)} />
-          </label>
-          <button type="button" onClick={() => delay.run(async () => "Saved push.away_after in " + (await setConfig(api, "push.away_after", away)).path)}>
-            Save delay
-          </button>
-        </div>
-      ) : null}
-      {delay.view}
-      <h3>Devices</h3>
+    <>
+      <Heading title="Devices" server>
+        {devices.state === "failed" ? null : (
+          <Button variant="primary" className="sm" onClick={() => run(async () => (setCode(await newPairCode(api)), ""))}>
+            Pair a device
+          </Button>
+        )}
+      </Heading>
       {devices.state === "failed" ? <Note text={devices.note} /> : null}
-      {devices.state === "ready" ? (
-        <ul className="settings-list">
-          {devices.value.devices.map((d) => (
-            <li key={d.id} aria-label={d.name}>
-              <span>{d.name}</span>
-              <span className="muted">{d.id === self ? "This device" : "Last seen " + when(d.last_seen)}</span>
-              {d.id === self ? null : revoking === d.id ? (
-                <button type="button" className="secondary" onClick={() => revoke(d)}>
-                  {"Revoke " + d.name}
-                </button>
-              ) : (
-                <button type="button" className="secondary" onClick={() => setRevoking(d.id)}>
-                  Revoke
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      {devices.state === "failed" ? null : (
-        <button type="button" onClick={() => run(async () => (setCode(await newPairCode(api)), ""))}>
-          Pair a device
-        </button>
-      )}
       {code ? (
         <p className="pair-code">
           Enter <code>{code.code}</code> in the app on the new device. The code expires at {when(code.expires_at)}.
         </p>
       ) : null}
+      {devices.state === "ready" ? (
+        <ul className="group" aria-label="Devices">
+          {devices.value.devices.map((d) => (
+            <li key={d.id} className="opt" aria-label={d.name}>
+              <div className="l">
+                <div className="t">{d.name}</div>
+                <div className="s">{d.id === self ? "This device" : "Last seen " + when(d.last_seen)}</div>
+              </div>
+              {d.id === self ? null : (
+                <Button className="sm" onClick={() => setRevoking(d)}>
+                  Revoke
+                </Button>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : null}
       {view}
-    </Group>
+      {revoking ? <Confirm title={"Revoke " + revoking.name + "?"} action="Revoke" onClose={() => setRevoking(null)} onConfirm={() => revoke(revoking)} /> : null}
+    </>
   );
 }
 
@@ -432,26 +504,25 @@ export function ServerAppearanceGroup({ api }: { api: Authed }) {
   }, [config]);
 
   return (
-    <Group title="Appearance">
-      <p className="muted">The [theme] colours of the TUI on the server. Leave a field empty to use the default.</p>
+    <section className="set-section" aria-label="TUI colors">
+      <div className="gtitle">
+        TUI COLORS <ServerTag />
+      </div>
       {config.state === "failed" ? <Note text={config.note} /> : null}
       {config.state === "ready" ? (
-        <ul className="settings-list theme-colors">
+        <div className="group">
+          <Opt sub="The [theme] colours of the TUI on the server. Leave a field empty to use the default." />
           {themeKeys.map((k) => (
-            <li key={k}>
-              <span className="swatch" style={{ background: colors[k] || "transparent" }} aria-hidden="true" />
-              <label>
-                {k}
-                <input type="text" value={colors[k] ?? ""} placeholder="#rrggbb" onChange={(e) => setColors({ ...colors, [k]: e.target.value })} />
-              </label>
-              <button type="button" aria-label={"Save " + k} onClick={() => run(async () => "Saved theme." + k + " in " + (await setConfig(api, "theme." + k, colors[k] ?? "")).path)}>
+            <Opt key={k} lead={<span className="swatch" style={{ background: colors[k] || "transparent" }} aria-hidden="true" />} title={k}>
+              <input className="ui input color-input" aria-label={k} type="text" value={colors[k] ?? ""} placeholder="#rrggbb" onChange={(e) => setColors({ ...colors, [k]: e.target.value })} />
+              <Button className="sm" aria-label={"Save " + k} onClick={() => run(async () => "Saved theme." + k + " in " + (await setConfig(api, "theme." + k, colors[k] ?? "")).path)}>
                 Save
-              </button>
-            </li>
+              </Button>
+            </Opt>
           ))}
-        </ul>
+        </div>
       ) : null}
       {view}
-    </Group>
+    </section>
   );
 }
