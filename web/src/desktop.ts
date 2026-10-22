@@ -6,7 +6,7 @@ export type TabSpec = { id: MainTab; title: string; needs: string | null };
 
 export const mainTabs: TabSpec[] = [
   { id: "chat", title: "Chat", needs: "Start or select a session to see its chat" },
-  { id: "terminal", title: "Terminal", needs: null },
+  { id: "terminal", title: "Terminal", needs: "Start or select a session to see its terminal" },
   { id: "review", title: "Review", needs: "Start or select a session to review its changes" },
   { id: "shell", title: "Shell", needs: "Start or select a session to open a shell in its worktree" },
   { id: "nvim", title: "nvim", needs: "Start or select a session to open nvim in its worktree" },
