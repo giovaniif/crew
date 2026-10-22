@@ -71,6 +71,16 @@ go run ./scripts/verify iso up
 sh -c 'C="$(go run ./scripts/verify iso crew -- remote pair --name TEST-again --url https://iso.invalid 2>&1 | grep -oE "\b[A-Z0-9]{8}\b" | head -1)"; go run ./scripts/verify web drive / --viewport mobile --installed --out-dir /tmp/crew-verify-map/remote --steps "[{\"click\":{\"role\":\"link\",\"name\":\"Settings\"}},{\"click\":{\"role\":\"button\",\"name\":\"Sign out\"}},{\"fill\":{\"label\":\"Pairing code\"},\"value\":\"$C\"},{\"click\":{\"role\":\"button\",\"name\":\"Pair\"}},{\"wait\":2000},{\"click\":{\"role\":\"link\",\"name\":\"Settings\"}},{\"expect\":{\"role\":\"heading\",\"name\":\"Settings\"}}]"'
 ```
 
+### a pasted pair link in the code field pairs
+
+```sh
+go run ./scripts/verify iso down
+go run ./scripts/verify iso up
+sh -c 'L="$(go run ./scripts/verify iso crew -- remote pair --name TEST-link --url https://iso.invalid 2>&1 | grep -oE "https://[^ \\\\]*#pair=[A-Z0-9]{8}" | head -1)"; go run ./scripts/verify web drive / --viewport mobile --installed --out-dir /tmp/crew-verify-map/remote --steps "[{\"click\":{\"role\":\"link\",\"name\":\"Settings\"}},{\"click\":{\"role\":\"button\",\"name\":\"Sign out\"}},{\"fill\":{\"label\":\"Pairing code\"},\"value\":\"$L\"},{\"click\":{\"role\":\"button\",\"name\":\"Pair\"}},{\"wait\":2000},{\"expect\":{\"role\":\"link\",\"name\":\"Settings\"}}]"'
+```
+
+Expect: no `POST /api/v1/pair 401` (#706).
+
 ### hello answers with the API version and no token
 
 ```sh

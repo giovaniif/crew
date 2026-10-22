@@ -13,7 +13,8 @@ export function isInstalled(win: DisplayWindow): boolean {
 const codeAlphabet = /[^23456789ABCDEFGHJKMNPQRSTUVWXYZ]/g;
 
 export function normalizePairCode(raw: string): string {
-  return raw.toUpperCase().replace(codeAlphabet, "").slice(0, 8);
+  const linked = /pair=([^&]*)/i.exec(raw);
+  return (linked ? linked[1] : raw).toUpperCase().replace(codeAlphabet, "").slice(0, 8);
 }
 
 export function pairCodeFromHash(hash: string): string {
