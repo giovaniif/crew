@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defaultDeviceName, formatPairCode, isInstalled, pairCodeFromHash } from "./display";
+import { defaultDeviceName, formatPairCode, isInstalled, normalizePairCode, pairCodeFromHash } from "./display";
 
 describe("isInstalled", () => {
   const media = (matches: boolean) => () => ({ matches });
@@ -29,6 +29,17 @@ describe("pairCodeFromHash", () => {
     ["", ""],
   ])("reads %j as %j", (hash, code) => {
     expect(pairCodeFromHash(hash)).toBe(code);
+  });
+});
+
+describe("normalizePairCode", () => {
+  it.each([
+    ["ABCD2345", "ABCD2345"],
+    ["abcd 2345", "ABCD2345"],
+    ["https://host.example/#pair=ZXMEJNVF", "ZXMEJNVF"],
+    ["  https://host.example/#pair=zxme-jnvf\n", "ZXMEJNVF"],
+  ])("reads %j as %j", (raw, code) => {
+    expect(normalizePairCode(raw)).toBe(code);
   });
 });
 
