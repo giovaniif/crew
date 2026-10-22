@@ -431,3 +431,31 @@ func decode(resp Response, out any) error {
 }
 
 const MaxMessage = 16 << 20
+
+func (c *Client) AttachBrowser(ctx context.Context) (<-chan BrowserCall, error) {
+	id, ch, err := c.send(MethodBrowserAttach, struct{}{})
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.await(ctx, ch)
+	if err == nil {
+		err = checkBuild(MethodBrowserAttach, resp)
+	}
+	if err == nil {
+		err = decode(resp, nil)
+	}
+	if err != nil {
+		c.forget(id)
+		return nil, err
+	}
+	calls := make(chan BrowserCall, 16)
+	go func() {
+		defer close(calls)
+		for resp := range ch {
+			if resp.Browser != nil {
+				calls <- *resp.Browser
+			}
+		}
+	}()
+	return calls, nil
+}

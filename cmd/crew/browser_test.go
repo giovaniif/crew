@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"io"
 	"net"
 	"os"
@@ -198,5 +199,92 @@ func TestBrowserCLIPassesItsTimeout(t *testing.T) {
 	code := run([]string{"browser", "--session", "s1", "--timeout", "100ms", "wait", "Done"}, io.Discard, &stderr)
 	if code != 1 || !strings.Contains(stderr.String(), "no reply") {
 		t.Fatalf("exit %d, stderr %q", code, stderr.String())
+	}
+}
+
+func TestBrowserCLISendsTheBrowserChoice(t *testing.T) {
+	home := browserDaemon(t)
+	calls := serveBrowser(t, home, func(rpc.BrowserCall) (any, string) {
+		return map[string]string{"text": "log ready\n"}, ""
+	})
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"browser", "--browser", "app", "--session", "s1", "console"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("exit %d: %s", code, stderr.String())
+	}
+	if call := <-calls; call.Command != "console" {
+		t.Fatalf("call %+v", call)
+	}
+	if stdout.String() != "log ready\n" {
+		t.Fatalf("stdout %q", stdout.String())
+	}
+}
+
+func TestBrowserCLIRefusesAnUnknownBrowserChoice(t *testing.T) {
+	browserDaemon(t)
+	var stderr bytes.Buffer
+	if code := run([]string{"browser", "--browser", "chrome", "--session", "s1", "snapshot"}, io.Discard, &stderr); code != 2 {
+		t.Fatalf("exit %d: %s", code, stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "--browser") {
+		t.Fatalf("stderr %q", stderr.String())
+	}
+}
+
+func TestBrowserAttachBridgesCallsToItsOutputAndRepliesFromItsInput(t *testing.T) {
+	home := browserDaemon(t)
+	inR, inW := io.Pipe()
+	outR, outW := io.Pipe()
+	exited := make(chan int, 1)
+	go func() { exited <- runBrowserAttach(inR, outW, io.Discard); _ = outW.Close() }()
+	lines := bufio.NewReader(outR)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	c, err := rpc.Dial(rpc.SocketPath(home))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = c.Close() }()
+	type got struct {
+		out json.RawMessage
+		err error
+	}
+	done := make(chan got, 1)
+	go func() {
+		for {
+			var out json.RawMessage
+			err := c.Call(ctx, rpc.MethodBrowserCommand, rpc.BrowserCommandParams{Session: "s1", Browser: "app", Command: "snapshot"}, &out)
+			var rerr *rpc.Error
+			if errors.As(err, &rerr) && strings.Contains(rerr.Message, "no browser") && ctx.Err() == nil {
+				time.Sleep(20 * time.Millisecond)
+				continue
+			}
+			done <- got{out, err}
+			return
+		}
+	}()
+	line, err := lines.ReadBytes('\n')
+	if err != nil {
+		t.Fatal(err)
+	}
+	var call rpc.BrowserCall
+	if err := json.Unmarshal(line, &call); err != nil || call.Session != "s1" || call.Command != "snapshot" || call.Call == 0 {
+		t.Fatalf("line %s: %v", line, err)
+	}
+	reply, _ := json.Marshal(map[string]any{"call": call.Call, "result": map[string]string{"text": "- button \"Go\" [@e1]"}})
+	if _, err := inW.Write(append(reply, '\n')); err != nil {
+		t.Fatal(err)
+	}
+	g := <-done
+	if g.err != nil || !strings.Contains(string(g.out), "@e1") {
+		t.Fatalf("result %s: %v", g.out, g.err)
+	}
+	_ = inW.Close()
+	select {
+	case code := <-exited:
+		if code != 0 {
+			t.Fatalf("exit %d", code)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("attach did not stop when its input closed")
 	}
 }
