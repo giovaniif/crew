@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -406,6 +407,24 @@ func TestServeStreamClosesOnARevocationWhileTheRevocationWatcherReconnects(t *te
 	next(t, c)
 	f.broadcast(rpc.Diff{Seq: 60, RevokedDevice: phone.ID})
 	if code, reason := closedWith(t, c, 500*time.Millisecond); code != serve.CloseUnauthorized {
+		t.Fatalf("closed with %d %q", code, reason)
+	}
+}
+
+func TestServeStreamClosesOnARevocationThatComesDuringAWrite(t *testing.T) {
+	f := newFakeDaemon()
+	f.devices[goodToken] = phone
+	_, ts := startServer(t, f, serve.Config{URL: publicURL})
+	c := openStream(t, ts, goodToken)
+	c.SetReadLimit(-1)
+	next(t, c)
+	big := strings.Repeat("x", 1<<20)
+	for i := range 16 {
+		f.broadcast(rpc.Diff{Seq: uint64(60 + i), Task: &domain.Task{ID: fmt.Sprintf("t%d", i), Source: domain.TaskText, Text: big}})
+	}
+	time.Sleep(100 * time.Millisecond)
+	f.broadcast(rpc.Diff{Seq: 80, RevokedDevice: phone.ID})
+	if code, reason := closedWith(t, c, 5*time.Second); code != serve.CloseUnauthorized {
 		t.Fatalf("closed with %d %q", code, reason)
 	}
 }
