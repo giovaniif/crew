@@ -60,13 +60,13 @@ describe("the Shortcuts settings", () => {
   async function openShortcuts() {
     const view = desktop("#/settings", true, "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0)");
     view.live();
-    await userEvent.click(within(screen.getByRole("list", { name: "This app" })).getByRole("button", { name: "Shortcuts" }));
+    await userEvent.click(within(screen.getByRole("navigation", { name: "Settings" })).getByRole("button", { name: "Shortcuts" }));
     return view;
   }
 
   it("records a new combo and keeps it in the app store", async () => {
     const { storage } = await openShortcuts();
-    const row = screen.getByRole("row", { name: /Filter sessions/ });
+    const row = screen.getByRole("listitem", { name: "Filter sessions" });
     expect(row).toHaveTextContent("⌘K");
     await userEvent.click(within(row).getByRole("button", { name: "Change" }));
     await userEvent.keyboard("{Meta>}{Shift>}j{/Shift}{/Meta}");
@@ -76,7 +76,7 @@ describe("the Shortcuts settings", () => {
 
   it("tells why a combo is refused and keeps the old one", async () => {
     const { storage } = await openShortcuts();
-    const row = screen.getByRole("row", { name: /Filter sessions/ });
+    const row = screen.getByRole("listitem", { name: "Filter sessions" });
     await userEvent.click(within(row).getByRole("button", { name: "Change" }));
     await userEvent.keyboard("{Meta>}n{/Meta}");
     expect(screen.getByRole("alert")).toHaveTextContent("⌘N is already used by New session");
