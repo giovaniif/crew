@@ -103,10 +103,14 @@ func prReportFor(st rpc.State, arg string) (prReport, error) {
 	for _, t := range st.Tasks {
 		tasks[t.ID] = t
 	}
+	worktrees := map[string]domain.Worktree{}
+	for _, w := range st.Worktrees {
+		worktrees[w.ID] = w
+	}
 	prsOf := func(s domain.Session) []domain.PullRequest {
 		var owned []domain.Worktree
-		for _, w := range st.Worktrees {
-			if slices.Contains(s.WorktreeIDs, w.ID) {
+		for _, id := range s.WorktreeIDs {
+			if w, ok := worktrees[id]; ok {
 				owned = append(owned, w)
 			}
 		}
