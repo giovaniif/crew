@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/base64"
@@ -19,8 +20,8 @@ import (
 	"github.com/giovaniif/crew/internal/rpc"
 )
 
-const browserUsage = "usage: crew browser [--session id] [--json] [--out file.png] [--timeout 30s] <" +
-	"goto url | snapshot | click @eN | fill @eN text | type text | press key | wait @eN|ms|text | screenshot | eval js | tabs | cookies [domain] | cookies import file | set-device desktop|ipad|iphone>"
+const browserUsage = "usage: crew browser [--session id] [--browser any|app|headless] [--json] [--out file.png] [--timeout 30s] <" +
+	"goto url | snapshot | click @eN | fill @eN text | type text | press key | wait @eN|ms|text | screenshot | eval js | tabs | cookies [domain] | cookies import file | set-device desktop|ipad|iphone | console | attach>"
 
 type browserShot struct {
 	PNG    string `json:"png"`
@@ -34,10 +35,18 @@ func runBrowser(args []string, stdout, stderr io.Writer) int {
 	session := fs.String("session", sessionFromEnv(), "session id (default $CREW_SESSION, else the session on $TMUX_PANE)")
 	asJSON := fs.Bool("json", false, "print the result as JSON")
 	out := fs.String("out", "", "file for the screenshot PNG (default a temp file)")
-	timeout := fs.Duration("timeout", 30*time.Second, "how long to wait for the macOS app")
+	timeout := fs.Duration("timeout", 30*time.Second, "how long to wait for the app")
+	browser := fs.String("browser", "", "any, app or headless (default: the app if it is attached, else the fallback)")
 	if err := fs.Parse(args); err != nil {
 		fmt.Fprintln(stderr, browserUsage)
 		return 2
+	}
+	if !domain.ValidBrowserChoice(*browser) {
+		fmt.Fprintf(stderr, "crew browser: --browser %q must be any, app or headless\n%s\n", *browser, browserUsage)
+		return 2
+	}
+	if rest := fs.Args(); len(rest) == 1 && rest[0] == "attach" {
+		return runBrowserAttach(os.Stdin, stdout, stderr)
 	}
 	if rest := fs.Args(); len(rest) > 1 && rest[0] == "cookies" && rest[1] == "import" {
 		return importCookies(rest[2:], *timeout, stdout, stderr)
@@ -47,7 +56,7 @@ func runBrowser(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "crew browser: %v\n%s\n", err, browserUsage)
 		return 2
 	}
-	p := rpc.BrowserCommandParams{Session: *session, Command: call.Command, Args: call.Args, TimeoutMS: int(timeout.Milliseconds())}
+	p := rpc.BrowserCommandParams{Session: *session, Browser: *browser, Command: call.Command, Args: call.Args, TimeoutMS: int(timeout.Milliseconds())}
 	if p.Session == "" {
 		p.Pane = os.Getenv("TMUX_PANE")
 	}
@@ -169,4 +178,55 @@ func printBrowserResult(w io.Writer, res json.RawMessage, asJSON bool) {
 		return
 	}
 	printBrowserResult(w, res, true)
+}
+
+func runBrowserAttach(in io.Reader, out io.Writer, stderr io.Writer) int {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	c, err := connectHome(ctx)
+	if err != nil {
+		fmt.Fprintf(stderr, "crew browser attach: %v\n", err)
+		return 1
+	}
+	defer func() { _ = c.Close() }()
+	calls, err := c.AttachBrowser(ctx)
+	if err != nil {
+		fmt.Fprintf(stderr, "crew browser attach: %v\n", err)
+		return 1
+	}
+	inputDone := make(chan error, 1)
+	go func() { inputDone <- relayReplies(ctx, c, in) }()
+	enc := json.NewEncoder(out)
+	for {
+		select {
+		case err := <-inputDone:
+			if err != nil {
+				fmt.Fprintf(stderr, "crew browser attach: %v\n", err)
+				return 1
+			}
+			return 0
+		case call, ok := <-calls:
+			if !ok {
+				fmt.Fprintln(stderr, "crew browser attach: the daemon closed the connection")
+				return 1
+			}
+			if err := enc.Encode(call); err != nil {
+				fmt.Fprintf(stderr, "crew browser attach: %v\n", err)
+				return 1
+			}
+		}
+	}
+}
+
+func relayReplies(ctx context.Context, c *rpc.Client, in io.Reader) error {
+	sc := bufio.NewScanner(in)
+	sc.Buffer(make([]byte, 64*1024), rpc.MaxMessage)
+	for sc.Scan() {
+		var reply rpc.BrowserReplyParams
+		if err := json.Unmarshal(sc.Bytes(), &reply); err != nil {
+			return fmt.Errorf("reply %q: %w", sc.Text(), err)
+		}
+		go func() { _ = c.Call(ctx, rpc.MethodBrowserReply, reply, nil) }()
+	}
+	return sc.Err()
 }

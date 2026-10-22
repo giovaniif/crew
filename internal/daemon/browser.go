@@ -133,6 +133,9 @@ func (d *Daemon) browserCommand(req rpc.Request) (*rpc.Response, bool) {
 	if !slices.Contains(domain.BrowserCommands(), p.Command) {
 		return errorResponse(req.ID, rpc.CodeBadRequest, fmt.Sprintf("unknown browser command %q", p.Command)), true
 	}
+	if !domain.ValidBrowserChoice(p.Browser) {
+		return errorResponse(req.ID, rpc.CodeBadRequest, fmt.Sprintf("unknown browser %q (one of any, app, mac, headless)", p.Browser)), true
+	}
 	session := p.Session
 	if session == "" && p.Pane != "" {
 		ok := d.query(func(s *state) {
@@ -162,7 +165,11 @@ func (d *Daemon) browserCommand(req rpc.Request) (*rpc.Response, bool) {
 	if d.headless.opener == nil {
 		cfg.Fallback = domain.BrowserFallbackOff
 	}
-	backend, ok := domain.ChooseBrowser(d.headless.want(session), d.browser.connected(), cfg)
+	want := p.Browser
+	if want == "" {
+		want = d.headless.want(session)
+	}
+	backend, ok := domain.ChooseBrowser(want, d.browser.connected(), cfg)
 	if !ok {
 		return errorResponse(req.ID, rpc.CodeUnavailable, rpc.NoBrowser), true
 	}
