@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { App, type AppEnv } from "../App";
+import { App, type AppEnv, type PageVisibility } from "../App";
 import type { Frame, Mates, StreamState } from "../stream";
 import { FakeServer, MemoryStorage } from "../test/fake-server";
 import { FakeSockets } from "../test/fake-socket";
@@ -57,7 +57,7 @@ const chat = [
   { id: "a1", cursor: 2, turn: "p1", role: "assistant", text: "I fixed the docs.", at: "2026-10-03T11:01:00Z" },
 ];
 
-function setup(hash = "#/mates", mates: Mates = board, approvals: unknown[] = []) {
+function setup(hash = "#/mates", mates: Mates = board, approvals: unknown[] = [], visibility?: PageVisibility) {
   window.location.hash = "";
   const sockets = new FakeSockets();
   const server = new FakeServer()
@@ -90,6 +90,7 @@ function setup(hash = "#/mates", mates: Mates = board, approvals: unknown[] = []
     openStream: sockets.open,
     now: () => Date.parse("2026-10-03T12:00:00Z"),
     onHashChange: () => () => undefined,
+    visibility,
   };
   render(<App env={env} />);
   sockets.last.open();
@@ -162,6 +163,36 @@ describe("Mates", () => {
     expect(screen.getByRole("link", { name: /^webby/ })).toHaveTextContent("Paused");
     expect(screen.getByRole("link", { name: /^fresh/ })).toHaveTextContent("No live chats");
     expect(screen.getByRole("link", { name: /^fresh/ })).toHaveTextContent("Idle");
+  });
+
+  it("loads needs you again when the page is shown again, so an approval decided elsewhere goes", async () => {
+    const page = { visible: false };
+    const listeners = new Set<() => void>();
+    const visibility = {
+      visible: () => page.visible,
+      onChange: (listener: () => void) => {
+        listeners.add(listener);
+        return () => {
+          listeners.delete(listener);
+        };
+      },
+    };
+    const ask = {
+      ID: "a1",
+      SessionID: "s1",
+      Mate: "helper",
+      Requester: "Gus",
+      Action: { Kind: "create_pr", Tool: "Bash", Input: "gh pr create --fill" },
+      At: "2026-10-03T11:00:00Z",
+      State: "pending",
+    };
+    const { server } = setup("#/mates", board, [ask], visibility);
+    expect(await screen.findByRole("listitem", { name: "helper: create pr" })).toBeInTheDocument();
+    server.on("GET", "/api/v1/approvals", { status: 200, body: [] });
+    page.visible = true;
+    act(() => listeners.forEach((l) => l()));
+    expect(await screen.findByText("No approvals wait for you.")).toBeInTheDocument();
+    expect(screen.queryByRole("listitem", { name: "helper: create pr" })).toBeNull();
   });
 
   it("shows needs you on the face of a mate with a pending approval", async () => {
