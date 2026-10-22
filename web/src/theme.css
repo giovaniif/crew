@@ -1552,6 +1552,7 @@ button.danger {
 }
 
 .mate-error,
+.automation-problem,
 .mate-held .mate-state,
 .mate-error .mate-state {
   color: var(--peach);
