@@ -3795,6 +3795,19 @@ tr.picked td.diff-ln {
   color: var(--text);
 }
 
+.browser-app {
+  font: inherit;
+  font-size: 13px;
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid var(--surface);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--text);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
 .browser-external {
   font-size: 13px;
   color: var(--link);

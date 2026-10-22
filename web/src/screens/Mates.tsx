@@ -37,6 +37,7 @@ import {
   toneOf,
 } from "../faces";
 import type { MateRow, Mates as MateBoard } from "../stream";
+import type { PageVisibility } from "../App";
 import { ApprovalList } from "./Approvals";
 
 function message(err: unknown): string {
@@ -381,7 +382,7 @@ const sources: [MateSource, string][] = [
   ["codex", "Codex"],
 ];
 
-export function Mates({ api, now, board }: { api: Authed; now: number; board?: MateBoard }) {
+export function Mates({ api, now, board, visibility }: { api: Authed; now: number; board?: MateBoard; visibility?: PageVisibility }) {
   const { defs, problems, error } = useMateDefs(api);
   const asking = useAskingMates(api);
   const [source, setSource] = useState<MateSource>("all");
@@ -436,7 +437,7 @@ export function Mates({ api, now, board }: { api: Authed; now: number; board?: M
       </div>
       <KillSwitch api={api} stopped={board?.stopped ?? false} />
       <h2>Needs you</h2>
-      <ApprovalList api={api} now={now} />
+      <ApprovalList api={api} now={now} visibility={visibility} />
     </main>
   );
 }

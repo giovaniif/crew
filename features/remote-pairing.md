@@ -126,6 +126,8 @@ Expect: a single-use code and its expiry.
 ### a wrong push delay shows its error under Save delay
 
 ```sh
+go run ./scripts/verify iso down
+go run ./scripts/verify iso up
 sh -c 'go run ./scripts/verify web drive /#/settings --viewport mobile --out-dir /tmp/crew-verify-map/remote --steps "[{\"expect\":{\"role\":\"heading\",\"name\":\"Settings\"}},{\"eval\":\"document.querySelectorAll(\\\"ul.settings-nav\\\")[1].querySelectorAll(\\\"button\\\")[2].click()\"},{\"expect\":{\"text\":\"Devices\"}},{\"fill\":{\"label\":\"Push after I am away for\"},\"value\":\"TEST-bad\"},{\"click\":{\"role\":\"button\",\"name\":\"Save delay\"}},{\"eval\":\"const a=document.querySelector(\\\"[role=alert]\\\"); const h=[...document.querySelectorAll(\\\"h3\\\")].find(e=>e.textContent===\\\"Devices\\\"); if (!a || !(a.compareDocumentPosition(h) & 4)) throw new Error(\\\"error not under Save delay\\\")\"}]" | jq -e "[.problems[].msg | test(\"400\")] | all"'
 ```
 

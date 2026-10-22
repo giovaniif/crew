@@ -241,7 +241,7 @@ function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, g
     return { screen: <Automations api={api} />, tab: "automations" };
   }
   if (hash === "#/mates") {
-    return { screen: <Mates api={api} now={now} board={snapshot.state?.mates} />, tab: "mates" };
+    return { screen: <Mates api={api} now={now} board={snapshot.state?.mates} visibility={env.visibility} />, tab: "mates" };
   }
   if (hash.startsWith("#/mates/")) {
     const name = hash.slice("#/mates/".length);

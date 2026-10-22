@@ -1,6 +1,7 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import { headlessView, sendCookies, type Authed, type HeadlessView } from "../api";
 import { browserAddress, portLinks, tabLabel } from "../browser";
+import type { DesktopBridge } from "../desktopBridge";
 import type { Worktree } from "../stream";
 
 export type BrowserTab = { id: number; url: string };
@@ -46,9 +47,9 @@ function useHeadless(api: Authed, session: string): HeadlessView {
   return view;
 }
 
-type Props = { session: string; worktrees: Worktree[]; host: string; store: BrowserStore; api: Authed };
+type Props = { session: string; worktrees: Worktree[]; host: string; store: BrowserStore; api: Authed; desktop?: DesktopBridge };
 
-export function BrowserPane({ session, worktrees, host, store, api }: Props) {
+export function BrowserPane({ session, worktrees, host, store, api, desktop }: Props) {
   const name = hostName(host);
   const links = portLinks(session, worktrees, name);
   const [state, setState] = useState<BrowserState>(() => store.get(session) ?? { tabs: [{ id: 1, url: links[0]?.url ?? "" }], selected: 1, next: 2 });
@@ -59,6 +60,19 @@ export function BrowserPane({ session, worktrees, host, store, api }: Props) {
   const [onServer, setOnServer] = useState(false);
   const [cookies, setCookies] = useState<{ ok: boolean; text: string } | null>(null);
   const showServer = onServer && headless.live;
+  const [appError, setAppError] = useState("");
+
+  const openInApp = async () => {
+    if (!desktop) {
+      return;
+    }
+    setAppError("");
+    try {
+      await desktop.invoke("crew_browser_open", { session, url: current.url || null });
+    } catch (err) {
+      setAppError(err instanceof Error ? err.message : String(err));
+    }
+  };
 
   const save = (next: BrowserState) => {
     store.set(session, next);
@@ -152,12 +166,22 @@ export function BrowserPane({ session, worktrees, host, store, api }: Props) {
                 setRefused(false);
               }}
             />
+            {desktop ? (
+              <button type="button" className="browser-app" onClick={() => void openInApp()}>
+                Open in app browser
+              </button>
+            ) : null}
             {current.url ? (
               <a className="browser-external" href={current.url} target="_blank" rel="noreferrer">
                 Open in browser
               </a>
             ) : null}
           </form>
+          {appError ? (
+            <p className="browser-refused" role="alert">
+              {appError}
+            </p>
+          ) : null}
           {refused ? (
             <p className="browser-refused" role="alert">
               Type a port, a host or an http or https URL
@@ -194,7 +218,9 @@ export function BrowserPane({ session, worktrees, host, store, api }: Props) {
           </p>
         ) : null}
         <p className="browser-note muted" role="note">
-          Profiles and agent control of this tab are not available. An agent uses the headless browser of the server.
+          {desktop
+            ? "An agent controls the app browser of this session. You see each step there and can use the page at the same time."
+            : "Profiles and agent control of this tab are not available. An agent uses the headless browser of the server."}
         </p>
       </div>
     </div>
