@@ -1,7 +1,9 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
+import type { AppEnv } from "../App";
 import { browserAddress, portLinks, tabLabel } from "../browser";
+import type { DesktopBridge } from "../desktopBridge";
 import type { Worktree } from "../stream";
 import { desktop, goldenState } from "../test/desktop";
 import type { FakeServer } from "../test/fake-server";
@@ -79,8 +81,23 @@ const notLive = (server: FakeServer) => {
   server.on("GET", "/api/v1/sessions/s1/browser", { status: 200, body: { live: false } });
 };
 
-async function openBrowser(ports: number[], routes: (server: FakeServer) => void = notLive) {
-  const { live, server } = desktop("#/sessions/s1", true, undefined, {}, routes);
+type Invoked = { cmd: string; args?: Record<string, unknown> };
+
+function fakeApp(answer: (cmd: string) => Promise<unknown> = () => Promise.resolve(null)) {
+  const calls: Invoked[] = [];
+  const bridge: DesktopBridge = {
+    invoke: (cmd, args) => {
+      calls.push({ cmd, args });
+      return answer(cmd);
+    },
+    focused: () => true,
+    onFocusChange: () => () => undefined,
+  };
+  return { bridge, calls };
+}
+
+async function openBrowser(ports: number[], routes: (server: FakeServer) => void = notLive, extra: Partial<AppEnv> = {}) {
+  const { live, server } = desktop("#/sessions/s1", true, undefined, extra, routes);
   live(withPorts(ports));
   await userEvent.click(await screen.findByRole("tab", { name: "Browser" }));
   return { pane: screen.getByRole("tabpanel"), server };
@@ -146,6 +163,29 @@ describe("the Browser tab", () => {
   it("tells which features of the Mac browser are not available", async () => {
     const { pane } = await openBrowser([3000]);
     expect(within(pane).getByRole("note")).toHaveTextContent("Profiles and agent control of this tab are not available. An agent uses the headless browser of the server.");
+    expect(within(pane).queryByRole("button", { name: "Open in app browser" })).toBeNull();
+  });
+
+  it("opens the page of the tab in the app browser of the session in the desktop app", async () => {
+    const app = fakeApp();
+    const { pane } = await openBrowser([3000], notLive, { desktop: app.bridge });
+    await userEvent.click(within(pane).getByRole("button", { name: "Open in app browser" }));
+    await waitFor(() => expect(app.calls).toContainEqual({ cmd: "crew_browser_open", args: { session: "s1", url: "http://crew.example.ts.net:3000/" } }));
+    expect(within(pane).getByRole("note")).toHaveTextContent("An agent controls the app browser of this session. You see each step there and can use the page at the same time.");
+  });
+
+  it("opens an empty app browser when the tab has no page", async () => {
+    const app = fakeApp();
+    const { pane } = await openBrowser([], notLive, { desktop: app.bridge });
+    await userEvent.click(within(pane).getByRole("button", { name: "Open in app browser" }));
+    await waitFor(() => expect(app.calls).toContainEqual({ cmd: "crew_browser_open", args: { session: "s1", url: null } }));
+  });
+
+  it("shows why the app browser did not open", async () => {
+    const app = fakeApp((cmd) => (cmd === "crew_browser_open" ? Promise.reject("only the page of this computer can open the app browser") : Promise.resolve(null)));
+    const { pane } = await openBrowser([3000], notLive, { desktop: app.bridge });
+    await userEvent.click(within(pane).getByRole("button", { name: "Open in app browser" }));
+    expect(await within(pane).findByRole("alert")).toHaveTextContent("only the page of this computer can open the app browser");
   });
 
   it("shows the headless browser of the server read-only while it is live", async () => {
