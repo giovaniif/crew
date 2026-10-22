@@ -49,7 +49,7 @@ func PlanCleanup(w Worktree, f CleanupFacts, now time.Time) CleanupDecision {
 	case f.SessionLive:
 		d.Reason = "its session is live"
 	case now.Sub(f.LastActivity) < CleanupGrace:
-		d.Reason = fmt.Sprintf("active within the last %v", CleanupGrace)
+		d.Reason = fmt.Sprintf("active within the last %d hours", int(CleanupGrace.Hours()))
 	case f.OnDefault:
 		d.Reason = "on the default branch"
 	case w.Branch == "" && !f.InDefault:
