@@ -48,6 +48,7 @@ func (d *Daemon) diskView(req rpc.Request) (*rpc.Response, bool) {
 		}
 		view.Rows = append(view.Rows, domain.DiskRow{WorktreeID: w.ID, Size: size, Action: r.Decision.Action, Reason: r.Decision.Reason})
 	}
+	domain.SortDiskRows(view.Rows)
 	view.Reclaimable, view.ReclaimablePending = domain.Reclaimable(view.Rows)
 	view.WorktreesSize, view.WorktreesPending = domain.TotalSize(view.Rows)
 	d.publishReclaimable(rpc.Reclaimable{Size: view.Reclaimable, Pending: view.ReclaimablePending})
