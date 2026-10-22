@@ -75,6 +75,7 @@ function Header({
       <p className="meta">{meta}</p>
       <p className="chat-facts">
         <span className={"chip chip-" + state}>{stateLabels[state] ?? state}</span>
+        {session.Muted ? <span className="badge muted-badge">muted</span> : null}
         {session.Usage.HasContext ? <span>{session.Usage.ContextLeftPercent + "% context left"}</span> : null}
         {age ? <span>{age}</span> : null}
       </p>
