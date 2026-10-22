@@ -59,6 +59,15 @@ go run ./scripts/verify tui drive --restart --size 90x20 --out-dir /tmp/crew-ver
 
 Expect: under the last row that fits, `… N more` counts the rows that are cut ([#689](https://github.com/giovaniif/crew/issues/689)).
 
+### numbered worktrees are listed in number order
+
+```sh
+go run ./scripts/verify iso seed --sessions 12
+go run ./scripts/verify tui drive --restart --size 90x20 --out-dir /tmp/crew-verify-map/disk --steps '[{"expect":"seeded change","timeout":8000},{"keys":"w"},{"expect":"WORKTREES & DISK","timeout":5000},{"expect":"seed-2-api","timeout":5000},{"absent":"seed-10-api"}]'
+```
+
+Expect: `seed-2-api` comes right after `seed-1-api`, and `seed-10-api` is below the cut ([#691](https://github.com/giovaniif/crew/issues/691)).
+
 ### disk view keys k, o and g (manual: they act on real worktree folders)
 
 ## Cleanup
