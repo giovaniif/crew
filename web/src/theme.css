@@ -2564,6 +2564,7 @@ button.danger {
   background: var(--mantle);
   border-radius: 8px;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
   font-family: var(--mono);
   font-size: 14px;
 }
