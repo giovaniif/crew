@@ -45,6 +45,15 @@ Expect: each seeded worktree is `keep` with `its session is live`, because each 
 go run ./scripts/verify tui drive --restart --size 90x30 --steps '[{"expect":"seed","timeout":8000},{"keys":"w"},{"expect":"KB","timeout":15000},{"expect":"#40 · seeded task 1"}]'
 ```
 
+### the grace reason says hours, not a Go duration (#683)
+
+```sh
+go run ./scripts/verify tui drive --restart --size 120x30 --steps '[{"expect":"seed","timeout":8000},{"keys":"x"},{"keys":"y"},{"wait":1500},{"keys":"w"},{"expect":"KB","timeout":15000},{"keys":"j"},{"keys":"d"},{"expect":"active within the last 4 hours","timeout":3000}]'
+go run ./scripts/verify iso crew --expect "active within the last 4 hours" --absent "4h0m0s" -- cleanup --dry-run
+```
+
+Expect: `x` then `y` ends the first session in the sidebar. Its worktree is the second row of the disk view, and `d` on it gives the grace reason in hours.
+
 ### cleanup of a merged worktree on a temp repo (manual: needs a temp repo with a merged PR in the fake gh; the rules are in internal/domain cleanup tests and internal/app tests)
 
 ### crew setup-worktree runs the .crew.toml recipe (manual: it needs a repo with a .crew.toml setup recipe)
