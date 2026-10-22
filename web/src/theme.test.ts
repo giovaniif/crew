@@ -208,4 +208,8 @@ describe("a mate color swatch", () => {
     expect(swatch.flex).toBe("none");
     expect(swatch["border-radius"]).toBe("50%");
   });
+
+  it("wraps a long word in the automation prompt", () => {
+    expect(rule(".automation-prompt")["overflow-wrap"]).toBe("anywhere");
+  });
 });
