@@ -216,6 +216,21 @@ function DiffView(p: DiffProps) {
       {!file.Binary && file.Hunks.length === 0 ? <p className="muted diff-note">No text changes</p> : null}
       {file.Hunks.length > 0 ? (
         <table className={"diff-table diff-" + p.layout}>
+          {p.layout === "unified" ? (
+            <colgroup>
+              <col className="col-ln-old" />
+              <col className="col-ln" />
+              <col className="col-sign" />
+              <col />
+            </colgroup>
+          ) : (
+            <colgroup>
+              <col className="col-ln" />
+              <col />
+              <col className="col-ln" />
+              <col />
+            </colgroup>
+          )}
           {file.Hunks.map((h, hi) => (
             <tbody key={hi}>
               <tr className="hunk-row">

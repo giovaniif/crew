@@ -239,6 +239,19 @@
 .diff-table td {
   padding: 0;
   vertical-align: top;
+  text-align: left;
+}
+
+.diff-table .col-ln-old {
+  width: 62px;
+}
+
+.diff-table .col-ln {
+  width: 40px;
+}
+
+.diff-table .col-sign {
+  width: 24px;
 }
 
 .diff-table tr {
@@ -277,12 +290,12 @@
 
 .line-added td,
 td.line-added {
-  background: oklch(0.97 0.03 150);
+  background: var(--added-bg);
 }
 
 .line-deleted td,
 td.line-deleted {
-  background: oklch(0.97 0.025 25);
+  background: var(--deleted-bg);
 }
 
 tr.commented td.diff-ln,
@@ -302,17 +315,20 @@ tr.picked td.diff-ln {
   border: 0;
   border-radius: 4px;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font: 600 12px/16px var(--font-sans);
   text-align: center;
   cursor: pointer;
   opacity: 0;
 }
 
-.review-pane .diff-split .line-comment {
-  position: static;
-  margin-left: 4px;
-  vertical-align: middle;
+.diff-split .col-ln {
+  width: 62px;
+}
+
+.diff-split td.diff-ln {
+  position: relative;
+  padding-left: 22px;
 }
 
 .diff-table tr:hover .line-comment,
