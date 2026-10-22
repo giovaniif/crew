@@ -57,7 +57,7 @@ pub fn serve_capability(url: &Url) -> Option<String> {
             "identifier": format!("serve-{host}-{port}"),
             "windows": ["main", "main-*"],
             "remote": { "urls": [origin] },
-            "permissions": ["core:default", "allow-crew-notify", "allow-crew-attention", "allow-fix-daemon"]
+            "permissions": ["core:default", "allow-crew-notify", "allow-crew-attention", "allow-fix-daemon", "allow-crew-browser-open"]
         })
         .to_string(),
     )

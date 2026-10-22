@@ -11,6 +11,7 @@ fn main() {
             "crew_server_remove",
             "crew_server_fix",
             "crew_server_workspace",
+            "crew_browser_open",
         ])),
     )
     .expect("the tauri build failed")
