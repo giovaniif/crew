@@ -1,6 +1,9 @@
 package domain
 
-import "testing"
+import (
+	"slices"
+	"testing"
+)
 
 func TestReclaimableSumsWorktreesTheEngineWouldRemoveOrBackUp(t *testing.T) {
 	rows := []DiskRow{
@@ -84,6 +87,37 @@ func TestWorktreeStatusSaysWhatTheWorktreeIsDoing(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			if got := WorktreeStatus(c.w, c.owner, c.action); got != c.want {
 				t.Fatalf("got %q, want %q", got, c.want)
+			}
+		})
+	}
+}
+
+func TestSortDiskRowsComparesDigitRunsAsNumbers(t *testing.T) {
+	cases := []struct {
+		name string
+		in   []string
+		want []string
+	}{
+		{"numbered seeds", []string{"/w/seed-10", "/w/seed-2", "/w/seed-1"}, []string{"/w/seed-1", "/w/seed-2", "/w/seed-10"}},
+		{"issue branches", []string{"/w/689-disk", "/w/1000-x", "/w/90-y"}, []string{"/w/90-y", "/w/689-disk", "/w/1000-x"}},
+		{"text before numbers", []string{"/b/1", "/a/2", "/a/10"}, []string{"/a/2", "/a/10", "/b/1"}},
+		{"leading zeros keep a stable order", []string{"/w/x-01", "/w/x-1", "/w/x-001"}, []string{"/w/x-1", "/w/x-01", "/w/x-001"}},
+		{"plain text", []string{"/w/b", "/w/ab", "/w/a"}, []string{"/w/a", "/w/ab", "/w/b"}},
+		{"a number before a letter", []string{"/w/a", "/w/9"}, []string{"/w/9", "/w/a"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rows := make([]DiskRow, len(tc.in))
+			for i, id := range tc.in {
+				rows[i] = DiskRow{WorktreeID: id}
+			}
+			SortDiskRows(rows)
+			got := make([]string, len(rows))
+			for i, r := range rows {
+				got[i] = r.WorktreeID
+			}
+			if !slices.Equal(got, tc.want) {
+				t.Errorf("order = %v, want %v", got, tc.want)
 			}
 		})
 	}

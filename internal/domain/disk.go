@@ -1,5 +1,11 @@
 package domain
 
+import (
+	"cmp"
+	"slices"
+	"strings"
+)
+
 const (
 	SizePending int64 = -1
 	SizeMissing int64 = -2
@@ -63,4 +69,41 @@ func WorktreeStatus(w Worktree, owner *Session, a CleanupAction) string {
 		return "● in use"
 	}
 	return "○ idle"
+}
+
+func SortDiskRows(rows []DiskRow) {
+	slices.SortStableFunc(rows, func(a, b DiskRow) int { return naturalCompare(a.WorktreeID, b.WorktreeID) })
+}
+
+func naturalCompare(a, b string) int {
+	for a != "" && b != "" {
+		da, db := digitRun(a), digitRun(b)
+		if da > 0 && db > 0 {
+			na, nb := strings.TrimLeft(a[:da], "0"), strings.TrimLeft(b[:db], "0")
+			if c := cmp.Compare(len(na), len(nb)); c != 0 {
+				return c
+			}
+			if c := strings.Compare(na, nb); c != 0 {
+				return c
+			}
+			if c := cmp.Compare(da, db); c != 0 {
+				return c
+			}
+			a, b = a[da:], b[db:]
+			continue
+		}
+		if a[0] != b[0] {
+			return cmp.Compare(a[0], b[0])
+		}
+		a, b = a[1:], b[1:]
+	}
+	return cmp.Compare(len(a), len(b))
+}
+
+func digitRun(s string) int {
+	n := 0
+	for n < len(s) && s[n] >= '0' && s[n] <= '9' {
+		n++
+	}
+	return n
 }
