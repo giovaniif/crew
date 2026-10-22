@@ -133,6 +133,58 @@ sh -c 'go run ./scripts/verify web drive /#/settings --viewport mobile --out-dir
 
 Expect: only the 400 of `POST /api/v1/config` is a problem. The error shows above the Devices heading.
 
+### approvals answer over HTTP
+
+```sh
+sh -c 'U="$(jq -r .serve_url "$VERIFY_HOME/iso.json")"; C="$(go run ./scripts/verify iso crew -- remote pair --name TEST-curl --url https://iso.invalid 2>&1 | grep -oE "\b[A-Z0-9]{8}\b" | head -1)"; T="$(curl -fsS -X POST -d "{\"code\":\"$C\",\"name\":\"TEST-curl\"}" "$U/api/v1/pair" | jq -r .token)"; curl -fsS -H "Authorization: Bearer $T" "$U/api/v1/approvals" | jq -e "."'
+```
+
+Expect: a JSON answer for the approvals of the isolated crew.
+
+### devices list the paired devices over HTTP
+
+```sh
+sh -c 'U="$(jq -r .serve_url "$VERIFY_HOME/iso.json")"; C="$(go run ./scripts/verify iso crew -- remote pair --name TEST-curl --url https://iso.invalid 2>&1 | grep -oE "\b[A-Z0-9]{8}\b" | head -1)"; T="$(curl -fsS -X POST -d "{\"code\":\"$C\",\"name\":\"TEST-curl\"}" "$U/api/v1/pair" | jq -r .token)"; curl -fsS -H "Authorization: Bearer $T" "$U/api/v1/devices" | jq -e "tostring | test(\"TEST-curl\")"'
+```
+
+Expect: the JSON lists the device `TEST-curl`.
+
+### disk answers over HTTP
+
+```sh
+sh -c 'U="$(jq -r .serve_url "$VERIFY_HOME/iso.json")"; C="$(go run ./scripts/verify iso crew -- remote pair --name TEST-curl --url https://iso.invalid 2>&1 | grep -oE "\b[A-Z0-9]{8}\b" | head -1)"; T="$(curl -fsS -X POST -d "{\"code\":\"$C\",\"name\":\"TEST-curl\"}" "$U/api/v1/pair" | jq -r .token)"; curl -fsS -H "Authorization: Bearer $T" "$U/api/v1/disk" | jq -e ".ports | type == \"array\""'
+```
+
+Expect: the JSON has a `ports` list.
+
+### mates answer over HTTP
+
+```sh
+sh -c 'U="$(jq -r .serve_url "$VERIFY_HOME/iso.json")"; C="$(go run ./scripts/verify iso crew -- remote pair --name TEST-curl --url https://iso.invalid 2>&1 | grep -oE "\b[A-Z0-9]{8}\b" | head -1)"; T="$(curl -fsS -X POST -d "{\"code\":\"$C\",\"name\":\"TEST-curl\"}" "$U/api/v1/pair" | jq -r .token)"; curl -fsS -H "Authorization: Bearer $T" "$U/api/v1/mates" | jq -e "."'
+```
+
+Expect: a JSON answer for the mates of the isolated crew.
+
+### onboarding answers over HTTP
+
+```sh
+sh -c 'U="$(jq -r .serve_url "$VERIFY_HOME/iso.json")"; C="$(go run ./scripts/verify iso crew -- remote pair --name TEST-curl --url https://iso.invalid 2>&1 | grep -oE "\b[A-Z0-9]{8}\b" | head -1)"; T="$(curl -fsS -X POST -d "{\"code\":\"$C\",\"name\":\"TEST-curl\"}" "$U/api/v1/pair" | jq -r .token)"; curl -fsS -H "Authorization: Bearer $T" "$U/api/v1/onboarding" | jq -e "."'
+```
+
+Expect: a JSON answer for the onboarding steps.
+
+### mates create, claim, memory, new, pause, resume and tokens over HTTP (manual: a mate starts a real harness)
+
+### approvals approve and deny over HTTP (manual: needs a pending approval from a real agent)
+
+### onboarding install, remove, nvim and finish over HTTP (manual: they change the setup of the harnesses)
+
+### session create, messages, answer, end, fresh, mute, read, shell, nvim and review over HTTP (manual: no CLI prints a session id for a curl recipe)
+
+### terminal, browser and cookies over HTTP (manual: needs a live pane or a browser of a session)
+
+### cleanup worktree, ports kill and workspaces remove over HTTP (manual: they remove data or stop processes)
+
 ### push subscribe and unsubscribe (manual: needs a real browser push subscription)
 
 ### session rename, switch, resume, interrupt and kill dev servers over HTTP (manual: no CLI prints a session id for a curl recipe)
