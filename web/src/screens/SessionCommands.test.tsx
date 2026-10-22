@@ -20,6 +20,16 @@ function items(menu: HTMLElement): string[] {
     .map((i) => i.textContent ?? "");
 }
 
+function opened(menu: HTMLElement, name: string): HTMLElement {
+  const hit = within(menu)
+    .getAllByRole("menuitem")
+    .find((i) => i.children[1]?.textContent === name);
+  if (!hit) {
+    throw new Error("no menu item " + name);
+  }
+  return hit;
+}
+
 function setup(extra: Parameters<typeof session>[2] = {}, hash = "") {
   const d = desktop(hash);
   d.live({ ...goldenState(), sessions: [session("a", "alpha", { Harness: "claude", Model: "sonnet", Effort: "high", ...extra })] });
@@ -33,7 +43,8 @@ function posts(server: ReturnType<typeof desktop>["server"]) {
 describe("the session commands", () => {
   it("has the commands of the Mac app in the context menu of a sidebar row", () => {
     setup();
-    expect(items(menuOf("alpha"))).toEqual(["Rename…", "Mute", "Model…", "Effort…", "Kill dev servers", "End session…"]);
+    expect(items(menuOf("alpha"))).toEqual(["Rename…F2", "Mute", "Model…sonnet", "Effort…high", "Show agent screen", "Open in editor⌘E", "Open browser", "Kill dev servers", "InterruptEsc", "End session…"]);
+    expect(within(screen.getByRole("menu", { name: "Session commands" })).getAllByRole("separator")).toHaveLength(2);
   });
 
   it("shows Unmute for a muted session and only Resume for an ended session", () => {
@@ -47,7 +58,7 @@ describe("the session commands", () => {
   it("renames a session", async () => {
     const { server } = setup();
     server.on("POST", "/api/v1/sessions/a/rename", { status: 200, body: {} });
-    await userEvent.click(within(menuOf("alpha")).getByRole("menuitem", { name: "Rename…" }));
+    await userEvent.click(opened(menuOf("alpha"), "Rename…"));
     const dialog = screen.getByRole("dialog", { name: "Rename session" });
     const name = within(dialog).getByRole("textbox", { name: "Name" });
     await userEvent.clear(name);
@@ -55,12 +66,19 @@ describe("the session commands", () => {
     await userEvent.click(within(dialog).getByRole("button", { name: "Rename" }));
     expect(posts(server)).toEqual([["/api/v1/sessions/a/rename", { name: "login fix" }]]);
     expect(screen.queryByRole("dialog", { name: "Rename session" })).not.toBeInTheDocument();
+    const toast = await screen.findByRole("status");
+    expect(toast).toHaveTextContent("Renamed to “login fix”");
+    await userEvent.click(within(toast).getByRole("button", { name: "Undo" }));
+    expect(posts(server)).toEqual([
+      ["/api/v1/sessions/a/rename", { name: "login fix" }],
+      ["/api/v1/sessions/a/rename", { name: "alpha" }],
+    ]);
   });
 
   it("mutes a session", async () => {
     const { server } = setup();
     server.on("POST", "/api/v1/sessions/a/mute", { status: 200, body: {} });
-    await userEvent.click(within(menuOf("alpha")).getByRole("menuitem", { name: "Mute" }));
+    await userEvent.click(opened(menuOf("alpha"), "Mute"));
     expect(posts(server)).toEqual([["/api/v1/sessions/a/mute", { muted: true }]]);
   });
 
@@ -68,10 +86,13 @@ describe("the session commands", () => {
     const { server } = setup();
     server.on("GET", "/api/v1/session-options", { status: 200, body: options });
     server.on("POST", "/api/v1/sessions/a/switch", { status: 200, body: {} });
-    await userEvent.click(within(menuOf("alpha")).getByRole("menuitem", { name: "Model…" }));
+    await userEvent.click(opened(menuOf("alpha"), "Model…"));
     const dialog = await screen.findByRole("dialog", { name: "Switch model" });
-    expect(within(dialog).getByRole("button", { name: "sonnet" })).toHaveAttribute("aria-pressed", "true");
-    await userEvent.click(within(dialog).getByRole("button", { name: "opus" }));
+    expect(within(dialog).getByRole("option", { name: /sonnet/ })).toHaveAttribute("aria-selected", "true");
+    expect(within(dialog).getByRole("option", { name: /sonnet/ })).toHaveTextContent("current");
+    await userEvent.click(within(dialog).getByRole("option", { name: /opus/ }));
+    expect(posts(server)).toEqual([]);
+    await userEvent.click(within(dialog).getByRole("button", { name: "Switch" }));
     expect(posts(server)).toEqual([["/api/v1/sessions/a/switch", { kind: "model", value: "opus" }]]);
   });
 
@@ -79,17 +100,18 @@ describe("the session commands", () => {
     const { server } = setup();
     server.on("GET", "/api/v1/session-options", { status: 200, body: options });
     server.on("POST", "/api/v1/sessions/a/switch", { status: 200, body: {} });
-    await userEvent.click(within(menuOf("alpha")).getByRole("menuitem", { name: "Effort…" }));
+    await userEvent.click(opened(menuOf("alpha"), "Effort…"));
     const dialog = await screen.findByRole("dialog", { name: "Switch effort" });
-    await userEvent.click(within(dialog).getByRole("button", { name: "low" }));
+    await userEvent.click(within(dialog).getByRole("option", { name: /low/ }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Switch" }));
     expect(posts(server)).toEqual([["/api/v1/sessions/a/switch", { kind: "effort", value: "low" }]]);
   });
 
   it("asks before it ends a session", async () => {
     const { server } = setup();
     server.on("POST", "/api/v1/sessions/a/end", { status: 200, body: {} });
-    await userEvent.click(within(menuOf("alpha")).getByRole("menuitem", { name: "End session…" }));
-    const dialog = screen.getByRole("alertdialog", { name: "End this session?" });
+    await userEvent.click(opened(menuOf("alpha"), "End session…"));
+    const dialog = screen.getByRole("dialog", { name: "End this session?" });
     expect(posts(server)).toEqual([]);
     await userEvent.click(within(dialog).getByRole("button", { name: "End session" }));
     expect(posts(server)).toEqual([["/api/v1/sessions/a/end", undefined]]);
@@ -100,36 +122,58 @@ describe("the session commands", () => {
     d.storage.setItem("crew.confirmEnd", "off");
     d.live({ ...goldenState(), sessions: [session("a", "alpha")] });
     d.server.on("POST", "/api/v1/sessions/a/end", { status: 200, body: {} });
-    await userEvent.click(within(menuOf("alpha")).getByRole("menuitem", { name: "End session…" }));
-    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    await userEvent.click(opened(menuOf("alpha"), "End session…"));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(posts(d.server)).toEqual([["/api/v1/sessions/a/end", undefined]]);
+  });
+
+  it("asks before it interrupts the agent", async () => {
+    const { server } = setup();
+    server.on("POST", "/api/v1/sessions/a/interrupt", { status: 200, body: {} });
+    await userEvent.click(opened(menuOf("alpha"), "Interrupt"));
+    const dialog = screen.getByRole("dialog", { name: "Interrupt this session?" });
+    expect(posts(server)).toEqual([]);
+    await userEvent.click(within(dialog).getByRole("button", { name: "Interrupt" }));
+    expect(posts(server)).toEqual([["/api/v1/sessions/a/interrupt", undefined]]);
+  });
+
+  it.each([
+    ["Show agent screen", "#/sessions/a/terminal", "Terminal"],
+    ["Open in editor", "#/sessions/a/nvim", "nvim"],
+    ["Open browser", "#/sessions/a/browser", "Browser"],
+  ])("%s opens that view of the session", async (item, hash, tab) => {
+    setup({}, "#/sessions/a");
+    await userEvent.click(screen.getByRole("button", { name: "Session commands" }));
+    await userEvent.click(opened(screen.getByRole("menu", { name: "Session commands" }), item));
+    expect(window.location.hash).toBe(hash);
+    expect(await screen.findByRole("tab", { name: tab })).toHaveAttribute("aria-selected", "true");
   });
 
   it("resumes an ended session", async () => {
     const { server } = setup({ Ended: true, order: -1 });
     server.on("POST", "/api/v1/sessions/a/resume", { status: 200, body: {} });
-    await userEvent.click(within(menuOf("alpha")).getByRole("menuitem", { name: "Resume" }));
+    await userEvent.click(opened(menuOf("alpha"), "Resume"));
     expect(posts(server)).toEqual([["/api/v1/sessions/a/resume", undefined]]);
   });
 
   it("kills the dev servers and tells how many stopped", async () => {
     const { server } = setup();
     server.on("POST", "/api/v1/sessions/a/kill-dev-servers", { status: 200, body: { killed: [4, 7] } });
-    await userEvent.click(within(menuOf("alpha")).getByRole("menuitem", { name: "Kill dev servers" }));
+    await userEvent.click(opened(menuOf("alpha"), "Kill dev servers"));
     expect(await screen.findByRole("status")).toHaveTextContent("Stopped 2 dev servers.");
   });
 
   it("tells when no dev servers run", async () => {
     const { server } = setup();
     server.on("POST", "/api/v1/sessions/a/kill-dev-servers", { status: 200, body: { killed: [] } });
-    await userEvent.click(within(menuOf("alpha")).getByRole("menuitem", { name: "Kill dev servers" }));
+    await userEvent.click(opened(menuOf("alpha"), "Kill dev servers"));
     expect(await screen.findByRole("status")).toHaveTextContent("No dev servers are running in this session's worktrees.");
   });
 
   it("shows the message of the daemon when a command fails", async () => {
     const { server } = setup();
     server.on("POST", "/api/v1/sessions/a/mute", { status: 500, body: { error: { code: "failed", message: "session a is gone" } } });
-    await userEvent.click(within(menuOf("alpha")).getByRole("menuitem", { name: "Mute" }));
+    await userEvent.click(opened(menuOf("alpha"), "Mute"));
     expect(await screen.findByRole("alert")).toHaveTextContent("session a is gone");
   });
 
