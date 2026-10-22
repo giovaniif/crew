@@ -267,6 +267,7 @@ function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, g
             onSignOut={onSignOut}
             connectUrl={env.connectUrl}
             userAgent={env.userAgent}
+            desktop={!!env.desktop}
           />
           {env.desktop && <DesktopAlerts storage={env.storage} />}
         </>

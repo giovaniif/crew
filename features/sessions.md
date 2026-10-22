@@ -62,6 +62,15 @@ Expect: with no session selected, Terminal is disabled with a reason, like Revie
 go run ./scripts/verify web drive / --viewport mobile --out-dir /tmp/crew-verify-map/sessions --steps '[{"click":{"text":"seeded change 1"}},{"expect":{"role":"textbox","name":"Message","exact":false}},{"shot":"chat.png"}]'
 ```
 
+### Enter sends a message
+
+```sh
+go run ./scripts/verify iso seed --sessions 3
+go run ./scripts/verify web drive / --viewport mobile --out-dir /tmp/crew-verify-map/sessions --steps '[{"click":{"text":"seeded change 1"}},{"fill":{"role":"textbox","name":"Message","exact":false},"value":"TEST-enter sends"},{"press":"Enter"},{"expect":{"text":"TEST-enter sends"}},{"eval":"if (document.querySelector(\"textarea[aria-label=Message]\").value !== \"\") throw new Error(\"draft kept\")"},{"shot":"enter-sends.png"}]'
+```
+
+Expect: Enter queues the message (the seeded session works) and clears the composer. Shift+Enter adds a new line. See #709.
+
 ### CLI reads back the seeded worktrees
 
 ```sh
@@ -125,4 +134,5 @@ go run ./scripts/verify iso down
 ## Gotchas
 
 - `crew tui --new-session` opens the new session dialog over the sidebar. `verify tui` runs `crew tui` with no flag.
+- The seeded sessions have no pane. Chat send, Terminal, Shell and nvim on a live pane are in [live-session.md](live-session.md).
 - The seeded worktrees are in `/tmp/seed`. They are not git repos, so `git status` fails on them.

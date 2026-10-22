@@ -37,9 +37,10 @@ export type SettingsProps = {
   storage: KeyValue;
   userAgent: string;
   connectUrl?: string;
+  desktop?: boolean;
 };
 
-function PushCard({ auth, installed, fetch, push }: Pick<SettingsProps, "auth" | "installed" | "fetch" | "push">) {
+function PushCard({ auth, installed, fetch, push, desktop }: Pick<SettingsProps, "auth" | "installed" | "fetch" | "push" | "desktop">) {
   const [notify, setNotify] = useState<Notify>(() => {
     if (!push.supported) {
       return { state: "idle" };
@@ -87,14 +88,14 @@ function PushCard({ auth, installed, fetch, push }: Pick<SettingsProps, "auth" |
   return (
     <section className="card" aria-label="Notifications">
       <h2>Notifications</h2>
-      {!installed && (
+      {!installed && !desktop && (
         <p className="muted">
           On iPhone and iPad, notifications work only in the app opened from the Home Screen. Add crew to your Home Screen,
           then open it from there.
         </p>
       )}
       {!push.supported ? (
-        <p className="muted">This browser cannot show notifications from crew.</p>
+        !desktop && <p className="muted">This browser cannot show notifications from crew.</p>
       ) : (
         <>
           <p className="muted">Get a notification when a session needs you, waits for an answer or finishes.</p>
@@ -331,7 +332,7 @@ function GroupNav({ label, groups, current, onPick }: { label: string; groups: {
   );
 }
 
-export function Settings({ auth, host, installed, fetch, push, onSignOut, storage, userAgent, connectUrl }: SettingsProps) {
+export function Settings({ auth, host, installed, fetch, push, onSignOut, storage, userAgent, connectUrl, desktop }: SettingsProps) {
   const [group, setGroup] = useState<GroupId>("general");
   const [settings, setSettings] = useState<AppSettings>(() => loadSettings(storage));
   const api: Authed = { fetch, token: auth.token };
@@ -370,7 +371,7 @@ export function Settings({ auth, host, installed, fetch, push, onSignOut, storag
               <dd>{auth.device.id}</dd>
             </dl>
           </section>
-          <PushCard auth={auth} installed={installed} fetch={fetch} push={push} />
+          {!(desktop && !push.supported) && <PushCard auth={auth} installed={installed} fetch={fetch} push={push} desktop={desktop} />}
           <GeneralPane general={settings.general} storage={storage} onChange={(general) => update({ ...settings, general })} />
           <button type="button" className="secondary" onClick={onSignOut}>
             Sign out
