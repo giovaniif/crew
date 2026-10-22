@@ -17,6 +17,14 @@ go run ./scripts/verify iso up
 go run ./scripts/verify iso crew --expect TEST-verify -- remote devices
 ```
 
+### revoke with a help flag prints the usage
+
+```sh
+{ go run ./scripts/verify iso crew -- remote revoke --help || true; } | grep -q 'usage: crew remote'
+{ go run ./scripts/verify iso crew -- focus --help || true; } | grep -q 'usage: crew focus'
+{ go run ./scripts/verify iso crew -- workspace remove --help || true; } | grep -q 'usage: crew workspace'
+```
+
 ### pair prints a link and a code
 
 ```sh
