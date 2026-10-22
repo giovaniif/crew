@@ -113,3 +113,18 @@ func TestPrintAutomationRunsShowsOutcomeAndSession(t *testing.T) {
 		t.Errorf("runs out of order:\n%s", out.String())
 	}
 }
+
+func TestAutomationArgumentsRefuseAHelpFlagAsTheName(t *testing.T) {
+	for _, sub := range []string{"show", "rerun", "trust", "runs", "run"} {
+		for _, flag := range []string{"--help", "-h"} {
+			if automationArgsOK([]string{sub, flag}) {
+				t.Errorf("automationArgsOK(%s %s) = true, want false", sub, flag)
+			}
+		}
+	}
+	for _, args := range [][]string{{"show", "nightly"}, {"runs"}, {"run", "nightly", "fix", "-h"}, {"run", "--work-item", "#42", "nightly"}} {
+		if !automationArgsOK(args) {
+			t.Errorf("automationArgsOK(%v) = false, want true", args)
+		}
+	}
+}
