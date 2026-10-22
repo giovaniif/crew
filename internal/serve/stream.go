@@ -113,6 +113,8 @@ func (s *Server) runStream(ctx context.Context, cancel context.CancelCauseFunc, 
 		return code, reason
 	}
 	defer func() { _ = d.Close() }()
+	stop := context.AfterFunc(ctx, func() { _ = d.Close() })
+	defer stop()
 	st.d = d
 	st.device = device.ID
 	defer st.unwatchAll()
@@ -135,6 +137,9 @@ func (s *Server) runStream(ctx context.Context, cancel context.CancelCauseFunc, 
 			return closeFor(context.Cause(ctx))
 		case out, ok := <-diffs:
 			if !ok {
+				if ctx.Err() != nil {
+					return closeFor(context.Cause(ctx))
+				}
 				return websocket.StatusTryAgainLater, errDaemonGone.Error()
 			}
 			if err := st.write(ctx, Frame{Diff: out}); err != nil {
@@ -327,7 +332,7 @@ func (st *stream) write(ctx context.Context, f Frame) error {
 	}
 	st.writeMu.Lock()
 	defer st.writeMu.Unlock()
-	wctx, cancel := context.WithTimeout(ctx, streamWriteTimeout)
+	wctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), streamWriteTimeout)
 	defer cancel()
 	return st.conn.Write(wctx, websocket.MessageText, data)
 }
