@@ -371,6 +371,21 @@ func TestReviewTreeShowsTheFolderSoSameNamedFilesDiffer(t *testing.T) {
 	}
 }
 
+func TestReviewTreeCutsALongFileNameWithAnEllipsisBeforeItsCounts(t *testing.T) {
+	st := fixture(1, 1)
+	name := "very/deep/TEST-a-really-long-file-name-for-the-tree.go"
+	diff := "diff --git a/" + name + " b/" + name + "\nindex 1..2 100644\n--- a/" + name + "\n+++ b/" + name + "\n@@ -1 +1 @@\n-a\n+b\n"
+	rv := &fakeReviewer{reply: rpc.Review{Worktrees: []domain.WorktreeReview{{Worktree: st.Worktrees[0], Files: domain.ParseDiff(diff)}}}}
+	m := tui.New(tui.Options{Theme: tui.Latte(), Now: clock, Review: rv})
+	m = update(m, tea.WindowSizeMsg{Width: 150, Height: 40})
+	m = update(m, tui.StateMsg(st))
+	m = drive(m, key("r"), key("n"))
+	out := screen(m)
+	if !strings.Contains(out, "… +1 -1") {
+		t.Fatalf("the long name does not end in an ellipsis and a space before its counts:\n%s", out)
+	}
+}
+
 func TestReviewDoesNotSayNoChangesWhenEachWorktreeFailed(t *testing.T) {
 	st := fixture(1, 2)
 	rv := &fakeReviewer{reply: rpc.Review{Worktrees: []domain.WorktreeReview{
