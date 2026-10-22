@@ -15,8 +15,7 @@ import (
 const approvalUsage = "usage: crew approval list | approve <id> | deny <id>"
 
 func runApproval(args []string, stdout, stderr io.Writer) int {
-	ok := len(args) == 1 && args[0] == "list" || len(args) == 2 && (args[0] == "approve" || args[0] == "deny")
-	if !ok {
+	if !approvalArgsOK(args) {
 		fmt.Fprintln(stderr, approvalUsage)
 		return 2
 	}
@@ -25,6 +24,10 @@ func runApproval(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 	return 0
+}
+
+func approvalArgsOK(args []string) bool {
+	return len(args) == 1 && args[0] == "list" || len(args) == 2 && (args[0] == "approve" || args[0] == "deny")
 }
 
 func approvalCommand(args []string, stdout io.Writer) error {
