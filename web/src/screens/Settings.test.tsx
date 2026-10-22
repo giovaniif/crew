@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { App, type AppEnv } from "../App";
 import { loadAuth } from "../auth";
 import { FakeServer, MemoryStorage } from "../test/fake-server";
+import { FakeDesktop } from "../test/fake-desktop";
 import { FakeSockets } from "../test/fake-socket";
 
 const device = { id: "k3m9p2qx", name: "work phone", created_at: "2026-10-03T10:00:00Z", last_seen: "2026-10-03T10:00:00Z" };
@@ -27,6 +28,14 @@ function setup(hash: string) {
 }
 
 describe("Settings", () => {
+  it("shows no iPhone or browser note in the desktop app", () => {
+    const { env } = setup("#/settings");
+    render(<App env={{ ...env, installed: false, userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)", desktop: new FakeDesktop() }} />);
+    expect(screen.queryByText(/Home Screen/)).toBeNull();
+    expect(screen.queryByText("This browser cannot show notifications from crew.")).toBeNull();
+  });
+
+
   it("is a tab next to the session list", () => {
     const { env } = setup("");
     render(<App env={env} />);
