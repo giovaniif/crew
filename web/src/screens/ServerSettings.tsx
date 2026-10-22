@@ -228,6 +228,7 @@ export function WorkspacesGroup({ api }: { api: Authed }) {
           ) : null}
         </div>
       ) : null}
+      {loaded.state === "ready" && known.length === 0 ? <p className="set-lead">No workspaces yet. Add a folder to start sessions in it.</p> : null}
       {loaded.state === "ready" && known.length > 0 ? (
         <ul className="group" aria-label="Workspaces">
           {known.map((w: WorkspaceInfo) => (

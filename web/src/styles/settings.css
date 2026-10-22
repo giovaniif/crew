@@ -700,3 +700,23 @@ a.ui.btn {
     min-height: 44px;
   }
 }
+
+.opt .s .error {
+  display: block;
+  margin: 2px 0 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--danger);
+}
+
+.opt .s .error::before {
+  content: none;
+}
+
+.accents .swatch,
+.accents .swatch:hover {
+  flex: none;
+  min-width: 18px;
+  min-height: 18px;
+}
