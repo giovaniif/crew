@@ -50,20 +50,22 @@ function Header({
   onInterrupt,
   mate,
   commands,
+  inBar,
 }: {
   session: Session;
   now: number;
   onInterrupt: () => void;
   mate?: ReactNode;
   commands?: ReactNode;
+  inBar?: boolean;
 }) {
   const age = timeInState(session.since, now);
   const state = stateOf(session);
   const meta = [session.where, [session.Harness, session.Model].filter(Boolean).join(" ")].filter(Boolean).join(" · ");
   return (
-    <header className="chat-top">
+    <header className={"chat-top" + (inBar ? " in-bar" : "")}>
       <div className="chat-bar" role="toolbar" aria-label="Session">
-        <Back />
+        {inBar ? null : <Back />}
         {mate}
         {busy(session) && !session.Ended ? (
           <button type="button" className="interrupt" onClick={onInterrupt}>
@@ -72,8 +74,8 @@ function Header({
         ) : null}
         {commands}
       </div>
-      <h1>{sessionTitle(session)}</h1>
-      <p className="meta">{meta}</p>
+      {inBar ? null : <h1>{sessionTitle(session)}</h1>}
+      {inBar ? null : <p className="meta">{meta}</p>}
       <p className="chat-facts">
         <span className={"chip chip-" + state}>{stateLabels[state] ?? state}</span>
         {session.Muted ? <span className="badge muted-badge">muted</span> : null}
@@ -492,7 +494,10 @@ function PermissionCard({ api, session }: { api: Authed; session: Session }) {
   const answering = phase.kind === "answering";
   return (
     <section className="permission" aria-label="Permission request">
-      <h2>Permission needed</h2>
+      <h2>
+        <span className="dot ask" aria-hidden="true" />
+        Permission needed
+      </h2>
       <pre className="permission-text">{prompt.text}</pre>
       {error ? (
         <p className="error" role="alert">
@@ -500,8 +505,8 @@ function PermissionCard({ api, session }: { api: Authed; session: Session }) {
         </p>
       ) : null}
       <div className="permission-choices">
-        {prompt.choices.map((c) => (
-          <button key={c.id} type="button" className="permission-choice" disabled={answering} onClick={() => void choose(prompt, c.id)}>
+        {prompt.choices.map((c, i) => (
+          <button key={c.id} type="button" className={"ui btn permission-choice" + (i === 0 ? " primary" : "")} disabled={answering} onClick={() => void choose(prompt, c.id)}>
             {c.label}
           </button>
         ))}
@@ -520,11 +525,11 @@ function Queued({ sends, onEdit, onDrop }: { sends: QueuedSend[]; onEdit: (s: Qu
         <li key={s.id}>
           <span className="queued-label">Queued</span>
           <span className="queued-text">{s.text}</span>
-          <button type="button" className="queued-action" aria-label={"Edit: " + s.text} onClick={() => onEdit(s)}>
-            Edit
+          <button type="button" className="ui icon-btn queued-action" title="Edit" aria-label={"Edit: " + s.text} onClick={() => onEdit(s)}>
+            ✎
           </button>
-          <button type="button" className="queued-action" aria-label={"Drop: " + s.text} onClick={() => onDrop(s)}>
-            Drop
+          <button type="button" className="ui icon-btn queued-action" title="Drop" aria-label={"Drop: " + s.text} onClick={() => onDrop(s)}>
+            ✕
           </button>
         </li>
       ))}
@@ -584,14 +589,38 @@ function Composer({ session, api, sends, persona }: { session: Session; api: Aut
           {error}
         </p>
       ) : null}
-      <form onSubmit={(ev) => void submit(ev)}>
-        <textarea aria-label="Message" rows={1} value={draft} disabled={locked} placeholder={locked ? "Answer the permission request first" : busy(session) ? "Queue a message" : persona ? "Message " + shownName(persona.name) + "…" : "Message"} onChange={(ev) => setDraft(ev.target.value)} onKeyDown={onKey} />
-        <button type="submit" disabled={blank || posting || locked}>
-          {busy(session) ? "Queue" : "Send"}
-        </button>
+      <form className="composer-box" onSubmit={(ev) => void submit(ev)}>
+        <textarea aria-label="Message" rows={1} value={draft} placeholder={busy(session) ? "Queue a message…" : persona ? "Message " + shownName(persona.name) + "…" : "Reply to the agent…"} onChange={(ev) => setDraft(ev.target.value)} onKeyDown={onKey} />
+        <div className="composer-foot" role="group" aria-label="Composer options">
+          <span className="composer-chip">{agentChip(session)}</span>
+          {session.Effort ? <span className="composer-chip">{"effort " + session.Effort}</span> : null}
+          <span className="spacer" />
+          <button type="submit" className="send" aria-label={busy(session) ? "Queue" : "Send"} disabled={blank || posting || locked}>
+            ↑
+          </button>
+        </div>
       </form>
+      <p className="hint" data-testid="composer-hint">
+        {locked ? (
+          <>
+            Answer the permission above to continue · <kbd>Enter</kbd> queues
+          </>
+        ) : (
+          <>
+            <kbd>Enter</kbd> send · <kbd>Shift</kbd>+<kbd>Enter</kbd> new line{busy(session) ? " · the agent is busy, so a message waits in the queue" : ""}
+          </>
+        )}
+      </p>
     </footer>
   );
+}
+
+function capital(word: string): string {
+  return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
+function agentChip(session: Session): string {
+  return [session.Harness, session.Model].filter(Boolean).map((w) => capital(String(w))).join(" · ");
 }
 
 function ConfirmInterrupt({ api, session, onClose }: { api: Authed; session: string; onClose: () => void }) {
@@ -697,9 +726,11 @@ export function SessionScreen({
   api,
   storage,
   onBrowser,
+  inBar,
 }: {
   id: string;
   onBrowser?: () => void;
+  inBar?: boolean;
   snapshot: StreamSnapshot;
   now: number;
   onRetry: () => void;
@@ -737,6 +768,7 @@ export function SessionScreen({
         onInterrupt={() => setConfirming(true)}
         mate={session.Mate?.Name ? <MateTools api={api} session={session} mate={session.Mate.Name} snapshot={snapshot} /> : undefined}
         commands={storage ? <SessionCommands api={api} session={session} storage={storage} button /> : undefined}
+        inBar={inBar}
       />
       <Connection snapshot={snapshot} now={now} onRetry={onRetry} />
       <main className="chat-main">
