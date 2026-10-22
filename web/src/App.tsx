@@ -238,7 +238,7 @@ function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, g
     return { screen: <Disk api={api} state={snapshot.state} now={now} go={go} />, tab: "sessions" };
   }
   if (hash === "#/automations") {
-    return { screen: <Automations api={api} />, tab: "automations" };
+    return { screen: <Automations api={api} now={now} />, tab: "automations" };
   }
   if (hash === "#/mates") {
     return { screen: <Mates api={api} now={now} board={snapshot.state?.mates} visibility={env.visibility} />, tab: "mates" };
