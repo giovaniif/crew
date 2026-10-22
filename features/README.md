@@ -7,6 +7,7 @@ This folder is the shared memory of what "working" means in crew (ADR [0055](../
 | Area | File | Surfaces |
 |---|---|---|
 | Sessions | [sessions.md](sessions.md) | CLI, TUI, PWA |
+| Live session | [live-session.md](live-session.md) | PWA |
 | Review pane | [review-pane.md](review-pane.md) | TUI |
 | Worktrees and cleanup | [worktrees-cleanup.md](worktrees-cleanup.md) | CLI, TUI |
 | PR board | [pr-board.md](pr-board.md) | CLI |

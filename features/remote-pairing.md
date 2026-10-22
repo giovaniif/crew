@@ -199,7 +199,7 @@ Expect: a JSON answer for the onboarding steps.
 
 ### session create, messages, answer, end, fresh, mute, read, shell, nvim and review over HTTP (manual: no CLI prints a session id for a curl recipe)
 
-### terminal, browser and cookies over HTTP (manual: needs a live pane or a browser of a session)
+### browser and cookies over HTTP (manual: needs a browser of a session; the terminal over HTTP is in live-session.md)
 
 ### cleanup worktree, ports kill and workspaces remove over HTTP (manual: they remove data or stop processes)
 

@@ -134,4 +134,5 @@ go run ./scripts/verify iso down
 ## Gotchas
 
 - `crew tui --new-session` opens the new session dialog over the sidebar. `verify tui` runs `crew tui` with no flag.
+- The seeded sessions have no pane. Chat send, Terminal, Shell and nvim on a live pane are in [live-session.md](live-session.md).
 - The seeded worktrees are in `/tmp/seed`. They are not git repos, so `git status` fails on them.
