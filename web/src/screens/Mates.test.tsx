@@ -240,6 +240,15 @@ describe("Mate profile", () => {
     expect(calls(server)).toContain("POST /api/v1/mates/helper/new");
   });
 
+  it("shows a failed new conversation next to its button, not under the page", async () => {
+    const { server } = setup("#/mates/helper");
+    server.on("POST", "/api/v1/mates/helper/new", { status: 400, body: { error: { code: "bad_request", message: "no workspace to start in" } } });
+    await userEvent.setup().click(await screen.findByRole("button", { name: "+ New conversation" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("no workspace to start in");
+    expect(screen.getByRole("button", { name: "+ New conversation" }).nextElementSibling).toBe(alert);
+  });
+
   it("edits the memory", async () => {
     const { server } = setup("#/mates/helper");
     const user = userEvent.setup();
