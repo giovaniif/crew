@@ -216,4 +216,8 @@ describe("a mate color swatch", () => {
   it("wraps the last seen date below a long device name instead of squeezing the name", () => {
     expect(rule(".settings-list li > :first-child").flex).toBe("1 1 12rem");
   });
+
+  it("keeps the theme color swatch a fixed circle in its settings row", () => {
+    expect(rule(".settings-list li > .swatch").flex).toBe("none");
+  });
 });
