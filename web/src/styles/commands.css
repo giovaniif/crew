@@ -1,0 +1,118 @@
+.session-menu-at {
+  position: fixed;
+  z-index: 21;
+}
+
+.session-menu.ui.menu {
+  min-width: 240px;
+  max-height: none;
+  font-size: var(--fs-md);
+}
+
+.session-menu:not(.ended) .item:nth-last-child(-n + 2) {
+  color: var(--danger);
+}
+
+.dialog-backdrop:has(.command-dialog) {
+  align-items: center;
+  background: rgba(20, 20, 30, 0.18);
+}
+
+.dialog:has(.command-dialog) {
+  max-width: 360px;
+  gap: 0;
+  padding: 16px;
+  border-radius: var(--r-lg);
+  background: var(--bg);
+  color: var(--ink);
+  box-shadow: var(--shadow-pop);
+  font-family: var(--font-sans);
+  font-size: var(--fs-md);
+}
+
+.dialog:has(.command-dialog) h2 {
+  margin: 0 0 4px;
+  font-size: var(--fs-lg);
+  font-weight: 600;
+}
+
+.command-dialog {
+  display: flex;
+  flex-direction: column;
+}
+
+.command-dialog p {
+  margin: 0 0 12px;
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+}
+
+.command-dialog .error {
+  color: var(--danger);
+}
+
+.command-dialog .ui.input {
+  margin-bottom: 4px;
+}
+
+.command-dialog .choice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.command-dialog .item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--h-row);
+  padding: 0 8px;
+  border-radius: var(--r-sm);
+  cursor: default;
+  outline: 0;
+}
+
+.command-dialog .item:hover,
+.command-dialog .item:focus-visible {
+  background: var(--bg-hover);
+}
+
+.command-dialog .item.hi {
+  background: var(--bg-active);
+}
+
+.command-dialog .item .ck {
+  width: 12px;
+  color: var(--accent);
+}
+
+.command-dialog .item .k {
+  margin-left: auto;
+  color: var(--ink-3);
+  font-size: var(--fs-xs);
+}
+
+.command-dialog .actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.command-note:has(.ui.toast) {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: var(--shadow-pop);
+}
+
+.command-note .ui.toast.error {
+  background: var(--danger);
+  color: #fff;
+}
+
+@media (pointer: coarse) {
+  .command-dialog .item {
+    min-height: 44px;
+  }
+}
