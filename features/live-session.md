@@ -52,10 +52,10 @@ Expect: `pwd` prints the path of the `TEST-live` worktree. Fails today: see #719
 Needs: VERIFY_NVIM
 
 ```sh
-go run ./scripts/verify web drive / --viewport desktop --out-dir /tmp/crew-verify-map/live-session --steps '[{"click":{"text":"TEST live session","exact":false}},{"click":{"role":"tab","name":"nvim"}},{"wait":4000},{"eval":"const t = document.getElementById(\"pane-nvim\").innerText; if (!t.includes(\"README.md\")) throw new Error(\"nvim pane: \" + t.slice(0, 200))"},{"shot":"nvim.png"}]'
+go run ./scripts/verify web drive / --viewport desktop --out-dir /tmp/crew-verify-map/live-session --steps '[{"click":{"text":"TEST live session","exact":false}},{"click":{"role":"tab","name":"nvim"}},{"wait":4000},{"press":"Escape"},{"press":":"},{"press":"p"},{"press":"w"},{"press":"d"},{"press":"Enter"},{"wait":1500},{"eval":"const t = document.getElementById(\"pane-nvim\").innerText; if (!t.includes(\"/TEST-live\")) throw new Error(\"nvim pane: \" + t.slice(0, 200))"},{"shot":"nvim.png"}]'
 ```
 
-Expect: nvim shows the files of the worktree (`README.md`). Set `VERIFY_NVIM=1` when `nvim` is on `PATH`. Fails today: see #719 and #710.
+Expect: nvim opens on its start screen, and `:pwd` prints the path of the `TEST-live` worktree. Set `VERIFY_NVIM=1` when `nvim` is on `PATH`. Fails today: see #719 and #710.
 
 ## Cleanup
 
