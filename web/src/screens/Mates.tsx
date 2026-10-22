@@ -707,7 +707,7 @@ function Profile({ api, card, asking, reload }: { api: Authed; card: MateCard; a
                 Connect…
               </button>
             ) : (
-              row.state.replaceAll("_", " ")
+              row.state === "connected" ? "" : row.state.replaceAll("_", " ")
             )}
           </div>
         </div>
