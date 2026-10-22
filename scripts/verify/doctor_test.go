@@ -1,11 +1,14 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
 
-func healthy(fs *fakeSys) {
+func healthy(e *env, fs *fakeSys) {
+	_ = os.MkdirAll(filepath.Join(e.repo, "web", "node_modules"), 0o755)
 	for _, p := range []string{"go", "git", "tmux", "node", "freeze"} {
 		fs.paths[p] = true
 	}
@@ -22,7 +25,7 @@ func healthy(fs *fakeSys) {
 
 func TestDoctorHealthyMachineIsOK(t *testing.T) {
 	e, fs := testEnv(t)
-	healthy(fs)
+	healthy(e, fs)
 	got, code := runJSON(t, e, "doctor")
 	if code != 0 {
 		t.Fatalf("exit %d: %s", code, problemText(got))
@@ -34,7 +37,7 @@ func TestDoctorHealthyMachineIsOK(t *testing.T) {
 
 func TestDoctorReportsMissingToolsOldNodeAndLoad(t *testing.T) {
 	e, fs := testEnv(t)
-	healthy(fs)
+	healthy(e, fs)
 	delete(fs.paths, "tmux")
 	delete(fs.paths, "freeze")
 	fs.handlers["node --version"] = func(cmd) (string, string, int) { return "v22.17.9\n", "", 0 }
@@ -57,7 +60,7 @@ func TestDoctorReportsMissingToolsOldNodeAndLoad(t *testing.T) {
 
 func TestDoctorReportsBehindMainAndBusyPorts(t *testing.T) {
 	e, fs := testEnv(t)
-	healthy(fs)
+	healthy(e, fs)
 	fs.handlers["git rev-list"] = func(cmd) (string, string, int) { return "3\n", "", 0 }
 	fs.busy[5199] = true
 	got, code := runJSON(t, e, "doctor")
@@ -88,5 +91,19 @@ func TestNodeVersionAtLeast(t *testing.T) {
 		if got := nodeOK(tt.v); got != tt.want {
 			t.Errorf("nodeOK(%q) = %v, want %v", tt.v, got, tt.want)
 		}
+	}
+}
+
+func TestDoctorReportsMissingWebNodeModulesWithTheFix(t *testing.T) {
+	e, fs := testEnv(t)
+	healthy(e, fs)
+	_ = os.RemoveAll(filepath.Join(e.repo, "web", "node_modules"))
+	got, code := runJSON(t, e, "doctor")
+	if code != 1 {
+		t.Fatalf("exit %d", code)
+	}
+	text := problemText(got)
+	if !strings.Contains(text, "web/node_modules") || !strings.Contains(text, "npm ci") {
+		t.Errorf("problems %q do not name web/node_modules and npm ci", text)
 	}
 }
