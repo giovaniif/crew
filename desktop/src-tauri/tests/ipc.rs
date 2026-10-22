@@ -1,3 +1,4 @@
+use crew_desktop::browse::label;
 use crew_desktop::ipc::{serve_capability, server_capability, tunnel_capability, SERVER_COMMANDS};
 use serde_json::{json, Value};
 use url::Url;
@@ -13,7 +14,13 @@ fn the_serve_origin_gets_the_commands_and_nothing_more() {
     assert_eq!(cap["remote"]["urls"], json!(["http://127.0.0.1:53412"]));
     assert_eq!(
         cap["permissions"],
-        json!(["core:default", "allow-crew-notify", "allow-crew-attention", "allow-fix-daemon"])
+        json!([
+            "core:default",
+            "allow-crew-notify",
+            "allow-crew-attention",
+            "allow-fix-daemon",
+            "allow-crew-browser-open"
+        ])
     );
 }
 
@@ -78,4 +85,35 @@ fn a_page_of_a_remote_server_gets_no_server_command() {
     }
     assert_eq!(tunnel["permissions"], json!(["allow-fix-daemon"]));
     assert_eq!(tunnel_capability(&Url::parse("https://crew.example.ts.net/").unwrap()), None);
+}
+
+fn window_matches(pattern: &str, label: &str) -> bool {
+    match pattern.strip_suffix('*') {
+        Some(prefix) => label.starts_with(prefix),
+        None => pattern == label,
+    }
+}
+
+#[test]
+fn no_capability_matches_a_browser_window() {
+    let text = std::fs::read_to_string(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/capabilities/default.json"
+    ))
+    .unwrap();
+    let local = Url::parse("http://127.0.0.1:53412/").unwrap();
+    let caps = [
+        serde_json::from_str::<Value>(&text).unwrap(),
+        capability("http://127.0.0.1:53412/").unwrap(),
+        parsed(server_capability(&local)).unwrap(),
+        parsed(tunnel_capability(&local)).unwrap(),
+    ];
+    for cap in &caps {
+        assert_eq!(cap.get("webviews"), None);
+        for pattern in cap["windows"].as_array().unwrap() {
+            for n in [0, 1, 25] {
+                assert!(!window_matches(pattern.as_str().unwrap(), &label(n)), "{pattern} {n}");
+            }
+        }
+    }
 }

@@ -1,4 +1,7 @@
+#[cfg(desktop)]
+pub mod app_browser;
 pub mod attention;
+pub mod browse;
 pub mod hub;
 pub mod ipc;
 pub mod local;
@@ -64,6 +67,9 @@ type Shared = Mutex<Hub>;
 
 static WINDOWS: AtomicUsize = AtomicUsize::new(0);
 
+#[cfg(desktop)]
+static BROWSER_BRIDGE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
 fn configured_url() -> Option<String> {
     std::env::var("CREW_URL")
         .ok()
@@ -127,6 +133,13 @@ fn start_local(app: &AppHandle, slot: &Mutex<Option<LocalServe>>) -> Result<Star
         },
     };
     *slot.lock().unwrap() = Some(serve);
+    #[cfg(desktop)]
+    {
+        app_browser::set_serve(app, &url);
+        if !BROWSER_BRIDGE.swap(true, Ordering::SeqCst) {
+            app_browser::watch(app.clone(), crew.clone());
+        }
+    }
     if let Some(state) = app.try_state::<Shared>() {
         let mut hub = state.lock().unwrap();
         hub.crew = Some(crew);
@@ -249,6 +262,33 @@ fn fix_ssh(app: &AppHandle, host: &str) -> Result<(), String> {
     };
     let (url, auth) = connect(app, &id)?;
     show(app, url, auth, true)
+}
+
+#[tauri::command]
+async fn crew_browser_open(
+    app: AppHandle,
+    webview: Webview,
+    session: String,
+    url: Option<String>,
+) -> Result<(), String> {
+    let page = webview.url().map_err(|e| e.to_string())?;
+    let local = app
+        .try_state::<Shared>()
+        .and_then(|s| s.lock().unwrap().local.as_ref().map(|(u, _)| u.origin()));
+    if local != Some(page.origin()) {
+        return Err("only the page of this computer can open the app browser".into());
+    }
+    let url = url
+        .filter(|u| !u.trim().is_empty())
+        .map(|u| browse::address(&u))
+        .transpose()?;
+    #[cfg(desktop)]
+    return blocking(move || app_browser::open(&app, &session, url).map(|_| ())).await;
+    #[cfg(mobile)]
+    {
+        let _ = (session, url);
+        Err("this device has no app browser".into())
+    }
 }
 
 #[tauri::command]
@@ -602,7 +642,8 @@ pub fn run() {
             crew_server_open,
             crew_server_remove,
             crew_server_fix,
-            crew_server_workspace
+            crew_server_workspace,
+            crew_browser_open
         ])
         .manage(Mutex::new(None::<LocalServe>))
         .setup(|app| {
@@ -617,6 +658,8 @@ pub fn run() {
             }
             let file = app.path().app_data_dir()?.join("servers.json");
             app.manage(Mutex::new(Hub::open(file)));
+            #[cfg(desktop)]
+            app.manage(app_browser::Browsers::default());
             let handle = app.handle().clone();
             let started = match configured_url() {
                 Some(value) => Started {
