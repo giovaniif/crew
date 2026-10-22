@@ -183,3 +183,21 @@ func TestPRBoardNameLookupPrefersLiveSessionsOverEndedOnes(t *testing.T) {
 		}
 	}
 }
+
+func TestPRBoardNamesASessionByThePROfItsFirstWorktreeLikeTheSidebar(t *testing.T) {
+	st := rpc.State{
+		Tasks:    []domain.Task{{ID: "t1", Text: "task text"}},
+		Sessions: []domain.Session{{ID: "s1", TaskID: "t1", WorktreeIDs: []string{"/w/web", "/w/api"}}},
+		Worktrees: []domain.Worktree{
+			{ID: "/w/api", Branch: "a", PR: &domain.PullRequest{Number: 1, Title: "API change", State: domain.PROpen}},
+			{ID: "/w/web", Branch: "b", PR: &domain.PullRequest{Number: 2, Title: "Web change", State: domain.PROpen}},
+		},
+	}
+	report, err := prReportFor(st, "Web change")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.Name != "Web change" || report.PRs[0].Number != 2 {
+		t.Errorf("name = %q, first PR = #%d, want %q and #2", report.Name, report.PRs[0].Number, "Web change")
+	}
+}
