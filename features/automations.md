@@ -78,6 +78,17 @@ go run ./scripts/verify web drive /#/automations --viewport both --out-dir /tmp/
 
 Expect: Save stays disabled, so the existing automation keeps its prompt ([#693](https://github.com/giovaniif/crew/issues/693)).
 
+### PWA Edit keeps the browser and filter of an automation
+
+```sh
+H="$(jq -r .home "${VERIFY_HOME:-/tmp/crew-verify-$(id -u)}/iso.json")"
+printf '\n[[automation]]\nname = "test-filtered"\nagent = "claude"\ntarget = "workspace"\nbrowser = "headless"\non = ["pr.opened"]\nprompt = "TEST filtered"\n[automation.filter]\nbranch = "feat/*"\n' >> "$H/config.toml"
+go run ./scripts/verify web drive /#/automations --viewport desktop --out-dir /tmp/crew-verify-map/automations --steps '[{"click":{"role":"button","name":"Details of test-filtered"}},{"click":{"role":"button","name":"Edit"}},{"fill":{"role":"textbox","name":"Prompt"},"value":"TEST filtered edited"},{"click":{"role":"button","name":"Save"}},{"expect":{"text":"TEST filtered edited"}},{"shot":"edit-kept.png"}]'
+grep -q 'browser = "headless"' "$H/config.toml" && grep -q 'branch = "feat/\*"' "$H/config.toml"
+```
+
+Expect: config.toml keeps `browser` and the `[automation.filter]` table ([#696](https://github.com/giovaniif/crew/issues/696)).
+
 ### run an automation from config (manual: needs an [[automation]] table in the isolated config.toml and a harness that runs turns; the fake claude does not)
 
 ## Cleanup
