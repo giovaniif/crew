@@ -15,6 +15,7 @@ import (
 const (
 	BrowserAny         = "any"
 	BrowserMac         = "mac"
+	BrowserApp         = "app"
 	BrowserHeadless    = "headless"
 	BrowserFallbackOff = "off"
 )
@@ -55,14 +56,14 @@ func ParseBrowserConfig(fallback string, maxHeadless *int, idle string) (Browser
 }
 
 func ValidBrowserChoice(want string) bool {
-	return want == "" || want == BrowserAny || want == BrowserMac || want == BrowserHeadless
+	return want == "" || want == BrowserAny || want == BrowserMac || want == BrowserApp || want == BrowserHeadless
 }
 
 func ChooseBrowser(want string, macConnected bool, cfg BrowserConfig) (string, bool) {
 	switch want {
 	case BrowserHeadless:
 		return BrowserHeadless, true
-	case BrowserMac:
+	case BrowserMac, BrowserApp:
 		if macConnected {
 			return BrowserMac, true
 		}

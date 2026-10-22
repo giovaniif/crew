@@ -39,6 +39,12 @@ go run ./scripts/verify iso crew --expect "keep" --expect "kept" --expect "its s
 
 Expect: each seeded worktree is `keep` with `its session is live`, because each seeded session is live. The live-session rule comes before the facts of the folder.
 
+### disk view shows the full task label next to short branches (#641)
+
+```sh
+go run ./scripts/verify tui drive --restart --size 90x30 --steps '[{"expect":"seed","timeout":8000},{"keys":"w"},{"expect":"KB","timeout":15000},{"expect":"#40 · seeded task 1"}]'
+```
+
 ### cleanup of a merged worktree on a temp repo (manual: needs a temp repo with a merged PR in the fake gh; the rules are in internal/domain cleanup tests and internal/app tests)
 
 ### crew setup-worktree runs the .crew.toml recipe (manual: it needs a repo with a .crew.toml setup recipe)

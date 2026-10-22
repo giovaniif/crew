@@ -27,6 +27,8 @@ func TestChooseBrowserPicksTheMacAppThenTheHeadlessFallback(t *testing.T) {
 		{"mac without the mac app never falls back", BrowserMac, false, on, "", false},
 		{"headless with the mac app", BrowserHeadless, true, off, BrowserHeadless, true},
 		{"headless without the mac app and fallback off", BrowserHeadless, false, off, BrowserHeadless, true},
+		{"app is the attached app", BrowserApp, true, off, BrowserMac, true},
+		{"app without the app never falls back", BrowserApp, false, on, "", false},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -181,7 +183,7 @@ func TestMergeCookiesReplacesTheSameNameDomainAndPath(t *testing.T) {
 }
 
 func TestValidateAutomationChecksTheBrowser(t *testing.T) {
-	for _, b := range []string{"", "any", "mac", "headless"} {
+	for _, b := range []string{"", "any", "mac", "app", "headless"} {
 		a := validAutomation()
 		a.Browser = b
 		if err := ValidateAutomation(a); err != nil {

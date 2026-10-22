@@ -18,7 +18,7 @@ var browserRef = regexp.MustCompile(`^@e[0-9]+$`)
 var browserDevices = map[string]bool{"desktop": true, "ipad": true, "iphone": true}
 
 func BrowserCommands() []string {
-	return []string{"goto", "snapshot", "click", "fill", "type", "press", "wait", "screenshot", "eval", "tabs", "cookies", "set-device"}
+	return []string{"goto", "snapshot", "click", "fill", "type", "press", "wait", "screenshot", "eval", "tabs", "cookies", "set-device", "console"}
 }
 
 func ParseBrowserCommand(args []string) (BrowserCall, error) {
@@ -28,7 +28,7 @@ func ParseBrowserCommand(args []string) (BrowserCall, error) {
 	cmd, rest := args[0], args[1:]
 	call := BrowserCall{Command: cmd, Args: map[string]any{}}
 	switch cmd {
-	case "snapshot", "tabs", "screenshot":
+	case "snapshot", "tabs", "screenshot", "console":
 		if len(rest) > 0 {
 			return BrowserCall{}, fmt.Errorf("%s takes no arguments", cmd)
 		}
