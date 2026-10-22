@@ -296,6 +296,7 @@ const noQuery: AutomationQuery = { search: "", enabled: null, outcome: null, age
 export function Automations({ api }: { api: Authed }) {
   const [list, setList] = useState<Automation[] | null>(null);
   const [error, setError] = useState("");
+  const [problems, setProblems] = useState<string[]>([]);
   const [running, setRunning] = useState("");
   const [runs, setRuns] = useState<AutomationRun[]>([]);
   const [open, setOpen] = useState("");
@@ -307,7 +308,11 @@ export function Automations({ api }: { api: Authed }) {
   useEffect(() => {
     let live = true;
     listAutomations(api)
-      .then((out) => live && setList(out.automations ?? []))
+      .then((out) => {
+        if (!live) return;
+        setList(out.automations ?? []);
+        setProblems(out.problems ?? []);
+      })
       .catch((err) => live && setError(err instanceof Error ? err.message : String(err)));
     automationRuns(api)
       .then((out) => live && setRuns(out.runs ?? []))
@@ -376,6 +381,11 @@ export function Automations({ api }: { api: Authed }) {
         </label>
       </div>
       {error && <p role="alert">{error}</p>}
+      {problems.map((p) => (
+        <p key={p} className="automation-problem">
+          {p}
+        </p>
+      ))}
       {list === null && !error && <p>Loading…</p>}
       {list !== null && list.length === 0 && <p>No automations. Add [[automation]] tables to config.toml on the server.</p>}
       {list !== null && list.length > 0 && rows.length === 0 && <p className="muted">No automation matches.</p>}

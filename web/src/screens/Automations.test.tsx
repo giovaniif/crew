@@ -49,6 +49,13 @@ describe("Automations", () => {
     expect(screen.getByRole("link", { name: "Automations" })).toHaveAttribute("href", "#/automations");
   });
 
+  it("shows the config problems that the server reports", async () => {
+    const { server, env } = setup("#/automations");
+    server.on("GET", "/api/v1/automations", { status: 200, body: { ...automations, problems: ['/h/config.toml: automation "bad": agent must be one of [claude codex omp]'] } });
+    render(<App env={env} />);
+    expect(await screen.findByText('/h/config.toml: automation "bad": agent must be one of [claude codex omp]')).toBeInTheDocument();
+  });
+
   it("lists each automation with its agent, trigger and state", async () => {
     const { env } = setup("#/automations");
     render(<App env={env} />);
