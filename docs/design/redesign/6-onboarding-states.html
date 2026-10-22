@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas" /><link rel="stylesheet" href="./crew.css" /><link rel="stylesheet" href="./canvas.css" /><style>
+.ob{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+.ob h1{font-size:22px;font-weight:600;letter-spacing:-.02em;margin:0 0 4px}
+.ob p.lead{color:var(--ink-2);margin:0 0 20px}
+.choice{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--line-2);border-radius:12px;padding:12px 14px;cursor:pointer}
+.choice.on{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+.choice .t{font-weight:500}
+.choice .s{font-size:var(--fs-sm);color:var(--ink-3)}
+.checklist .li{min-height:36px}
+.state{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;flex:1}
+.state .t{font-weight:600;font-size:var(--fs-lg)}
+.state .s{color:var(--ink-3);max-width:340px}
+.mini4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--line);width:900px}
+.mini4>div{background:var(--bg);height:230px;display:flex;flex-direction:column}
+.cap2{font-size:var(--fs-xs);color:var(--ink-3);padding:8px 12px;border-bottom:1px solid var(--line)}
+.banner{display:flex;align-items:center;gap:8px;margin:10px;padding:8px 10px;border-radius:10px;background:oklch(0.97 0.03 75);font-size:var(--fs-sm);color:oklch(0.42 0.09 75)}
+.spin{width:12px;height:12px;border-radius:50%;border:2px solid var(--bg-active);border-top-color:var(--ink-2)}
+</style></helmet>
+<section class="dv-turn" id="t6">
+<div class="dv-thd"><a class="dv-tid" href="#t6">6</a><span class="dv-tname">Onboarding, connection and empty states</span></div>
+<p class="dv-notes"><b>Onboarding</b> asks once where agents run, sets it up with a live checklist, and adds the first workspace. That workspace becomes the default chip in the composer, so you never choose it again (this fixes "select twice"). <b>Connection</b> problems show as a thin banner in the sidebar, not a full screen. <b>Empty states</b> are one line and one action.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="6a"><div class="dv-olabel"><a class="dv-oid" href="#6a">6a</a>First run: where do agents run?</div>
+<div class="dv-card"><div class="win short" data-screen-label="Onboarding where" style="width:760px">
+<div class="titlebar"><span class="tl"></span><span class="tl"></span><span class="tl"></span></div>
+<div class="ob"><div style="width:440px">
+<div class="steps" style="display:flex;gap:6px;margin-bottom:22px"><i style="width:22px;height:4px;border-radius:2px;background:var(--ink)"></i><i style="width:22px;height:4px;border-radius:2px;background:var(--bg-active)"></i><i style="width:22px;height:4px;border-radius:2px;background:var(--bg-active)"></i></div>
+<h1>Where do agents run?</h1><p class="lead">You can add more servers later in Settings.</p>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div class="choice on"><span class="radio on" style="margin-top:3px"></span><div><div class="t">This Mac</div><div class="s">The app starts crew for you.</div></div></div>
+<div class="choice"><span class="radio" style="margin-top:3px"></span><div><div class="t">Another computer, over SSH</div><div class="s">Hosts from ~/.ssh/config, key login only.</div></div></div>
+<div class="choice"><span class="radio" style="margin-top:3px"></span><div><div class="t">A paired server</div><div class="s">Its address and a code from <span class="mono">crew remote pair</span>.</div></div></div>
+</div>
+<div style="display:flex;justify-content:flex-end;margin-top:18px"><button class="btn primary">Continue</button></div>
+</div></div>
+</div></div></div>
+
+<div class="dv-opt" id="6b"><div class="dv-olabel"><a class="dv-oid" href="#6b">6b</a>First run: setting up, then the first workspace</div>
+<div class="dv-card"><div class="win short" data-screen-label="Onboarding setup" style="width:760px">
+<div class="titlebar"><span class="tl"></span><span class="tl"></span><span class="tl"></span></div>
+<div class="ob"><div style="width:440px">
+<div style="display:flex;gap:6px;margin-bottom:22px"><i style="width:22px;height:4px;border-radius:2px;background:var(--ink)"></i><i style="width:22px;height:4px;border-radius:2px;background:var(--ink)"></i><i style="width:22px;height:4px;border-radius:2px;background:var(--bg-active)"></i></div>
+<h1>Setting up this Mac</h1><p class="lead">Nothing needs sudo.</p>
+<div class="list checklist">
+<div class="li"><span style="color:var(--ok)">✓</span><span class="grow">tmux, git and gh found</span><span class="muted mono">/opt/homebrew/bin</span></div>
+<div class="li"><span style="color:var(--ok)">✓</span><span class="grow">crew daemon started</span></div>
+<div class="li"><span class="spin"></span><span class="grow">Installing Claude Code hooks</span></div>
+<div class="li"><span class="muted">–</span><span class="grow muted">nvim (optional) not found</span><a href="#">How to install</a></div>
+</div>
+<div class="section-title">FIRST WORKSPACE</div>
+<div style="display:flex;gap:6px"><input class="input mono" value="~/code/web" /><button class="btn">Browse…</button></div>
+<div class="muted" style="font-size:var(--fs-sm);margin-top:4px">A git repository or a folder of them. It becomes your default project.</div>
+<div style="display:flex;justify-content:flex-end;gap:6px;margin-top:18px"><button class="btn quiet">Skip</button><button class="btn primary">Open crew</button></div>
+</div></div>
+</div></div></div>
+
+<div class="dv-opt" id="6c"><div class="dv-olabel"><a class="dv-oid" href="#6c">6c</a>States</div>
+<div class="dv-card"><div class="mini4" data-screen-label="States">
+<div><div class="cap2">Sidebar: daemon dropped</div><div style="width:232px;background:var(--bg-side);flex:1;border-right:1px solid var(--line)"><div class="banner"><span class="spin"></span><span style="flex:1">Reconnecting in 5s</span><a href="#">Retry</a></div><div class="row" style="margin:0 6px;opacity:.5"><span class="dot run"></span><span class="nm">Fix the login redirect</span></div></div></div>
+<div><div class="cap2">No sessions yet</div><div class="state"><div class="t">No sessions yet</div><div class="s">Start one here, or run claude or codex in a terminal.</div><button class="btn primary" style="margin-top:6px">New session <kbd style="background:transparent;color:#fff;border-color:rgba(255,255,255,.4)">⌘N</kbd></button></div></div>
+<div><div class="cap2">Agent screen: pane gone</div><div class="state"><div class="t">This session's pane closed</div><div class="s">The agent is not running in tmux anymore. Its chat and changes are still here.</div><div style="display:flex;gap:6px;margin-top:6px"><button class="btn">Back to chat</button><button class="btn primary">Resume session</button></div></div></div>
+<div><div class="cap2">Build mismatch</div><div class="state"><div class="t">The server runs another crew version</div><div class="s">App 0.1.0-beta.4, server 0.1.0-beta.3. Update the server, then reconnect.</div><div style="display:flex;gap:6px;margin-top:6px"><button class="btn">Copy update command</button><button class="btn primary">Reconnect</button></div></div></div>
+</div></div></div>
+
+</div>
+<p class="dv-next">Try next: "show the SSH host picker of <a class="dv-oid" href="#6a">6a</a>" · "a loading skeleton for the sidebar"</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

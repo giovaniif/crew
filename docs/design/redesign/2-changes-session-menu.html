@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas" /><link rel="stylesheet" href="./crew.css" /><link rel="stylesheet" href="./canvas.css" /><style>
+.rv{flex:1;display:grid;grid-template-columns:240px minmax(0,1fr) 280px;min-height:0}
+.files{border-right:1px solid var(--line);padding:8px 6px;overflow:auto}
+.ftree .row{height:26px;font-size:var(--fs-sm)}
+.ftree .add{color:var(--ok);font-size:var(--fs-xs)}
+.ftree .del{color:var(--danger);font-size:var(--fs-xs)}
+.diff{overflow:auto;padding:12px 16px}
+.fhead{display:flex;align-items:center;gap:8px;height:34px;padding:0 10px;border:1px solid var(--line);border-bottom:0;border-radius:10px 10px 0 0;background:var(--bg-side);font-size:var(--fs-sm)}
+.hunk{border:1px solid var(--line);border-radius:0 0 10px 10px;overflow:hidden;font:12px/20px var(--font-mono)}
+.ln{display:grid;grid-template-columns:22px 40px 40px minmax(0,1fr)}
+.ln span{padding:0 6px;color:var(--ink-3);text-align:right}
+.ln code{white-space:pre;padding-left:8px}
+.ln.hh{background:var(--bg-sunken);color:var(--ink-3)}
+.ln.a{background:oklch(0.97 0.03 150)}
+.ln.d{background:oklch(0.97 0.025 25)}
+.ln .plus{color:#fff;background:var(--accent);border-radius:4px;width:16px;height:16px;line-height:16px;text-align:center;margin:2px 3px;padding:0}
+.inline-c{margin:6px 10px 8px 104px;border:1px solid var(--line-2);border-radius:10px;padding:8px 10px;font-family:var(--font-sans);font-size:var(--fs-md)}
+.draft{border-left:1px solid var(--line);display:flex;flex-direction:column;padding:12px}
+.dc{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:8px}
+.dc .mono{color:var(--ink-3);font-size:var(--fs-xs)}
+.perm{border:1px solid oklch(0.85 0.06 25);background:oklch(0.985 0.01 25);border-radius:14px;padding:12px 14px}
+.perm pre{margin:8px 0 10px;font:12px/1.5 var(--font-mono);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.queued{max-width:720px;margin:0 auto 6px;display:flex;flex-direction:column;gap:4px}
+.qi{display:flex;align-items:center;gap:8px;font-size:var(--fs-sm);background:var(--bg-sunken);border-radius:10px;padding:5px 6px 5px 10px}
+.qi .grow{flex:1;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.menu-float{position:absolute;right:12px;top:68px}
+</style></helmet>
+<section class="dv-turn" id="t2">
+<div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">Changes, session menu, permission and queue</span></div>
+<p class="dv-notes"><b>Changes</b> replaces the Review tab: file tree at left, diff in the middle, draft review at right. Scope and layout are segmented controls in the bar; worktree is a custom select. Hover a line to see the blue <b>+</b>; shift-click selects a range. <b>Permission</b> is a card in the transcript with the answers as buttons; the composer stays usable for typing but Enter is blocked with the hint shown. <b>Queued</b> messages sit as chips above the composer.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="2a"><div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a>Changes</div>
+<div class="dv-card"><div class="win" data-screen-label="Changes">
+<div class="titlebar"><span class="tl"></span><span class="tl"></span><span class="tl"></span></div>
+<div class="app" style="grid-template-columns:200px minmax(0,1fr)">
+<aside class="side mini"><div class="side-head"><span class="brand">crew</span><button class="icon-btn">+</button></div><div class="side-scroll"><div class="side-label"><span>Running</span><span>2</span></div><div class="row on"><span class="dot run"></span><span class="nm">Fix the login redirect</span></div><div class="row"><span class="dot run"></span><span class="nm">Add rate limit to /search</span></div></div></aside>
+<div class="main">
+<div class="bar"><span class="title">Fix the login redirect</span><span class="spacer"></span><div class="tabs"><button class="tab">Chat</button><button class="tab on">Changes <span class="muted">+42 −7</span></button></div><button class="icon-btn">›_</button><button class="icon-btn">⋯</button></div>
+<div class="bar" style="height:38px;background:var(--bg)"><div class="seg"><button class="on">Uncommitted</button><button>Branch</button><button>Last turn</button></div><button class="select" style="min-width:0;height:26px"><span class="mono">fix-login-redirect</span><span class="chev">▾</span></button><span class="spacer"></span><span class="muted" style="font-size:var(--fs-sm)">3 of 5 viewed</span><div class="seg"><button class="on">Unified</button><button>Split</button></div></div>
+<div class="rv">
+<div class="files ftree">
+<div class="side-label"><span>src/auth</span></div>
+<div class="row on"><span class="check on">✓</span><span class="nm">callback.ts</span><span class="add">+18</span><span class="del">−4</span></div>
+<div class="row"><span class="check"></span><span class="nm">safeNext.ts</span><span class="add">+21</span></div>
+<div class="row"><span class="check"></span><span class="nm">safeNext.test.ts</span><span class="add">+3</span></div>
+<div class="side-label"><span>src/routes</span></div>
+<div class="row"><span class="check on">✓</span><span class="nm">login.tsx</span><span class="del">−3</span></div>
+<div class="row"><span class="check on">✓</span><span class="nm">logo.png</span><span class="muted" style="font-size:11px">binary</span></div>
+</div>
+<div class="diff">
+<div class="fhead"><span class="check on">✓</span><span class="mono" style="font-weight:500">src/auth/callback.ts</span><span class="spacer"></span><button class="btn quiet" style="height:24px;font-size:12px">Open in editor</button><button class="icon-btn">⋯</button></div>
+<div class="hunk">
+<div class="ln hh"><span></span><span></span><span></span><code>@@ -12,9 +12,14 @@ export async function callback(req)</code></div>
+<div class="ln"><span></span><span>12</span><span>12</span><code>  const params = new URL(req.url).searchParams</code></div>
+<div class="ln d"><span></span><span>13</span><span></span><code>- return redirect("/home")</code></div>
+<div class="ln a"><span class="plus">+</span><span></span><span>13</span><code>+ const next = safeNext(params.get("next"), origin)</code></div>
+<div class="inline-c">Use the request origin, not the env var. <span class="muted">· line 13</span><div style="display:flex;justify-content:flex-end;gap:6px;margin-top:6px"><button class="btn quiet" style="height:24px;font-size:12px">Cancel</button><button class="btn primary" style="height:24px;font-size:12px">Add comment</button></div></div>
+<div class="ln a"><span></span><span></span><span>14</span><code>+ return redirect(next ?? "/home")</code></div>
+<div class="ln"><span></span><span>14</span><span>15</span><code>}</code></div>
+</div>
+</div>
+<div class="draft">
+<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px"><span style="font-weight:600">Draft review</span><span class="pill">2</span></div>
+<div class="dc"><div class="mono">callback.ts:13</div>Use the request origin, not the env var.</div>
+<div class="dc"><div class="mono">login.tsx:40–44</div>This block is dead after the change. Remove it.</div>
+<textarea class="input" style="height:70px;padding:8px 10px;resize:none" placeholder="Overall note (optional)"></textarea>
+<span class="spacer"></span>
+<button class="btn primary" style="justify-content:center">Send to agent</button>
+</div>
+</div>
+</div>
+</div>
+</div></div></div>
+
+<div class="dv-opt" id="2b"><div class="dv-olabel"><a class="dv-oid" href="#2b">2b</a>Permission card, queued messages, ⋯ menu open</div>
+<div class="dv-card"><div class="win" data-screen-label="Permission and menu">
+<div class="titlebar"><span class="tl"></span><span class="tl"></span><span class="tl"></span></div>
+<div class="app" style="grid-template-columns:200px minmax(0,1fr)">
+<aside class="side mini"><div class="side-head"><span class="brand">crew</span><button class="icon-btn">+</button></div><div class="side-scroll"><div class="side-label"><span>Needs you</span><span>1</span></div><div class="row on"><span class="dot ask"></span><span class="nm">Clean the build output</span></div><div class="side-label"><span>Running</span><span>1</span></div><div class="row"><span class="dot run"></span><span class="nm">Add rate limit to /search</span></div></div></aside>
+<div class="main">
+<div class="bar"><span class="title">Clean the build output</span><span class="sub">web</span><span class="spacer"></span><div class="tabs"><button class="tab on">Chat</button><button class="tab">Changes</button></div><button class="icon-btn">›_</button><button class="icon-btn" style="background:var(--bg-active)">⋯</button></div>
+<div class="chat"><div class="thread" style="padding-bottom:20px">
+<div class="msg-user">The dist folder has stale bundles. Clean it and rebuild.</div>
+<div class="msg-agent"><p>I'll remove the old output first.</p></div>
+<div class="perm"><div style="display:flex;align-items:center;gap:6px;font-weight:600"><span class="dot ask"></span>Permission needed</div>
+<pre>Bash: rm -rf dist</pre>
+<div style="display:flex;gap:6px"><button class="btn primary">Yes</button><button class="btn">Yes, don't ask again</button><button class="btn">No</button></div></div>
+</div></div>
+<div class="dock">
+<div class="queued"><div class="qi"><span class="muted">Queued</span><span class="grow">Then run the bundle size check</span><button class="icon-btn" title="Edit">✎</button><button class="icon-btn" title="Drop">✕</button></div></div>
+<div class="composer"><textarea rows="1" placeholder="Queue a message…"></textarea><div class="composer-foot"><button class="chip ghost">+</button><span class="spacer"></span><button class="send">↑</button></div></div>
+<div class="hint">Answer the permission above to continue · <kbd>Enter</kbd> queues</div>
+</div>
+</div>
+</div>
+<div class="menu menu-float">
+<div class="item"><span class="ck"></span>Rename…<span class="k">F2</span></div>
+<div class="item"><span class="ck"></span>Mute</div>
+<div class="item hi"><span class="ck"></span>Model…<span class="k">opus</span></div>
+<div class="item"><span class="ck"></span>Effort…<span class="k">high</span></div>
+<div class="menu-sep"></div>
+<div class="item"><span class="ck"></span>Show agent screen</div>
+<div class="item"><span class="ck"></span>Open in editor<span class="k">⌘E</span></div>
+<div class="item"><span class="ck"></span>Open browser</div>
+<div class="item"><span class="ck"></span>Kill dev servers</div>
+<div class="menu-sep"></div>
+<div class="item" style="color:var(--danger)"><span class="ck"></span>Interrupt<span class="k">Esc</span></div>
+<div class="item" style="color:var(--danger)"><span class="ck"></span>End session…</div>
+</div>
+</div></div></div>
+
+<div class="dv-opt" id="2c"><div class="dv-olabel"><a class="dv-oid" href="#2c">2c</a>Dialogs: switch model, end session; toast</div>
+<div class="dv-card"><div class="win short" data-screen-label="Dialogs" style="width:900px">
+<div class="titlebar"><span class="tl"></span><span class="tl"></span><span class="tl"></span></div>
+<div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:24px;padding:28px;background:var(--bg-sunken)">
+<div class="dialog" style="width:auto"><h3>Switch model</h3><p>The agent gets the change before its next turn.</p>
+<div class="item hi"><span class="ck">✓</span>opus<span class="k">current</span></div><div class="item"><span class="ck"></span>sonnet</div><div class="item"><span class="ck"></span>haiku</div>
+<div class="actions"><button class="btn quiet">Cancel</button><button class="btn primary">Switch</button></div></div>
+<div style="display:flex;flex-direction:column;gap:20px">
+<div class="dialog" style="width:auto"><h3>End this session?</h3><p>The agent stops. The worktree and branch stay; cleanup backs up any uncommitted work first.</p>
+<div class="krow" style="display:flex;gap:8px;align-items:center"><span class="check"></span><span class="dim">Keep the worktree after cleanup</span></div>
+<div class="actions"><button class="btn quiet">Cancel</button><button class="btn" style="background:var(--danger);color:#fff;border-color:var(--danger)">End session</button></div></div>
+<div><span class="toast">Renamed to “Login redirect”<button class="btn">Undo</button></span></div>
+</div>
+</div>
+</div></div></div>
+
+</div>
+<p class="dv-next">Try next: "split layout for <a class="dv-oid" href="#2a">2a</a>" · "permission inline in the composer instead of <a class="dv-oid" href="#2b">2b</a>"</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
