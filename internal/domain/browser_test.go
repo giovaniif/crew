@@ -29,6 +29,7 @@ func TestParseBrowserCommandBuildsTheCallTheMacAppRuns(t *testing.T) {
 		{[]string{"set-device", "iPhone"}, BrowserCall{Command: "set-device", Args: map[string]any{"device": "iphone"}}},
 		{[]string{"set-device", "desktop"}, BrowserCall{Command: "set-device", Args: map[string]any{"device": "desktop"}}},
 		{[]string{"set-device", "ipad"}, BrowserCall{Command: "set-device", Args: map[string]any{"device": "ipad"}}},
+		{[]string{"console"}, BrowserCall{Command: "console", Args: map[string]any{}}},
 	}
 	for _, c := range cases {
 		got, err := ParseBrowserCommand(c.args)
@@ -52,6 +53,7 @@ func TestParseBrowserCommandRefusesBadArgumentsAndSaysWhy(t *testing.T) {
 		{[]string{"goto", "a", "b"}, "goto takes one URL"},
 		{[]string{"snapshot", "x"}, "snapshot takes no arguments"},
 		{[]string{"tabs", "x"}, "tabs takes no arguments"},
+		{[]string{"console", "x"}, "console takes no arguments"},
 		{[]string{"screenshot", "x"}, "screenshot takes no arguments"},
 		{[]string{"click"}, "click needs an element ref"},
 		{[]string{"click", "e1"}, `"e1" is not an element ref`},
@@ -80,7 +82,7 @@ func TestParseBrowserCommandRefusesBadArgumentsAndSaysWhy(t *testing.T) {
 }
 
 func TestBrowserCommandsListsEveryCommandOnce(t *testing.T) {
-	want := []string{"goto", "snapshot", "click", "fill", "type", "press", "wait", "screenshot", "eval", "tabs", "cookies", "set-device"}
+	want := []string{"goto", "snapshot", "click", "fill", "type", "press", "wait", "screenshot", "eval", "tabs", "cookies", "set-device", "console"}
 	if got := BrowserCommands(); !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %v", got)
 	}

@@ -379,3 +379,40 @@ func BenchmarkBrowserRoundTrip(b *testing.B) {
 		b.Fatalf("a browser round trip through the daemon took %v, budget 5ms", perOp)
 	}
 }
+
+func TestBrowserCommandForTheAppGoesToTheAttachedApp(t *testing.T) {
+	_, path := start(t, &memStore{})
+	app := attachBrowser(t, path)
+	c := dial(t, path)
+	done := make(chan error, 1)
+	go func() {
+		_, err := browserCommand(c, rpc.BrowserCommandParams{Session: "s1", Browser: domain.BrowserApp, Command: "console"})
+		done <- err
+	}()
+	call := app.call()
+	if call.Command != "console" {
+		t.Fatalf("call %+v", call)
+	}
+	app.reply(call.Call, map[string]string{"text": "log hi"}, "")
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestBrowserCommandForTheAppWithoutItDoesNotUseTheHeadlessBrowser(t *testing.T) {
+	_, path := start(t, &memStore{})
+	c := dial(t, path)
+	_, err := browserCommand(c, rpc.BrowserCommandParams{Session: "s1", Browser: domain.BrowserApp, Command: "snapshot"})
+	if !strings.Contains(rpcMessage(err), "no browser") {
+		t.Fatalf("got %v", err)
+	}
+}
+
+func TestBrowserCommandRefusesAnUnknownBrowser(t *testing.T) {
+	_, path := start(t, &memStore{})
+	c := dial(t, path)
+	_, err := browserCommand(c, rpc.BrowserCommandParams{Session: "s1", Browser: "chrome", Command: "snapshot"})
+	if !strings.Contains(rpcMessage(err), `unknown browser "chrome"`) {
+		t.Fatalf("got %v", err)
+	}
+}

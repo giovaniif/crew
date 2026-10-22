@@ -17,6 +17,7 @@ const NoBrowser = "no browser: the macOS app is not connected"
 type BrowserCommandParams struct {
 	Session   string         `json:"session,omitempty"`
 	Pane      string         `json:"pane,omitempty"`
+	Browser   string         `json:"browser,omitempty"`
 	Command   string         `json:"command"`
 	Args      map[string]any `json:"args,omitempty"`
 	TimeoutMS int            `json:"timeout_ms,omitempty"`
