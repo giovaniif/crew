@@ -36,6 +36,13 @@ go run ./scripts/verify web drive / --viewport both --out-dir /tmp/crew-verify-m
 go run ./scripts/verify web drive '/#/mates/new' --viewport both --out-dir /tmp/crew-verify-map/pwa --steps '[{"click":{"role":"button","name":"Quill"}},{"eval":"(() => { if (document.querySelector(\"label.field input\").value !== \"quill\") throw new Error(\"name not filled\"); return 1 })()"},{"shot":"new-mate.png"}]'
 ```
 
+### remove workspace confirm marks Remove as danger
+
+```sh
+rm -rf /tmp/TEST-ws && git init -q /tmp/TEST-ws && git -C /tmp/TEST-ws commit -q --allow-empty -m init
+go run ./scripts/verify web drive '/#/new' --viewport both --out-dir /tmp/crew-verify-map/pwa --steps '[{"click":{"role":"button","name":"Add workspace…"}},{"fill":{"label":"Folder on the server","exact":false},"value":"/tmp/TEST-ws"},{"click":{"role":"button","name":"Add","exact":true}},{"wait":1200},{"click":{"role":"button","name":"Remove workspace"}},{"eval":"(() => { if (!document.querySelector(\".confirm button.danger\")) throw new Error(\"Remove is not danger\"); return 1 })()"},{"click":{"role":"button","name":"Remove /tmp/TEST-ws"}},{"shot":"remove-workspace.png"}]'
+```
+
 ### pairing screen in the installed app with the fake API
 
 ```sh
