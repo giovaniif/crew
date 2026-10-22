@@ -349,3 +349,14 @@ func TestSetupNvimStepShowsTheWholeMissingPluginPath(t *testing.T) {
 	m = pressCmd(pressCmd(m, keySpace), keyEnter)
 	mustShow(t, strings.ReplaceAll(strings.Join(strings.Fields(screen(m)), ""), "▌", ""), "Thepluginfilesarenotat"+long+".")
 }
+
+func TestSetupHarnessStepShowsTheWholeLongPaths(t *testing.T) {
+	file := "/tmp/crew-iso-3487862116/home/.config/test-codex-home/hooks.json"
+	backup := file + ".crew-20261022T062300Z.bak"
+	o := freshMachine()
+	o.Harnesses[domain.HarnessClaude] = domain.HarnessSetup{File: file, Backup: backup}
+	m, _ := setupModel(t, o)
+	m = pressCmd(m, keyEnter)
+	out := strings.ReplaceAll(strings.Join(strings.Fields(screen(m)), ""), "▌", "")
+	mustShow(t, out, "Changes"+file, "Backup"+backup)
+}
