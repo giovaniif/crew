@@ -263,3 +263,20 @@ func TestDiskViewSaysWhenTheNextCleanupRuns(t *testing.T) {
 		t.Errorf("next cleanup = %v, want an hour after the daemon started at %v", view.NextCleanup, before)
 	}
 }
+
+func TestDiskViewListsNumberedWorktreesInNumberOrder(t *testing.T) {
+	env := startDisk(t, mergedWT("10", 10), mergedWT("2", 2), mergedWT("1", 1))
+	c := dial(t, env.path)
+
+	view, err := c.DiskView(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, r := range view.Rows {
+		got = append(got, r.WorktreeID)
+	}
+	if want := []string{"/solo-1", "/solo-2", "/solo-10"}; !slices.Equal(got, want) {
+		t.Errorf("rows = %v, want %v", got, want)
+	}
+}
