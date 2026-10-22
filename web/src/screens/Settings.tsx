@@ -5,6 +5,7 @@ import { confirmEnd, setConfirmEnd } from "../commands";
 import { disablePush, enablePush, type PushEnv } from "../push";
 import { applyTheme, clamp, fontSizes, lineHeights, loadSettings, saveSettings, type AppSettings, type Appearance, type EventAlert, type General, type NotificationSettings } from "../settings";
 import { assignShortcut, comboFor, comboFromEvent, comboLabel, defaultShortcuts, restoreShortcut, shortcutActions, type Shortcuts } from "../shortcuts";
+import { Checkbox, Select, Stepper } from "../ui";
 import { Brand } from "./Brand";
 import { AgentsGroup, ServerAppearanceGroup, ServerNotificationsGroup, WorkspacesGroup } from "./ServerSettings";
 
@@ -131,25 +132,16 @@ function PushCard({ auth, installed, fetch, push, desktop }: Pick<SettingsProps,
 
 function Check({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
-    <label className="check">
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-      {label}
-    </label>
+    <Checkbox label={label} checked={checked} onChange={onChange} />
   );
 }
 
 function Pick<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: [T, string][]; onChange: (v: T) => void }) {
   return (
-    <label>
+    <div className="ui-field">
       {label}
-      <select value={value} onChange={(e) => onChange(e.target.value as T)}>
-        {options.map(([v, title]) => (
-          <option key={v} value={v}>
-            {title}
-          </option>
-        ))}
-      </select>
-    </label>
+      <Select label={label} value={value} onChange={onChange} options={options.map(([v, title]) => ({ value: v, label: title }))} />
+    </div>
   );
 }
 
@@ -157,21 +149,21 @@ function NumberField({ label, value, step, onCommit }: { label: string; value: n
   const [text, setText] = useState(String(value));
   useEffect(() => setText(String(value)), [value]);
   return (
-    <label>
+    <div className="ui-field">
       {label}
-      <input
-        type="number"
+      <Stepper
+        label={label}
         step={step}
         value={text}
-        onChange={(e) => {
-          setText(e.target.value);
-          if (e.target.value !== "" && !Number.isNaN(Number(e.target.value))) {
-            onCommit(Number(e.target.value));
+        onChange={(next) => {
+          setText(next);
+          if (next !== "" && !Number.isNaN(Number(next))) {
+            onCommit(Number(next));
           }
         }}
         onBlur={() => setText(String(value))}
       />
-    </label>
+    </div>
   );
 }
 
