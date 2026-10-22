@@ -588,7 +588,12 @@ dependencies = [
 name = "crew-desktop"
 version = "0.0.0"
 dependencies = [
+ "base64 0.22.1",
+ "block2",
  "libc",
+ "objc2-app-kit",
+ "objc2-foundation",
+ "objc2-web-kit",
  "semver",
  "serde",
  "serde_json",

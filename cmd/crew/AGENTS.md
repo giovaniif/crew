@@ -76,8 +76,10 @@ Hooks call `crew hook`. It writes one message to the socket and exits. It never 
   - It also extends `review.open`. With `"tokens": true` in the params, it passes the request on and adds `Spans`, a list of `[start, end, class]`, to each diff line of the reply (see [internal/syntax/](../../internal/syntax/AGENTS.md)). A file with no lexer gets no `Spans`.
   - All other lines pass through with no change.
   - Tests: `go test ./cmd/crew/ -run 'Rpc|Tokens'` and `go test -tags integration ./test/integration/ -run RpcBridge`. See [ADR 0049](../../docs/adr/0049-macos-app.md).
-- `crew browser [--session id] [--json] [--out file.png] [--timeout 30s] <command> [args]` drives the browser of the Mac app ([ADR 0051](../../docs/adr/0051-browser-in-mac-app.md)).
-  - The commands are `goto`, `snapshot`, `click`, `fill`, `type`, `press`, `wait`, `screenshot`, `eval`, `tabs`, `cookies` and `set-device`. `domain.ParseBrowserCommand` checks the arguments.
+- `crew browser [--session id] [--browser any|app|headless] [--json] [--out file.png] [--timeout 30s] <command> [args]` drives the browser of the app ([ADR 0051](../../docs/adr/0051-browser-in-mac-app.md), ADR 0060).
+  - The commands are `goto`, `snapshot`, `click`, `fill`, `type`, `press`, `wait`, `screenshot`, `eval`, `tabs`, `cookies`, `set-device` and `console`.
+  - `--browser app` uses only the attached app. `--browser headless` uses only the headless browser. With no flag, the daemon chooses. A different value exits 2.
+  - `crew browser attach` is the control channel of the Tauri app. It sends `browser.attach`, writes each `BrowserCall` as one JSON line to stdout and sends each JSON line of stdin (`{"call","result"}` or `{"call","error"}`) with `browser.reply`. It exits 0 when stdin closes, and 1 when the daemon closes the connection. `domain.ParseBrowserCommand` checks the arguments.
   - The session is `--session`, else `$CREW_SESSION`, else the session on `$TMUX_PANE`.
   - It prints the `text` of the result (the tree of `snapshot`), a plain string, or else JSON. `--json` prints the full result.
   - `screenshot` writes the PNG to `--out`, else to a temp file, and prints the path.

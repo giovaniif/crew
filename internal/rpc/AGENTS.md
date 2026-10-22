@@ -151,7 +151,8 @@ Each RPC request and response contains the build (`version.String()`). The daemo
   - `browser.attach` (`{}` → `{"attached":true}`) makes the calling connection the browser. The Mac app sends it. A new attach replaces the old one. The attach ends when its connection closes.
   - After the result, the daemon pushes each call on the same `id` as a response with `browser`: `{"call","session","command","args"}`.
   - The app answers with `browser.reply` (`{"call","result","error"}` → `{}`) on the same connection. A call that does not wait for this connection is `not_found`.
-  - `browser.command` (`{"session","pane","command","args","timeout_ms"}` → the `result` of the app) runs one command. With no `session`, the daemon uses the session on `pane`.
+  - `browser.command` (`{"session","pane","browser","command","args","timeout_ms"}` → the `result` of the app) runs one command. With no `session`, the daemon uses the session on `pane`.
+  - `browser` is `any`, `app`, `mac` or `headless`. `app` and `mac` use only the attached app. With no `browser`, the daemon uses the choice of the automation of the session. A different value is `bad_request`.
   - With no attached app, it is `unavailable` with the message `no browser: the macOS app is not connected`. If the app disconnects first, it is also `unavailable`.
   - An `error` from the app is `failed` with that message. No reply in `timeout_ms` (default 30 s, a maximum of 10 min) is `failed`.
   - An unknown command, or no session and no known pane, is `bad_request`.

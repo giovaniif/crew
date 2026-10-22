@@ -43,6 +43,12 @@ The Tauri 2 app for desktop and mobile ([ADR 0057](../docs/adr/0057-tauri-apps.m
   - `tauri.android.conf.json` sets `version` to `0.0.1`, because Android does not accept `0.0.0`.
   - `gen/android/` is the output of `npx tauri android init`, with the comments removed. The bundle id is `sh.giovani.crew`.
   - The icons come from `macos/AppIcon.png`. Run `npx tauri icon ../macos/AppIcon.png -o src-tauri/icons` to make them again. Keep only the desktop files.
+- App browser (`src/browse.rs`, `src/app_browser.rs`, desktop only, issue #656):
+  - When the local `crew serve` starts, the app runs `crew browser attach` (`browse::run_bridge`). It starts the command again when it stops. Thus `crew browser --browser app` and an agent without `--browser` use the app.
+  - Each session gets its own window with the label `browse-<n>`. No capability matches this label, so the page gets no IPC. The window refuses a navigation to the origin of `crew serve` and to a scheme that is not `http` or `https` (`browse::allow_navigation`).
+  - The commands run as scripts in the page (`browse::plan`, `browse::run_script`). Rust reads each result with `eval_with_callback` (`browse::read_script`), not with IPC. `goto` waits for the page load event. `screenshot` uses `takeSnapshot` of `WKWebView` and works only on macOS. The initialization script keeps the last 200 console lines for `console`.
+  - The command `crew_browser_open {session, url}` opens or shows the window of a session. Only the origin of the local `crew serve` can call it (`ipc::serve_capability` and a check of the page origin).
+  - `tests/browse.rs` tests the labels, the navigation rule, the addresses, the steps, the results and the bridge (with a fake `crew` script). `tests/ipc.rs` tests that no capability matches a `browse-<n>` window. See ADR 0060.
 - Update (`src/update.rs`, desktop only):
   - At launch and each 6 h, the app gets `latest.json` from the `updater` branch (`plugins.updater.endpoints` in `tauri.conf.json`). The release workflow writes this file for each tag, also for a prerelease. Thus the app also offers `v0.1.0-beta.*` releases.
   - `newer` compares the versions as semver, with prereleases (`0.1.0-beta.2` < `0.1.0-beta.10` < `0.1.0`).

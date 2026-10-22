@@ -352,6 +352,8 @@ func (t *Tab) Run(ctx context.Context, command string, raw json.RawMessage) (jso
 		return t.cookies(ctx, str("domain"))
 	case "set-device":
 		return t.device(ctx, str("device"))
+	case "console":
+		return nil, errors.New("console: the headless browser keeps no console lines: use --browser app")
 	}
 	return nil, fmt.Errorf("unknown browser command %q", command)
 }
