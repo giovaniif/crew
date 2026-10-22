@@ -218,10 +218,10 @@ export function NewSession({ env, token }: { env: AppEnv; token: string }) {
               {removeError}
             </div>
           ) : null}
-          <button type="button" onClick={() => setRemoving(false)}>
+          <button type="button" className="secondary" onClick={() => setRemoving(false)}>
             Cancel
           </button>
-          <button type="button" aria-label={"Remove " + workspace} onClick={confirmRemove}>
+          <button type="button" className="danger" aria-label={"Remove " + workspace} onClick={confirmRemove}>
             Remove
           </button>
         </div>
