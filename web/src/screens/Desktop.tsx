@@ -6,6 +6,7 @@ import { parseRoute } from "../route";
 import { sessionMeta, stateStyle } from "../sessions";
 import type { Session, StreamClient, StreamSnapshot } from "../stream";
 import type { Servers } from "../servers";
+import type { DesktopBridge } from "../desktopBridge";
 import { Brand } from "./Brand";
 import { FirstRun } from "./FirstRun";
 import { ServerChip, useServerListing } from "./Servers";
@@ -28,6 +29,7 @@ export type PaneProps = {
   terminals: TerminalStore | null;
   host: string;
   browsers: BrowserStore;
+  desktop?: DesktopBridge;
 };
 
 function Placeholder({ title }: { title: string }) {
@@ -45,7 +47,7 @@ export const panes: Record<MainTab, (props: PaneProps) => ReactNode> = {
   review: (p) => <ReviewPane key={p.session.ID} session={p.session.ID} sessionState={p.session.State} api={p.api} />,
   shell: (p) => <TerminalPane store={p.terminals} session={p.session} kind="shell" />,
   nvim: (p) => <TerminalPane store={p.terminals} session={p.session} kind="nvim" />,
-  browser: (p) => <BrowserPane key={p.session.ID} session={p.session.ID} worktrees={p.snapshot.state?.worktrees ?? []} host={p.host} store={p.browsers} api={p.api} />,
+  browser: (p) => <BrowserPane key={p.session.ID} session={p.session.ID} worktrees={p.snapshot.state?.worktrees ?? []} host={p.host} store={p.browsers} api={p.api} desktop={p.desktop} />,
 };
 
 type OnMenu = (id: string, x: number, y: number) => void;
@@ -299,7 +301,7 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
           {session ? <SessionCommands key={session.ID} api={api} session={session} storage={env.storage} button /> : null}
         </Toolbar>
         <section className={"pane pane-" + tab} role="tabpanel" id={"pane-" + tab} aria-labelledby={"tab-" + tab}>
-          {session ? panes[tab]({ session, snapshot, now, onRetry, client, api, terminals, host: env.host, browsers: browsers.current }) : <Placeholder title="Terminal" />}
+          {session ? panes[tab]({ session, snapshot, now, onRetry, client, api, terminals, host: env.host, browsers: browsers.current, desktop: env.desktop }) : <Placeholder title="Terminal" />}
         </section>
       </>
     );
