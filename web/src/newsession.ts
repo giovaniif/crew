@@ -54,3 +54,36 @@ export function saveChoices(storage: KeyValue, choices: Choices): void {
     return;
   }
 }
+
+export function agentValue(harness: string, model: string): string {
+  return harness + "|" + model;
+}
+
+export function splitAgent(value: string): { harness: string; model: string } {
+  const at = value.indexOf("|");
+  return at < 0 ? { harness: value, model: "" } : { harness: value.slice(0, at), model: value.slice(at + 1) };
+}
+
+export function agentChoices(defaults: Record<string, string>, extra: { harness: string; model: string } | null): { value: string; label: string }[] {
+  const out: { value: string; label: string }[] = [];
+  for (const h of harnesses) {
+    out.push({ value: agentValue(h.id, ""), label: h.label + " · " + defaultLabel(defaults[h.id]) });
+    const models = modelChoices[h.id] ?? [];
+    for (const m of models) {
+      out.push({ value: agentValue(h.id, m), label: h.label + " · " + m });
+    }
+    if (extra && extra.harness === h.id && extra.model && !models.includes(extra.model)) {
+      out.push({ value: agentValue(h.id, extra.model), label: h.label + " · " + extra.model });
+    }
+  }
+  return out;
+}
+
+export function taskFields(text: string): { work_item: string; prompt: string } {
+  const trimmed = text.trim();
+  if (/^https?:\/\/\S+$/.test(trimmed)) {
+    return { work_item: trimmed, prompt: "" };
+  }
+  const first = trimmed.split("\n")[0]?.trim() ?? "";
+  return { work_item: first, prompt: trimmed.includes("\n") ? trimmed : "" };
+}
