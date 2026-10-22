@@ -9,8 +9,12 @@ import (
 	"github.com/giovaniif/crew/internal/rpc"
 )
 
+func isHelpArg(arg string) bool {
+	return arg == "-h" || arg == "--help"
+}
+
 func runFocus(args []string, stderr io.Writer) int {
-	if len(args) != 1 {
+	if len(args) != 1 || isHelpArg(args[0]) {
 		fmt.Fprintln(stderr, "usage: crew focus <session id>")
 		return 2
 	}
