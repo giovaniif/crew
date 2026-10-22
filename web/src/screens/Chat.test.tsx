@@ -278,6 +278,68 @@ describe("the composer", () => {
     expect(server.headers[post].authorization).toBe("Bearer t0k");
   });
 
+  it("sends with Enter", async () => {
+    const server = new FakeServer()
+      .on("GET", "/api/v1/sessions/s2/messages?limit=50", page([]))
+      .on("POST", "/api/v1/sessions/s2/messages", { status: 200, body: { id: "q1", queued: false } });
+    const sockets = setup(server, "#/sessions/s2");
+    live(sockets);
+    const box = screen.getByRole("textbox", { name: "Message" });
+    await userEvent.type(box, "now add a test{Enter}");
+    await waitFor(() => expect(box).toHaveValue(""));
+    const posts = server.calls.filter((c) => c.method === "POST" && c.path === "/api/v1/sessions/s2/messages");
+    expect(posts.map((c) => c.body)).toEqual([{ text: "now add a test" }]);
+  });
+
+  it("queues with Enter while the agent works", async () => {
+    const server = new FakeServer()
+      .on("GET", newest, page([]))
+      .on("POST", "/api/v1/sessions/s1/messages", { status: 200, body: { id: "m2", queued: true } });
+    const sockets = setup(server);
+    live(sockets, goldenState());
+    const box = screen.getByRole("textbox", { name: "Message" });
+    await userEvent.type(box, "then update the docs{Enter}");
+    await waitFor(() => expect(box).toHaveValue(""));
+    expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/sessions/s1/messages")?.body).toEqual({ text: "then update the docs" });
+  });
+
+  it("adds a new line with Shift+Enter and does not send", async () => {
+    const server = new FakeServer().on("GET", "/api/v1/sessions/s2/messages?limit=50", page([]));
+    const sockets = setup(server, "#/sessions/s2");
+    live(sockets);
+    const box = screen.getByRole("textbox", { name: "Message" });
+    await userEvent.type(box, "first{Shift>}{Enter}{/Shift}second");
+    expect(box).toHaveValue("first\nsecond");
+    expect(server.calls.some((c) => c.method === "POST" && c.path === "/api/v1/sessions/s2/messages")).toBe(false);
+  });
+
+  it("does not send with Enter during IME composition", async () => {
+    const server = new FakeServer().on("GET", "/api/v1/sessions/s2/messages?limit=50", page([]));
+    const sockets = setup(server, "#/sessions/s2");
+    live(sockets);
+    const box = screen.getByRole("textbox", { name: "Message" });
+    await userEvent.type(box, "nihon");
+    const composing = fireEvent.keyDown(box, { key: "Enter", isComposing: true });
+    const ime = fireEvent.keyDown(box, { key: "Enter", keyCode: 229 });
+    expect([composing, ime]).toEqual([true, true]);
+    await act(async () => {});
+    expect(server.calls.some((c) => c.method === "POST" && c.path === "/api/v1/sessions/s2/messages")).toBe(false);
+    expect(box).toHaveValue("nihon");
+  });
+
+  it("does not send with Enter while the session asks permission", async () => {
+    const server = new FakeServer().on("GET", newest, page([]));
+    const sockets = setup(server);
+    const state = goldenState();
+    state.sessions = state.sessions.map((s) => (s.ID === "s1" ? { ...s, State: "permission", Ended: false } : s));
+    live(sockets, state);
+    const box = screen.getByRole("textbox", { name: "Message" });
+    expect(box).toBeDisabled();
+    fireEvent.keyDown(box, { key: "Enter" });
+    await act(async () => {});
+    expect(server.calls.some((c) => c.method === "POST" && c.path === "/api/v1/sessions/s1/messages")).toBe(false);
+  });
+
   it("keeps what was typed while a send was on its way", async () => {
     const posted = new Deferred<FakeRoute>();
     const server = new FakeServer()
