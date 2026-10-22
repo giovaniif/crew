@@ -438,6 +438,10 @@ export function diskView(a: Authed): Promise<DiskView> {
   return authedRequest<DiskView>(a, "/api/v1/disk");
 }
 
+export function cleanupRun(a: Authed): Promise<{ items: CleanupItem[] }> {
+  return authedRequest<{ items: CleanupItem[] }>(a, "/api/v1/cleanup/run", "POST");
+}
+
 export function cleanupWorktree(a: Authed, path: string, backup: boolean): Promise<CleanupItem> {
   return authedRequest<CleanupItem>(a, "/api/v1/cleanup/worktree", "POST", { path, backup });
 }
