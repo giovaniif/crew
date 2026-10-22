@@ -21,7 +21,7 @@ go run ./scripts/verify tui drive --restart --out-dir /tmp/crew-verify-map/notif
 ### the PWA marks a muted session (#616)
 
 ```sh
-go run ./scripts/verify web drive '/#/sessions/seed-session-2' --viewport desktop --out-dir /tmp/crew-verify-map/notify --steps '[{"click":{"role":"button","name":"Session commands"}},{"click":{"role":"menuitem","name":"Mute"}},{"wait":800}]'
+go run ./scripts/verify web drive '/#/sessions/seed-session-3' --viewport desktop --out-dir /tmp/crew-verify-map/notify --steps '[{"click":{"role":"button","name":"Session commands"}},{"click":{"role":"menuitem","name":"Mute"}},{"wait":800}]'
 go run ./scripts/verify web drive / --viewport both --out-dir /tmp/crew-verify-map/notify --steps '[{"expect":{"text":"muted","exact":true}},{"shot":"muted-pwa.png"}]'
 ```
 
@@ -35,4 +35,5 @@ go run ./scripts/verify iso down
 
 ## Gotchas
 
+- The TUI recipe mutes `seed-session-2`. The PWA recipe uses `seed-session-3`, so it starts from an unmuted session.
 - `crew notify stream` runs until it is stopped. Do not run it in a recipe without a timeout.
