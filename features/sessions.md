@@ -48,6 +48,14 @@ go run ./scripts/verify web drive / --viewport desktop --out-dir /tmp/crew-verif
 
 Expect: one flat Sessions list with a state dot for each session. The desktop sidebar has no attention groups. On Linux and Windows, the `Ctrl+Shift+<n>` key shows only on the hovered, focused or selected row, so it does not cut the names (#623).
 
+### PWA desktop disables the Terminal tab with no session
+
+```sh
+go run ./scripts/verify web drive / --viewport desktop --out-dir /tmp/crew-verify-map/sessions --steps '[{"expect":{"text":"Select a session"}},{"eval":"if (!document.getElementById(\"tab-terminal\").disabled) throw new Error(\"terminal tab enabled\")"},{"expect":{"text":"not available in this version","exact":false},"absent":true},{"shot":"no-session-tabs.png"}]'
+```
+
+Expect: with no session selected, Terminal is disabled with a reason, like Review, Shell and nvim. See #679.
+
 ### PWA opens a session chat
 
 ```sh
