@@ -73,16 +73,17 @@ type call struct {
 }
 
 type fakeCaller struct {
-	mu     sync.Mutex
-	calls  []call
-	err    error
-	failOn string
-	dirs   map[string][]domain.Child
-	autos  []domain.Automation
-	asks   []domain.Approval
-	mates  []domain.Mate
-	tones  []domain.MateToneAxis
-	memory string
+	mu           sync.Mutex
+	calls        []call
+	err          error
+	failOn       string
+	dirs         map[string][]domain.Child
+	autos        []domain.Automation
+	autoProblems []string
+	asks         []domain.Approval
+	mates        []domain.Mate
+	tones        []domain.MateToneAxis
+	memory       string
 }
 
 func (f *fakeCaller) Call(_ context.Context, method string, params, out any) error {
@@ -128,7 +129,7 @@ func (f *fakeCaller) Call(_ context.Context, method string, params, out any) err
 		return nil
 	}
 	if method == rpc.MethodAutomationList {
-		*out.(*rpc.AutomationList) = rpc.AutomationList{Automations: f.autos}
+		*out.(*rpc.AutomationList) = rpc.AutomationList{Automations: f.autos, Problems: f.autoProblems}
 		return nil
 	}
 	if method == rpc.MethodNewSession {
