@@ -60,6 +60,9 @@ func doctor(e *env, args []string, r *result) {
 			r.fail("node "+v+" is older than 22.18", "install Node 22.18 or newer (nvm install 22)")
 		}
 		web := filepath.Join(e.repo, "web")
+		if _, err := os.Stat(filepath.Join(web, "node_modules")); err != nil {
+			r.fail("web/node_modules is missing, so iso up cannot start the web dev server", "cd web && npm ci")
+		}
 		if p, _, code := e.sys.exec(cmd{dir: web, name: "node", args: []string{"-e", chromiumProbe}}); code == 0 {
 			r.set("chromium", strings.TrimSpace(p))
 		} else {
