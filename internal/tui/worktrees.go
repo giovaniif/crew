@@ -468,6 +468,7 @@ func (m Model) diskTable(around int) ([]string, []string) {
 	rows := m.diskRows()
 	sel, selRow := m.selectedID(rows), 0
 	var body, owners []string
+	var starts []bool
 	for _, r := range rows {
 		w := m.worktrees[r.WorktreeID]
 		isSel := r.WorktreeID == sel
@@ -476,9 +477,11 @@ func (m Model) diskTable(around int) ([]string, []string) {
 		}
 		body = append(body, m.diskRowLine(r, w, cols, isSel))
 		owners = append(owners, ownDisk+r.WorktreeID)
+		starts = append(starts, true)
 		if r.Action == domain.CleanupBackupThenAsk {
 			body = append(body, m.line(isSel, []piece{{s.dim, "     ↳ "}, {s.peach, r.Reason}, {s.sub, " · b backup + remove · o shell · g session"}}, nil))
 			owners = append(owners, ownDisk+r.WorktreeID)
+			starts = append(starts, false)
 		}
 	}
 	recent := append([]string{""}, m.recentLines()...)
@@ -487,18 +490,35 @@ func (m Model) diskTable(around int) ([]string, []string) {
 		recent = nil
 	}
 	room := max(free-len(recent), 1)
+	hint := len(body) > room && room > 1
+	if hint {
+		room--
+	}
 	off := 0
 	if selRow >= room {
 		off = selRow - room + 2
 	}
 	off = min(off, max(len(body)-room, 0))
-	body, owners = body[off:], owners[off:]
-	if len(body) > room {
-		body, owners = body[:room], owners[:room]
-	}
+	end := min(off+room, len(body))
+	hidden := rowStarts(starts[:off]) + rowStarts(starts[end:])
+	body, owners = body[off:end], owners[off:end]
 	out = append(out, body...)
 	owners = append([]string{""}, owners...)
+	if hint && hidden > 0 {
+		out = append(out, m.line(false, []piece{{s.dim, fmt.Sprintf("     … %d more", hidden)}}, nil))
+		owners = append(owners, "")
+	}
 	return append(out, recent...), owners
+}
+
+func rowStarts(starts []bool) int {
+	n := 0
+	for _, start := range starts {
+		if start {
+			n++
+		}
+	}
+	return n
 }
 
 func (m Model) selectedID(rows []domain.DiskRow) string {
