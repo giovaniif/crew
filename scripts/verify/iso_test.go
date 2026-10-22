@@ -194,3 +194,52 @@ func TestIsoUpFailsCleanlyWhenPairingFails(t *testing.T) {
 		t.Errorf("did not stop what it started: %v", fs.killed)
 	}
 }
+
+func TestIsoUpSessionStartsALiveFakeAgentSessionInARealRepo(t *testing.T) {
+	e, fs := testEnv(t)
+	isoReady(fs)
+	fs.paths["git"] = true
+	fs.handlers["crew new"] = func(c cmd) (string, string, int) {
+		if envOf(c)["CREW_TMUX_SOCKET"] == "" {
+			t.Error("crew new runs without the isolated env")
+		}
+		return "session s-live1 on pane %3\n", "", 0
+	}
+	got, code := runJSON(t, e, "iso", "up", "--session")
+	if code != 0 {
+		t.Fatalf("exit %d: %s", code, problemText(got))
+	}
+	home := got["home"].(string)
+	repo := filepath.Join(home, "TEST-live")
+	if !fs.ran("git -C " + repo + " init") {
+		t.Errorf("no git repo made at %s", repo)
+	}
+	if !fs.ran(filepath.Join(home, "bin/crew") + " new --workspace " + repo) {
+		t.Error("crew new did not start a session in the repo")
+	}
+	steps, err := os.ReadFile(filepath.Join(home, "e2e", "claude.steps"))
+	if err != nil || !strings.Contains(string(steps), "chat") {
+		t.Errorf("the fake claude does not chat: %q, %v", steps, err)
+	}
+	if got["session"] != "s-live1" || got["pane"] != "%3" || got["worktree"] != repo {
+		t.Errorf("session, pane, worktree = %v, %v, %v", got["session"], got["pane"], got["worktree"])
+	}
+	st, _ := loadIso(e)
+	if st.Session != "s-live1" {
+		t.Errorf("session %q not saved", st.Session)
+	}
+}
+
+func TestIsoUpSessionFailsCleanlyWhenCrewNewFails(t *testing.T) {
+	e, fs := testEnv(t)
+	isoReady(fs)
+	fs.paths["git"] = true
+	fs.handlers["crew new"] = func(c cmd) (string, string, int) { return "", "no harness", 1 }
+	got, code := runJSON(t, e, "iso", "up", "--session")
+	if code != 1 || !strings.Contains(problemText(got), "no harness") {
+		t.Errorf("exit %d: %s", code, problemText(got))
+	}
+	if len(fs.killed) != 2 {
+		t.Errorf("did not stop what it started: %v", fs.killed)
+	}
+}
