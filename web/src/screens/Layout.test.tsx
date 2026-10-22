@@ -43,7 +43,8 @@ describe("the toolbar", () => {
     const { live } = desktop();
     live();
     const tab = (name: string) => screen.getByRole("tab", { name });
-    expect(tab("Terminal")).toBeEnabled();
+    expect(tab("Terminal")).toBeDisabled();
+    expect(tab("Terminal")).toHaveAccessibleDescription("Start or select a session to see its terminal");
     expect(tab("Review")).toBeDisabled();
     expect(tab("Review")).toHaveAccessibleDescription("Start or select a session to review its changes");
     expect(tab("Shell")).toBeDisabled();
