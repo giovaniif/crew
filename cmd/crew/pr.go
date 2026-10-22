@@ -123,6 +123,9 @@ func prReportFor(st rpc.State, arg string) (prReport, error) {
 			byName = append(byName, s)
 		}
 	}
+	if live := slices.DeleteFunc(slices.Clone(byName), func(s domain.Session) bool { return s.Ended }); len(live) > 0 {
+		byName = live
+	}
 	if match == nil {
 		switch len(byName) {
 		case 0:
