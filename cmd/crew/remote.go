@@ -55,7 +55,7 @@ func remoteCommand(args []string, stdout, stderr io.Writer) error {
 		}
 		return remoteDevices(stdout)
 	case "revoke":
-		if len(args) != 2 {
+		if len(args) != 2 || isHelpArg(args[1]) {
 			return errRemoteUsage
 		}
 		return remoteRevoke(args[1], stdout)

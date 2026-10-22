@@ -16,7 +16,7 @@ const workspaceUsage = "usage: crew workspace <add|list|remove> [path]"
 
 func runWorkspace(args []string, stdout, stderr io.Writer) int {
 	wantArgs := map[string]int{"add": 2, "remove": 2, "list": 1}
-	if len(args) == 0 || len(args) != wantArgs[args[0]] {
+	if len(args) == 0 || len(args) != wantArgs[args[0]] || len(args) == 2 && isHelpArg(args[1]) {
 		fmt.Fprintln(stderr, workspaceUsage)
 		return 2
 	}
