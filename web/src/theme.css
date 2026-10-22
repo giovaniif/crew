@@ -2964,7 +2964,7 @@ button.danger {
 }
 
 .settings-list li > :first-child {
-  flex: 1;
+  flex: 1 1 12rem;
 }
 
 .settings-list button {
