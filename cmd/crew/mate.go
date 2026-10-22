@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 	"text/tabwriter"
 
@@ -28,7 +29,7 @@ func runMate(args []string, stdout, stderr io.Writer) int {
 }
 
 func mateArgsOK(args []string) bool {
-	if len(args) == 0 {
+	if len(args) == 0 || len(args) > 1 && isHelpFlag(args[1]) {
 		return false
 	}
 	switch args[0] {
@@ -44,7 +45,7 @@ func mateArgsOK(args []string) bool {
 	case "stop":
 		return len(args) == 1 || len(args) == 2 && args[1] == "--off"
 	case "set":
-		return len(args) >= 2
+		return len(args) >= 2 && !slices.Contains(args[2:], "--help") && !slices.Contains(args[2:], "-h")
 	case "add":
 		_, _, err := parseMateAdd(args[1:])
 		return err == nil
@@ -52,6 +53,10 @@ func mateArgsOK(args []string) bool {
 		return len(args) == 2 || len(args) == 3 && args[2] == "--clear"
 	}
 	return false
+}
+
+func isHelpFlag(arg string) bool {
+	return arg == "-h" || arg == "--help"
 }
 
 type repoList []string

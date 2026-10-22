@@ -64,6 +64,21 @@ func TestRunMateRejectsBadArguments(t *testing.T) {
 	}
 }
 
+func TestMateArgumentsRefuseAHelpFlagAsTheName(t *testing.T) {
+	for _, sub := range []string{"show", "remove", "claim", "pause", "resume", "memory", "slack", "tokens", "set", "add", "new"} {
+		for _, flag := range []string{"--help", "-h"} {
+			if mateArgsOK([]string{sub, flag}) {
+				t.Errorf("mateArgsOK(%s %s) = true, want false", sub, flag)
+			}
+		}
+	}
+	for _, args := range [][]string{{"set", "reviewer", "--help"}, {"show", "reviewer"}, {"set", "reviewer", "--prompt", "hi"}} {
+		if want := args[len(args)-1] != "--help"; mateArgsOK(args) != want {
+			t.Errorf("mateArgsOK(%v) = %v, want %v", args, !want, want)
+		}
+	}
+}
+
 func TestMateFromFlags(t *testing.T) {
 	existing := domain.Mate{Name: "reviewer", Prompt: "old", Agent: "claude", Model: "opus", Repos: []string{"api"}, Owner: "U012ABCDEF", Enabled: true}
 	cases := []struct {
