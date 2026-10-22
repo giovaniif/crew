@@ -319,6 +319,9 @@ func statusColor(t Theme, s domain.FileStatus) string {
 
 func treeName(file string, room int) [2]string {
 	dir, base := path.Split(file)
+	if ansi.StringWidth(base) > room {
+		return [2]string{"", ansi.Truncate(base, max(room, 1), "…")}
+	}
 	if dir == "" {
 		return [2]string{"", base}
 	}
