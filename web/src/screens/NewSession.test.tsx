@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { App, type AppEnv } from "../App";
@@ -248,6 +248,15 @@ describe("managing workspaces from the phone", () => {
     await userEvent.type(screen.getByRole("textbox", { name: "Folder on the server" }), "/home/me/nope");
     await userEvent.click(screen.getByRole("button", { name: "Add" }));
     expect(await screen.findByText("/home/me/nope is not a directory")).toBeInTheDocument();
+  });
+
+  it("shows the remove workspace confirm with a secondary Cancel and a danger Remove", async () => {
+    setup();
+    await waitFor(() => expect(screen.getByLabelText("Workspace")).toHaveValue("/home/me/api"));
+    await userEvent.click(screen.getByRole("button", { name: "Remove workspace" }));
+    const dialog = screen.getByRole("alertdialog");
+    expect(within(dialog).getByRole("button", { name: "Cancel" })).toHaveClass("secondary");
+    expect(within(dialog).getByRole("button", { name: "Remove /home/me/api" })).toHaveClass("danger");
   });
 
   it("removes the selected workspace only after a confirmation that no files change", async () => {
