@@ -127,4 +127,8 @@
   .state-empty .ui.btn {
     min-height: 44px;
   }
+
+  .state-empty kbd {
+    display: none;
+  }
 }
