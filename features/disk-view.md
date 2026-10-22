@@ -44,6 +44,12 @@ go run ./scripts/verify tui drive --restart --size 80x30 --out-dir /tmp/crew-ver
 go run ./scripts/verify tui drive --restart --size 60x20 --out-dir /tmp/crew-verify-map/disk --steps '[{"expect":"seeded change 2","timeout":8000},{"keys":"w"},{"expect":"WORKTREES & DISK","timeout":5000},{"expect":"SIZE","timeout":5000},{"expect":"KB","timeout":8000}]'
 ```
 
+### an 18-row terminal keeps the footer and the status line
+
+```sh
+go run ./scripts/verify tui drive --restart --size 100x18 --out-dir /tmp/crew-verify-map/disk --steps '[{"expect":"seeded change 2","timeout":8000},{"keys":"w"},{"expect":"WORKTREES & DISK","timeout":5000},{"expect":"seed-1-api","timeout":5000},{"expect":"w or esc closes","timeout":5000},{"keys":"k"},{"expect":"no dev servers in this worktree","timeout":5000}]'
+```
+
 ### disk view keys k, o and g (manual: they act on real worktree folders)
 
 ## Cleanup

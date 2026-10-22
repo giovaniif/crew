@@ -1552,6 +1552,7 @@ button.danger {
 }
 
 .mate-error,
+.automation-problem,
 .mate-held .mate-state,
 .mate-error .mate-state {
   color: var(--peach);
@@ -1875,15 +1876,18 @@ button.danger {
   margin: 12px 0;
 }
 
-.swatch {
-  width: 28px;
-  height: 28px;
+.swatches .swatch {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  flex: none;
   border-radius: 50%;
   border: 0;
   padding: 0;
 }
 
-.swatch.on {
+.swatches .swatch.on {
   box-shadow:
     0 0 0 2px var(--base),
     0 0 0 4px var(--text);
@@ -2560,6 +2564,7 @@ button.danger {
   background: var(--mantle);
   border-radius: 8px;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
   font-family: var(--mono);
   font-size: 14px;
 }

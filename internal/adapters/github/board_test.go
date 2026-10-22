@@ -41,6 +41,22 @@ func TestPRBoardParseBoardReadsEverythingTheBoardShows(t *testing.T) {
 	}
 }
 
+func TestPRBoardSkipsAPRFromAForkWithTheSameHeadName(t *testing.T) {
+	if !strings.Contains(boardFragment, "isCrossRepository") {
+		t.Errorf("the board query does not ask whether a PR comes from a fork")
+	}
+	out := `{"data":{"r0":{"pullRequests":{"nodes":[
+		{"number":2,"title":"fork","url":"u2","headRefName":"main","state":"OPEN","isCrossRepository":true},
+		{"number":1,"title":"own","url":"u1","headRefName":"main","state":"OPEN","isCrossRepository":false}]}}}}`
+	got, err := parseBoard([]byte(out), []string{"r0"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if prs := got["r0"]; len(prs) != 1 || prs[0].Number != 1 {
+		t.Errorf("got %+v, want only PR 1", prs)
+	}
+}
+
 func TestPRBoardParseBoardRejectsGarbageAndEmptyData(t *testing.T) {
 	for _, in := range []string{"not json", `{"errors":[{"message":"Bad credentials"}]}`, `{"data":null}`} {
 		if _, err := parseBoard([]byte(in), []string{"r0"}); err == nil {
