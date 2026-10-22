@@ -27,7 +27,7 @@ func runApproval(args []string, stdout, stderr io.Writer) int {
 }
 
 func approvalArgsOK(args []string) bool {
-	return len(args) == 1 && args[0] == "list" || len(args) == 2 && (args[0] == "approve" || args[0] == "deny")
+	return len(args) == 1 && args[0] == "list" || len(args) == 2 && (args[0] == "approve" || args[0] == "deny") && args[1] != "-h" && args[1] != "--help"
 }
 
 func approvalCommand(args []string, stdout io.Writer) error {

@@ -27,6 +27,9 @@ func runAutomation(args []string, stdout, stderr io.Writer) int {
 }
 
 func automationArgsOK(args []string) bool {
+	if len(args) > 1 && (args[1] == "-h" || args[1] == "--help") {
+		return false
+	}
 	switch args[0] {
 	case "list":
 		return len(args) == 1
