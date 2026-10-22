@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas" /><link rel="stylesheet" href="./crew.css" /><style>
+body{margin:0;background:#ecebe8}
+.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08)}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 8px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}
+.dv-notes{font:12px/1.55 system-ui,sans-serif;color:rgba(0,0,0,.6);max-width:900px;margin:0 0 22px}
+.dv-notes b{color:#1a1a1a}
+.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.55)}
+.dv-card{background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
+.dv-next{margin:22px 0 0;font:12px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.5)}
+.win{width:1200px;height:760px;display:flex;flex-direction:column}
+.titlebar{height:30px;flex:none;display:flex;align-items:center;gap:7px;padding:0 12px;background:var(--bg-side);border-bottom:1px solid var(--line)}
+.tl{width:11px;height:11px;border-radius:50%;background:#d9d9dc}
+.win .app{flex:1;min-height:0}
+.split{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 440px;min-height:0}
+.browser{border-left:1px solid var(--line);display:flex;flex-direction:column;background:var(--bg)}
+.urlbar{height:40px;display:flex;align-items:center;gap:6px;padding:0 8px;border-bottom:1px solid var(--line)}
+.url{flex:1;height:26px;border-radius:var(--r-pill);background:var(--bg-sunken);display:flex;align-items:center;padding:0 12px;font-size:var(--fs-sm);color:var(--ink-2)}
+.ph{flex:1;margin:10px;border-radius:8px;background:repeating-linear-gradient(135deg,#f6f6f7 0 10px,#efeff1 10px 20px);display:grid;place-items:center;font:11px var(--font-mono);color:var(--ink-3)}
+.agentnote{font-size:var(--fs-xs);color:var(--ink-3);padding:6px 12px;border-top:1px solid var(--line);display:flex;gap:6px;align-items:center}
+.drawer{height:190px;flex:none;border-top:1px solid var(--line);display:flex;flex-direction:column;background:#fbfbfb}
+.drawer-bar{height:30px;display:flex;align-items:center;gap:4px;padding:0 8px;border-bottom:1px solid var(--line);font-size:var(--fs-sm)}
+.term{flex:1;font:12px/1.6 var(--font-mono);padding:8px 14px;color:var(--ink)}
+.term .p{color:var(--accent)}
+.kit{width:760px;padding:24px;display:grid;grid-template-columns:1fr 1fr;gap:26px 32px}
+.kit h3{grid-column:1/-1;margin:0;font-size:var(--fs-xs);font-weight:600;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em}
+.kcell{display:flex;flex-direction:column;gap:10px}
+.krow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cap{font-size:var(--fs-xs);color:var(--ink-3)}
+</style></helmet>
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">crew desktop: denser shell, Grok-style composer, one-step start, custom controls</span></div>
+<p class="dv-notes"><b>System.</b> Base text 13px (was 16), controls 28px tall (was 48), sidebar 232px (was 288), radius 8. White, neutral ink, one blue accent; black primary actions. All tokens live in <b>crew.css</b>, which is the spec to implement. <b>Tabs.</b> Only Chat and Changes. Shell is a bottom drawer (<b>⌃`</b>). Browser slides in from the right when the agent or a link opens a page. nvim is an "Open in editor" action. The raw agent screen (old Terminal tab) moves to the ⋯ menu as "Show agent screen". <b>Composer.</b> Enter sends, Shift+Enter adds a new line. When the agent is busy, Enter queues the message and a small chip shows it.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="1a"><div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Session: chat</div>
+<div class="dv-card"><div class="win" data-screen-label="Session chat">
+<div class="titlebar"><span class="tl"></span><span class="tl"></span><span class="tl"></span></div>
+<div class="app">
+<aside class="side">
+<div class="side-head"><span class="brand">crew</span><button class="icon-btn" title="New session  ⌘N">+</button></div>
+<div class="side-scroll">
+<div class="side-label"><span>Needs you</span><span>1</span></div>
+<div class="row"><span class="dot ask"></span><span class="nm">Allow edit of go.mod</span><span class="meta">api</span></div>
+<div class="side-label"><span>Running</span><span>2</span></div>
+<div class="row on"><span class="dot run"></span><span class="nm">Fix the login redirect</span><span class="meta">web</span></div>
+<div class="row"><span class="dot run"></span><span class="nm">Add rate limit to /search</span><span class="meta">api</span></div>
+<div class="side-label"><span>Done</span><span>3</span></div>
+<div class="row"><span class="dot ok"></span><span class="nm">#42 Flaky checkout test</span><span class="meta">web</span></div>
+<div class="row"><span class="dot ok"></span><span class="nm">Bump chroma lexers</span><span class="meta">api</span></div>
+<div class="row"><span class="dot"></span><span class="nm">Docs: pairing recipe</span><span class="meta">docs</span></div>
+</div>
+<div class="side-foot">
+<div class="row"><span class="nm" style="color:var(--ink-2)">Automations</span></div>
+<div class="row"><span class="nm" style="color:var(--ink-2)">Settings</span><span class="meta">⌘,</span></div>
+</div>
+</aside>
+<div class="main">
+<div class="bar"><span class="title">Fix the login redirect</span><span class="sub">web · fix-login-redirect</span><span class="spacer"></span>
+<div class="tabs"><button class="tab on">Chat</button><button class="tab">Changes <span style="color:var(--ink-3)">+42 −7</span></button></div>
+<button class="icon-btn" title="Shell  ⌃`">›_</button><button class="icon-btn">⋯</button></div>
+<div class="chat"><div class="thread">
+<div class="msg-user">After login, users land on /home even when they came from a deep link. Keep the original path.</div>
+<div class="msg-agent"><p>The redirect drops the <code style="font-family:var(--font-mono);font-size:12px">next</code> param in the auth callback. I'll carry it through the session and validate it is same-origin.</p></div>
+<div class="tool"><span class="ok">✓</span>Read <code>src/auth/callback.ts</code></div>
+<div class="tool"><span class="ok">✓</span>Edited <code>src/auth/callback.ts</code><span style="color:var(--ok)">+18</span><span style="color:var(--danger)">−4</span></div>
+<div class="codeblock">const next = safeNext(params.get("next"), origin)
+return redirect(next ?? "/home")</div>
+<div class="tool"><span style="color:var(--accent)">●</span>Running <code>npm test auth</code></div>
+</div></div>
+<div class="dock">
+<div class="composer">
+<textarea rows="1" placeholder="Reply to the agent…"></textarea>
+<div class="composer-foot"><button class="chip ghost">＋</button><button class="chip">Claude · Opus <span class="chev">▾</span></button><button class="chip">effort high <span class="chev">▾</span></button><span class="spacer"></span><button class="send" disabled="disabled">↑</button></div>
+</div>
+<div class="hint"><kbd>Enter</kbd> send · <kbd>Shift</kbd>+<kbd>Enter</kbd> new line · the agent is busy, so a message waits in the queue</div>
+</div>
+</div>
+</div>
+</div></div></div>
+
+<div class="dv-opt" id="1b"><div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Same session: browser panel slid in, shell drawer open</div>
+<div class="dv-card"><div class="win" data-screen-label="Session with browser and shell">
+<div class="titlebar"><span class="tl"></span><span class="tl"></span><span class="tl"></span></div>
+<div class="app">
+<aside class="side">
+<div class="side-head"><span class="brand">crew</span><button class="icon-btn">+</button></div>
+<div class="side-scroll">
+<div class="side-label"><span>Running</span><span>2</span></div>
+<div class="row on"><span class="dot run"></span><span class="nm">Fix the login redirect</span><span class="meta">web</span></div>
+<div class="row"><span class="dot run"></span><span class="nm">Add rate limit to /search</span><span class="meta">api</span></div>
+</div>
+</aside>
+<div class="main">
+<div class="bar"><span class="title">Fix the login redirect</span><span class="spacer"></span><div class="tabs"><button class="tab on">Chat</button><button class="tab">Changes</button></div><button class="icon-btn" style="background:var(--bg-active);color:var(--ink)">›_</button><button class="icon-btn">⋯</button></div>
+<div class="split">
+<div style="display:flex;flex-direction:column;min-height:0">
+<div class="chat"><div class="thread" style="padding-bottom:20px">
+<div class="tool"><span style="color:var(--accent)">●</span>Browser: opened <code>localhost:5173/login?next=/billing</code></div>
+<div class="msg-agent"><p>Logging in with the test user to check the redirect…</p></div>
+</div></div>
+<div class="dock" style="padding-bottom:12px"><div class="composer"><textarea rows="1" placeholder="Reply to the agent…"></textarea><div class="composer-foot"><button class="chip ghost">＋</button><span class="spacer"></span><button class="send">↑</button></div></div></div>
+<div class="drawer"><div class="drawer-bar"><span style="font-weight:500">Shell</span><span style="color:var(--ink-3)">~/web/.crew/fix-login-redirect</span><span class="spacer"></span><button class="icon-btn">＋</button><button class="icon-btn">✕</button></div>
+<div class="term"><span class="p">$</span> git status --short<br/> M src/auth/callback.ts<br/>?? src/auth/safeNext.test.ts<br/><span class="p">$</span> ▍</div></div>
+</div>
+<div class="browser"><div class="urlbar"><button class="icon-btn">‹</button><div class="url">localhost:5173/billing</div><button class="icon-btn">↗</button><button class="icon-btn">✕</button></div>
+<div class="ph">page the agent is driving</div>
+<div class="agentnote"><span class="dot run"></span>Agent is controlling this page · click anywhere to take over</div></div>
+</div>
+</div>
+</div>
+</div></div></div>
+
+<div class="dv-opt" id="1c"><div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>New session: one composer, chips remember the last choice</div>
+<div class="dv-card"><div class="win" data-screen-label="New session">
+<div class="titlebar"><span class="tl"></span><span class="tl"></span><span class="tl"></span></div>
+<div class="app">
+<aside class="side"><div class="side-head"><span class="brand">crew</span><button class="icon-btn" style="background:var(--bg-active)">+</button></div>
+<div class="side-scroll"><div class="side-label"><span>Running</span><span>2</span></div>
+<div class="row"><span class="dot run"></span><span class="nm">Fix the login redirect</span><span class="meta">web</span></div>
+<div class="row"><span class="dot run"></span><span class="nm">Add rate limit to /search</span><span class="meta">api</span></div></div></aside>
+<div class="main">
+<div class="home">
+<h1>What should the agent do?</h1>
+<div class="composer">
+<textarea rows="2" placeholder="Describe the task, or paste a PR or issue URL">https://github.com/acme/web/issues/42</textarea>
+<div style="display:flex;align-items:center;gap:6px;font-size:var(--fs-sm);color:var(--ink-2);padding:2px 0 4px"><span class="dot ok"></span>Issue #42 · Flaky checkout test → new worktree <code style="font-family:var(--font-mono);font-size:11px;background:var(--bg-sunken);padding:1px 6px;border-radius:4px">42-flaky-checkout</code></div>
+<div class="composer-foot"><button class="chip">▣ web <span class="chev">▾</span></button><button class="chip">Claude · Opus <span class="chev">▾</span></button><button class="chip">effort high <span class="chev">▾</span></button><span class="spacer"></span><button class="send">↑</button></div>
+</div>
+<div class="hint"><kbd>Enter</kbd> start · project, agent and effort are remembered from your last session</div>
+</div>
+</div>
+</div>
+</div></div></div>
+
+<div class="dv-opt" id="1d"><div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>Controls kit: nothing native</div>
+<div class="dv-card"><div class="kit" data-screen-label="Controls kit">
+<h3>Buttons</h3>
+<div class="kcell" style="grid-column:1/-1"><div class="krow"><button class="btn primary">Start session</button><button class="btn">Open in editor</button><button class="btn quiet">Cancel</button><button class="btn danger">Remove worktree</button><button class="send">↑</button><button class="icon-btn">⋯</button></div></div>
+<h3>Select and menu</h3>
+<div class="kcell"><div class="field"><label>Project</label><button class="select"><span>▣ web</span><span class="chev">▾</span></button></div>
+<span class="cap">Closed: a button, never &lt;select&gt;. Opens the menu at right, anchored under it.</span></div>
+<div class="kcell"><div class="menu"><input class="search" placeholder="Find a project…" />
+<div class="menu-label">Recent</div>
+<div class="item hi"><span class="ck">✓</span>web<span class="k">~/code/web</span></div>
+<div class="item"><span class="ck"></span>api<span class="k">~/code/api</span></div>
+<div class="item"><span class="ck"></span>docs<span class="k">~/code/docs</span></div>
+<div class="menu-sep"></div>
+<div class="item"><span class="ck">＋</span>Add a project…</div></div></div>
+<h3>Inputs</h3>
+<div class="kcell"><div class="field"><label>Model</label><input class="input" value="opus" /></div><span class="cap">Suggestions open in the same menu, not a &lt;datalist&gt;.</span></div>
+<div class="kcell"><div class="field"><label>Effort</label><div class="seg"><button>low</button><button>medium</button><button class="on">high</button><button>max</button></div></div><span class="cap">A segmented control replaces a short &lt;select&gt; or radio group.</span></div>
+<h3>Toggles</h3>
+<div class="kcell"><div class="krow"><span class="switch on"></span>Notify when a session needs me</div><div class="krow"><span class="switch"></span>Keep worktree after merge</div></div>
+<div class="kcell"><div class="krow"><span class="check on">✓</span>Viewed</div><div class="krow"><span class="check"></span>Hide whitespace</div><div class="krow"><span class="radio on"></span>Claude<span class="radio" style="margin-left:12px"></span>Codex</div></div>
+<h3>Feedback</h3>
+<div class="kcell" style="grid-column:1/-1"><div class="krow"><span class="toast">The agent's pane closed.<button class="btn">Restart</button></span></div></div>
+</div></div></div>
+
+</div>
+<p class="dv-next">Try next: "make <a class="dv-oid" href="#1a">1a</a> denser still" · "show <a class="dv-oid" href="#1c">1c</a> with the project menu open" · "bubbles for agent messages too"</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas" /><link rel="stylesheet" href="./crew.css" /><link rel="stylesheet" href="./canvas.css" /><style>
+.auto{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 380px;min-height:0}
+.detail{border-left:1px solid var(--line);overflow:auto;padding:16px 18px}
+.kv{display:grid;grid-template-columns:96px minmax(0,1fr);gap:6px 10px;font-size:var(--fs-md)}
+.kv dt{color:var(--ink-3)}
+.kv dd{margin:0}
+.runs .li{min-height:34px}
+.filters{display:flex;gap:6px;align-items:center;margin-bottom:10px}
+.table tr.on td{background:var(--accent-soft)}
+.subtabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:10px}
+.subtabs button{height:30px;padding:0 10px;border:0;background:transparent;font:inherit;font-size:var(--fs-sm);color:var(--ink-2);border-bottom:2px solid transparent;cursor:pointer}
+.subtabs button.on{color:var(--ink);border-bottom-color:var(--ink);font-weight:500}
+</style></helmet>
+<section class="dv-turn" id="t4">
+<div class="dv-thd"><a class="dv-tid" href="#t4">4</a><span class="dv-tname">Automations and Disk</span></div>
+<p class="dv-notes"><b>Automations</b>: a table with custom filter chips; select a row to see details and run history in a side panel; Edit opens the form in the same panel. <b>Disk</b>: five quiet stat tiles, underline sub-tabs, dense tables with row actions on hover.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="4a"><div class="dv-olabel"><a class="dv-oid" href="#4a">4a</a>Automations</div>
+<div class="dv-card"><div class="win" data-screen-label="Automations">
+<div class="titlebar"><span class="tl"></span><span class="tl"></span><span class="tl"></span></div>
+<div class="app" style="grid-template-columns:200px minmax(0,1fr)">
+<aside class="side mini"><div class="side-head"><span class="brand">crew</span><button class="icon-btn">+</button></div><div class="side-scroll"><div class="side-label"><span>Running</span><span>1</span></div><div class="row"><span class="dot run"></span><span class="nm">Fix the login redirect</span></div></div><div class="side-foot"><div class="row"><span class="nm dim">Mates</span></div><div class="row"><span class="nm dim">Approvals</span></div><div class="row on"><span class="nm">Automations</span></div><div class="row"><span class="nm dim">Disk</span></div><div class="row"><span class="nm dim">Settings</span></div></div></aside>
+<div class="main">
+<div class="auto">
+<div class="page">
+<div class="page-head"><h2>Automations</h2><span class="sub">4</span><span class="spacer"></span><button class="btn primary">New automation</button></div>
+<div class="filters"><button class="chip">State: All <span class="chev">▾</span></button><button class="chip">Last run: Any <span class="chev">▾</span></button><button class="chip">Agent: All <span class="chev">▾</span></button><span class="spacer"></span><input class="input" style="width:180px" placeholder="Search" /></div>
+<table class="table">
+<tr><th>Name</th><th>Trigger</th><th>Agent</th><th>Last run</th><th></th></tr>
+<tr class="on"><td><b style="font-weight:500">Morning triage</b></td><td class="mono dim">cron 0 9 * * 1-5</td><td class="dim">Claude</td><td><span class="pill ok">succeeded</span> <span class="muted">2h ago</span></td><td><span class="switch on"></span></td></tr>
+<tr><td>Dependabot review</td><td class="mono dim">on pr.opened</td><td class="dim">Codex</td><td><span class="pill bad">failed</span> <span class="muted">yesterday</span></td><td><span class="switch on"></span></td></tr>
+<tr><td>Weekly flaky report</td><td class="mono dim">cron 0 17 * * 5</td><td class="dim">Claude</td><td><span class="pill">skipped</span> <span class="muted">5d ago</span></td><td><span class="switch on"></span></td></tr>
+<tr><td class="muted">Docs sync</td><td class="mono muted">cron 0 3 * * *</td><td class="muted">Claude</td><td><span class="muted">Never run</span></td><td><span class="switch"></span></td></tr>
+</table>
+</div>
+<div class="detail">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><b style="font-size:var(--fs-lg)">Morning triage</b><span class="spacer"></span><button class="btn" style="height:26px;font-size:12px">Run now</button><button class="btn" style="height:26px;font-size:12px">Edit</button></div>
+<div class="subtabs"><button class="on">Details</button><button>History</button></div>
+<dl class="kv"><dt>Trigger</dt><dd class="mono">cron 0 9 * * 1-5</dd><dt>Timezone</dt><dd>America/Sao_Paulo</dd><dt>Agent</dt><dd>Claude · opus · high</dd><dt>Target</dt><dd class="mono">api</dd><dt>Precheck</dt><dd class="mono">gh issue list --label triage</dd><dt>Session</dt><dd>new each run</dd></dl>
+<div class="section-title">PROMPT</div>
+<div class="mem" style="font-size:var(--fs-sm);background:var(--bg-sunken);border-radius:10px;padding:8px 10px;color:var(--ink-2)">Read the new issues labelled triage. Label each, link duplicates, and post a short summary.</div>
+<div class="section-title">RECENT RUNS</div>
+<div class="list runs"><div class="li"><span class="dot ok"></span><span class="grow">Today 09:00</span><span class="muted">4m 12s</span><a href="#">Open</a></div><div class="li"><span class="dot ok"></span><span class="grow">Yesterday 09:00</span><span class="muted">3m 40s</span><a href="#">Open</a></div><div class="li"><span class="dot ask"></span><span class="grow">Mon 09:00</span><span class="muted">precheck failed</span><a href="#">Open</a></div></div>
+</div>
+</div>
+</div>
+</div>
+</div></div></div>
+
+<div class="dv-opt" id="4b"><div class="dv-olabel"><a class="dv-oid" href="#4b">4b</a>Worktrees and disk</div>
+<div class="dv-card"><div class="win" data-screen-label="Disk">
+<div class="titlebar"><span class="tl"></span><span class="tl"></span><span class="tl"></span></div>
+<div class="app" style="grid-template-columns:200px minmax(0,1fr)">
+<aside class="side mini"><div class="side-head"><span class="brand">crew</span><button class="icon-btn">+</button></div><div class="side-scroll"></div><div class="side-foot"><div class="row"><span class="nm dim">Mates</span></div><div class="row"><span class="nm dim">Approvals</span></div><div class="row"><span class="nm dim">Automations</span></div><div class="row on"><span class="nm">Disk</span></div><div class="row"><span class="nm dim">Settings</span></div></div></aside>
+<div class="main"><div class="page">
+<div class="page-head"><h2>Worktrees and disk</h2><span class="spacer"></span><button class="btn">Clean up now</button></div>
+<div class="stats">
+<div class="card stat"><div class="k">Volume</div><div class="v">182 GB free</div><div style="display:flex;align-items:center;gap:6px;margin-top:6px"><div class="bar-fill"><i style="width:64%"></i></div><span class="s">64%</span></div></div>
+<div class="card stat"><div class="k">Worktrees</div><div class="v">12</div><div class="s">8.4 GB</div></div>
+<div class="card stat"><div class="k">Reclaimable</div><div class="v">3.1 GB</div><div class="s">5 worktrees</div></div>
+<div class="card stat"><div class="k">Shared deps store</div><div class="v">2.2 GB</div><div class="s">pnpm</div></div>
+<div class="card stat"><div class="k">Auto-cleanup</div><div class="v" style="font-size:var(--fs-md)">On · daily</div><div class="s">next at 03:00</div></div>
+</div>
+<div class="subtabs"><button class="on">Worktrees 12</button><button>Dev servers 3</button><button>Recently cleaned</button></div>
+<table class="table">
+<tr><th>Worktree</th><th>Session</th><th>State</th><th style="text-align:right">Size</th><th>Ports</th><th>Cleanup</th><th></th></tr>
+<tr><td class="mono">web/fix-login-redirect</td><td>Fix the login redirect</td><td><span class="pill blue">in use</span></td><td style="text-align:right">640 MB</td><td class="mono dim">5173</td><td class="muted">kept: process</td><td></td></tr>
+<tr><td class="mono">api/rate-limit-search</td><td>Add rate limit to /search</td><td><span class="pill blue">in use</span></td><td style="text-align:right">1.2 GB</td><td class="mono dim">8080</td><td class="muted">kept: process</td><td></td></tr>
+<tr><td class="mono">web/42-flaky-checkout</td><td class="dim">#42 Flaky checkout test</td><td><span class="pill ok">merged</span></td><td style="text-align:right">580 MB</td><td></td><td>tonight</td><td><button class="btn quiet" style="height:24px;font-size:12px">Remove…</button></td></tr>
+<tr><td class="mono">api/bump-chroma</td><td class="dim">Bump chroma lexers</td><td><span class="pill ok">merged</span></td><td style="text-align:right">910 MB</td><td></td><td>tonight</td><td><button class="btn quiet" style="height:24px;font-size:12px">Remove…</button></td></tr>
+<tr><td class="mono">docs/pairing-recipe</td><td class="muted">ended</td><td><span class="pill warn">dirty</span></td><td style="text-align:right">42 MB</td><td></td><td class="muted">backs up first</td><td><button class="btn quiet" style="height:24px;font-size:12px">Remove…</button></td></tr>
+</table>
+</div></div>
+</div>
+</div></div></div>
+
+</div>
+<p class="dv-next">Try next: "show the edit form in <a class="dv-oid" href="#4a">4a</a>" · "show the Dev servers tab of <a class="dv-oid" href="#4b">4b</a>"</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
