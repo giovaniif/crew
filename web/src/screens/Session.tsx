@@ -10,6 +10,7 @@ import { Connection, sessionTitle } from "./SessionList";
 import { SessionCommands } from "./SessionCommands";
 import type { KeyValue } from "../auth";
 import { legacyBrowserWord } from "../legacy";
+import { Checkbox } from "../ui";
 
 const stateLabels: Record<string, string> = {
   running: "working",
@@ -666,10 +667,7 @@ function MateTools({ api, session, mate, snapshot }: { api: Authed; session: Ses
           onCancel={() => setAsking(false)}
           onConfirm={() => void fresh()}
         >
-          <label className="mate-bar-keep">
-            <input type="checkbox" checked={keep} onChange={(e) => setKeep(e.target.checked)} />
-            Keep this worktree
-          </label>
+          <Checkbox className="mate-bar-keep" label="Keep this worktree" checked={keep} onChange={setKeep} />
         </Confirm>
       ) : null}
     </>

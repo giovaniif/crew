@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { KeyValue } from "./auth";
 import { attentionMenu, bannerStep, loadAlertPrefs, saveAlertPrefs, viewFor, type AlertPrefs, type EventAlert } from "./desktopAttention";
 import type { StreamClient, StreamSnapshot } from "./stream";
+import { Checkbox } from "./ui";
 
 export type DesktopBridge = {
   invoke: (cmd: string, args?: Record<string, unknown>) => Promise<unknown>;
@@ -123,40 +124,15 @@ export function DesktopAlerts({ storage }: { storage: KeyValue }) {
         <h2>Desktop notifications</h2>
         {events.map(({ key, label }) => (
           <p key={key}>
-            <label>
-              <input
-                type="checkbox"
-                checked={prefs[key].banner}
-                onChange={(e) => setAlert(key, { ...prefs[key], banner: e.target.checked })}
-              />{" "}
-              Banner when a session {label}
-            </label>{" "}
-            <label>
-              <input
-                type="checkbox"
-                aria-label={"Sound when a session " + label}
-                checked={prefs[key].sound}
-                onChange={(e) => setAlert(key, { ...prefs[key], sound: e.target.checked })}
-              />{" "}
-              Sound
-            </label>
+            <Checkbox label={"Banner when a session " + label} checked={prefs[key].banner} onChange={(banner) => setAlert(key, { ...prefs[key], banner })} />{" "}
+            <Checkbox label="Sound" ariaLabel={"Sound when a session " + label} checked={prefs[key].sound} onChange={(sound) => setAlert(key, { ...prefs[key], sound })} />
           </p>
         ))}
         <p>
-          <label>
-            <input
-              type="checkbox"
-              checked={prefs.skipSessionInView}
-              onChange={(e) => change({ ...prefs, skipSessionInView: e.target.checked })}
-            />{" "}
-            No banner for the session on screen
-          </label>
+          <Checkbox label="No banner for the session on screen" checked={prefs.skipSessionInView} onChange={(skipSessionInView) => change({ ...prefs, skipSessionInView })} />
         </p>
         <p>
-          <label>
-            <input type="checkbox" checked={prefs.notifyMuted} onChange={(e) => change({ ...prefs, notifyMuted: e.target.checked })} />{" "}
-            Banners for muted sessions
-          </label>
+          <Checkbox label="Banners for muted sessions" checked={prefs.notifyMuted} onChange={(notifyMuted) => change({ ...prefs, notifyMuted })} />
         </p>
       </section>
     </main>

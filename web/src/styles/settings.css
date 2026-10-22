@@ -72,10 +72,6 @@
   color: var(--subtext);
 }
 
-.check {
-  display: flex;
-}
-
 .server-list {
   display: flex;
   flex-direction: column;

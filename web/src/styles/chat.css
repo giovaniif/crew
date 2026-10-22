@@ -589,20 +589,7 @@ button.danger {
   border-left: 4px solid var(--red);
 }
 
-.check {
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-  min-height: 44px;
-}
-
 .rerun {
   min-height: 44px;
   padding: 6px 12px;
-}
-
-.check input {
-  width: 20px;
-  height: 20px;
-  margin: 0;
 }

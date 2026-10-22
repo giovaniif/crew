@@ -9,10 +9,17 @@ body {
   background: var(--base);
   color: var(--text);
   font-family: var(--sans);
-  font-size: 16px;
-  line-height: 1.5;
+  font-size: var(--fs-md);
+  line-height: var(--lh);
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
+}
+
+@media (pointer: coarse) {
+  html,
+  body {
+    font-size: 16px;
+  }
 }
 
 #root {

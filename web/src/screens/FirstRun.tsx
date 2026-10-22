@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { backStep, flowSteps, nextStep, primaryTitle, sshTarget, stepTitle, type Servers, type Step, type Where } from "../servers";
+import { RadioGroup, Suggest } from "../ui";
 
 type SetupState = { state: "idle" } | { state: "busy" } | { state: "done"; id: string } | { state: "failed"; message: string };
 
@@ -120,15 +121,14 @@ export function FirstRun({ servers, welcome, onClose }: FirstRunProps) {
         {step === "location" ? (
           <fieldset className="choices">
             <legend>Where do agents run?</legend>
-            {choices.map((c) => (
-              <label key={c.where} className="where-choice">
-                <input type="radio" name="where" checked={where === c.where} onChange={() => choose(c.where)} />
-                <span>
-                  <span className="where-title">{c.title}</span>
-                  <span className="muted">{c.detail}</span>
-                </span>
-              </label>
-            ))}
+            <RadioGroup
+              label="Where do agents run?"
+              className="where-choices"
+              itemClassName="where-choice"
+              value={where}
+              onChange={choose}
+              options={choices.map((c) => ({ value: c.where, label: <span className="where-title">{c.title}</span>, detail: <span className="muted">{c.detail}</span> }))}
+            />
           </fieldset>
         ) : null}
         {step === "host" && where === "url" ? (
@@ -150,15 +150,8 @@ export function FirstRun({ servers, welcome, onClose }: FirstRunProps) {
           <div className="fields">
             <label>
               SSH host
-              <input type="text" list="ssh-hosts" autoCapitalize="off" spellCheck={false} placeholder="user@host" value={host} onChange={(e) => setHost(e.target.value)} />
+              <Suggest label="SSH host" suggestions={hosts} autoCapitalize="off" spellCheck={false} placeholder="user@host" value={host} onChange={setHost} />
             </label>
-            <datalist id="ssh-hosts">
-              {hosts.map((h) => (
-                <option key={h} value={h}>
-                  {h}
-                </option>
-              ))}
-            </datalist>
             {hostBad ? (
               <p className="error" role="alert">
                 Type a host name or user@host. Options and spaces are not allowed.
