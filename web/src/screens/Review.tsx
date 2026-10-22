@@ -24,6 +24,7 @@ import {
   type ReviewWorktree,
   type Scope,
 } from "../review";
+import { Checkbox, Segmented, Select } from "../ui";
 
 type Layout = "unified" | "split";
 
@@ -183,10 +184,7 @@ function DiffView(p: DiffProps) {
     <section className="review-diff" aria-label={file.Path}>
       <header className="diff-file-head">
         <span className="diff-path">{file.OldPath && file.OldPath !== file.Path ? file.OldPath + " → " + file.Path : file.Path}</span>
-        <label className="viewed-toggle">
-          <input type="checkbox" checked={p.viewed} onChange={(e) => p.onViewed(e.target.checked)} />
-          Viewed
-        </label>
+        <Checkbox className="viewed-toggle" label="Viewed" checked={p.viewed} onChange={p.onViewed} />
       </header>
       {file.Binary ? <p className="muted diff-note">Binary file</p> : null}
       {!file.Binary && file.Hunks.length === 0 ? <p className="muted diff-note">No text changes</p> : null}
@@ -395,34 +393,19 @@ export function ReviewPane({ session, sessionState, api, initial }: ReviewPanePr
   return (
     <div className="review-pane">
       <div className="review-bar">
-        <div className="segmented" role="radiogroup" aria-label="Scope">
-          {reviewScopes.map((s) => (
-            <label key={s.id} className={scope === s.id ? "on" : undefined}>
-              <input type="radio" name={"scope-" + session} checked={scope === s.id} onChange={() => choose(s.id, worktree)} />
-              {s.title}
-            </label>
-          ))}
-        </div>
-        <label className="review-worktree">
-          <span className="visually-hidden">Worktree</span>
-          <select aria-label="Worktree" value={worktree} onChange={(e) => choose(scope, e.target.value)}>
-            {(review ? worktreeMenu(review) : [{ id: "", title: "All" }]).map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.title}
-              </option>
-            ))}
-          </select>
-        </label>
+        <Segmented label="Scope" value={scope} onChange={(s) => choose(s, worktree)} options={reviewScopes.map((s) => ({ value: s.id, label: s.title }))} />
+        <Select className="review-worktree" label="Worktree" value={worktree} onChange={(w) => choose(scope, w)} options={(review ? worktreeMenu(review) : [{ id: "", title: "All" }]).map((c) => ({ value: c.id, label: c.title }))} />
         <span className="muted">{fileCount === 1 ? "1 file" : fileCount + " files"}</span>
         <span className="spacer" />
-        <div className="segmented" role="radiogroup" aria-label="Layout">
-          {(["unified", "split"] as Layout[]).map((l) => (
-            <label key={l} className={layout === l ? "on" : undefined}>
-              <input type="radio" name={"layout-" + session} checked={layout === l} onChange={() => setLayout(l)} />
-              {l === "unified" ? "Unified" : "Split"}
-            </label>
-          ))}
-        </div>
+        <Segmented<Layout>
+          label="Layout"
+          value={layout}
+          onChange={setLayout}
+          options={[
+            { value: "unified", label: "Unified" },
+            { value: "split", label: "Split" },
+          ]}
+        />
         <button type="button" onClick={() => void load(scope, worktree)}>
           Reload
         </button>
@@ -445,7 +428,7 @@ export function ReviewPane({ session, sessionState, api, initial }: ReviewPanePr
                     const current = selected?.worktree.ID === f.worktree && selected.file.Path === f.path;
                     return (
                       <li key={f.path} className={current ? "current" : undefined}>
-                        <input type="checkbox" aria-label={"Viewed " + f.path} checked={f.viewed} onChange={(e) => setViewed(f.worktree, f.path, f.blob, e.target.checked)} />
+                        <Checkbox label="" ariaLabel={"Viewed " + f.path} checked={f.viewed} onChange={(v) => setViewed(f.worktree, f.path, f.blob, v)} />
                         <button type="button" aria-current={current ? "true" : undefined} onClick={() => setKey({ worktree: f.worktree, path: f.path })}>
                           <span className={"file-status status-" + f.status}>{f.status}</span>
                           <span className="file-path">{f.path}</span>

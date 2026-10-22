@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { loadSettings } from "../settings";
 import { desktop } from "../test/desktop";
 import type { FakeServer } from "../test/fake-server";
+import { pick } from "../test/pick";
 
 afterEach(() => {
   window.location.hash = "";
@@ -98,7 +99,7 @@ describe("the app settings", () => {
 
   it("keeps Appearance in the app store and clamps the font size", async () => {
     const { storage } = await open("This app", "Appearance");
-    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Theme" }), "Mocha");
+    await pick(userEvent.setup(), screen.getByRole("combobox", { name: "Theme" }), "Mocha");
     const size = screen.getByRole("spinbutton", { name: "Terminal font size" });
     await userEvent.clear(size);
     await userEvent.type(size, "40");
@@ -132,8 +133,8 @@ describe("the server settings", () => {
   it("saves the agent defaults and the fallback threshold in config.toml", async () => {
     const { server } = await open("Server", "Agents");
     const claude = await screen.findByRole("group", { name: "Claude Code" });
-    expect(within(claude).getByRole("combobox", { name: "Default model" })).toHaveValue("opus");
-    await userEvent.selectOptions(within(claude).getByRole("combobox", { name: "Default effort" }), "high");
+    expect(within(claude).getByRole("combobox", { name: "Default model" })).toHaveTextContent("opus");
+    await pick(userEvent.setup(), within(claude).getByRole("combobox", { name: "Default effort" }), "high");
     const threshold = screen.getByRole("spinbutton", { name: "Fallback threshold (%)" });
     await userEvent.clear(threshold);
     await userEvent.type(threshold, "90");

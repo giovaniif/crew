@@ -3,7 +3,12 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "theme.css"), "utf8");
+const here = dirname(fileURLToPath(import.meta.url));
+const styles = readFileSync(join(here, "styles", "index.css"), "utf8")
+  .split("\n")
+  .map((line) => line.match(/@import "\.\/(.+)";/)?.[1])
+  .filter((name): name is string => name !== undefined);
+const css = [readFileSync(join(here, "theme.css"), "utf8"), ...styles.map((name) => readFileSync(join(here, "styles", name), "utf8"))].join("\n");
 
 function tokens(): Record<string, string> {
   const root = css.match(/:root\s*{([^}]*)}/)?.[1] ?? "";
@@ -175,10 +180,10 @@ describe("the stylesheet", () => {
     expect(unclosed).toEqual([]);
   });
 
-  it("gives the selected automation detail tab the accent and the form checkbox a 20px box", () => {
+  it("gives the selected automation detail tab the accent and the kit checkbox a 14px box", () => {
     expect(rule('.detail-tabs button[aria-selected="true"]').background).toBe("var(--blue)");
     expect(rule(".detail-tabs button").background).toBe("var(--mantle)");
-    expect(rule(".check input").width).toBe("20px");
+    expect(rule(".ui .check").width).toBe("14px");
   });
 });
 

@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { addWorkspace, expandPath, listWorkspaces, removeWorkspace, resolveWorkItem, sessionOptions, startSession, type HarnessOptions, type WorkItemResolved, type WorkspaceList } from "../api";
 import type { AppEnv } from "../App";
 import { defaultLabel, effortChoices, harnesses, loadChoices, modelChoices, saveChoices } from "../newsession";
+import { Segmented, Select, Suggest } from "../ui";
 
 type Resolution = { state: "idle" } | { state: "checking" } | { state: "ok"; item: WorkItemResolved } | { state: "bad"; message: string };
 
@@ -227,16 +228,10 @@ export function NewSession({ env, token }: { env: AppEnv; token: string }) {
         </div>
       ) : null}
       <form onSubmit={submit}>
-        <label>
+        <div className="ui-field">
           Workspace
-          <select value={workspace} onChange={(e) => setWorkspace(e.target.value)} disabled={roots.length === 0}>
-            {roots.map((w) => (
-              <option key={w.Root} value={w.Root}>
-                {baseName(w.Root) + " · " + w.Root}
-              </option>
-            ))}
-          </select>
-        </label>
+          <Select label="Workspace" value={workspace} onChange={setWorkspace} disabled={roots.length === 0} search={roots.length > 8 ? "Find a workspace…" : undefined} options={roots.map((w) => ({ value: w.Root, label: baseName(w.Root) + " · " + w.Root }))} />
+        </div>
         <label>
           Task (optional)
           <input
@@ -276,41 +271,25 @@ export function NewSession({ env, token }: { env: AppEnv; token: string }) {
         </label>
         <fieldset className="harness">
           <legend>Agent</legend>
-          {harnesses.map((h) => (
-            <label key={h.id} className="choice">
-              <input type="radio" name="harness" value={h.id} checked={harness === h.id} onChange={() => chooseHarness(h.id)} />
-              {h.label}
-            </label>
-          ))}
+          <Segmented label="Agent" value={harness} onChange={chooseHarness} options={harnesses.map((h) => ({ value: h.id, label: h.label }))} />
         </fieldset>
-        <label>
+        <div className="ui-field">
           Model
-          <input
+          <Suggest
+            label="Model"
             value={model}
-            onChange={(e) => setModel(e.target.value)}
-            list="model-choices"
+            onChange={setModel}
+            suggestions={modelChoices[harness] ?? []}
             placeholder={defaultLabel(harnessDefault?.default_model)}
             autoCapitalize="none"
             autoCorrect="off"
             spellCheck={false}
           />
-          <datalist id="model-choices">
-            {(modelChoices[harness] ?? []).map((m) => (
-              <option key={m} value={m} />
-            ))}
-          </datalist>
-        </label>
-        <label>
+        </div>
+        <div className="ui-field">
           Effort
-          <select value={effort} onChange={(e) => setEffort(e.target.value)}>
-            <option value="">{defaultLabel(harnessDefault?.default_effort)}</option>
-            {effortChoices.map((e) => (
-              <option key={e} value={e}>
-                {e}
-              </option>
-            ))}
-          </select>
-        </label>
+          <Segmented label="Effort" value={effort} onChange={setEffort} options={[{ value: "", label: defaultLabel(harnessDefault?.default_effort) }, ...effortChoices.map((e) => ({ value: e, label: e }))]} />
+        </div>
         {failure ? (
           <div className="error" role="alert">
             <pre>{failure}</pre>

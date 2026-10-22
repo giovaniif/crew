@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas" /><link rel="stylesheet" href="./crew.css" /><link rel="stylesheet" href="./canvas.css" /><style>
+.set{flex:1;display:grid;grid-template-columns:200px minmax(0,1fr);min-height:0}
+.snav{background:var(--bg-side);border-right:1px solid var(--line);padding:12px 6px}
+.snav .row{height:28px}
+.sbody{overflow:auto;padding:22px 32px}
+.sbody h2{margin:0 0 14px;font-size:var(--fs-lg);font-weight:600}
+.group{max-width:620px;border:1px solid var(--line);border-radius:12px;margin-bottom:18px}
+.opt{display:flex;align-items:center;gap:12px;min-height:44px;padding:8px 14px;border-bottom:1px solid var(--line)}
+.opt:last-child{border-bottom:0}
+.opt .l{flex:1;min-width:0}
+.opt .t{font-weight:500}
+.opt .s{font-size:var(--fs-sm);color:var(--ink-3)}
+.gtitle{max-width:620px;font-size:var(--fs-xs);font-weight:600;color:var(--ink-3);margin:0 0 6px;letter-spacing:.02em}
+.stepper{display:inline-flex;align-items:center;border:1px solid var(--line-2);border-radius:8px;height:26px}
+.stepper button{width:26px;height:24px;border:0;background:transparent;color:var(--ink-2);cursor:pointer;font-size:14px}
+.stepper span{min-width:28px;text-align:center;font-size:var(--fs-md)}
+.swatch{width:18px;height:18px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.1)}
+.swatch.on{box-shadow:0 0 0 2px #fff,0 0 0 3.5px var(--ink)}
+</style></helmet>
+<section class="dv-turn" id="t5">
+<div class="dv-thd"><a class="dv-tid" href="#t5">5</a><span class="dv-tname">Settings and Servers</span></div>
+<p class="dv-notes"><b>One Settings</b> with one menu: the old "This app" and "Server" lists merge, so Notifications and Appearance appear once. Server-side rows carry a small <b>server</b> tag. Only rows that apply to the platform show: no iPhone Home Screen note and no "this browser" text in the Mac app, and no Sign out for the local server. Rows are label at left, control at right (switch, stepper, segmented, custom select). Nothing native.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="5a"><div class="dv-olabel"><a class="dv-oid" href="#5a">5a</a>Settings: General</div>
+<div class="dv-card"><div class="win" data-screen-label="Settings General">
+<div class="titlebar"><span class="tl"></span><span class="tl"></span><span class="tl"></span></div>
+<div class="set">
+<nav class="snav">
+<div class="row" style="color:var(--ink-3)"><span class="nm">‹ Back</span><span class="meta">Esc</span></div>
+<div style="height:8px"></div>
+<div class="row on"><span class="nm">General</span></div>
+<div class="row"><span class="nm">Notifications</span></div>
+<div class="row"><span class="nm">Appearance</span></div>
+<div class="row"><span class="nm">Shortcuts</span></div>
+<div class="row"><span class="nm">Workspaces</span></div>
+<div class="row"><span class="nm">Agents</span></div>
+<div class="row"><span class="nm">Devices</span></div>
+<div class="row"><span class="nm">Servers</span></div>
+</nav>
+<div class="sbody">
+<h2>General</h2>
+<div class="gtitle">SIDEBAR</div>
+<div class="group">
+<div class="opt"><div class="l"><div class="t">Ended sessions shown</div><div class="s">The most recent ones, under Ended</div></div><div class="stepper"><button>−</button><span>10</span><button>+</button></div></div>
+<div class="opt"><div class="l"><div class="t">Show worktrees</div></div><span class="switch on"></span></div>
+<div class="opt"><div class="l"><div class="t">Show subagents</div><div class="s">Nested under the session that started them</div></div><span class="switch"></span></div>
+</div>
+<div class="gtitle">SESSIONS</div>
+<div class="group">
+<div class="opt"><div class="l"><div class="t">Ask before I end a session</div></div><span class="switch on"></span></div>
+<div class="opt"><div class="l"><div class="t">Default agent</div><div class="s">Used by the New session chips</div></div><button class="select" style="min-width:150px"><span>Claude · opus</span><span class="chev">▾</span></button></div>
+<div class="opt"><div class="l"><div class="t">Default effort</div></div><div class="seg"><button>low</button><button>medium</button><button class="on">high</button><button>max</button></div></div>
+</div>
+</div>
+</div>
+</div></div></div>
+
+<div class="dv-opt" id="5b"><div class="dv-olabel"><a class="dv-oid" href="#5b">5b</a>Settings: Notifications (Mac app)</div>
+<div class="dv-card"><div class="win" data-screen-label="Settings Notifications">
+<div class="titlebar"><span class="tl"></span><span class="tl"></span><span class="tl"></span></div>
+<div class="set">
+<nav class="snav">
+<div class="row" style="color:var(--ink-3)"><span class="nm">‹ Back</span><span class="meta">Esc</span></div><div style="height:8px"></div>
+<div class="row"><span class="nm">General</span></div><div class="row on"><span class="nm">Notifications</span></div><div class="row"><span class="nm">Appearance</span></div><div class="row"><span class="nm">Shortcuts</span></div><div class="row"><span class="nm">Workspaces</span></div><div class="row"><span class="nm">Agents</span></div><div class="row"><span class="nm">Devices</span></div><div class="row"><span class="nm">Servers</span></div>
+</nav>
+<div class="sbody">
+<h2>Notifications</h2>
+<div class="group"><div class="opt"><span class="dot ok"></span><div class="l"><div class="t">Notifications are on for this Mac</div><div class="s">Change them in System Settings › Notifications › crew</div></div><button class="btn" style="height:26px;font-size:12px">Send a test</button></div></div>
+<div class="gtitle">NOTIFY ME WHEN A SESSION</div>
+<div class="group">
+<div class="opt"><div class="l"><div class="t">Needs permission</div></div><span class="switch on"></span></div>
+<div class="opt"><div class="l"><div class="t">Waits for an answer</div></div><span class="switch on"></span></div>
+<div class="opt"><div class="l"><div class="t">Finishes</div></div><span class="switch on"></span></div>
+<div class="opt"><div class="l"><div class="t">Hits a limit or an error</div></div><span class="switch"></span></div>
+</div>
+<div class="gtitle">OPTIONS</div>
+<div class="group">
+<div class="opt"><div class="l"><div class="t">Play a sound</div></div><span class="switch on"></span></div>
+<div class="opt"><div class="l"><div class="t">Skip the session that is on screen</div></div><span class="switch on"></span></div>
+<div class="opt"><div class="l"><div class="t">Also notify for muted sessions</div></div><span class="switch"></span></div>
+<div class="opt"><div class="l"><div class="t">Push to my phone after I'm away for <span class="pill">server</span></div></div><button class="select" style="min-width:90px"><span>2 min</span><span class="chev">▾</span></button></div>
+</div>
+</div>
+</div>
+</div></div></div>
+
+<div class="dv-opt" id="5c"><div class="dv-olabel"><a class="dv-oid" href="#5c">5c</a>Settings: Appearance</div>
+<div class="dv-card"><div class="win short" data-screen-label="Settings Appearance" style="width:900px">
+<div class="titlebar"><span class="tl"></span><span class="tl"></span><span class="tl"></span></div>
+<div class="set">
+<nav class="snav"><div class="row"><span class="nm">General</span></div><div class="row"><span class="nm">Notifications</span></div><div class="row on"><span class="nm">Appearance</span></div><div class="row"><span class="nm">Shortcuts</span></div></nav>
+<div class="sbody">
+<h2>Appearance</h2>
+<div class="group">
+<div class="opt"><div class="l"><div class="t">Theme</div></div><div class="seg"><button class="on">System</button><button>Light</button><button>Dark</button></div></div>
+<div class="opt"><div class="l"><div class="t">Accent</div></div><div style="display:flex;gap:8px"><span class="swatch on" style="background:oklch(0.55 0.15 255)"></span><span class="swatch" style="background:oklch(0.55 0.15 150)"></span><span class="swatch" style="background:oklch(0.55 0.15 300)"></span><span class="swatch" style="background:oklch(0.55 0.15 30)"></span><span class="swatch" style="background:#1c1c1f"></span></div></div>
+<div class="opt"><div class="l"><div class="t">Density</div></div><div class="seg"><button>Comfortable</button><button class="on">Compact</button></div></div>
+<div class="opt"><div class="l"><div class="t">Diff layout</div></div><div class="seg"><button class="on">Unified</button><button>Split</button></div></div>
+<div class="opt"><div class="l"><div class="t">Terminal font size</div></div><div class="stepper"><button>−</button><span>13</span><button>+</button></div></div>
+<div class="opt"><div class="l"><div class="t">Cursor</div></div><div class="seg"><button class="on">Block</button><button>Underline</button><button>Bar</button></div><span class="switch on" title="Blink"></span></div>
+</div>
+</div>
+</div>
+</div></div></div>
+
+<div class="dv-opt" id="5d"><div class="dv-olabel"><a class="dv-oid" href="#5d">5d</a>Settings: Workspaces, Servers, Devices</div>
+<div class="dv-card"><div class="win short" data-screen-label="Settings Workspaces" style="width:900px">
+<div class="titlebar"><span class="tl"></span><span class="tl"></span><span class="tl"></span></div>
+<div class="set">
+<nav class="snav"><div class="row on"><span class="nm">Workspaces</span></div><div class="row"><span class="nm">Agents</span></div><div class="row"><span class="nm">Devices</span></div><div class="row"><span class="nm">Servers</span></div></nav>
+<div class="sbody">
+<h2 style="display:flex;align-items:center">Workspaces<span class="spacer"></span><button class="btn primary" style="height:26px;font-size:12px">Add a folder…</button></h2>
+<div class="group">
+<div class="opt"><span class="mono" style="flex:1">~/code/web</span><span class="muted">git repo</span><button class="icon-btn">⋯</button></div>
+<div class="opt"><span class="mono" style="flex:1">~/code/api</span><span class="muted">git repo</span><button class="icon-btn">⋯</button></div>
+<div class="opt"><span class="mono" style="flex:1">~/code/services</span><span class="muted">4 repos</span><button class="icon-btn">⋯</button></div>
+</div>
+<div class="gtitle">SERVERS</div>
+<div class="group">
+<div class="opt"><span class="dot ok"></span><div class="l"><div class="t">This Mac <span class="pill blue">current</span></div><div class="s">crew 0.1.0-beta.4 · started by the app</div></div><button class="btn" style="height:26px;font-size:12px">Fix</button></div>
+<div class="opt"><span class="dot ok"></span><div class="l"><div class="t">host.tail914724.ts.net</div><div class="s">paired · crew 0.1.0-beta.4</div></div><button class="btn" style="height:26px;font-size:12px">Open</button><button class="icon-btn">⋯</button></div>
+</div>
+</div>
+</div>
+</div></div></div>
+
+</div>
+<p class="dv-next">Try next: "Settings as a sheet over the app instead of a full screen" · "show Agents and the hooks status"</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
