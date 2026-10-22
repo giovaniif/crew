@@ -1,9 +1,10 @@
-use std::ffi::OsString;
+use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::net::TcpListener;
 use std::path::{Path, PathBuf};
+use std::time::{Duration, Instant};
 
-use crew_desktop::local::{crew_name, find_crew, free_port, serve_args};
+use crew_desktop::local::{crew_name, find_crew, free_port, login_path, serve_args, serve_path};
 
 fn temp_dir(name: &str) -> PathBuf {
     let dir = std::env::temp_dir().join(format!("crew-desktop-{}-{}", name, std::process::id()));
@@ -79,4 +80,58 @@ fn serve_listens_on_loopback_with_the_same_public_url() {
             "http://127.0.0.1:51234"
         ]
     );
+}
+
+fn dirs_of(path: &OsString) -> Vec<PathBuf> {
+    std::env::split_paths(path).collect()
+}
+
+#[test]
+fn serve_path_adds_the_homebrew_and_local_dirs_to_a_minimal_gui_path() {
+    let path = serve_path(Some(OsStr::new("/usr/bin:/bin")), None, Some(Path::new("/Users/u")));
+    let dirs = dirs_of(&path);
+    for want in ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin", "/Users/u/.local/bin"] {
+        assert!(dirs.contains(&PathBuf::from(want)), "{want} not in {dirs:?}");
+    }
+}
+
+#[test]
+fn serve_path_puts_the_login_shell_path_first_and_keeps_each_dir_once() {
+    let path = serve_path(
+        Some(OsStr::new("/usr/bin:/bin")),
+        Some("/opt/homebrew/bin:/usr/bin".to_string()),
+        None,
+    );
+    let dirs = dirs_of(&path);
+    assert_eq!(dirs[0], PathBuf::from("/opt/homebrew/bin"));
+    assert_eq!(dirs.iter().filter(|d| d.as_path() == Path::new("/usr/bin")).count(), 1);
+    assert_eq!(dirs.iter().filter(|d| d.as_path() == Path::new("/opt/homebrew/bin")).count(), 1);
+}
+
+#[cfg(unix)]
+fn fake_shell(name: &str, script: &str) -> PathBuf {
+    use std::os::unix::fs::PermissionsExt;
+    let shell = temp_dir(name).join("fake-shell");
+    fs::write(&shell, script).unwrap();
+    fs::set_permissions(&shell, fs::Permissions::from_mode(0o755)).unwrap();
+    shell
+}
+
+#[cfg(unix)]
+#[test]
+fn login_path_reads_the_path_that_the_shell_prints() {
+    let shell = fake_shell("login-shell", "#!/bin/sh\nprintf %s /opt/homebrew/bin:/usr/bin\n");
+    assert_eq!(
+        login_path(&shell, Duration::from_secs(5)).as_deref(),
+        Some("/opt/homebrew/bin:/usr/bin")
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn login_path_gives_up_on_a_shell_that_hangs() {
+    let shell = fake_shell("login-hang", "#!/bin/sh\nexec sleep 30\n");
+    let start = Instant::now();
+    assert_eq!(login_path(&shell, Duration::from_millis(300)), None);
+    assert!(start.elapsed() < Duration::from_secs(5));
 }
