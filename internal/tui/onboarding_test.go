@@ -340,3 +340,12 @@ func TestSetupNvimStepKeepsTheSnippetInsideTheWidth(t *testing.T) {
 		mustShow(t, strings.Join(strings.Fields(out), ""), strings.ReplaceAll(long, " ", ""))
 	}
 }
+
+func TestSetupNvimStepShowsTheWholeMissingPluginPath(t *testing.T) {
+	long := "/tmp/crew-iso-3487862116/home/.local/share/crew/nvim"
+	o := freshMachine()
+	o.Nvim = domain.NvimSetup{OnPath: true, PluginDir: long, ConfigFile: "/c/init.lua"}
+	m, _ := setupModel(t, o)
+	m = pressCmd(pressCmd(m, keySpace), keyEnter)
+	mustShow(t, strings.ReplaceAll(strings.Join(strings.Fields(screen(m)), ""), "▌", ""), "Thepluginfilesarenotat"+long+".")
+}
