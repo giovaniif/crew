@@ -156,7 +156,7 @@ func (m Model) harnessLines() []string {
 		out = append(out, m.para(piece{s.peach, " ▌ "}, s.text, setup.Err)...)
 		return append(out, m.para(piece{s.peach, " ▌ "}, s.sub, "Fix or move the file, then open this again with S.")...)
 	}
-	out = append(out, m.line(false, []piece{bar, {s.sub, "Changes "}, {s.bold, setup.File}}, nil))
+	out = append(out, m.field(bar, "Changes ", s.bold, setup.File)...)
 	out = append(out, m.para(bar, s.text, text.change)...)
 	backup := setup.Backup
 	switch {
@@ -165,7 +165,7 @@ func (m Model) harnessLines() []string {
 	case backup == "":
 		backup = "none needed: the file does not exist yet"
 	}
-	out = append(out, m.line(false, []piece{bar, {s.sub, "Backup  "}, {s.text, backup}}, nil))
+	out = append(out, m.field(bar, "Backup  ", s.text, backup)...)
 	out = append(out, m.line(false, []piece{bar, {s.sub, "Undo    "}, {s.text, text.undo}}, nil))
 	if h == domain.HarnessCodex {
 		trust := piece{s.peach, " ▌ "}
@@ -260,6 +260,19 @@ func (m Model) para(bar piece, st lipgloss.Style, text string) []string {
 	var out []string
 	for _, l := range strings.Split(ansi.Wrap(text, room, ""), "\n") {
 		out = append(out, m.line(false, []piece{bar, {st, l}}, nil))
+	}
+	return out
+}
+
+func (m Model) field(bar piece, label string, st lipgloss.Style, value string) []string {
+	room := max(m.width-ansi.StringWidth(bar.s)-ansi.StringWidth(label)-1, 10)
+	var out []string
+	for i, l := range strings.Split(ansi.Wrap(value, room, ""), "\n") {
+		lead := label
+		if i > 0 {
+			lead = strings.Repeat(" ", ansi.StringWidth(label))
+		}
+		out = append(out, m.line(false, []piece{bar, {m.styles.sub, lead}, {st, l}}, nil))
 	}
 	return out
 }
