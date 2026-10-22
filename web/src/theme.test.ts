@@ -180,10 +180,10 @@ describe("the stylesheet", () => {
     expect(unclosed).toEqual([]);
   });
 
-  it("gives the selected automation detail tab the accent and the form checkbox a 20px box", () => {
+  it("gives the selected automation detail tab the accent and the kit checkbox a 14px box", () => {
     expect(rule('.detail-tabs button[aria-selected="true"]').background).toBe("var(--blue)");
     expect(rule(".detail-tabs button").background).toBe("var(--mantle)");
-    expect(rule(".check input").width).toBe("20px");
+    expect(rule(".ui .check").width).toBe("14px");
   });
 });
 
