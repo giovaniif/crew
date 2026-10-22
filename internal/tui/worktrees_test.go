@@ -534,3 +534,24 @@ func TestWorktreesShortTerminalKeepsTheFooterAndTheSelectedRowOnScreen(t *testin
 		}
 	}
 }
+
+func TestWorktreesShortTerminalSaysHowManyRowsAreHidden(t *testing.T) {
+	branches := []string{"feat-a", "feat-b", "feat-c", "feat-d"}
+	for _, presses := range [][]string{nil, {"j", "j", "j"}} {
+		for h := 12; h <= 18; h++ {
+			r := diskModel().open()
+			r.m = update(r.m, tea.WindowSizeMsg{Width: 150, Height: h})
+			r.press(presses...)
+			out := screen(r.m)
+			hidden := 0
+			for _, b := range branches {
+				if !strings.Contains(out, b) {
+					hidden++
+				}
+			}
+			if hidden > 0 && !strings.Contains(out, fmt.Sprintf("%d more", hidden)) {
+				t.Errorf("height %d after %v: %d rows are hidden and the view does not say so:\n%s", h, presses, hidden, out)
+			}
+		}
+	}
+}
