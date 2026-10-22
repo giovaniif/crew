@@ -36,8 +36,14 @@ fn the_page_can_open_http_and_https_pages() {
 #[test]
 fn the_page_cannot_open_the_origin_of_crew_serve() {
     let serve = url("http://127.0.0.1:53412/");
-    assert!(!allow_navigation(&url("http://127.0.0.1:53412/#/sessions/s1"), Some(&serve)));
-    assert!(!allow_navigation(&url("http://127.0.0.1:53412/api/v1/hello"), Some(&serve)));
+    assert!(!allow_navigation(
+        &url("http://127.0.0.1:53412/#/sessions/s1"),
+        Some(&serve)
+    ));
+    assert!(!allow_navigation(
+        &url("http://127.0.0.1:53412/api/v1/hello"),
+        Some(&serve)
+    ));
 }
 
 #[test]
@@ -57,10 +63,22 @@ fn the_page_cannot_open_other_schemes() {
 #[test]
 fn an_address_becomes_a_url_like_the_headless_browser() {
     assert_eq!(address("3000").unwrap().as_str(), "http://127.0.0.1:3000/");
-    assert_eq!(address(":3000/login").unwrap().as_str(), "http://127.0.0.1:3000/login");
-    assert_eq!(address("localhost:5173/a").unwrap().as_str(), "http://localhost:5173/a");
-    assert_eq!(address("https://example.com/").unwrap().as_str(), "https://example.com/");
-    assert_eq!(address("example.com").unwrap().as_str(), "http://example.com/");
+    assert_eq!(
+        address(":3000/login").unwrap().as_str(),
+        "http://127.0.0.1:3000/login"
+    );
+    assert_eq!(
+        address("localhost:5173/a").unwrap().as_str(),
+        "http://localhost:5173/a"
+    );
+    assert_eq!(
+        address("https://example.com/").unwrap().as_str(),
+        "https://example.com/"
+    );
+    assert_eq!(
+        address("example.com").unwrap().as_str(),
+        "http://example.com/"
+    );
     assert!(address("").is_err());
     assert!(address("ftp://example.com/").is_err());
 }
@@ -72,8 +90,8 @@ fn the_app_attaches_with_crew_browser_attach() {
 
 #[test]
 fn a_call_line_parses() {
-    let call = parse_call(r#"{"call":7,"session":"s1","command":"click","args":{"ref":"@e2"}}"#)
-        .unwrap();
+    let call =
+        parse_call(r#"{"call":7,"session":"s1","command":"click","args":{"ref":"@e2"}}"#).unwrap();
     assert_eq!(call.call, 7);
     assert_eq!(call.session, "s1");
     assert_eq!(call.command, "click");
@@ -253,7 +271,7 @@ mod bridge {
         let args = dir.join("args.log");
         let reply = dir.join("reply.log");
         let script = format!(
-            "#!/bin/sh\necho \"$*\" > '{args}'\necho '{{\"call\":7,\"session\":\"s1\",\"command\":\"snapshot\",\"args\":{{}}}}'\nread line\necho \"$line\" > '{reply}'\n",
+            "#!/bin/sh\necho \"$*\" > '{args}'\necho '{{\"call\":7,\"session\":\"s1\",\"command\":\"snapshot\",\"args\":{{}}}}'\nread -r line\necho \"$line\" > '{reply}'\n",
             args = args.display(),
             reply = reply.display(),
         );
@@ -264,13 +282,20 @@ mod bridge {
         fs::rename(&draft, &crew).unwrap();
         let (tx, rx) = mpsc::channel();
         run_bridge(&crew, move |call, responder| {
-            tx.send((call.session.clone(), call.command.clone())).unwrap();
+            tx.send((call.session.clone(), call.command.clone()))
+                .unwrap();
             responder.send(Ok(json!({"text": "- button \"Go\" [@e1]"})));
         })
         .unwrap();
-        assert_eq!(rx.recv().unwrap(), ("s1".to_string(), "snapshot".to_string()));
+        assert_eq!(
+            rx.recv().unwrap(),
+            ("s1".to_string(), "snapshot".to_string())
+        );
         assert_eq!(fs::read_to_string(&args).unwrap().trim(), "browser attach");
         let line: Value = serde_json::from_str(fs::read_to_string(&reply).unwrap().trim()).unwrap();
-        assert_eq!(line, json!({"call": 7, "result": {"text": "- button \"Go\" [@e1]"}}));
+        assert_eq!(
+            line,
+            json!({"call": 7, "result": {"text": "- button \"Go\" [@e1]"}})
+        );
     }
 }
