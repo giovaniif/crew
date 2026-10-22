@@ -2967,6 +2967,10 @@ button.danger {
   flex: 1 1 12rem;
 }
 
+.settings-list li > .swatch {
+  flex: none;
+}
+
 .settings-list button {
   min-height: 44px;
   width: auto;
