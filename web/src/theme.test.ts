@@ -212,4 +212,8 @@ describe("a mate color swatch", () => {
   it("wraps a long word in the automation prompt", () => {
     expect(rule(".automation-prompt")["overflow-wrap"]).toBe("anywhere");
   });
+
+  it("wraps the last seen date below a long device name instead of squeezing the name", () => {
+    expect(rule(".settings-list li > :first-child").flex).toBe("1 1 12rem");
+  });
 });
