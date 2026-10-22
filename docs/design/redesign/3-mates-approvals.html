@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas" /><link rel="stylesheet" href="./crew.css" /><link rel="stylesheet" href="./canvas.css" /><style>
+.mates{flex:1;display:grid;grid-template-columns:280px minmax(0,1fr);min-height:0}
+.mlist{border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.mlist .row{height:44px;gap:10px}
+.mlist .row .s{font-size:var(--fs-xs);color:var(--ink-3)}
+.prof{overflow:auto;padding:24px 32px}
+.prof-head{display:flex;align-items:center;gap:14px;margin-bottom:18px}
+.prof-head h2{margin:0;font-size:20px;font-weight:600;letter-spacing:-.01em}
+.facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:18px}
+.mem{font-size:var(--fs-md);color:var(--ink-2);background:var(--bg-sunken);border-radius:10px;padding:10px 12px;line-height:1.6}
+.wiz{flex:1;display:flex;flex-direction:column;align-items:center;padding:28px}
+.steps{display:flex;gap:6px;margin-bottom:22px}
+.steps i{width:22px;height:4px;border-radius:2px;background:var(--bg-active)}
+.steps i.on{background:var(--ink)}
+.preset{border:1px solid var(--line-2);border-radius:12px;padding:10px 12px;cursor:pointer}
+.preset.on{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+.preset .t{font-weight:500}
+.preset .s{font-size:var(--fs-sm);color:var(--ink-3)}
+.slider{display:grid;grid-template-columns:90px minmax(0,1fr) 90px;align-items:center;gap:10px;font-size:var(--fs-sm);color:var(--ink-2)}
+.track{height:4px;border-radius:2px;background:var(--bg-active);position:relative}
+.track b{position:absolute;top:-5px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 0 0 1px var(--line-2),0 1px 3px rgba(0,0,0,.15)}
+.ap{border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start}
+.ap pre{margin:6px 0 0;font:12px/1.5 var(--font-mono);color:var(--ink);background:var(--bg-sunken);border-radius:8px;padding:6px 10px}
+</style></helmet>
+<section class="dv-turn" id="t3">
+<div class="dv-thd"><a class="dv-tid" href="#t3">3</a><span class="dv-tname">Mates and Approvals</span></div>
+<p class="dv-notes"><b>Mates</b> become a list and detail view: mates at left with search and the All / Claude / Codex filter, the profile at right with facts, conversations and memory. The kill switch is a quiet <b>Stop all</b> button with a confirm. <b>New mate</b> is a 4-step centered flow with a thin progress bar instead of dots. <b>Approvals</b> are cards with the command, who asked, and the two actions.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="3a"><div class="dv-olabel"><a class="dv-oid" href="#3a">3a</a>Mates: list and profile</div>
+<div class="dv-card"><div class="win" data-screen-label="Mates">
+<div class="titlebar"><span class="tl"></span><span class="tl"></span><span class="tl"></span></div>
+<div class="app" style="grid-template-columns:200px minmax(0,1fr)">
+<aside class="side mini"><div class="side-head"><span class="brand">crew</span><button class="icon-btn">+</button></div><div class="side-scroll"><div class="side-label"><span>Running</span><span>2</span></div><div class="row"><span class="dot run"></span><span class="nm">Fix the login redirect</span></div><div class="row"><span class="dot run"></span><span class="nm">Add rate limit to /search</span></div></div><div class="side-foot"><div class="row on"><span class="nm">Mates</span><span class="meta" style="display:inline">4</span></div><div class="row"><span class="nm dim">Approvals</span><span class="pill bad">1</span></div><div class="row"><span class="nm dim">Automations</span></div><div class="row"><span class="nm dim">Disk</span></div><div class="row"><span class="nm dim">Settings</span></div></div></aside>
+<div class="main">
+<div class="mates">
+<div class="mlist">
+<div style="padding:10px 10px 6px;display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;align-items:center;gap:6px"><span style="font-weight:600;font-size:var(--fs-lg)">Mates</span><span class="spacer"></span><button class="btn" style="height:26px;font-size:12px">Stop all</button><button class="btn primary" style="height:26px;font-size:12px">New mate</button></div>
+<input class="input" placeholder="Search" />
+<div class="seg"><button class="on">All</button><button>Claude</button><button>Codex</button></div>
+</div>
+<div class="side-scroll">
+<div class="side-label"><span>Needs you</span></div>
+<div class="row"><span class="face f3">R</span><div class="nm"><div>rex</div><div class="s">Waiting for an answer · #api</div></div><span class="dot wait"></span></div>
+<div class="side-label"><span>All mates</span></div>
+<div class="row on"><span class="face f1">A</span><div class="nm"><div>ada</div><div class="s">Careful reviewer · Claude</div></div><span class="dot run"></span></div>
+<div class="row"><span class="face f2">M</span><div class="nm"><div>milo</div><div class="s">Fast bug fixer · Codex</div></div><span class="dot"></span></div>
+<div class="row"><span class="face f4">J</span><div class="nm"><div>june</div><div class="s">Patient explainer · Claude</div></div><span class="pill">paused</span></div>
+</div>
+</div>
+<div class="prof">
+<div class="prof-head"><span class="face lg f1">A</span><div><h2>ada</h2><div class="muted">Careful reviewer · working in #api</div></div><span class="spacer"></span><button class="btn">Pause</button><button class="btn">Settings</button></div>
+<div class="facts">
+<div class="card stat"><div class="k">Agent</div><div class="v" style="font-size:var(--fs-md)">Claude · opus</div><div class="s">effort high</div></div>
+<div class="card stat"><div class="k">Repos</div><div class="v" style="font-size:var(--fs-md)">api, web</div><div class="s">api is the default</div></div>
+<div class="card stat"><div class="k">Memory</div><div class="v" style="font-size:var(--fs-md)">3.2 KB</div><div class="s">updated 2h ago</div></div>
+<div class="card stat"><div class="k">Slack</div><div class="v" style="font-size:var(--fs-md)">Not connected</div><div class="s"><a href="#">Connect…</a></div></div>
+</div>
+<div class="section-title">CONVERSATIONS</div>
+<div class="list">
+<div class="li"><span class="dot run"></span><div class="grow"><div class="t">Review #42 checkout flake</div><div class="s">api · started 12m ago</div></div><button class="btn quiet" style="height:24px;font-size:12px">Open</button></div>
+<div class="li"><span class="dot ok"></span><div class="grow"><div class="t">Explain the rate limiter</div><div class="s">api · yesterday</div></div><button class="btn quiet" style="height:24px;font-size:12px">Open</button></div>
+</div>
+<div class="section-title" style="display:flex;align-items:center">MEMORY<span class="spacer"></span><button class="btn quiet" style="height:22px;font-size:11px">Edit</button><button class="btn quiet danger" style="height:22px;font-size:11px">Clear…</button></div>
+<div class="mem">The api repo runs tests with <span class="mono">make test</span>. The owner wants small PRs with the test commit first. Never touch migrations without asking.</div>
+</div>
+</div>
+</div>
+</div>
+</div></div></div>
+
+<div class="dv-opt" id="3b"><div class="dv-olabel"><a class="dv-oid" href="#3b">3b</a>New mate, step 2 of 4: personality</div>
+<div class="dv-card"><div class="win short" data-screen-label="New mate" style="width:760px">
+<div class="titlebar"><span class="tl"></span><span class="tl"></span><span class="tl"></span></div>
+<div style="height:40px;display:flex;align-items:center;padding:0 12px;border-bottom:1px solid var(--line)"><button class="btn quiet">Cancel</button><span class="spacer"></span><span style="font-weight:500">New mate</span><span class="spacer"></span><span style="width:70px"></span></div>
+<div class="wiz">
+<div class="steps"><i class="on"></i><i class="on"></i><i></i><i></i></div>
+<div style="width:520px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;gap:10px"><span class="face f1">A</span><span style="font-size:var(--fs-lg);font-weight:600">How should ada work?</span></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<div class="preset on"><div class="t">Careful reviewer</div><div class="s">Reads first, asks before big changes</div></div>
+<div class="preset"><div class="t">Fast bug fixer</div><div class="s">Small fix, test, done</div></div>
+<div class="preset"><div class="t">Patient explainer</div><div class="s">Teaches while it works</div></div>
+<div class="preset"><div class="t">Blank</div><div class="s">No extra prompt</div></div>
+</div>
+<div class="slider"><span>Terse</span><div class="track"><b style="left:30%"></b></div><span style="text-align:right">Chatty</span></div>
+<div class="slider"><span>Cautious</span><div class="track"><b style="left:20%"></b></div><span style="text-align:right">Bold</span></div>
+<div class="slider"><span>Formal</span><div class="track"><b style="left:50%"></b></div><span style="text-align:right">Playful</span></div>
+<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px"><button class="btn quiet">Back</button><button class="btn primary">Next</button></div>
+</div>
+</div>
+</div></div></div>
+
+<div class="dv-opt" id="3c"><div class="dv-olabel"><a class="dv-oid" href="#3c">3c</a>Approvals</div>
+<div class="dv-card"><div class="win short" data-screen-label="Approvals" style="width:760px">
+<div class="titlebar"><span class="tl"></span><span class="tl"></span><span class="tl"></span></div>
+<div class="page">
+<div class="page-head"><h2>Approvals</h2><span class="pill bad">2</span></div>
+<p class="dim" style="margin:-6px 0 14px">A mate asks here before a dangerous action that someone other than you started.</p>
+<div style="display:flex;flex-direction:column;gap:10px">
+<div class="ap"><span class="face f3">R</span><div style="flex:1;min-width:0"><div><b>rex</b> <span class="muted">wants to run, asked by @sam in Slack · 4m ago</span></div><pre>git push --force origin main</pre></div><div style="display:flex;gap:6px"><button class="btn">Deny</button><button class="btn primary">Approve</button></div></div>
+<div class="ap"><span class="face f1">A</span><div style="flex:1;min-width:0"><div><b>ada</b> <span class="muted">wants to run, asked by @kim · 11m ago</span></div><pre>DROP TABLE sessions_old</pre></div><div style="display:flex;gap:6px"><button class="btn">Deny</button><button class="btn primary">Approve</button></div></div>
+<div class="ap" style="background:var(--bg-sunken);border-color:transparent"><span class="face f2">M</span><div style="flex:1"><b>milo</b> <span class="muted">· Approved. The session tries it again.</span></div><button class="btn quiet" style="height:24px;font-size:12px">Open session</button></div>
+</div>
+</div>
+</div></div></div>
+
+</div>
+<p class="dv-next">Try next: "bigger faces in <a class="dv-oid" href="#3a">3a</a>" · "show step 1 (face) of <a class="dv-oid" href="#3b">3b</a>"</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
