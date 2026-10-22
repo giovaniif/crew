@@ -373,7 +373,7 @@ func (m Model) diskScreenLines() (lines, owners []string) {
 		lines = append(lines, "", m.line(false, []piece{{s.sub, " loading…"}}, nil))
 	default:
 		lines = append(lines, m.diskHeader()...)
-		table, tableOwners := m.diskTable()
+		table, tableOwners := m.diskTable(len(lines) + len(m.diskFooter()))
 		owners = make([]string, len(lines), m.height)
 		owners = append(owners, tableOwners...)
 		lines = append(lines, table...)
@@ -456,7 +456,7 @@ func (m Model) taskOf(w domain.Worktree) string {
 	return "–"
 }
 
-func (m Model) diskTable() ([]string, []string) {
+func (m Model) diskTable(around int) ([]string, []string) {
 	s := m.styles
 	cols := m.diskColumns()
 	head := []piece{
@@ -481,8 +481,12 @@ func (m Model) diskTable() ([]string, []string) {
 			owners = append(owners, ownDisk+r.WorktreeID)
 		}
 	}
-	recent := m.recentLines()
-	room := max(m.height-len(out)-len(recent)-8, 3)
+	recent := append([]string{""}, m.recentLines()...)
+	free := m.height - around - len(out)
+	if free-len(recent) < min(len(body), 3) {
+		recent = nil
+	}
+	room := max(free-len(recent), 1)
 	off := 0
 	if selRow >= room {
 		off = selRow - room + 2
@@ -494,7 +498,7 @@ func (m Model) diskTable() ([]string, []string) {
 	}
 	out = append(out, body...)
 	owners = append([]string{""}, owners...)
-	return append(append(out, ""), recent...), owners
+	return append(out, recent...), owners
 }
 
 func (m Model) selectedID(rows []domain.DiskRow) string {
