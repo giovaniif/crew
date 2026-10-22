@@ -47,7 +47,7 @@ The phone app: a PWA that `crew serve` embeds and serves at `/` (ADR [0046](../d
   - `toolRow` splits the tool name from `Tool.Summary`. `testResult` reads a go test, Vitest/Jest, pytest or cargo summary from the output.
   - A `Message` has no diff counts, so tool rows do not show them.
 - `src/screens/Session.tsx` is the chat. It has the header, the log and the composer.
-  - The header shows the name, `where`, harness and model, context left and a state chip. While the session runs or asks permission, it also shows Interrupt, behind a confirmation.
+  - The header shows the name, `where`, harness and model, context left, a state chip and a `muted` mark for a muted session. While the session runs or asks permission, it also shows Interrupt, behind a confirmation.
   - The log loads the newest page (50). Then it sends `watch` with the newest cursor it holds. It sends `watch` again each time the stream is `live` again. It sends `unwatch` when it closes.
   - A scroll near the top (or the button of the top row) loads the page before `before`. To keep the reading position, the log adds the height that it grew to `scrollTop`, because iOS Safari has no `overflow-anchor`. While the top row says loading, it keeps one height, so it never moves the log.
   - New messages scroll to the bottom only while the reader is at the bottom.

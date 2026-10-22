@@ -81,6 +81,20 @@ describe("the chat header", () => {
     expect(header.getByText("working")).toBeInTheDocument();
   });
 
+  it("marks a muted session in the header so the user can tell that it sends no banners", async () => {
+    const server = new FakeServer().on("GET", newest, page([]));
+    const sockets = setup(server);
+    live(sockets, withSession(goldenState(), "s1", { Muted: true }));
+    expect(within(screen.getByRole("banner")).getByText("muted")).toBeInTheDocument();
+  });
+
+  it("shows no muted mark in the header of a session that is not muted", async () => {
+    const server = new FakeServer().on("GET", newest, page([]));
+    const sockets = setup(server);
+    live(sockets, withSession(goldenState(), "s1", { Muted: false }));
+    expect(within(screen.getByRole("banner")).queryByText("muted")).not.toBeInTheDocument();
+  });
+
   it("follows the session's state live", async () => {
     const server = new FakeServer().on("GET", newest, page([]));
     const sockets = setup(server);
