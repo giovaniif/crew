@@ -35,6 +35,12 @@ describe("Settings", () => {
     expect(screen.queryByText("This browser cannot show notifications from crew.")).toBeNull();
   });
 
+  it("has no Sign out in the desktop app on its own server", () => {
+    const { env } = setup("#/settings");
+    render(<App env={{ ...env, desktop: new FakeDesktop(), desktopAuth: { token: "desk", device } }} />);
+    expect(screen.getByRole("region", { name: "This device" })).toHaveTextContent("work phone");
+    expect(screen.queryByRole("button", { name: "Sign out" })).toBeNull();
+  });
 
   it("is a tab next to the session list", () => {
     const { env } = setup("");
