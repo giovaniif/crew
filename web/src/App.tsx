@@ -181,7 +181,7 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
   if (hash === "#/servers/add" && servers) {
     return (
       <main className="screen">
-        <FirstRun servers={servers} welcome={false} onClose={() => go("#/servers")} />
+        <FirstRun servers={servers} welcome={false} storage={env.storage} mac={/Macintosh/.test(env.userAgent)} onClose={() => go("#/servers")} />
       </main>
     );
   }
