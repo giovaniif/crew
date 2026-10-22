@@ -158,3 +158,28 @@ func TestPRBoardParseArgs(t *testing.T) {
 		}
 	}
 }
+
+func TestPRBoardNameLookupPrefersLiveSessionsOverEndedOnes(t *testing.T) {
+	st := prState()
+	st.Tasks = append(st.Tasks, domain.Task{ID: "t3", Text: "dup"})
+	st.Sessions = append(st.Sessions,
+		domain.Session{ID: "old", TaskID: "t3", Ended: true},
+		domain.Session{ID: "new", TaskID: "t3"},
+		domain.Session{ID: "gone", TaskID: "t4", Ended: true},
+	)
+	st.Tasks = append(st.Tasks, domain.Task{ID: "t4", Text: "only ended"})
+	tests := []struct{ arg, want string }{
+		{"dup", "new"},
+		{"only ended", "gone"},
+	}
+	for _, tc := range tests {
+		report, err := prReportFor(st, tc.arg)
+		if err != nil {
+			t.Errorf("%q: %v", tc.arg, err)
+			continue
+		}
+		if report.Session != tc.want {
+			t.Errorf("%q: session = %q, want %q", tc.arg, report.Session, tc.want)
+		}
+	}
+}
