@@ -13,6 +13,7 @@ import (
 
 type automationPrompt struct {
 	list    []domain.Automation
+	problem string
 	idx     int
 	typing  bool
 	text    string
@@ -21,8 +22,9 @@ type automationPrompt struct {
 }
 
 type automationsMsg struct {
-	list []domain.Automation
-	err  error
+	list    []domain.Automation
+	problem string
+	err     error
 }
 
 func (m Model) openAutomations() (Model, tea.Cmd) {
@@ -44,7 +46,7 @@ func (m Model) openAutomations() (Model, tea.Cmd) {
 				enabled = append(enabled, a)
 			}
 		}
-		return automationsMsg{list: enabled}
+		return automationsMsg{list: enabled, problem: firstProblem(list.Problems)}
 	}
 }
 
@@ -53,7 +55,7 @@ func (m Model) automationsLoaded(msg automationsMsg) Model {
 		return m
 	}
 	p := *m.auto
-	p.loading, p.list = false, msg.list
+	p.loading, p.list, p.problem = false, msg.list, msg.problem
 	if msg.err != nil {
 		p.err = msg.err.Error()
 	}
@@ -121,6 +123,8 @@ func (m Model) automationLeft() []piece {
 		return []piece{{s.badge, " AUTOMATION "}, {s.dim, " loading…"}}
 	case p.err != "":
 		return []piece{{s.badge, " AUTOMATION "}, {s.peach, " " + p.err}}
+	case len(p.list) == 0 && p.problem != "":
+		return []piece{{s.badge, " AUTOMATION "}, {s.peach, " " + p.problem}}
 	case len(p.list) == 0:
 		return []piece{{s.badge, " AUTOMATION "}, {s.dim, " no automations: add [[automation]] to config.toml"}}
 	case !p.typing:
@@ -134,4 +138,15 @@ func (m Model) automationLeft() []piece {
 		text = ansi.TruncateLeft(p.text, cut, "")
 	}
 	return []piece{{s.badge, badge}, {s.text, " " + text + "▏"}}
+}
+
+func firstProblem(problems []string) string {
+	if len(problems) == 0 {
+		return ""
+	}
+	text := problems[0]
+	if i := strings.Index(text, `automation "`); i > 0 {
+		text = text[i:]
+	}
+	return text
 }
