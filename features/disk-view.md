@@ -50,6 +50,15 @@ go run ./scripts/verify tui drive --restart --size 60x20 --out-dir /tmp/crew-ver
 go run ./scripts/verify tui drive --restart --size 100x18 --out-dir /tmp/crew-verify-map/disk --steps '[{"expect":"seeded change 2","timeout":8000},{"keys":"w"},{"expect":"WORKTREES & DISK","timeout":5000},{"expect":"seed-1-api","timeout":5000},{"expect":"w or esc closes","timeout":5000},{"keys":"k"},{"expect":"no dev servers in this worktree","timeout":5000}]'
 ```
 
+### a short terminal says how many worktree rows it hides
+
+```sh
+go run ./scripts/verify iso seed --sessions 12
+go run ./scripts/verify tui drive --restart --size 90x20 --out-dir /tmp/crew-verify-map/disk --steps '[{"expect":"seeded change","timeout":8000},{"keys":"w"},{"expect":"WORKTREES & DISK","timeout":5000},{"expect":"more","timeout":5000},{"expect":"w or esc closes"}]'
+```
+
+Expect: under the last row that fits, `… N more` counts the rows that are cut ([#689](https://github.com/giovaniif/crew/issues/689)).
+
 ### disk view keys k, o and g (manual: they act on real worktree folders)
 
 ## Cleanup
