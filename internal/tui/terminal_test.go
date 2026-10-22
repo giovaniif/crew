@@ -140,3 +140,16 @@ func TestReviewCountsCommentsFromTheSnapshot(t *testing.T) {
 		t.Fatalf("snapshot comments are not shown:\n%s", out)
 	}
 }
+
+func TestReviewOOnADeletedFileKeepsTheReviewAndSaysWhy(t *testing.T) {
+	m, calls, rv := terminalModel(t, 150, 40)
+	rv.reply.Worktrees[0].Files = domain.ParseDiff("diff --git a/gone.ts b/gone.ts\ndeleted file mode 100644\nindex 1111111..0000000\n--- a/gone.ts\n+++ /dev/null\n@@ -1 +0,0 @@\n-bye\n")
+	m = drive(m, keys("r", "o")...)
+	if len(calls.calls) != 0 {
+		t.Fatalf("calls = %+v; o must not open a deleted file in nvim", calls.calls)
+	}
+	out := screen(m)
+	if !strings.Contains(out, "REVIEW") || !strings.Contains(out, "gone.ts is deleted") {
+		t.Fatalf("the review closed or gave no reason:\n%s", out)
+	}
+}

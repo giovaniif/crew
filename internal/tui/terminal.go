@@ -52,6 +52,10 @@ func (m Model) openInNvim() (tea.Model, tea.Cmd) {
 	if !ok || m.opts.Calls == nil {
 		return m, nil
 	}
+	if f.file.Status == domain.FileDeleted {
+		m.status = f.file.Path + " is deleted; there is no file to open in nvim"
+		return m, nil
+	}
 	m.rv.open = false
 	r := m.opts.Review
 	open := m.callDaemon(rpc.MethodNvimOpen, rpc.NvimParams{
