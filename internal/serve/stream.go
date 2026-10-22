@@ -113,6 +113,8 @@ func (s *Server) runStream(ctx context.Context, cancel context.CancelCauseFunc, 
 		return code, reason
 	}
 	defer func() { _ = d.Close() }()
+	stop := context.AfterFunc(ctx, func() { _ = d.Close() })
+	defer stop()
 	st.d = d
 	st.device = device.ID
 	defer st.unwatchAll()
