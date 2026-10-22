@@ -539,6 +539,7 @@ export function MateProfile({ api, name, board }: { api: Authed; name: string; b
   const [connecting, setConnecting] = useState(false);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
+  const [startNote, setStartNote] = useState("");
   const row: MateRow | undefined = board?.mates.find((m) => m.name === name);
   const def = defs.find((d) => d.name === name);
 
@@ -591,15 +592,21 @@ export function MateProfile({ api, name, board }: { api: Authed; name: string; b
         type="button"
         className="primary"
         disabled={busy}
-        onClick={() =>
-          run(async () => {
-            const s = await newMateConversation(api, name);
-            window.location.hash = "#/sessions/" + encodeURIComponent(s.ID);
-          })
-        }
+        onClick={() => {
+          setStartNote("");
+          void run(async () => {
+            try {
+              const s = await newMateConversation(api, name);
+              window.location.hash = "#/sessions/" + encodeURIComponent(s.ID);
+            } catch (err) {
+              setStartNote(message(err));
+            }
+          });
+        }}
       >
         + New conversation
       </button>
+      {startNote && <p role="alert">{startNote}</p>}
       <h2>Conversations</h2>
       {local.length === 0 && row.threads.length === 0 && <p className="muted">No conversations yet.</p>}
       <ul className="mate-threads conv-list" aria-label={"Conversations of " + name}>
