@@ -24,6 +24,14 @@ go run ./scripts/verify iso crew --expect "no pending approvals" -- approval lis
 go run ./scripts/verify web drive /#/approvals --viewport both --out-dir /tmp/crew-verify-map/approvals --steps '[{"expect":{"role":"link","name":"Approvals"}},{"shot":"tab.png"}]'
 ```
 
+### a help flag in the place of the ID prints the usage
+
+```sh
+{ go run ./scripts/verify iso crew -- approval approve --help || true; } | grep -q 'usage: crew approval'
+{ go run ./scripts/verify iso crew -- approval deny -h || true; } | grep -q 'usage: crew approval'
+{ go run ./scripts/verify iso crew -- automation show --help || true; } | grep -q 'usage: crew automation'
+```
+
 ### approve a pending approval from the phone (manual: needs an agent that asks for an approval; the fake claude does not)
 
 ## Cleanup
