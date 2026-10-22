@@ -32,15 +32,6 @@ export type PaneProps = {
   desktop?: DesktopBridge;
 };
 
-function Placeholder({ title }: { title: string }) {
-  return (
-    <div className="pane-placeholder">
-      <p className="pane-title">{title}</p>
-      <p className="muted">This tab is not available in this version of the app.</p>
-    </div>
-  );
-}
-
 export const panes: Record<MainTab, (props: PaneProps) => ReactNode> = {
   chat: (p) => <SessionScreen key={p.session.ID} id={p.session.ID} snapshot={p.snapshot} now={p.now} onRetry={p.onRetry} client={p.client} api={p.api} />,
   terminal: (p) => <TerminalPane store={p.terminals} session={p.session} kind="agent" />,
@@ -294,14 +285,14 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
   let main: ReactNode;
   if (other) {
     main = <div className="main-other">{other}</div>;
-  } else if (session || (tab === "terminal" && route.screen !== "session")) {
+  } else if (session) {
     main = (
       <>
         <Toolbar tab={tab} hasSession={session !== null} onTab={setTab}>
           {session ? <SessionCommands key={session.ID} api={api} session={session} storage={env.storage} button /> : null}
         </Toolbar>
         <section className={"pane pane-" + tab} role="tabpanel" id={"pane-" + tab} aria-labelledby={"tab-" + tab}>
-          {session ? panes[tab]({ session, snapshot, now, onRetry, client, api, terminals, host: env.host, browsers: browsers.current, desktop: env.desktop }) : <Placeholder title="Terminal" />}
+          {panes[tab]({ session, snapshot, now, onRetry, client, api, terminals, host: env.host, browsers: browsers.current, desktop: env.desktop })}
         </section>
       </>
     );
