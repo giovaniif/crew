@@ -195,7 +195,7 @@ func (m Model) nvimLines() []string {
 		out = append(out, m.line(false, []piece{bar, {s.green, "✓ the crew plugin is configured"}}, nil))
 		return append(out, m.para(bar, s.sub, "found in "+n.ConfigFile)...)
 	case domain.NvimNoPlugin:
-		out = append(out, m.line(false, []piece{{s.peach, " ▌ "}, {s.text, "The plugin files are not at " + n.PluginDir + "."}}, nil))
+		out = append(out, m.para(piece{s.peach, " ▌ "}, s.text, "The plugin files are not at "+n.PluginDir+".")...)
 		out = append(out, m.para(piece{s.peach, " ▌ "}, s.sub, "The install script puts them there; from a source checkout, add these lines yourself with the path to its nvim/ directory.")...)
 		out = append(out, "")
 		return append(out, m.code(domain.NvimSnippet(n.PluginDir, n.ConfigFile))...)
@@ -258,7 +258,7 @@ func (m Model) code(lines []string) []string {
 func (m Model) para(bar piece, st lipgloss.Style, text string) []string {
 	room := max(m.width-ansi.StringWidth(bar.s)-1, 10)
 	var out []string
-	for _, l := range strings.Split(ansi.Wordwrap(text, room, ""), "\n") {
+	for _, l := range strings.Split(ansi.Wrap(text, room, ""), "\n") {
 		out = append(out, m.line(false, []piece{bar, {st, l}}, nil))
 	}
 	return out
