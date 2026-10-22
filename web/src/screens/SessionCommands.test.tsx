@@ -187,7 +187,7 @@ describe("the session commands", () => {
     const d = desktop("#/sessions/a", false);
     d.live({ ...goldenState(), sessions: [session("a", "alpha")] });
     await userEvent.click(screen.getByRole("button", { name: "Session commands" }));
-    expect(items(screen.getByRole("menu", { name: "Session commands" }))).toContain("Rename…");
+    expect(items(screen.getByRole("menu", { name: "Session commands" }))).toContain("Rename…F2");
   });
 });
 
