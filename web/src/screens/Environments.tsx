@@ -770,7 +770,7 @@ function Editor({
         <span className="pill blue">Custom</span>
       )}
       {local ? null : (
-        <span className="muted small">isolated · kind is set at creation</span>
+        <span className="muted small kind-note">isolated · kind is set at creation</span>
       )}
       <span className="spacer" />
       <UsedBy env={env} />

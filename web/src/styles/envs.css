@@ -162,6 +162,7 @@
 }
 
 .eedit .opt > label.l {
+  display: block;
   font-weight: 500;
 }
 
@@ -410,11 +411,28 @@
   min-height: 44px;
 }
 
-.eedit .opt > label.l {
-  text-align: left;
-}
-
 .eedit .page-head a {
   color: var(--accent);
   text-decoration: none;
+}
+
+.envs-phone .eedit .page-head {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.envs-phone .eedit .kind-note {
+  display: none;
+}
+
+.envs-phone .eedit .opt > .l {
+  flex-basis: 100%;
+}
+
+.envs-phone .eedit .opt .ui.input {
+  max-width: none;
+}
+
+.envs-phone .keyhead {
+  flex-wrap: wrap;
 }
