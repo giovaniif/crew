@@ -125,8 +125,19 @@ describe("the mate card", () => {
   });
 });
 
+describe("the automations table", () => {
+  it("keeps the enable switch inside the right edge of the table", () => {
+    expect(rule(".automations .switch-col")["padding-right"]).toBe("12px");
+    expect(rule(".automations .switch-col").width).toBe("52px");
+  });
+
+  it("gives the side panel 380px next to the table", () => {
+    expect(rule(".automations.with-detail")["grid-template-columns"]).toBe("minmax(0, 1fr) 380px");
+  });
+});
+
 describe("touch targets", () => {
-  it.each([".session-card", ".back", ".retry", ".new-session", ".choice", ".interrupt", ".queued-action", ".permission-choice", ".load-older", ".tool summary", ".automation-row button", ".run-actions button", ".approval-actions button", ".kill-actions button", ".mate-actions button", ".mate-threads a", ".open-session", ".term-retry", ".phone-views button", ".settings-nav button", ".folders li", ".shortcut-actions button", ".settings-list button", ".disk-actions button", ".disk-tabs button", ".disk-kill", ".where-choice", ".first-run-buttons button", ".first-run-body .fields button", ".server-row-buttons button", ".chip-button", ".chip-menu button", ".change-server", ".swatches .swatch"])("%s is at least 44px tall", (selector) => {
+  it.each([".session-card", ".back", ".retry", ".new-session", ".choice", ".interrupt", ".queued-action", ".permission-choice", ".load-older", ".tool summary", ".automations .chip", ".automations .subtabs button", ".automations .run-list .link", ".run-actions button", ".approval-actions button", ".kill-actions button", ".mate-actions button", ".mate-threads a", ".open-session", ".term-retry", ".phone-views button", ".settings-nav button", ".folders li", ".shortcut-actions button", ".settings-list button", ".disk-actions button", ".disk-tabs button", ".disk-kill", ".where-choice", ".first-run-buttons button", ".first-run-body .fields button", ".server-row-buttons button", ".chip-button", ".chip-menu button", ".change-server", ".swatches .swatch"])("%s is at least 44px tall", (selector) => {
     expect(parseInt(rule(selector)["min-height"] ?? "0", 10)).toBeGreaterThanOrEqual(44);
   });
 });
@@ -180,9 +191,8 @@ describe("the stylesheet", () => {
     expect(unclosed).toEqual([]);
   });
 
-  it("gives the selected automation detail tab the accent and the kit checkbox a 14px box", () => {
-    expect(rule('.detail-tabs button[aria-selected="true"]').background).toBe("var(--blue)");
-    expect(rule(".detail-tabs button").background).toBe("var(--mantle)");
+  it("underlines the selected automation sub-tab in ink and gives the kit checkbox a 14px box", () => {
+    expect(rule(".automations .subtabs button.on")["border-bottom-color"]).toBe("var(--ink)");
     expect(rule(".ui .check").width).toBe("14px");
   });
 });

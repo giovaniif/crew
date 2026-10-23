@@ -97,19 +97,21 @@ function fakeApp(answer: (cmd: string) => Promise<unknown> = () => Promise.resol
 }
 
 async function openBrowser(ports: number[], routes: (server: FakeServer) => void = notLive, extra: Partial<AppEnv> = {}) {
-  const { live, server } = desktop("#/sessions/s1", true, undefined, extra, routes);
+  const { live, server } = desktop("#/sessions/s1/browser", true, undefined, extra, routes);
   live(withPorts(ports));
-  await userEvent.click(await screen.findByRole("tab", { name: "Browser" }));
-  return { pane: screen.getByRole("tabpanel"), server };
+  return { pane: await screen.findByRole("complementary", { name: "Browser" }), server };
 }
 
 describe("the Browser tab", () => {
-  it("needs a session", () => {
-    const { live } = desktop();
-    live();
-    const tab = screen.getByRole("tab", { name: "Browser" });
-    expect(tab).toBeDisabled();
-    expect(tab).toHaveAccessibleDescription("Start or select a session to open its browser");
+  it("slides in when the agent opens a page", async () => {
+    const tool = { id: "t1", cursor: 10, turn: "p1", role: "tool", text: "", tool: { name: "Bash", summary: "crew browser open http://localhost:5173", status: "done" }, at: "2026-10-03T12:00:00Z" };
+    const { live } = desktop("#/sessions/s1", true, undefined, {}, (server) => {
+      notLive(server);
+      server.on("GET", "/api/v1/sessions/s1/messages?limit=50", { status: 200, body: { messages: [tool], before: 0 } });
+    });
+    live(withPorts([3000]));
+    expect(screen.queryByRole("complementary", { name: "Browser" })).toBeNull();
+    expect(await screen.findByRole("complementary", { name: "Browser" })).toBeInTheDocument();
   });
 
   it("opens the first port of the session and links each port", async () => {

@@ -219,7 +219,7 @@ function Handoff() {
   );
 }
 
-function Chat({ id, client, api, status, persona, freshFrom, children }: { id: string; client: StreamClient; api: Authed; status: StreamStatus; persona?: Persona; freshFrom?: string; children?: ReactNode }) {
+function Chat({ id, client, api, status, persona, freshFrom, onBrowser, children }: { id: string; client: StreamClient; api: Authed; status: StreamStatus; persona?: Persona; freshFrom?: string; onBrowser?: () => void; children?: ReactNode }) {
   const earlier = useEarlier(api, freshFrom);
   const [t, setT] = useState<Transcript>(emptyTranscript);
   const [loadError, setLoadError] = useState("");
@@ -234,6 +234,13 @@ function Chat({ id, client, api, status, persona, freshFrom, children }: { id: s
   const latest = useRef(t);
   latest.current = t;
   const { fetch, token } = api;
+  const browsing = usesBrowser(t.messages);
+
+  useEffect(() => {
+    if (browsing && onBrowser) {
+      onBrowser();
+    }
+  }, [browsing, onBrowser]);
 
   useEffect(() => {
     let alive = true;
@@ -360,7 +367,7 @@ function Chat({ id, client, api, status, persona, freshFrom, children }: { id: s
         <MessageLine key={m.id} message={m} persona={persona} />
       ))}
       {watchError ? <p className="error">{"Live updates stopped: " + watchError}</p> : null}
-      {usesBrowser(t.messages) ? (
+      {browsing && !onBrowser ? (
         <p className="browser-note" role="note">
           This session uses the browser of the Mac app. The phone app cannot show that browser. Open the session in the Mac app to see it.
         </p>
@@ -689,8 +696,10 @@ export function SessionScreen({
   client,
   api,
   storage,
+  onBrowser,
 }: {
   id: string;
+  onBrowser?: () => void;
   snapshot: StreamSnapshot;
   now: number;
   onRetry: () => void;
@@ -731,7 +740,7 @@ export function SessionScreen({
       />
       <Connection snapshot={snapshot} now={now} onRetry={onRetry} />
       <main className="chat-main">
-        <Chat id={id} client={client} api={api} status={snapshot.status} persona={persona} freshFrom={session.Mate?.FreshFrom || undefined}>
+        <Chat id={id} client={client} api={api} status={snapshot.status} persona={persona} freshFrom={session.Mate?.FreshFrom || undefined} onBrowser={onBrowser}>
           <PermissionCard api={api} session={session} />
         </Chat>
       </main>

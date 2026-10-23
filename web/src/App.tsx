@@ -17,7 +17,6 @@ import { Pair } from "./screens/Pair";
 import { SessionScreen } from "./screens/Session";
 import { SessionList } from "./screens/SessionList";
 import { FirstRun } from "./screens/FirstRun";
-import { ServersScreen } from "./screens/Servers";
 import { Settings } from "./screens/Settings";
 import { PhoneSession } from "./screens/PhoneSession";
 import { ReviewPane } from "./screens/Review";
@@ -181,7 +180,7 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
   if (hash === "#/servers/add" && servers) {
     return (
       <main className="screen">
-        <FirstRun servers={servers} welcome={false} onClose={() => go("#/servers")} />
+        <FirstRun servers={servers} welcome={false} storage={env.storage} mac={/Macintosh/.test(env.userAgent)} onClose={() => go("#/servers")} />
       </main>
     );
   }
@@ -231,14 +230,11 @@ type OtherInputs = {
 };
 
 function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, go, servers }: OtherInputs): { screen: ReactNode; tab: Tab } | null {
-  if (hash === "#/servers" && servers) {
-    return { screen: <ServersScreen servers={servers} />, tab: "settings" };
-  }
   if (hash === "#/disk") {
     return { screen: <Disk api={api} state={snapshot.state} now={now} go={go} />, tab: "sessions" };
   }
   if (hash === "#/automations") {
-    return { screen: <Automations api={api} />, tab: "automations" };
+    return { screen: <Automations api={api} now={now} />, tab: "automations" };
   }
   if (hash === "#/mates") {
     return { screen: <Mates api={api} now={now} board={snapshot.state?.mates} visibility={env.visibility} />, tab: "mates" };
@@ -253,11 +249,11 @@ function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, g
   if (hash === "#/approvals") {
     return { screen: <Approvals api={api} now={now} visibility={env.visibility} />, tab: "approvals" };
   }
-  if (hash === "#/settings") {
+  if (hash === "#/settings" || (hash === "#/servers" && servers)) {
     return {
       screen: (
         <>
-          <Settings
+          <Settings key={hash}
             auth={auth}
             host={env.host}
             installed={env.installed}
@@ -268,6 +264,9 @@ function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, g
             connectUrl={env.connectUrl}
             userAgent={env.userAgent}
             desktop={!!env.desktop}
+            local={!!env.desktopAuth}
+            servers={servers}
+            initial={hash === "#/servers" ? "servers" : undefined}
           />
           {env.desktop && <DesktopAlerts storage={env.storage} />}
         </>

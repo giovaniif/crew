@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Button } from "../ui";
 import type { ServerListing, ServerRow, Servers } from "../servers";
 
 type RowState = { state: "idle" } | { state: "busy"; what: string } | { state: "fixed" } | { state: "failed"; message: string };
@@ -42,36 +43,37 @@ function Row({ server, current, servers, reload }: { server: ServerRow; current:
 
   const busy = row.state === "busy";
   return (
-    <li className="card server-row" aria-label={server.name}>
-      <div className="server-row-text">
-        <h3>{server.name}</h3>
-        <p className="muted">{server.detail}</p>
+    <li className="opt server-row" aria-label={server.name}>
+      <span className="dot ok" />
+      <div className="l">
+        <div className="t">
+          <h3>{server.name}</h3>
+          {current ? <span className="pill blue">Current</span> : null}
+        </div>
+        <div className="s">{server.detail}</div>
+        {row.state === "busy" ? <p role="status">{row.what}</p> : null}
+        {row.state === "fixed" ? <p role="status">Fixed</p> : null}
+        {row.state === "failed" ? (
+          <p className="error" role="alert">
+            {row.message}
+          </p>
+        ) : null}
       </div>
-      {current ? <span className="chip">Current</span> : null}
-      <div className="server-row-buttons">
-        {current ? null : (
-          <button type="button" className="flow-button" disabled={busy} onClick={() => act("Opening…", () => servers.open(server.id), { state: "idle" })}>
-            Open
-          </button>
-        )}
-        {server.kind === "url" ? null : (
-          <button type="button" className="flow-button" disabled={busy} onClick={() => act("Fixing…", () => servers.fix(server.id), { state: "fixed" })}>
-            Fix
-          </button>
-        )}
-        {server.kind === "local" ? null : (
-          <button type="button" className="flow-button danger" disabled={busy} onClick={() => act("Removing…", () => servers.remove(server.id), { state: "idle" })}>
-            Remove
-          </button>
-        )}
-      </div>
-      {row.state === "busy" ? <p role="status">{row.what}</p> : null}
-      {row.state === "fixed" ? <p role="status">Fixed</p> : null}
-      {row.state === "failed" ? (
-        <p className="error" role="alert">
-          {row.message}
-        </p>
-      ) : null}
+      {current ? null : (
+        <Button className="sm" disabled={busy} onClick={() => act("Opening…", () => servers.open(server.id), { state: "idle" })}>
+          Open
+        </Button>
+      )}
+      {server.kind === "url" ? null : (
+        <Button className="sm" disabled={busy} onClick={() => act("Fixing…", () => servers.fix(server.id), { state: "fixed" })}>
+          Fix
+        </Button>
+      )}
+      {server.kind === "local" ? null : (
+        <Button variant="danger" className="sm" disabled={busy} onClick={() => act("Removing…", () => servers.remove(server.id), { state: "idle" })}>
+          Remove
+        </Button>
+      )}
     </li>
   );
 }
@@ -79,11 +81,17 @@ function Row({ server, current, servers, reload }: { server: ServerRow; current:
 export function ServersScreen({ servers }: { servers: Servers }) {
   const [listing, reload] = useServerListing(servers);
   return (
-    <main className="screen">
-      <h1>Servers</h1>
-      <p className="lead">Each server has its own connection. Fix runs crew setup daemon on it again, on this computer or over SSH.</p>
+    <>
+      <h2 className="set-title">
+        Servers
+        <span className="spacer" />
+        <a className="ui btn primary sm" href="#/servers/add">
+          Add a server
+        </a>
+      </h2>
+      <p className="set-lead">Each server has its own connection. Fix runs crew setup daemon on it again, on this computer or over SSH.</p>
       {listing ? (
-        <ul className="server-list">
+        <ul className="group" aria-label="Servers">
           {listing.servers.map((s) => (
             <Row key={s.id} server={s} current={s.id === listing.selected} servers={servers} reload={reload} />
           ))}
@@ -91,10 +99,7 @@ export function ServersScreen({ servers }: { servers: Servers }) {
       ) : (
         <p className="muted">Loading the servers…</p>
       )}
-      <a className="new-session" href="#/servers/add">
-        Add a server
-      </a>
-    </main>
+    </>
   );
 }
 
