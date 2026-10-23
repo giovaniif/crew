@@ -197,6 +197,7 @@ See [ADR 0015](../../docs/adr/0015-session-lifecycle.md).
 - A worker reads a bounded queue and calls `app.Notifier`. For a focused session, it first asks `app.Foreground` if a terminal app is in front. If so, it drops the banner.
 - The title is the session name (`NameFor`, else the harness). The body is `needs permission`, `waiting` or `done`. There is a maximum of one banner for each session every 10 s.
 - `$CREW_HOME/notify.json` sets an optional macOS sound for each event: `{"sounds":{"permission":"Glass"}}`.
+- **Alerts.** The daemon keeps the newest 20 `domain.Alert`s in `State.Alerts` (`Diff.Alerts` sends the full list). `domain.PRChecksAlert` adds one when the PR of a worktree that a session owns goes to failing checks. `domain.AutomationAlert` adds one for an automation run with the outcome `failed`. Alerts are in memory only. The apps show them as banners. Tests: `go test ./internal/domain/ ./internal/daemon/ -run Alert`.
 - `session.mute` sets `Session.Muted`. Muted sessions get no banner, but they still become unread.
 - Claude and Codex share one path, and a fixture-driven daemon test covers both. See [ADR 0016](../../docs/adr/0016-notifications-and-attention.md).
 - To test by hand, put stub `osascript` and `terminal-notifier` scripts first on the `PATH` of the daemon. They log their argv, as the e2e ones in `test/e2e/testdata/bin` do. Or fire a maximum of a few real ones.
