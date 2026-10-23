@@ -49,6 +49,31 @@ func TestIsoUpEnvFakesPutsEnvDumpingHarnessesFirstOnPath(t *testing.T) {
 	}
 }
 
+func TestEnvFakesFireSessionStartWithTheSameSessionIDInAWorktree(t *testing.T) {
+	_, _, home := upWithEnvFakes(t)
+	log := filepath.Join(home, "hooks.log")
+	if err := os.WriteFile(filepath.Join(home, "bin", "crew"), []byte("#!/bin/sh\necho \"$*\" >>"+log+"\ncat >>"+log+"\necho >>"+log+"\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	work := t.TempDir()
+	for _, h := range []string{"claude", "claude", "codex"} {
+		c := exec.Command(filepath.Join(home, "fakes", h))
+		c.Dir = work
+		c.Env = []string{"CREW_HOME=" + home, "PATH=/usr/bin:/bin"}
+		if out, err := c.CombinedOutput(); err != nil {
+			t.Fatalf("%s: %v %s", h, err, out)
+		}
+	}
+	b, _ := os.ReadFile(log)
+	lines := strings.Split(strings.TrimSpace(string(b)), "\n")
+	if len(lines) != 6 || lines[0] != "hook --harness claude --event SessionStart" || lines[4] != "hook --harness codex --event SessionStart" {
+		t.Fatalf("hooks %q", b)
+	}
+	if lines[1] != lines[3] || !strings.Contains(lines[1], `"session_id":"TEST-`) || !strings.Contains(lines[1], `"cwd":"`+work+`"`) {
+		t.Errorf("payloads %q and %q", lines[1], lines[3])
+	}
+}
+
 func TestIsoUpWithoutEnvFakesKeepsTheE2EFakesFirst(t *testing.T) {
 	e, fs := testEnv(t)
 	isoReady(fs)
