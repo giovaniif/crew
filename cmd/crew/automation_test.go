@@ -128,3 +128,32 @@ func TestAutomationArgumentsRefuseAHelpFlagAsTheName(t *testing.T) {
 		}
 	}
 }
+
+func TestAutomationArgumentsTakeAMate(t *testing.T) {
+	for _, args := range [][]string{{"list", "--mate", "test-ada"}, {"link", "weekly", "--mate", "test-ada"}, {"link", "weekly", "--mate", ""}} {
+		if !automationArgsOK(args) {
+			t.Errorf("automationArgsOK(%q) = false, want true", args)
+		}
+	}
+	for _, args := range [][]string{{"list", "--mate"}, {"link", "weekly"}, {"link", "--mate", "test-ada"}, {"link", "weekly", "--mate"}} {
+		if automationArgsOK(args) {
+			t.Errorf("automationArgsOK(%q) = true, want false", args)
+		}
+	}
+}
+
+func TestMateAutomationsKeepsOnlyTheAutomationsOfTheMate(t *testing.T) {
+	list := rpc.AutomationList{Automations: []domain.Automation{{Name: "weekly", Mate: "test-ada"}, {Name: "solo"}}, Problems: []string{"p"}}
+	got := mateAutomations(list, "test-ada")
+	if len(got.Automations) != 1 || got.Automations[0].Name != "weekly" || len(got.Problems) != 1 {
+		t.Fatalf("got %+v", got)
+	}
+}
+
+func TestPrintAutomationShowsTheMate(t *testing.T) {
+	var out bytes.Buffer
+	printAutomation(&out, domain.Automation{Name: "weekly", Mate: "test-ada", Prompt: "TEST"})
+	if !strings.Contains(out.String(), "mate:      test-ada") {
+		t.Errorf("got:\n%s", out.String())
+	}
+}
