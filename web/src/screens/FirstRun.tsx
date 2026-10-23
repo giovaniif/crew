@@ -3,6 +3,7 @@ import type { KeyValue } from "../auth";
 import { rememberWorkspace } from "../newsession";
 import { backStep, nextStep, sshTarget, type Servers, type Step, type Where } from "../servers";
 import { Button, RadioGroup, Suggest } from "../ui";
+import { BrowseButton } from "./BrowseButton";
 
 type SetupState = { state: "idle" } | { state: "busy" } | { state: "done"; id: string } | { state: "failed"; message: string };
 
@@ -214,7 +215,10 @@ export function FirstRun({ servers, welcome, onClose, storage, mac }: FirstRunPr
             <h1>{target} is ready</h1>
             <p className="lead">Add the first workspace, or skip and add one later.</p>
             <div className="ob-section">FIRST WORKSPACE</div>
-            <input className="ui input mono" aria-label="First workspace" type="text" autoCapitalize="off" spellCheck={false} placeholder="~/code/web" value={path} onChange={(e) => setPath(e.target.value)} />
+            <div className="ob-path">
+              <input className="ui input mono" aria-label="First workspace" type="text" autoCapitalize="off" spellCheck={false} placeholder="~/code/web" value={path} onChange={(e) => setPath(e.target.value)} />
+              {where === "local" ? <BrowseButton pick={() => servers.pickFolder()} onPick={setPath} onError={setError} /> : null}
+            </div>
             <p className="ob-note">A git repository or a folder of them. It becomes your default project.</p>
           </>
         ) : null}

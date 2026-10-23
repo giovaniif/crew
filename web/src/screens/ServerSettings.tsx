@@ -25,6 +25,7 @@ import {
 } from "../api";
 import { Button, Dialog, Menu, Select, Stepper } from "../ui";
 import { Group, Opt, ServerTag } from "./SettingsRows";
+import { BrowseButton, type PickFolder } from "./BrowseButton";
 
 type Loaded<T> = { state: "loading" } | { state: "ready"; value: T } | { state: "failed"; note: string };
 
@@ -157,7 +158,7 @@ function Confirm({ title, action, onConfirm, onClose }: { title: string; action:
   );
 }
 
-export function WorkspacesGroup({ api }: { api: Authed }) {
+export function WorkspacesGroup({ api, pickFolder }: { api: Authed; pickFolder?: PickFolder }) {
   const load = useCallback(async () => {
     const [list, options] = await Promise.all([listWorkspaces(api.fetch, api.token), sessionOptions(api.fetch, api.token).catch(() => ({ home: "" }))]);
     return { list, home: options.home ?? "" };
@@ -214,6 +215,7 @@ export function WorkspacesGroup({ api }: { api: Authed }) {
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && text.trim() && add()}
           />
+          {pickFolder ? <BrowseButton pick={pickFolder} onPick={setText} /> : null}
           <Button variant="primary" disabled={!text.trim()} onClick={add}>
             Add workspace
           </Button>
