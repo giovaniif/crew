@@ -51,9 +51,10 @@ async function select(name: string) {
 
 describe("Automations", () => {
   it("is a tab next to the session list", () => {
-    const { env } = setup("");
+    const { env } = setup("#/more");
     render(<App env={env} />);
     expect(screen.getByRole("link", { name: "Automations" })).toHaveAttribute("href", "#/automations");
+    expect(screen.getByRole("link", { name: "More" })).toHaveAttribute("aria-current", "page");
   });
 
   it("shows the config problems that the server reports", async () => {
