@@ -1,6 +1,7 @@
 package envstore_test
 
 import (
+	"database/sql"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -9,6 +10,8 @@ import (
 
 	"github.com/giovaniif/crew/internal/adapters/envstore"
 	"github.com/giovaniif/crew/internal/app"
+
+	_ "modernc.org/sqlite"
 )
 
 const probeSecret = "TEST-zzprobesecretzz"
@@ -48,12 +51,57 @@ func probeHome(t *testing.T, files ...string) string {
 	return home
 }
 
+func piDB(t *testing.T, dir string, disabled ...string) {
+	t.Helper()
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	db, err := sql.Open("sqlite", filepath.Join(dir, "agent.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = db.Close() }()
+	if _, err := db.Exec("CREATE TABLE auth_credentials (id INTEGER PRIMARY KEY, provider TEXT, credential_type TEXT, data TEXT, disabled_cause TEXT)"); err != nil {
+		t.Fatal(err)
+	}
+	for _, d := range disabled {
+		if _, err := db.Exec("INSERT INTO auth_credentials (provider, credential_type, data, disabled_cause) VALUES ('anthropic', 'oauth', '" + probeSecret + "', " + d + ")"); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestProbeCountsAPiLoginOnlyWhenAgentDBHasAnEnabledCredential(t *testing.T) {
+	for _, c := range []struct {
+		name     string
+		disabled []string
+		want     bool
+	}{
+		{"no rows", nil, false},
+		{"only a disabled row", []string{"'revoked'"}, false},
+		{"an enabled row", []string{"'revoked'", "NULL"}, true},
+	} {
+		home := t.TempDir()
+		dir := filepath.Join(home, "pi")
+		piDB(t, dir, c.disabled...)
+		got := envstore.Probe{Home: home, Env: envOf(map[string]string{"PI_CODING_AGENT_DIR": dir}), Run: (&probeRun{}).run}.Local()
+		if got.Pi != c.want {
+			t.Errorf("%s: pi %v, want %v", c.name, got.Pi, c.want)
+		}
+	}
+	home := probeHome(t, ".omp/agent/auth.json")
+	if (envstore.Probe{Home: home, Env: envOf(nil), Run: (&probeRun{}).run}).Local().Pi {
+		t.Error("an auth.json counts as a Pi login; omp keeps logins in agent.db")
+	}
+}
+
 func envOf(vars map[string]string) func(string) string {
 	return func(k string) string { return vars[k] }
 }
 
 func TestProbeReportsWhatThisMachineHasWithoutItsSecrets(t *testing.T) {
-	home := probeHome(t, ".claude/.credentials.json", ".omp/agent/auth.json")
+	home := probeHome(t, ".claude/.credentials.json")
+	piDB(t, filepath.Join(home, ".omp", "agent"), "NULL")
 	run := &probeRun{answers: map[string]probeAnswer{
 		"git config --global user.name":                 {out: "TEST Owner\n"},
 		"git config --global user.email":                {out: "owner@example.com\n"},

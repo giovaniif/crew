@@ -159,3 +159,41 @@ func TestEnvExecWithAHarnessGivesOnlyItsAccountAndSeedsOnlyItsDir(t *testing.T) 
 		t.Error("the claude dir was seeded for a codex mate")
 	}
 }
+
+func TestEnvLoginOmpWritesOnlyIntoTheEnvDir(t *testing.T) {
+	home := t.TempDir()
+	personal := t.TempDir()
+	bin := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(personal, ".omp", "agent"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(personal, ".omp", "agent", "agent.db"), []byte("TEST-personal"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	fake := "#!/bin/sh\nprintf '%s' \"$*\" > \"$PI_CODING_AGENT_DIR/agent.db\"\n"
+	if err := os.WriteFile(filepath.Join(bin, "omp"), []byte(fake), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	s := envstore.Store{Home: home}
+	if err := s.Save(domain.Environment{Name: "test-bot", Kind: domain.EnvCustom, Parts: []domain.EnvPart{domain.EnvPi}}); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command(os.Args[0], "-test.run=TestEnvExecHelperProcess", "--", "env", "login", "test-bot", "--harness", "omp")
+	cmd.Env = []string{"CREW_TEST_ENV_EXEC=1", "CREW_HOME=" + home, "PATH=" + bin + ":/usr/bin:/bin", "HOME=" + personal}
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("%v: %s", err, stderr.String())
+	}
+	got, err := os.ReadFile(filepath.Join(home, "envs", "test-bot", "omp", "agent.db"))
+	if err != nil || string(got) != "login" {
+		t.Errorf("env agent.db %q, %v", got, err)
+	}
+	mine, _ := os.ReadFile(filepath.Join(personal, ".omp", "agent", "agent.db"))
+	if string(mine) != "TEST-personal" {
+		t.Errorf("personal agent.db changed: %q", mine)
+	}
+	if !strings.Contains(stderr.String(), "omp login") {
+		t.Errorf("stderr %q", stderr.String())
+	}
+}
