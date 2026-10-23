@@ -96,14 +96,43 @@ describe("the agent screen", () => {
     expect(within(agentScreen()).getByRole("status")).toHaveTextContent("This session's pane closed");
   });
 
-  it("explains a closed pane and offers the chat or a new try", async () => {
+  it("explains a closed pane and offers the chat or a resume", async () => {
     const d = open("#/sessions/s1/agent");
     d.terminals.socket("%5").drop(4404, "no pane");
     const state = within(agentScreen()).getByRole("status");
     expect(state).toHaveTextContent("The agent is not running in tmux anymore. Its chat and changes are still here.");
-    expect(within(state).getByRole("button", { name: "Open again" })).toBeInTheDocument();
+    expect(within(state).queryByRole("button", { name: "Open again" })).not.toBeInTheDocument();
     await userEvent.click(within(agentScreen()).getByRole("button", { name: "Back to chat" }));
     expect(window.location.hash).toBe("#/sessions/s1");
+  });
+
+  it("resumes an ended session from its closed pane and connects to the new pane", async () => {
+    const d = open("#/sessions/s1/agent");
+    d.server.on("POST", "/api/v1/sessions/s1/resume", { status: 200, body: {} });
+    d.sockets.last.push({ state: { ...two(), sessions: [session("s1", "fix the login redirect", { Pane: "%5", Ended: true }), session("s2", "add retries", { Pane: "%9" })] } });
+    d.terminals.socket("%5").drop(4404, "no pane");
+    const resume = within(agentScreen()).getByRole("button", { name: "Resume session" });
+    expect(resume).toHaveClass("primary");
+    await userEvent.click(resume);
+    await waitFor(() => expect(posts(d, "/api/v1/sessions/s1/resume")).toBe(1));
+    d.sockets.last.push({ state: { ...two(), sessions: [session("s1", "fix the login redirect", { Pane: "%12" }), session("s2", "add retries", { Pane: "%9" })] } });
+    await waitFor(() => expect(d.terminals.sockets.some((x) => x.pane === "%12")).toBe(true));
+  });
+
+  it("shows why a resume of a closed pane failed", async () => {
+    const d = open("#/sessions/s1/agent");
+    d.server.on("POST", "/api/v1/sessions/s1/resume", { status: 400, body: { error: { code: "bad_request", message: "session s1 has no harness session to resume" } } });
+    d.sockets.last.push({ state: { ...two(), sessions: [session("s1", "fix the login redirect", { Pane: "%5", Ended: true }), session("s2", "add retries", { Pane: "%9" })] } });
+    d.terminals.socket("%5").drop(4404, "no pane");
+    await userEvent.click(within(agentScreen()).getByRole("button", { name: "Resume session" }));
+    expect(await within(agentScreen()).findByRole("alert")).toHaveTextContent("session s1 has no harness session to resume");
+  });
+
+  it("offers no resume while the session of the closed pane is not ended yet", async () => {
+    const d = open("#/sessions/s1/agent");
+    d.terminals.socket("%5").drop(4404, "no pane");
+    expect(within(agentScreen()).queryByRole("button", { name: "Resume session" })).not.toBeInTheDocument();
+    expect(within(agentScreen()).getByRole("status")).toHaveTextContent("Resume session shows here when crew ends the session.");
   });
 
   it("says when tmux is not available", async () => {
