@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -euo pipefail
+out="${GITHUB_OUTPUT:-/dev/stdout}"
+go=false web=false desktop=false android=false ios=false
+all() { go=true web=true desktop=true android=true ios=true; }
+emit() {
+  {
+    echo "go=$go"
+    echo "web=$web"
+    echo "desktop=$desktop"
+    echo "android=$android"
+    echo "ios=$ios"
+  } >>"$out"
+}
+if [ "${EVENT:-}" != pull_request ] || [ -z "${BASE:-}" ]; then
+  all
+  emit
+  exit 0
+fi
+if ! files=$(git diff --name-only --no-renames "$BASE...${HEAD:-HEAD}"); then
+  all
+  emit
+  exit 0
+fi
+while IFS= read -r f; do
+  [ -n "$f" ] || continue
+  case "$f" in
+    (.github/* | scripts/ci-changes | Makefile) all ;;
+    (web/*) web=true desktop=true android=true ios=true ;;
+    (desktop/src-tauri/gen/android/*) desktop=true android=true ;;
+    (desktop/src-tauri/gen/apple/*) desktop=true ios=true ;;
+    (desktop/*) desktop=true android=true ios=true ;;
+    (docs/* | *.md | LICENSE) ;;
+    (*) go=true ;;
+  esac
+done <<<"$files"
+emit

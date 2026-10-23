@@ -13,39 +13,85 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  build:
-    runs-on: macos-latest
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      go: ${{ steps.f.outputs.go }}
+      web: ${{ steps.f.outputs.web }}
+      desktop: ${{ steps.f.outputs.desktop }}
+      android: ${{ steps.f.outputs.android }}
+      ios: ${{ steps.f.outputs.ios }}
     steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: f
+        run: scripts/ci-changes
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+
+  build:
+    needs: changes
+    if: ${{ !cancelled() }}
+    runs-on: macos-latest
+    env:
+      GO_CHANGED: ${{ needs.changes.outputs.go }}
+      WEB_CHANGED: ${{ needs.changes.outputs.web }}
+    steps:
+      - run: test "$CHANGES" = success
+        env:
+          CHANGES: ${{ needs.changes.result }}
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-      - uses: golangci/golangci-lint-action@v8
+      - if: env.GO_CHANGED == 'true'
+        uses: golangci/golangci-lint-action@v8
         with:
           version: v2.14.0
           install-only: true
-      - uses: actions/setup-node@v5
+      - if: env.GO_CHANGED == 'true' || env.WEB_CHANGED == 'true'
+        uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
           cache-dependency-path: web/package-lock.json
-      - run: make web
-      - run: npm test
+      - if: env.GO_CHANGED == 'true' || env.WEB_CHANGED == 'true'
+        run: make web
+      - if: env.GO_CHANGED == 'true' || env.WEB_CHANGED == 'true'
+        run: npm test
         working-directory: web
-      - run: CREW_WEB_BUILT=1 go test ./internal/serve/ -run Static
-      - run: make build
-      - run: ./bin/crew version
-      - run: make lint
-      - run: BUDGET_SCALE=2 scripts/bench-hook.sh ./bin/crew
-      - run: brew list tmux >/dev/null 2>&1 || brew install tmux
-      - run: brew list neovim >/dev/null 2>&1 || brew install neovim
-      - run: go test ./...
-      - run: go vet -tags integration -composites=false ./...
-      - run: go test -p 2 -tags integration ./...
+      - if: env.GO_CHANGED == 'true' || env.WEB_CHANGED == 'true'
+        run: CREW_WEB_BUILT=1 go test ./internal/serve/ -run Static
+      - if: env.GO_CHANGED == 'true'
+        run: make build
+      - if: env.GO_CHANGED == 'true'
+        run: ./bin/crew version
+      - if: env.GO_CHANGED == 'true'
+        run: make lint
+      - if: env.GO_CHANGED != 'true'
+        run: go run ./scripts/lint-comments . && go run ./scripts/lint-agents .
+      - if: env.GO_CHANGED == 'true'
+        run: BUDGET_SCALE=2 scripts/bench-hook.sh ./bin/crew
+      - if: env.GO_CHANGED == 'true'
+        run: brew list tmux >/dev/null 2>&1 || brew install tmux
+      - if: env.GO_CHANGED == 'true'
+        run: brew list neovim >/dev/null 2>&1 || brew install neovim
+      - if: env.GO_CHANGED == 'true'
+        run: go test ./...
+      - if: env.GO_CHANGED == 'true'
+        run: go vet -tags integration -composites=false ./...
+      - if: env.GO_CHANGED == 'true'
+        run: go test -p 2 -tags integration ./...
 
   desktop:
+    needs: changes
+    if: needs.changes.outputs.desktop == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -74,6 +120,8 @@ jobs:
       - run: xvfb-run -a desktop/e2e/run
 
   android:
+    needs: changes
+    if: needs.changes.outputs.android == 'true'
     runs-on: ubuntu-latest
     env:
       NDK_VERSION: 27.0.12077973
@@ -160,6 +208,8 @@ jobs:
           script: desktop/android-smoke
 
   desktop-macos:
+    needs: changes
+    if: needs.changes.outputs.desktop == 'true'
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v5
@@ -172,40 +222,58 @@ jobs:
       - run: cargo build --locked --manifest-path desktop/src-tauri/Cargo.toml
 
   tdd:
-    if: github.event_name == 'pull_request'
+    needs: changes
+    if: ${{ !cancelled() && github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
+    env:
+      CODE_CHANGED: ${{ needs.changes.outputs.go == 'true' || needs.changes.outputs.desktop == 'true' }}
     steps:
+      - run: test "$CHANGES" = success
+        env:
+          CHANGES: ${{ needs.changes.result }}
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-go@v6
+      - if: env.CODE_CHANGED == 'true'
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-      - uses: actions/setup-node@v5
+      - if: env.CODE_CHANGED == 'true'
+        uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
           cache-dependency-path: web/package-lock.json
-      - run: sudo apt-get update && sudo apt-get install -y tmux neovim
+      - if: env.CODE_CHANGED == 'true'
+        run: sudo apt-get update && sudo apt-get install -y tmux neovim
       - run: cp scripts/tdd-check "$RUNNER_TEMP/" && "$RUNNER_TEMP/tdd-check" "origin/${{ github.base_ref }}" "${{ github.event.pull_request.head.sha }}"
         env:
           TDD_PR_TITLE: ${{ github.event.pull_request.title }}
 
   mutate:
+    needs: changes
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
+    env:
+      GO_CHANGED: ${{ needs.changes.outputs.go }}
     steps:
+      - run: test "$CHANGES" = success
+        env:
+          CHANGES: ${{ needs.changes.result }}
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-go@v6
+      - if: env.GO_CHANGED == 'true'
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-      - run: go install github.com/go-gremlins/gremlins/cmd/gremlins@v0.6.0
+      - if: env.GO_CHANGED == 'true'
+        run: go install github.com/go-gremlins/gremlins/cmd/gremlins@v0.6.0
       - if: github.event_name != 'pull_request'
         run: make mutate
-      - if: github.event_name == 'pull_request'
+      - if: github.event_name == 'pull_request' && env.GO_CHANGED == 'true'
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: |
