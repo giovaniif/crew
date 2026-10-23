@@ -23,6 +23,7 @@ type mateDoc struct {
 	Owner    string          `toml:"owner"`
 	Avatar   string          `toml:"avatar"`
 	Color    string          `toml:"color"`
+	Env      string          `toml:"env"`
 	Tone     domain.MateTone `toml:"tone"`
 	NoMemory bool            `toml:"no_memory"`
 	Enabled  *bool           `toml:"enabled"`
@@ -46,7 +47,7 @@ func parseMates(text, path string) ([]domain.Mate, []string) {
 	for i, d := range doc.Mate {
 		mates[i] = domain.Mate{
 			Name: d.Name, Prompt: d.Prompt, Agent: d.Agent, Model: d.Model, Effort: d.Effort,
-			Repos: d.Repos, Owner: d.Owner, Avatar: d.Avatar, Color: d.Color, Tone: d.Tone, NoMemory: d.NoMemory, Enabled: d.Enabled == nil || *d.Enabled,
+			Repos: d.Repos, Owner: d.Owner, Avatar: d.Avatar, Color: d.Color, Env: d.Env, Tone: d.Tone, NoMemory: d.NoMemory, Enabled: d.Enabled == nil || *d.Enabled,
 		}
 	}
 	return mates, problems
@@ -210,6 +211,9 @@ func (d *Daemon) mateSet(req rpc.Request) *rpc.Response {
 	src, failed := d.editableConfig(req.ID)
 	if failed != nil {
 		return failed
+	}
+	if err := domain.ValidateMateEnv(m, parseEnvNames(src)); err != nil {
+		return errorResponse(req.ID, rpc.CodeBadRequest, err.Error())
 	}
 	next := domain.SetMateBlock(src, m)
 	parsed, problems := parseMates(next, d.cfg.path)
