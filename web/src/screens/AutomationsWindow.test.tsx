@@ -4,7 +4,6 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { Automation, AutomationRun } from "../api";
 import { automationOf, automationRows, draftOf, type AutomationQuery } from "../automations";
 import { desktop } from "../test/desktop";
-import { pick } from "../test/pick";
 
 afterEach(() => {
   window.location.hash = "";
@@ -69,36 +68,33 @@ async function open() {
 describe("the Automations window", () => {
   it("opens from the sidebar and filters the list", async () => {
     await open();
-    await screen.findByRole("listitem", { name: "fix-ci" });
+    await screen.findByRole("row", { name: "fix-ci" });
     await userEvent.type(screen.getByRole("searchbox", { name: "Search automations" }), "deps");
-    expect(screen.queryByRole("listitem", { name: "fix-ci" })).not.toBeInTheDocument();
-    expect(screen.getByRole("listitem", { name: "deps" })).toBeInTheDocument();
-    await userEvent.clear(screen.getByRole("searchbox", { name: "Search automations" }));
-    await pick(userEvent.setup(), screen.getByRole("combobox", { name: "Last outcome" }), "Failed");
-    expect(screen.getAllByRole("listitem").map((li) => li.getAttribute("aria-label")).filter(Boolean)).toEqual(["fix-ci"]);
+    expect(screen.queryByRole("row", { name: "fix-ci" })).not.toBeInTheDocument();
+    expect(screen.getByRole("row", { name: "deps" })).toBeInTheDocument();
   });
 
-  it("shows the overview and the runs, and reruns a run", async () => {
+  it("shows the details and the history, and reruns a run", async () => {
     await open();
-    const fix = await screen.findByRole("listitem", { name: "fix-ci" });
-    await userEvent.click(within(fix).getByRole("button", { name: "Details of fix-ci" }));
-    const detail = screen.getByRole("region", { name: "fix-ci" });
-    expect(within(detail).getByRole("tab", { name: "Overview" })).toHaveAttribute("aria-selected", "true");
-    expect(detail).toHaveTextContent("Fix the CI of {{work_item}}.");
-    await userEvent.click(within(detail).getByRole("tab", { name: "Runs" }));
-    const rows = within(detail).getAllByRole("listitem");
+    await userEvent.click(await screen.findByRole("row", { name: "fix-ci" }));
+    const panel = screen.getByRole("complementary", { name: "fix-ci" });
+    expect(within(panel).getByRole("tab", { name: "Details" })).toHaveAttribute("aria-selected", "true");
+    expect(panel).toHaveTextContent("Fix the CI of {{work_item}}.");
+    await userEvent.click(within(panel).getByRole("tab", { name: "History" }));
+    const rows = within(within(panel).getByRole("list", { name: "Run history of fix-ci" })).getAllByRole("listitem");
     expect(rows).toHaveLength(2);
     expect(within(rows[1]).getByRole("link", { name: "Open session" })).toHaveAttribute("href", "#/sessions/s1");
     await userEvent.click(within(rows[0]).getByRole("button", { name: "Rerun" }));
     await waitFor(() => expect(window.location.hash).toBe("#/sessions/s4"));
   });
 
-  it("edits an automation through automation.save", async () => {
+  it("edits an automation in the side panel through automation.save", async () => {
     const { server } = await open();
-    const deps = await screen.findByRole("listitem", { name: "deps" });
-    await userEvent.click(within(deps).getByRole("button", { name: "Details of deps" }));
-    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
-    const form = screen.getByRole("form", { name: "Edit deps" });
+    await userEvent.click(await screen.findByRole("row", { name: "deps" }));
+    const panel = screen.getByRole("complementary", { name: "deps" });
+    await userEvent.click(within(panel).getByRole("button", { name: "Edit" }));
+    const form = within(panel).getByRole("form", { name: "Edit deps" });
+    expect(within(form).getByRole("textbox", { name: "Schedule" })).toHaveClass("ui", "input");
     await userEvent.click(within(form).getByRole("checkbox", { name: "Enabled" }));
     await userEvent.click(within(form).getByRole("button", { name: "Save" }));
     await waitFor(() =>
@@ -108,11 +104,11 @@ describe("the Automations window", () => {
     );
   });
 
-  it("makes a new automation", async () => {
+  it("makes a new automation in the side panel", async () => {
     const { server } = await open();
-    await screen.findByRole("listitem", { name: "fix-ci" });
+    await screen.findByRole("row", { name: "fix-ci" });
     await userEvent.click(screen.getByRole("button", { name: "New automation" }));
-    const form = screen.getByRole("form", { name: "New automation" });
+    const form = within(screen.getByRole("complementary", { name: "New automation" })).getByRole("form", { name: "New automation" });
     await userEvent.type(within(form).getByRole("textbox", { name: "Name" }), "triage");
     await userEvent.type(within(form).getByRole("textbox", { name: "Prompt" }), "Triage the new issues.");
     await userEvent.type(within(form).getByRole("textbox", { name: "Schedule" }), "daily 08:00");
@@ -124,12 +120,13 @@ describe("the Automations window", () => {
     );
   });
 
-  it("shows the .crew.toml of a repo automation and has no Edit", async () => {
+  it("shows the .crew.toml of a repo automation, with no Edit and a switch that cannot change", async () => {
     await open();
-    const audit = await screen.findByRole("listitem", { name: "audit" });
-    await userEvent.click(within(audit).getByRole("button", { name: "Details of audit" }));
-    const detail = screen.getByRole("region", { name: "audit" });
-    expect(detail).toHaveTextContent("/src/api/.crew.toml");
-    expect(within(detail).queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+    const audit = await screen.findByRole("row", { name: "audit" });
+    expect(within(audit).getByRole("switch", { name: "Enable audit" })).toBeDisabled();
+    await userEvent.click(audit);
+    const panel = screen.getByRole("complementary", { name: "audit" });
+    expect(panel).toHaveTextContent("/src/api/.crew.toml");
+    expect(within(panel).queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
   });
 });

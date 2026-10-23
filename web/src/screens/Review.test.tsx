@@ -41,8 +41,8 @@ async function openReview(extra: (s: ReturnType<typeof desktop>["server"]) => vo
   d.server.on("GET", reviewPath + "?scope=branch&worktree=w2", { status: 200, body: withSecondWorktree() });
   extra(d.server);
   d.live();
-  await userEvent.click(await screen.findByRole("tab", { name: "Review" }));
-  const pane = screen.getByRole("tabpanel", { name: "Review" });
+  await userEvent.click(await screen.findByRole("tab", { name: "Changes" }));
+  const pane = screen.getByRole("tabpanel", { name: "Changes" });
   await within(pane).findByRole("navigation", { name: "Changed files" });
   return { ...d, pane };
 }
@@ -161,7 +161,7 @@ describe("the Review tab", () => {
     const d = desktop("#/sessions/s1");
     d.server.on("GET", reviewPath, { status: 404, body: { error: { code: "not_found", message: "no session s1" } } });
     d.live();
-    await userEvent.click(await screen.findByRole("tab", { name: "Review" }));
+    await userEvent.click(await screen.findByRole("tab", { name: "Changes" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("no session s1");
   });
 });

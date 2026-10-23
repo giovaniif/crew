@@ -125,6 +125,16 @@ describe("Servers", () => {
     expect(within(dialog).getByRole("button", { name: "Get started" })).toBeInTheDocument();
   });
 
+  it("lists the servers in the Servers group of Settings", async () => {
+    const desktop = withRemote();
+    app("#/servers", { desktop });
+    const nav = screen.getByRole("navigation", { name: "Settings" });
+    expect(within(nav).getByRole("button", { name: "Servers" })).toHaveAttribute("aria-current", "page");
+    const box = await screen.findByRole("listitem", { name: "box" });
+    await userEvent.click(within(box).getByRole("button", { name: "Open" }));
+    expect(desktop.of("crew_server_open")).toEqual([{ id: "ssh:box" }]);
+  });
+
   it("shows no chip outside the desktop app", () => {
     app("");
     expect(screen.queryByRole("button", { name: /^Server:/ })).not.toBeInTheDocument();

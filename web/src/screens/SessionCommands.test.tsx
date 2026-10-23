@@ -151,8 +151,8 @@ describe("the end confirmation setting", () => {
   it("is on by default and Settings turns it off", async () => {
     const d = desktop("#/settings", false);
     d.live();
-    const box = screen.getByRole("checkbox", { name: "Ask before I end a session" });
-    expect(box).toBeChecked();
+    const box = screen.getByRole("switch", { name: "Ask before I end a session" });
+    expect(box).toHaveAttribute("aria-checked", "true");
     await userEvent.click(box);
     expect(d.storage.getItem("crew.confirmEnd")).toBe("off");
   });
