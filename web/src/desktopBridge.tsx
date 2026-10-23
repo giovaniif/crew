@@ -79,7 +79,7 @@ export function useDesktopAttention(
       shown.current = null;
       return;
     }
-    const step = bannerStep(shown.current, snapshot.state.sessions, loadAlertPrefs(storage), view);
+    const step = bannerStep(shown.current, snapshot.state.sessions, loadAlertPrefs(storage), view, snapshot.state.alerts ?? []);
     shown.current = step.shown;
     for (const banner of step.posts) {
       void desktop.invoke("crew_notify", { banner }).catch(() => undefined);

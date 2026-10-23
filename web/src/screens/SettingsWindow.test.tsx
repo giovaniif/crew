@@ -118,6 +118,23 @@ describe("the app settings", () => {
     expect(screen.queryByRole("checkbox", { name: /Sound when/ })).toBeNull();
   });
 
+  it("has the mate, automation and PR checks rows of frame 10d", async () => {
+    const { storage } = await open("Notifications");
+    const mates = screen.getByRole("region", { name: "Mates" });
+    expect(within(mates).getAllByRole("switch").map((s) => s.getAttribute("aria-label"))).toEqual([
+      "A mate needs you",
+      "A mate finished a thread",
+      "An automation failed",
+    ]);
+    expect(within(mates).getByText("Approval or a question")).toBeInTheDocument();
+    const sessions = screen.getByRole("region", { name: "Sessions" });
+    await userEvent.click(within(sessions).getByRole("switch", { name: "PR checks failed" }));
+    await pick(userEvent.setup(), within(mates).getByRole("combobox", { name: "Sound when a mate finished a thread" }), "Default");
+    const alerts = JSON.parse(storage.getItem("crew.alerts") ?? "{}");
+    expect(alerts.prChecksFailed.banner).toBe(false);
+    expect(alerts.mateDone.sound).toBe(true);
+  });
+
   it("keeps Appearance in the app store and clamps the font size", async () => {
     const { storage } = await open("Appearance");
     await userEvent.click(within(screen.getByRole("radiogroup", { name: "Theme" })).getByRole("radio", { name: "Dark" }));

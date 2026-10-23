@@ -11,7 +11,7 @@ import { Automations } from "./screens/Automations";
 import { Desktop } from "./screens/Desktop";
 import { Disk } from "./screens/Disk";
 import { Environments } from "./screens/Environments";
-import { MateProfile, NewMate } from "./screens/Mates";
+import { MatePage, NewMate } from "./screens/Mates";
 import { MatesHome } from "./screens/MatesHome";
 import { FirstMate, firstMateSkipped } from "./screens/FirstMate";
 import { More } from "./screens/More";
@@ -25,7 +25,7 @@ import { Settings, type UpdateCheck } from "./screens/Settings";
 import { PhoneSession } from "./screens/PhoneSession";
 import { ReviewPane } from "./screens/Review";
 import { Servers } from "./servers";
-import { useStream, useStreamClient, type OpenSocket } from "./stream";
+import { useStream, useStreamClient, type OpenSocket, type StreamClient } from "./stream";
 import { TerminalStore, type TerminalEnv } from "./terminal";
 
 export type AppEnv = {
@@ -156,7 +156,7 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
   const wide = useWide(env.wide);
   const route = parseRoute(hash);
   const retry = () => client.retryNow();
-  const other = otherScreen(hash, { env, auth, api, now, snapshot, onSignOut, go, servers, wide });
+  const other = otherScreen(hash, { env, auth, api, now, snapshot, onSignOut, go, servers, wide, client });
   if (wide) {
     return (
       <Desktop
@@ -229,9 +229,10 @@ type OtherInputs = {
   go: (hash: string) => void;
   servers?: Servers;
   wide: boolean;
+  client: StreamClient;
 };
 
-function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, go, servers, wide }: OtherInputs): { screen: ReactNode; tab: Tab } | null {
+function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, go, servers, wide, client }: OtherInputs): { screen: ReactNode; tab: Tab } | null {
   if (hash === "#/disk") {
     return { screen: <Disk api={api} state={snapshot.state} now={now} go={go} />, tab: "more" };
   }
@@ -247,8 +248,14 @@ function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, g
   }
   if (hash.startsWith("#/mates/")) {
     const name = hash.slice("#/mates/".length);
+    const repos = [...new Set((snapshot.state?.workspaces ?? []).flatMap((w) => (w.Repos ?? []).map((r) => r.Name)))];
     return {
-      screen: name === "new" ? <NewMate api={api} /> : <MateProfile api={api} name={safeDecode(name)} board={snapshot.state?.mates} />,
+      screen:
+        name === "new" ? (
+          <NewMate api={api} repos={repos} />
+        ) : (
+          <MatePage key={name.split("/")[0]} api={api} hash={hash} board={snapshot.state?.mates} snapshot={snapshot} client={client} wide={wide} />
+        ),
       tab: "mates",
     };
   }

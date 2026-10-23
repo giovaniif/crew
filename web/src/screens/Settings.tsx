@@ -391,20 +391,68 @@ function AboutPane({
   );
 }
 
-const events: {
-  key: "permission" | "waiting" | "done" | "limitOrError";
-  title: string;
-}[] = [
+type EventKey = "permission" | "waiting" | "done" | "limitOrError" | "mateNeeds" | "mateDone" | "automationFailed" | "prChecksFailed";
+
+const mateEvents: { key: EventKey; title: string; sub?: string }[] = [
+  { key: "mateNeeds", title: "A mate needs you", sub: "Approval or a question" },
+  { key: "mateDone", title: "A mate finished a thread" },
+  { key: "automationFailed", title: "An automation failed" },
+];
+
+const sessionEvents: { key: EventKey; title: string; sub?: string }[] = [
   { key: "permission", title: "Session asks permission" },
   { key: "waiting", title: "Session waits for an answer" },
   { key: "done", title: "Session finished" },
   { key: "limitOrError", title: "Session hits a limit or an error" },
+  { key: "prChecksFailed", title: "PR checks failed" },
 ];
 
 const sounds: { value: "none" | "default"; label: string }[] = [
   { value: "none", label: "None" },
   { value: "default", label: "Default" },
 ];
+
+function EventGroup({
+  label,
+  rows,
+  value,
+  onChange,
+}: {
+  label: string;
+  rows: { key: EventKey; title: string; sub?: string }[];
+  value: AlertPrefs;
+  onChange: (next: AlertPrefs) => void;
+}) {
+  return (
+    <Group label={label} title={label.toUpperCase()}>
+      <div className="nrow h" aria-hidden="true">
+        <span>Event</span>
+        <span>Banner</span>
+        <span>Sound</span>
+      </div>
+      {rows.map((e) => (
+        <div key={e.key} className="nrow">
+          <span className="t">
+            {e.title}
+            {e.sub ? <span className="s">{e.sub}</span> : null}
+          </span>
+          <Switch
+            label={null}
+            ariaLabel={e.title}
+            checked={value[e.key].banner}
+            onChange={(v) => onChange({ ...value, [e.key]: { ...value[e.key], banner: v } })}
+          />
+          <Select
+            label={"Sound when " + (e.title.startsWith("PR") ? e.title : e.title.toLowerCase())}
+            value={value[e.key].sound ? "default" : "none"}
+            options={sounds}
+            onChange={(v) => onChange({ ...value, [e.key]: { ...value[e.key], sound: v === "default" } })}
+          />
+        </div>
+      ))}
+    </Group>
+  );
+}
 
 function NotificationsPane({
   storage,
@@ -420,34 +468,8 @@ function NotificationsPane({
   };
   return (
     <>
-      <Group label="Sessions" title="SESSIONS">
-        <div className="nrow h" aria-hidden="true">
-          <span>Event</span>
-          <span>Banner</span>
-          <span>Sound</span>
-        </div>
-        {events.map((e) => (
-          <div key={e.key} className="nrow">
-            <span className="t">{e.title}</span>
-            <Switch
-              label={null}
-              ariaLabel={e.title}
-              checked={value[e.key].banner}
-              onChange={(v) =>
-                onChange({ ...value, [e.key]: { ...value[e.key], banner: v } })
-              }
-            />
-            <Select
-              label={"Sound when " + e.title.toLowerCase()}
-              value={value[e.key].sound ? "default" : "none"}
-              options={sounds}
-              onChange={(v) =>
-                onChange({ ...value, [e.key]: { ...value[e.key], sound: v === "default" } })
-              }
-            />
-          </div>
-        ))}
-      </Group>
+      <EventGroup label="Mates" rows={mateEvents} value={value} onChange={onChange} />
+      <EventGroup label="Sessions" rows={sessionEvents} value={value} onChange={onChange} />
       <Group label="Options" title="OPTIONS">
         <SwitchRow
           title="Skip the session that is on screen"

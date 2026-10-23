@@ -169,6 +169,15 @@
     "mates": {
       "stopped": false,
       "mates": []
-    }
+    },
+    "alerts": [
+      {
+        "id": "automation_failed:r1",
+        "kind": "automation_failed",
+        "title": "Automation fix-ci failed",
+        "body": "no such repo",
+        "at": "2026-10-03T12:00:00Z"
+      }
+    ]
   }
 }
