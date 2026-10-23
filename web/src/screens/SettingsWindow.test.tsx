@@ -55,7 +55,7 @@ function withServer(server: FakeServer) {
   return server;
 }
 
-const groups = ["General", "Notifications", "Appearance", "Shortcuts", "Workspaces", "Agents", "Devices"];
+const groups = ["General", "Notifications", "Appearance", "Mates and Slack", "Sessions", "Shortcuts", "Devices", "About"];
 
 async function open(name: string, hash = "#/settings", wide = true) {
   const view = desktop(hash, wide);
@@ -76,7 +76,7 @@ describe("the Settings window", () => {
   });
 
   it("keeps the menu on a phone, with the tab bar", async () => {
-    await open("Workspaces", "#/settings", false);
+    await open("Sessions", "#/settings", false);
     expect(await screen.findByText("/home/me/api")).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Screens" })).toBeInTheDocument();
   });
@@ -91,8 +91,10 @@ describe("the Settings window", () => {
 describe("the app settings", () => {
   it("keeps General in the app store", async () => {
     const { storage } = await open("General");
-    await userEvent.click(screen.getByRole("switch", { name: "Show subagents" }));
+    await userEvent.click(within(screen.getByRole("navigation", { name: "Settings" })).getByRole("button", { name: "Sessions" }));
     await userEvent.click(screen.getByRole("switch", { name: "Ask before I end a session" }));
+    await userEvent.click(within(screen.getByRole("navigation", { name: "Settings" })).getByRole("button", { name: "General" }));
+    await userEvent.click(screen.getByRole("switch", { name: "Show subagents" }));
     const shown = screen.getByRole("spinbutton", { name: "Ended sessions shown" });
     await userEvent.clear(shown);
     await userEvent.type(shown, "25");
@@ -146,9 +148,54 @@ describe("the app settings", () => {
   });
 });
 
+describe("the sections of frame 10d", () => {
+  it("saves the mate limits in config.toml from Mates and Slack", async () => {
+    const { server } = await open("Mates and Slack");
+    const hops = await screen.findByRole("spinbutton", { name: "Hop limit" });
+    await userEvent.clear(hops);
+    await userEvent.type(hops, "3");
+    await userEvent.click(screen.getByRole("button", { name: "Save hop limit" }));
+    await waitFor(() =>
+      expect(server.calls.filter((c) => c.method === "POST" && c.path === "/api/v1/config").map((c) => c.body)).toEqual([{ key: "mates.hop_limit", value: "3" }]),
+    );
+    expect(screen.getByRole("spinbutton", { name: "Turns each hour" })).toBeInTheDocument();
+    expect(screen.getByRole("spinbutton", { name: "Turns each day" })).toBeInTheDocument();
+    expect(screen.getByRole("spinbutton", { name: "Tokens each day" })).toBeInTheDocument();
+    expect(screen.getByText(/Connect Slack on the page of each mate/)).toBeInTheDocument();
+  });
+
+  it("shows the workspaces and the agents under Sessions", async () => {
+    await open("Sessions");
+    expect(await screen.findByText("/home/me/api")).toBeInTheDocument();
+    expect(await screen.findByRole("group", { name: "Claude Code" })).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "Ask before I end a session" })).toBeInTheDocument();
+  });
+
+  it("shows the build and the links under About, with no update check in a browser", async () => {
+    await open("About");
+    expect(await screen.findByText("v0.12.0+abc")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Source on GitHub" })).toHaveAttribute("href", "https://github.com/giovaniif/crew");
+    expect(screen.queryByRole("button", { name: "Check for updates" })).toBeNull();
+  });
+
+  it("checks for updates in the desktop app", async () => {
+    const app = new FakeDesktop();
+    app.handlers.crew_check_update = () => ({ current: "0.12.0", latest: null });
+    const view = desktop("#/settings", true, undefined, { desktop: app });
+    withServer(view.server);
+    view.live();
+    await userEvent.click(within(screen.getByRole("navigation", { name: "Settings" })).getByRole("button", { name: "About" }));
+    await userEvent.click(screen.getByRole("button", { name: "Check for updates" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("crew 0.12.0 is the newest version.");
+    app.handlers.crew_check_update = () => ({ current: "0.12.0", latest: "0.13.0" });
+    await userEvent.click(screen.getByRole("button", { name: "Check for updates" }));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("crew 0.13.0 is available."));
+  });
+});
+
 describe("the server settings", () => {
   it("adds a workspace from the path field with folder suggestions", async () => {
-    const { server } = await open("Workspaces");
+    const { server } = await open("Sessions");
     expect(await screen.findByText("/home/me/api")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Add a folder…" }));
     await userEvent.type(screen.getByRole("combobox", { name: "Workspace path" }), "~/w");
@@ -160,7 +207,7 @@ describe("the server settings", () => {
   });
 
   it("has no Browse… for the path field outside the desktop app", async () => {
-    await open("Workspaces");
+    await open("Sessions");
     await userEvent.click(screen.getByRole("button", { name: "Add a folder…" }));
     expect(screen.getByRole("combobox", { name: "Workspace path" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Browse…" })).toBeNull();
@@ -172,7 +219,7 @@ describe("the server settings", () => {
     const view = desktop("#/settings", true, undefined, { desktop: app });
     withServer(view.server);
     view.live();
-    await userEvent.click(within(screen.getByRole("navigation", { name: "Settings" })).getByRole("button", { name: "Workspaces" }));
+    await userEvent.click(within(screen.getByRole("navigation", { name: "Settings" })).getByRole("button", { name: "Sessions" }));
     await userEvent.click(screen.getByRole("button", { name: "Add a folder…" }));
     await userEvent.click(screen.getByRole("button", { name: "Browse…" }));
     expect(app.of("crew_pick_folder")).toEqual([{ near: "/home/me/api" }]);
@@ -180,7 +227,7 @@ describe("the server settings", () => {
   });
 
   it("shows the hooks of each agent and installs them", async () => {
-    const { server } = await open("Agents");
+    const { server } = await open("Sessions");
     const codex = await screen.findByRole("group", { name: "Codex" });
     expect(within(codex).getByText("Hooks not installed")).toBeInTheDocument();
     expect(within(screen.getByRole("group", { name: "Claude Code" })).getByText("Hooks installed in /home/me/.claude/settings.json")).toBeInTheDocument();
@@ -189,7 +236,7 @@ describe("the server settings", () => {
   });
 
   it("saves the agent defaults and the fallback threshold in config.toml", async () => {
-    const { server } = await open("Agents");
+    const { server } = await open("Sessions");
     const claude = await screen.findByRole("group", { name: "Claude Code" });
     expect(within(claude).getByRole("combobox", { name: "Default model" })).toHaveTextContent("opus");
     await pick(userEvent.setup(), within(claude).getByRole("combobox", { name: "Default effort" }), "high");
@@ -235,7 +282,7 @@ describe("the server settings", () => {
   });
 
   it("removes a workspace from its menu after a confirm", async () => {
-    const { server } = await open("Workspaces");
+    const { server } = await open("Sessions");
     await userEvent.click(await screen.findByRole("button", { name: "More for /home/me/api" }));
     await userEvent.click(screen.getByRole("menuitem", { name: "Remove" }));
     await userEvent.click(within(screen.getByRole("dialog", { name: "Remove /home/me/api?" })).getByRole("button", { name: "Remove" }));
@@ -262,7 +309,7 @@ describe("the server settings", () => {
     withServer(view.server).on("GET", "/api/v1/workspaces/dirs?path=%2Fhome%2Fme", { status: 403, body: { error: { code: "forbidden", message: "only the owner device" } } });
     view.server.on("GET", "/api/v1/config", { status: 403, body: { error: { code: "forbidden", message: "only the owner device" } } });
     view.live();
-    await userEvent.click(within(screen.getByRole("navigation", { name: "Settings" })).getByRole("button", { name: "Agents" }));
+    await userEvent.click(within(screen.getByRole("navigation", { name: "Settings" })).getByRole("button", { name: "Sessions" }));
     expect(await screen.findByText("Only the owner device, the app on the computer that runs crew, can change this.")).toBeInTheDocument();
   });
 });

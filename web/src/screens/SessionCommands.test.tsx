@@ -197,6 +197,7 @@ describe("the end confirmation setting", () => {
   it("is on by default and Settings turns it off", async () => {
     const d = desktop("#/settings", false);
     d.live();
+    await userEvent.click(within(screen.getByRole("navigation", { name: "Settings" })).getByRole("button", { name: "Sessions" }));
     const box = screen.getByRole("switch", { name: "Ask before I end a session" });
     expect(box).toHaveAttribute("aria-checked", "true");
     await userEvent.click(box);

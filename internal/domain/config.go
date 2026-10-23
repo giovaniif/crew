@@ -3,6 +3,7 @@ package domain
 import (
 	"errors"
 	"fmt"
+	"math"
 	"regexp"
 	"slices"
 	"strconv"
@@ -15,7 +16,7 @@ var (
 )
 
 func ConfigKeys() []string {
-	keys := []string{"fallback.threshold", "push.away_after"}
+	keys := []string{"fallback.threshold", "push.away_after", "mates.hop_limit", "mates.turns_per_hour", "mates.daily_turns", "mates.daily_tokens"}
 	for _, h := range Harnesses() {
 		keys = append(keys, "defaults."+string(h)+".model", "defaults."+string(h)+".effort")
 	}
@@ -32,6 +33,8 @@ func ConfigLiteral(key, value string) (string, error) {
 	switch {
 	case key == "fallback.threshold":
 		return intLiteral(key, value, 0, 100)
+	case strings.HasPrefix(key, "mates."):
+		return intLiteral(key, value, 0, math.MaxInt32)
 	case key == "push.away_after":
 		d, err := time.ParseDuration(value)
 		if err != nil || d < 0 {

@@ -30,6 +30,14 @@ func TestConfigLiteralValidatesEachKey(t *testing.T) {
 		{"theme.purple", "#123456", "", false},
 		{"tracker.token", "secret", "", false},
 		{"launcher", "4", "", false},
+		{"mates.hop_limit", "5", "5", true},
+		{"mates.hop_limit", "0", "0", true},
+		{"mates.hop_limit", "-1", "", false},
+		{"mates.turns_per_hour", "20", "20", true},
+		{"mates.daily_turns", "100", "100", true},
+		{"mates.daily_turns", "many", "", false},
+		{"mates.daily_tokens", "2000000", "2000000", true},
+		{"mates.stop", "true", "", false},
 		{"", "4", "", false},
 	}
 	for _, c := range cases {
@@ -63,7 +71,7 @@ func TestConfigHasNoTuiThemeKeys(t *testing.T) {
 
 func TestConfigKeysListEverySettableKey(t *testing.T) {
 	keys := ConfigKeys()
-	for _, want := range []string{"fallback.threshold", "push.away_after", "defaults.claude.model", "defaults.codex.effort"} {
+	for _, want := range []string{"fallback.threshold", "push.away_after", "defaults.claude.model", "defaults.codex.effort", "mates.hop_limit", "mates.turns_per_hour", "mates.daily_turns", "mates.daily_tokens"} {
 		found := false
 		for _, k := range keys {
 			found = found || k == want

@@ -71,7 +71,8 @@ pub fn watch<R: tauri::Runtime>(
     stop_serve: impl Fn(&tauri::AppHandle<R>) + Send + 'static,
 ) {
     std::thread::spawn(move || loop {
-        let checked = tauri::async_runtime::block_on(check(&app, crew.as_deref(), &stop_serve));
+        let checked =
+            tauri::async_runtime::block_on(check(&app, crew.as_deref(), &stop_serve)).map(|_| ());
         if let Err(err) = checked {
             eprintln!("crew-desktop: update check failed: {err}");
         }
@@ -80,11 +81,11 @@ pub fn watch<R: tauri::Runtime>(
 }
 
 #[cfg(desktop)]
-async fn check<R: tauri::Runtime>(
+pub async fn check<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
     crew: Option<&std::path::Path>,
     stop_serve: &impl Fn(&tauri::AppHandle<R>),
-) -> Result<(), String> {
+) -> Result<Option<String>, String> {
     use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
     use tauri_plugin_updater::UpdaterExt;
 
@@ -97,8 +98,9 @@ async fn check<R: tauri::Runtime>(
         .build()
         .map_err(|e| e.to_string())?;
     let Some(update) = updater.check().await.map_err(|e| e.to_string())? else {
-        return Ok(());
+        return Ok(None);
     };
+    let latest = update.version.clone();
     let text = prompt(&current, &update.version, update.body.as_deref());
     let agreed = app
         .dialog()
@@ -129,5 +131,5 @@ async fn check<R: tauri::Runtime>(
             Step::Restart => app.restart(),
         }
     }
-    Ok(())
+    Ok(Some(latest))
 }
