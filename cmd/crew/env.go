@@ -13,7 +13,7 @@ import (
 	"github.com/giovaniif/crew/internal/rpc"
 )
 
-const envUsage = "usage: crew env list | show <env> | create <env> [--kind custom|local] [--part p]... [--git-name n] [--git-email e] | set <env> <VAR> (the value comes from stdin or a prompt) | set <env> [--part p]... [--git-name n] [--git-email e] | unset <env> <VAR> | login <env> | ssh-key <env> [--make|--rotate|--confirm|--import] | delete <env> | exec [<env> [--harness claude|codex|omp]] -- <program> [args...]"
+const envUsage = "usage: crew env list | show <env> | create <env> [--kind custom|local] [--part p]... [--git-name n] [--git-email e] | set <env> <VAR> (the value comes from stdin or a prompt) | set <env> [--part p]... [--git-name n] [--git-email e] | unset <env> <VAR> | login <env> [--harness claude|omp] | ssh-key <env> [--make|--rotate|--confirm|--import] | delete <env> | exec [<env> [--harness claude|codex|omp]] -- <program> [args...]"
 
 func runEnv(args []string, stdout, stderr io.Writer) int {
 	if len(args) > 0 && args[0] == "exec" {
@@ -24,8 +24,8 @@ func runEnv(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 	if args[0] == "login" {
-		fmt.Fprintf(stderr, "crew env login: this runs claude setup-token in environment %s. Then store the token with crew env set %s CLAUDE_CODE_OAUTH_TOKEN.\n", args[1], args[1])
-		return execInEnv(envLoginArgv(args[1]), stderr)
+		fmt.Fprintf(stderr, "crew env login: "+envLogins[envLoginHarness(args[1:])].note+"\n", args[1])
+		return execInEnv(envLoginArgv(args[1:]), stderr)
 	}
 	if err := envCLI(args, stdout); err != nil {
 		fmt.Fprintf(stderr, "crew env %s: %v\n", args[0], err)

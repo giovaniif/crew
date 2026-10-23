@@ -36,7 +36,13 @@ func envArgsOK(args []string) bool {
 	switch args[0] {
 	case "list":
 		return len(args) == 1
-	case "show", "delete", "login":
+	case "login":
+		if len(args) == 4 && args[2] == "--harness" {
+			_, ok := envLogins[domain.Harness(args[3])]
+			return ok
+		}
+		return len(args) == 2
+	case "show", "delete":
 		return len(args) == 2
 	case "create":
 		return len(args) >= 2 && noHelp
@@ -54,8 +60,26 @@ func envArgsOK(args []string) bool {
 	return false
 }
 
-func envLoginArgv(name string) []string {
-	return []string{"exec", name, "--harness", "claude", "--", "claude", "setup-token"}
+type envLogin struct {
+	argv []string
+	note string
+}
+
+var envLogins = map[domain.Harness]envLogin{
+	domain.HarnessClaude: {[]string{"claude", "setup-token"}, "this runs claude setup-token in environment %[1]s. Then store the token with crew env set %[1]s CLAUDE_CODE_OAUTH_TOKEN."},
+	domain.HarnessOmp:    {[]string{"omp", "login"}, "this runs omp login in environment %[1]s. omp keeps the login in the Pi dir of %[1]s."},
+}
+
+func envLoginHarness(args []string) domain.Harness {
+	if len(args) == 3 {
+		return domain.Harness(args[2])
+	}
+	return domain.HarnessClaude
+}
+
+func envLoginArgv(args []string) []string {
+	h := envLoginHarness(args)
+	return append([]string{"exec", args[0], "--harness", string(h), "--"}, envLogins[h].argv...)
 }
 
 func envCLI(args []string, stdout io.Writer) error {
