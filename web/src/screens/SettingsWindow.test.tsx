@@ -100,18 +100,16 @@ describe("the app settings", () => {
     expect(storage.getItem("crew.confirmEnd")).toBe("off");
   });
 
-  it("keeps Notifications in the app store", async () => {
+  it("keeps Notifications in the store that the banners read, with a Sound box for each event", async () => {
     const { storage } = await open("Notifications");
     await userEvent.click(screen.getByRole("switch", { name: "Hits a limit or an error" }));
+    await userEvent.click(screen.getByRole("checkbox", { name: "Sound when a session finishes" }));
     await userEvent.click(screen.getByRole("switch", { name: "Also notify for muted sessions" }));
-    const n = loadSettings(storage).notifications;
-    expect(n.limitOrError.banner).toBe(!defaults.notifications.limitOrError.banner);
-    const sound = screen.getByRole("switch", { name: "Play a sound" });
-    await userEvent.click(sound);
-    const all = loadSettings(storage).notifications;
-    const on = sound.getAttribute("aria-checked") === "true";
-    expect([all.permission.sound, all.waiting.sound, all.done.sound, all.limitOrError.sound]).toEqual([on, on, on, on]);
-    expect(loadSettings(storage).notifications.notifyMuted).toBe(true);
+    const alerts = JSON.parse(storage.getItem("crew.alerts") ?? "{}");
+    expect(alerts.limitOrError.banner).toBe(!defaults.notifications.limitOrError.banner);
+    expect(alerts.done.sound).toBe(!defaults.notifications.done.sound);
+    expect(alerts.notifyMuted).toBe(true);
+    expect(screen.queryByRole("switch", { name: "Play a sound" })).toBeNull();
   });
 
   it("keeps Appearance in the app store and clamps the font size", async () => {
@@ -156,7 +154,7 @@ describe("the server settings", () => {
     await userEvent.click(within(screen.getByRole("navigation", { name: "Settings" })).getByRole("button", { name: "Workspaces" }));
     await userEvent.click(screen.getByRole("button", { name: "Add a folder…" }));
     await userEvent.click(screen.getByRole("button", { name: "Browse…" }));
-    expect(app.of("crew_pick_folder")).toHaveLength(1);
+    expect(app.of("crew_pick_folder")).toEqual([{ near: "/home/me/api" }]);
     expect(screen.getByRole("combobox", { name: "Workspace path" })).toHaveValue("/home/me/web");
   });
 
