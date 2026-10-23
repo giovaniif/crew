@@ -1,7 +1,7 @@
 import type { KeyValue } from "./auth";
 import { parseRoute } from "./route";
 import { groupSessions, limitRows } from "./sessions";
-import type { Session, StreamState } from "./stream";
+import type { Alert, Session, StreamState } from "./stream";
 
 export type EventAlert = { banner: boolean; sound: boolean };
 
@@ -10,6 +10,10 @@ export type AlertPrefs = {
   waiting: EventAlert;
   done: EventAlert;
   limitOrError: EventAlert;
+  mateNeeds: EventAlert;
+  mateDone: EventAlert;
+  automationFailed: EventAlert;
+  prChecksFailed: EventAlert;
   skipSessionInView: boolean;
   notifyMuted: boolean;
 };
@@ -19,13 +23,23 @@ export const defaultAlertPrefs: AlertPrefs = {
   waiting: { banner: true, sound: false },
   done: { banner: true, sound: false },
   limitOrError: { banner: true, sound: false },
+  mateNeeds: { banner: true, sound: true },
+  mateDone: { banner: false, sound: false },
+  automationFailed: { banner: true, sound: true },
+  prChecksFailed: { banner: true, sound: true },
   skipSessionInView: true,
   notifyMuted: false,
 };
 
 const prefsKey = "crew.alerts";
 
-function alertFor(prefs: AlertPrefs, state: string): EventAlert {
+function alertFor(prefs: AlertPrefs, state: string, mate: boolean): EventAlert {
+  if (mate && (state === "permission" || state === "waiting")) {
+    return prefs.mateNeeds;
+  }
+  if (mate && state === "done") {
+    return prefs.mateDone;
+  }
   switch (state) {
     case "permission":
       return prefs.permission;
@@ -74,7 +88,17 @@ function kindOf(state: string): BannerPost["kind"] {
   return state === "permission" || state === "waiting" ? state : "other";
 }
 
-export function bannerStep(shown: Record<string, string> | null, sessions: Session[], prefs: AlertPrefs, view: View): BannerStep {
+function alertPref(prefs: AlertPrefs, kind: string): EventAlert {
+  return kind === "automation_failed" ? prefs.automationFailed : prefs.prChecksFailed;
+}
+
+export function bannerStep(
+  shown: Record<string, string> | null,
+  sessions: Session[],
+  prefs: AlertPrefs,
+  view: View,
+  alerts: Alert[] = [],
+): BannerStep {
   const next: Record<string, string> = {};
   const posts: BannerPost[] = [];
   for (const s of sessions) {
@@ -85,13 +109,28 @@ export function bannerStep(shown: Record<string, string> | null, sessions: Sessi
     if (shown === null || shown[s.ID] === s.banner) {
       continue;
     }
-    const alert = alertFor(prefs, s.State);
+    const alert = alertFor(prefs, s.State, !!s.Mate);
     const inView = prefs.skipSessionInView && view.front && view.session === s.ID;
     const muted = s.Muted && !prefs.notifyMuted;
     if (inView || muted || !alert.banner) {
       continue;
     }
     posts.push({ id: s.ID, title: s.name || "crew", body: s.banner, kind: kindOf(s.State), sound: alert.sound });
+  }
+  for (const a of alerts) {
+    const key = "alert:" + a.id;
+    next[key] = a.id;
+    if (shown === null || shown[key] === a.id) {
+      continue;
+    }
+    const pref = alertPref(prefs, a.kind);
+    const owner = sessions.find((s) => s.ID === a.session);
+    const inView = !!a.session && prefs.skipSessionInView && view.front && view.session === a.session;
+    const muted = !!owner?.Muted && !prefs.notifyMuted;
+    if (inView || muted || !pref.banner) {
+      continue;
+    }
+    posts.push({ id: a.id, title: a.title, body: a.body, kind: "other", sound: pref.sound });
   }
   return { posts, shown: next };
 }

@@ -207,7 +207,7 @@ func (d *Daemon) runMate(ctx context.Context, name string, w *mateWorker) {
 func (d *Daemon) setMateState(name string, w *mateWorker, s app.SlackStatus) {
 	d.slack.mu.Lock()
 	if d.slack.running[name] == w {
-		d.slack.states[name] = rpc.MateState{Name: name, State: s.State, Error: s.Error}
+		d.slack.states[name] = rpc.MateState{Name: name, State: s.State, Error: s.Error, Channels: s.Channels}
 		if s.User != "" {
 			d.slack.users[name] = s.User
 		}

@@ -35,11 +35,12 @@ type MateThread struct {
 }
 
 type MateConversation struct {
-	Session   string            `json:"session"`
-	Name      string            `json:"name"`
-	State     domain.AgentState `json:"state"`
-	Ended     bool              `json:"ended"`
-	StartedAt time.Time         `json:"started_at"`
+	Session    string            `json:"session"`
+	Name       string            `json:"name"`
+	State      domain.AgentState `json:"state"`
+	Ended      bool              `json:"ended"`
+	StartedAt  time.Time         `json:"started_at"`
+	Automation string            `json:"automation,omitempty"`
 }
 
 type Mate struct {
@@ -63,6 +64,7 @@ type State struct {
 	Limits     []Quota             `json:"limits"`
 	Sends      []domain.QueuedSend `json:"sends"`
 	Mates      Mates               `json:"mates"`
+	Alerts     []domain.Alert      `json:"alerts"`
 }
 
 type Diff struct {
@@ -77,6 +79,7 @@ type Diff struct {
 	Limits           *[]Quota             `json:"limits,omitempty"`
 	Sends            *[]domain.QueuedSend `json:"sends,omitempty"`
 	Mates            *Mates               `json:"mates,omitempty"`
+	Alerts           *[]domain.Alert      `json:"alerts,omitempty"`
 }
 
 type FailingCheck struct {
@@ -119,6 +122,7 @@ type NativeState struct {
 	Drafts      []domain.ReviewDraft  `json:"drafts"`
 	Reclaimable rpc.Reclaimable       `json:"reclaimable"`
 	Mates       Mates                 `json:"mates"`
+	Alerts      []domain.Alert        `json:"alerts"`
 }
 
 type NativeDiff struct {
@@ -140,6 +144,7 @@ type NativeDiff struct {
 	Comment          *domain.ReviewComment `json:"comment,omitempty"`
 	Reclaimable      *rpc.Reclaimable      `json:"reclaimable,omitempty"`
 	Mates            *Mates                `json:"mates,omitempty"`
+	Alerts           *[]domain.Alert       `json:"alerts,omitempty"`
 }
 
 type derived struct {
@@ -184,6 +189,7 @@ func New(st rpc.State) (*View, *State) {
 		Limits:     native.Limits,
 		Sends:      native.Sends,
 		Mates:      native.Mates,
+		Alerts:     native.Alerts,
 	}
 }
 
@@ -238,6 +244,7 @@ func build(st rpc.State, native bool) (*View, *NativeState) {
 		Drafts:      orEmpty(st.Drafts),
 		Reclaimable: st.Reclaimable,
 		Mates:       v.mates,
+		Alerts:      orEmpty(st.Alerts),
 	}
 }
 
@@ -270,6 +277,7 @@ func (v *View) ApplyNative(d rpc.Diff) []*NativeDiff {
 		Draft:            d.Draft,
 		Comment:          d.Comment,
 		Reclaimable:      d.Reclaimable,
+		Alerts:           d.Alerts,
 	}
 	if d.Session != nil {
 		s := v.show(*d.Session, orders)
@@ -304,6 +312,7 @@ func (d *NativeDiff) phone() *Diff {
 		Limits:           d.Limits,
 		Sends:            d.Sends,
 		Mates:            d.Mates,
+		Alerts:           d.Alerts,
 	}
 	if d.Worktree != nil {
 		wt := withoutPorts(*d.Worktree)
@@ -486,7 +495,7 @@ func (v *View) quotas() []Quota {
 
 func (d *Diff) keep() bool {
 	return d.RemovedWorkspace != "" || d.RemovedWorktree != "" || d.RemovedSession != "" ||
-		d.Workspace != nil || d.Task != nil || d.Worktree != nil || d.Session != nil || d.Sends != nil || d.Limits != nil || d.Mates != nil
+		d.Workspace != nil || d.Task != nil || d.Worktree != nil || d.Session != nil || d.Sends != nil || d.Limits != nil || d.Mates != nil || d.Alerts != nil
 }
 
 func (d *NativeDiff) keep() bool {
@@ -552,7 +561,7 @@ func (v *View) mateConversations(name string) []MateConversation {
 		if s.Mate == nil || !s.Mate.Local || s.Mate.Name != name {
 			continue
 		}
-		out = append(out, MateConversation{Session: id, Name: v.shown[id].name, State: s.State, Ended: s.Ended, StartedAt: s.StartedAt})
+		out = append(out, MateConversation{Session: id, Name: v.shown[id].name, State: s.State, Ended: s.Ended, StartedAt: s.StartedAt, Automation: s.Mate.Automation})
 	}
 	sort.Slice(out, func(i, j int) bool {
 		if !out[i].StartedAt.Equal(out[j].StartedAt) {

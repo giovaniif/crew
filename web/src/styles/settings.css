@@ -485,6 +485,13 @@ a.ui.btn {
   font-weight: 500;
 }
 
+.nrow .t .s {
+  display: block;
+  font-weight: 400;
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+}
+
 .nrow .ui-anchor,
 .nrow .ui.select {
   width: 150px;

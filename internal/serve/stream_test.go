@@ -108,6 +108,7 @@ func streamState() rpc.State {
 		Subagents: []domain.Subagent{{SessionID: "s1", ID: "a1"}},
 		Drafts:    []domain.ReviewDraft{{Session: "s1"}},
 		Sends:     []domain.QueuedSend{{ID: "m1", Session: "s1", Text: "and add a test", QueuedAt: at}},
+		Alerts:    []domain.Alert{{ID: "automation_failed:r1", Kind: domain.AlertAutomationFailed, Title: "Automation fix-ci failed", Body: "no such repo", At: at}},
 	}
 }
 
@@ -219,8 +220,10 @@ func TestServeStreamSendsTheFilteredStateThenItsDiffs(t *testing.T) {
 	f.broadcast(rpc.Diff{Seq: 46, Sends: &sends})
 	f.broadcast(rpc.Diff{Seq: 47, RemovedSession: "s2"})
 	f.broadcast(rpc.Diff{Seq: 48, Task: &domain.Task{ID: "t1", Source: domain.TaskText, Text: "fix the login redirect", PinnedName: "login fix"}})
+	alerts := []domain.Alert{{ID: "pr_checks_failed:x", Kind: domain.AlertPRChecksFailed, Title: "PR #42 checks failed", Session: "s1", At: at}}
+	f.broadcast(rpc.Diff{Seq: 49, Alerts: &alerts})
 	var frames []json.RawMessage
-	for range 7 {
+	for range 8 {
 		frames = append(frames, next(t, c))
 	}
 	all, _ := json.Marshal(frames)

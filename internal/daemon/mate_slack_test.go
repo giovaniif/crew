@@ -82,6 +82,18 @@ func TestMateWorkerConnectsEachEnabledMateThatHasTokens(t *testing.T) {
 	}
 }
 
+func TestMateStateGivesTheSlackChannelsOfTheMate(t *testing.T) {
+	hub := &fakeSlackHub{chans: map[string][]string{knownBot: {"api", "web"}}}
+	c, _ := slackDaemon(t, hub)
+	if _, err := setTokens(c, "reviewer", knownBot, knownApp); err != nil {
+		t.Fatal(err)
+	}
+	got := waitState(t, c, "reviewer", domain.MateConnected)
+	if strings.Join(got.Channels, ",") != "api,web" {
+		t.Fatalf("channels %v", got.Channels)
+	}
+}
+
 func TestMateClearTokensDisconnectsTheMate(t *testing.T) {
 	hub := &fakeSlackHub{}
 	c, _ := slackDaemon(t, hub)

@@ -34,14 +34,15 @@ func (a Action) Dangerous() bool {
 }
 
 type MateSeat struct {
-	Name      string
-	Owner     string
-	Authority string
-	Origin    string       `json:",omitempty"`
-	Asked     []ActionKind `json:",omitempty"`
-	Hops      int          `json:",omitempty"`
-	Local     bool         `json:",omitempty"`
-	FreshFrom string       `json:",omitempty"`
+	Name       string
+	Owner      string
+	Authority  string
+	Origin     string       `json:",omitempty"`
+	Asked      []ActionKind `json:",omitempty"`
+	Hops       int          `json:",omitempty"`
+	Local      bool         `json:",omitempty"`
+	FreshFrom  string       `json:",omitempty"`
+	Automation string       `json:",omitempty"`
 }
 
 type ActionScope struct {
