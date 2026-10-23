@@ -155,7 +155,7 @@ describe("Mate page", () => {
     expect(within(rail).getByRole("radio", { name: "Claude" })).toHaveAttribute("aria-checked", "true");
     expect(await within(rail).findByText(/Help\.\s+With care\./)).toBeInTheDocument();
     expect(within(rail).getByText(/Connected as @helper/)).toBeInTheDocument();
-    expect(within(rail).getByRole("link", { name: "+ Add automation" })).toHaveAttribute("href", "#/automations");
+    expect(within(rail).getByRole("link", { name: "+ Add automation" })).toHaveAttribute("href", "#/automations/new?mate=helper");
   });
 
   it("gives a mate without Slack its app threads, with the normal composer", async () => {
@@ -276,7 +276,7 @@ describe("Mate page", () => {
     await waitFor(() => expect(saved().at(-1)).toMatchObject({ mate: { name: "helper", avatar: "bolt" } }));
     const swatches = within(rail).getAllByRole("button", { name: /^Color / });
     await user.click(swatches[1]);
-    await waitFor(() => expect(saved().at(-1)?.mate?.color).toMatch(/^#[0-9a-f]{6}$/i));
+    await waitFor(() => expect((saved().at(-1) as { mate: { color?: string } }).mate.color).toMatch(/^#[0-9a-f]{6}$/i));
   });
 
   it("offers Connect… for a mate without Slack", async () => {
