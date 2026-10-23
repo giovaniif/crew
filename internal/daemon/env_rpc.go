@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/giovaniif/crew/internal/app"
 	"github.com/giovaniif/crew/internal/domain"
@@ -12,6 +14,29 @@ import (
 
 func WithEnvironments(s app.EnvironmentStore) Option {
 	return func(d *Daemon) { d.envs = s }
+}
+
+const localFactsTTL = 30 * time.Second
+
+type localFactsCache struct {
+	mu    sync.Mutex
+	probe app.LocalProbe
+	at    time.Time
+	facts app.LocalFacts
+}
+
+func (c *localFactsCache) get() app.LocalFacts {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.at.IsZero() || time.Since(c.at) > localFactsTTL {
+		c.facts = c.probe.Local()
+		c.at = time.Now()
+	}
+	return c.facts
+}
+
+func WithLocalProbe(p app.LocalProbe) Option {
+	return func(d *Daemon) { d.localFacts = &localFactsCache{probe: p} }
 }
 
 func (d *Daemon) envMethod(req rpc.Request) *rpc.Response {
@@ -78,6 +103,18 @@ func (d *Daemon) envInfo(env domain.Environment, mates []domain.Mate) rpc.EnvInf
 	}
 	if pub, err := d.envs.PublicKey(env.Name); err == nil {
 		info.PublicKey = pub
+		if at, err := d.envs.KeyCreated(env.Name); err == nil {
+			info.KeyCreated = at.UTC().Format(time.RFC3339)
+		}
+	}
+	if next, err := d.envs.NewPublicKey(env.Name); err == nil {
+		info.NewPublicKey = next
+	}
+	if env.Kind != domain.EnvLocal {
+		info.GitName, info.GitEmail = d.envs.GitIdentity(env.Name)
+	} else if d.localFacts != nil {
+		f := d.localFacts.get()
+		info.Local = &rpc.EnvLocal{GitName: f.GitName, GitEmail: f.GitEmail, SSHAgent: f.SSHAgent, SSHKeys: f.SSHKeys, GitHub: f.GitHub, GitHubUser: f.GitHubUser, Claude: f.Claude, Codex: f.Codex, Pi: f.Pi}
 	}
 	users := domain.MatesUsingEnv(mates, env.Name)
 	if env.Kind == domain.EnvLocal && env.Name == string(domain.EnvLocal) {
@@ -222,6 +259,8 @@ func (d *Daemon) envSSHKey(req rpc.Request, env domain.Environment, mates []doma
 		next, err = d.envs.RotateSSHKey(env.Name)
 	case rpc.EnvSSHKeyConfirm:
 		err = d.envs.ConfirmSSHKey(env.Name)
+	case rpc.EnvSSHKeyCancel:
+		err = d.envs.CancelSSHKey(env.Name)
 	case rpc.EnvSSHKeyImport:
 		if strings.TrimSpace(p.PrivateKey) == "" {
 			return errorResponse(req.ID, rpc.CodeBadRequest, "env.ssh_key import needs a private key")
@@ -234,7 +273,7 @@ func (d *Daemon) envSSHKey(req rpc.Request, env domain.Environment, mates []doma
 		return errorResponse(req.ID, rpc.CodeFailed, err.Error())
 	}
 	info := d.envInfo(env, mates)
-	if next != info.PublicKey {
+	if next != "" && next != info.PublicKey {
 		info.NewPublicKey = next
 	}
 	return result(req.ID, info)

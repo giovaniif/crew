@@ -9,9 +9,12 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/giovaniif/crew/internal/adapters/envstore"
+	"github.com/giovaniif/crew/internal/app"
 	"github.com/giovaniif/crew/internal/daemon"
 	"github.com/giovaniif/crew/internal/domain"
 	"github.com/giovaniif/crew/internal/rpc"
@@ -314,5 +317,96 @@ func TestEnvMethodsWithoutAStoreAreUnavailable(t *testing.T) {
 	c := dial(t, sock)
 	if _, err := envCall(c, rpc.MethodEnvList, struct{}{}); callCode(err) != rpc.CodeUnavailable {
 		t.Errorf("err = %v", err)
+	}
+}
+
+func TestEnvShowReturnsTheGitIdentityAndSetChangesIt(t *testing.T) {
+	c, _, _ := envDaemon(t, globalMates)
+	createBot(t, c)
+	got, err := envCall(c, rpc.MethodEnvShow, rpc.EnvNameParams{Name: "bot"})
+	if err != nil || got.GitName != "Bot" || got.GitEmail != "bot@example.com" {
+		t.Fatalf("show %+v, %v", got, err)
+	}
+	if _, err := envCall(c, rpc.MethodEnvSet, rpc.EnvSetParams{Name: "bot", GitName: "TEST Other", GitEmail: "other@example.com"}); err != nil {
+		t.Fatal(err)
+	}
+	got, _ = envCall(c, rpc.MethodEnvShow, rpc.EnvNameParams{Name: "bot"})
+	if got.GitName != "TEST Other" || got.GitEmail != "other@example.com" {
+		t.Errorf("after set %+v", got)
+	}
+}
+
+func TestEnvShowKeepsThePendingKeyAndCancelDeletesIt(t *testing.T) {
+	c, _, _ := envDaemon(t, globalMates)
+	createBot(t, c)
+	first, err := envCall(c, rpc.MethodEnvSSHKey, rpc.EnvSSHKeyParams{Name: "bot", Action: rpc.EnvSSHKeyMake})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := time.Parse(time.RFC3339, first.KeyCreated); err != nil {
+		t.Errorf("key_created %q", first.KeyCreated)
+	}
+	rotated, _ := envCall(c, rpc.MethodEnvSSHKey, rpc.EnvSSHKeyParams{Name: "bot", Action: rpc.EnvSSHKeyRotate})
+	shown, _ := envCall(c, rpc.MethodEnvShow, rpc.EnvNameParams{Name: "bot"})
+	if shown.NewPublicKey == "" || shown.NewPublicKey != rotated.NewPublicKey {
+		t.Fatalf("show after rotate %q, want %q", shown.NewPublicKey, rotated.NewPublicKey)
+	}
+	cancelled, err := envCall(c, rpc.MethodEnvSSHKey, rpc.EnvSSHKeyParams{Name: "bot", Action: rpc.EnvSSHKeyCancel})
+	if err != nil || cancelled.NewPublicKey != "" || cancelled.PublicKey != first.PublicKey {
+		t.Fatalf("cancel %+v, %v", cancelled, err)
+	}
+	if _, err := envCall(c, rpc.MethodEnvSSHKey, rpc.EnvSSHKeyParams{Name: "bot", Action: rpc.EnvSSHKeyConfirm}); err == nil {
+		t.Error("confirm after cancel succeeded")
+	}
+	if _, err := envCall(c, rpc.MethodEnvSSHKey, rpc.EnvSSHKeyParams{Name: "bot", Action: rpc.EnvSSHKeyCancel}); err == nil {
+		t.Error("cancel with no new key succeeded")
+	}
+}
+
+type countingProbe struct {
+	mu    sync.Mutex
+	calls int
+	facts app.LocalFacts
+}
+
+func (p *countingProbe) Local() app.LocalFacts {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.calls++
+	return p.facts
+}
+
+func TestEnvShowOfLocalReportsTheFactsOfThisMachineAndCachesThem(t *testing.T) {
+	home := t.TempDir()
+	path := filepath.Join(home, "config.toml")
+	if err := os.WriteFile(path, []byte(globalMates), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	probe := &countingProbe{facts: app.LocalFacts{GitName: "TEST Owner", GitEmail: "owner@example.com", SSHAgent: true, SSHKeys: 2, GitHub: true, GitHubUser: "owner", Claude: true, Codex: true}}
+	_, sock := start(t, &memStore{}, daemon.WithConfig(path), daemon.WithEnvironments(envstore.Store{Home: home}), daemon.WithLocalProbe(probe))
+	c := dial(t, sock)
+	got, err := envCall(c, rpc.MethodEnvShow, rpc.EnvNameParams{Name: "local"})
+	if err != nil || got.Local == nil {
+		t.Fatalf("show local %+v, %v", got, err)
+	}
+	want := rpc.EnvLocal{GitName: "TEST Owner", GitEmail: "owner@example.com", SSHAgent: true, SSHKeys: 2, GitHub: true, GitHubUser: "owner", Claude: true, Codex: true}
+	if *got.Local != want {
+		t.Errorf("local %+v, want %+v", *got.Local, want)
+	}
+	if _, err := envCall(c, rpc.MethodEnvShow, rpc.EnvNameParams{Name: "local"}); err != nil {
+		t.Fatal(err)
+	}
+	probe.mu.Lock()
+	calls := probe.calls
+	probe.mu.Unlock()
+	if calls != 1 {
+		t.Errorf("probe ran %d times, want 1", calls)
+	}
+	if _, err := envCall(c, rpc.MethodEnvCreate, rpc.EnvCreateParams{Name: "bot", Kind: domain.EnvCustom, Parts: []domain.EnvPart{domain.EnvGit}}); err != nil {
+		t.Fatal(err)
+	}
+	bot, _ := envCall(c, rpc.MethodEnvShow, rpc.EnvNameParams{Name: "bot"})
+	if bot.Local != nil {
+		t.Errorf("custom env has local facts %+v", bot.Local)
 	}
 }

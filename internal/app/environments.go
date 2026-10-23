@@ -1,6 +1,10 @@
 package app
 
-import "github.com/giovaniif/crew/internal/domain"
+import (
+	"time"
+
+	"github.com/giovaniif/crew/internal/domain"
+)
 
 type EnvironmentStore interface {
 	List() ([]domain.Environment, error)
@@ -17,4 +21,24 @@ type EnvironmentStore interface {
 	RotateSSHKey(env string) (string, error)
 	ConfirmSSHKey(env string) error
 	PublicKey(env string) (string, error)
+	NewPublicKey(env string) (string, error)
+	CancelSSHKey(env string) error
+	KeyCreated(env string) (time.Time, error)
+	GitIdentity(env string) (name, email string)
+}
+
+type LocalFacts struct {
+	GitName    string
+	GitEmail   string
+	SSHAgent   bool
+	SSHKeys    int
+	GitHub     bool
+	GitHubUser string
+	Claude     bool
+	Codex      bool
+	Pi         bool
+}
+
+type LocalProbe interface {
+	Local() LocalFacts
 }
