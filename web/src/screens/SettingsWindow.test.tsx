@@ -55,7 +55,7 @@ function withServer(server: FakeServer) {
   return server;
 }
 
-const groups = ["General", "Notifications", "Appearance", "Mates and Slack", "Sessions", "Shortcuts", "About"];
+const groups = ["General", "Notifications", "Appearance", "Mates and Slack", "Sessions", "Shortcuts", "Devices", "About"];
 
 async function open(name: string, hash = "#/settings", wide = true) {
   const view = desktop(hash, wide);
@@ -237,7 +237,7 @@ describe("the server settings", () => {
   });
 
   it("lists the devices, revokes one and shows a pair code", async () => {
-    const { server } = await open("General");
+    const { server } = await open("Devices");
     const tablet = await screen.findByRole("listitem", { name: "tablet" });
     expect(screen.getByRole("listitem", { name: "Laptop" })).toHaveTextContent("This device");
     await userEvent.click(within(tablet).getByRole("button", { name: "Revoke" }));
@@ -283,7 +283,7 @@ describe("the server settings", () => {
     const view = desktop("#/settings");
     withServer(view.server).on("GET", "/api/v1/devices", { status: 501, body: { error: { code: "unknown_method", message: "no device.list" } } });
     view.live();
-    await userEvent.click(within(screen.getByRole("navigation", { name: "Settings" })).getByRole("button", { name: "General" }));
+    await userEvent.click(within(screen.getByRole("navigation", { name: "Settings" })).getByRole("button", { name: "Devices" }));
     expect(await screen.findByText("This server does not have this setting. Update crew on the server to change it here.")).toBeInTheDocument();
   });
 
