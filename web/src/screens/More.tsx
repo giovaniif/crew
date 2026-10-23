@@ -1,5 +1,6 @@
 const items: { href: string; icon: string; label: string }[] = [
   { href: "#/automations", icon: "↻", label: "Automations" },
+  { href: "#/envs", icon: "⌂", label: "Environments" },
   { href: "#/disk", icon: "▥", label: "Disk" },
   { href: "#/settings", icon: "⚙", label: "Settings" },
 ];

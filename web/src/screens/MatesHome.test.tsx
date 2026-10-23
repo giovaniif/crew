@@ -50,10 +50,10 @@ describe("the Mates home", () => {
     expect(await screen.findByRole("heading", { name: "Mates", level: 1 })).toBeInTheDocument();
     const nav = within(screen.getByRole("navigation", { name: "Sidebar" }));
     expect(nav.getAllByRole("link").map((a) => a.getAttribute("aria-label") ?? a.querySelector(".nm")?.textContent)).toEqual(
-      expect.arrayContaining(["Mates", "Sessions", "Approvals", "Automations", "Disk", "Settings"]),
+      expect.arrayContaining(["Mates", "Sessions", "Approvals", "Automations", "Environments", "Disk", "Settings"]),
     );
     const order = nav.getAllByRole("link").map((a) => a.querySelector(".nm")?.textContent).filter(Boolean);
-    expect(order).toEqual(["Mates", "Sessions", "Approvals", "Automations", "Disk", "Settings"]);
+    expect(order).toEqual(["Mates", "Sessions", "Approvals", "Automations", "Environments", "Disk", "Settings"]);
     expect(nav.getByRole("link", { name: /^Mates/ })).toHaveAttribute("aria-current", "page");
     expect(nav.getByRole("link", { name: /^Sessions/ })).toHaveAttribute("href", "#/sessions");
     expect(nav.getByRole("link", { name: "+ New mate" })).toHaveAttribute("href", "#/mates/new");

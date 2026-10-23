@@ -10,6 +10,7 @@ import { Approvals } from "./screens/Approvals";
 import { Automations } from "./screens/Automations";
 import { Desktop } from "./screens/Desktop";
 import { Disk } from "./screens/Disk";
+import { Environments } from "./screens/Environments";
 import { MateProfile, NewMate } from "./screens/Mates";
 import { MatesHome } from "./screens/MatesHome";
 import { More } from "./screens/More";
@@ -235,6 +236,10 @@ function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, g
   }
   if (hash === "#/automations") {
     return { screen: <Automations api={api} now={now} />, tab: "more" };
+  }
+  if (hash === "#/envs" || hash.startsWith("#/envs/")) {
+    const name = safeDecode(hash.slice("#/envs/".length));
+    return { screen: <Environments api={api} name={hash === "#/envs" ? "" : name} wide={wide} />, tab: "more" };
   }
   if (hash === "#/more") {
     return { screen: <More />, tab: "more" };
