@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -25,11 +26,10 @@ type Table struct {
 }
 
 func (Table) Listeners(ctx context.Context) ([]domain.Listener, error) {
-	sockets, err := run(ctx, "netstat", "-anv", "-p", "tcp")
+	listeners, err := sockets(ctx)
 	if err != nil {
 		return nil, err
 	}
-	listeners := parseNetstat(sockets)
 	if len(listeners) == 0 {
 		return nil, nil
 	}
@@ -38,6 +38,15 @@ func (Table) Listeners(ctx context.Context) ([]domain.Listener, error) {
 		return nil, err
 	}
 	return merge(listeners, parseDetails(found)), nil
+}
+
+func sockets(ctx context.Context) ([]domain.Listener, error) {
+	if runtime.GOOS == "linux" {
+		out, err := run(ctx, "ss", "-ltnpH")
+		return parseSS(out), err
+	}
+	out, err := run(ctx, "netstat", "-anv", "-p", "tcp")
+	return parseNetstat(out), err
 }
 
 func run(ctx context.Context, name string, args ...string) (string, error) {

@@ -68,7 +68,7 @@ Implementations of the `app` ports. All exec, disk and network calls are here. g
 - **systemd**: on Linux, writes and starts (or stops and deletes) the systemd user unit for `crew setup serve`. It has the same idempotency and `.bak` backup as launchd. Tests use a temp dir and a fake runner, never `~/.config/systemd`.
   - If `XDG_RUNTIME_DIR` and `DBUS_SESSION_BUS_ADDRESS` are not set, `systemd.Exec` sets them from `/run/user/<uid>`. Non-interactive ssh has neither.
   - If that dir is missing, it still runs systemctl, but adds a `loginctl enable-linger` hint to its error.
-- **procs** (`app.ProcessTable`): `netstat -anv -p tcp` for listening sockets, then one `lsof -a -d cwd -p <pids>` for their group, command and cwd. A refresh (both commands) must take less than 50 ms. `BenchmarkPortsRefresh` fails above that (measured 19 ms). It also runs one `lsof -d cwd` for the holders check of cleanup.
+- **procs** (`app.ProcessTable`): `netstat -anv -p tcp` (macOS) or `ss -ltnpH` (Linux) for listening sockets, then one `lsof -a -d cwd -p <pids>` for their group, command and cwd. A refresh (both commands) must take less than 50 ms. `BenchmarkPortsRefresh` fails above that (measured 19 ms). It also runs one `lsof -d cwd` for the holders check of cleanup.
 - **fs**:
   - `WorkspaceFS` (stat and readdir only, no git).
   - `Du` (`du -sk -P`; `go test -tags integration -run Disk ./internal/adapters/fs/`).

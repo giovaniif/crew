@@ -66,6 +66,29 @@ func TestPortsParseEmpty(t *testing.T) {
 	}
 }
 
+const ssFixture = `LISTEN 0      4096       127.0.0.1:8081       0.0.0.0:* users:(("node",pid=101,fd=7))
+LISTEN 0      511            [::1]:8081          [::]:* users:(("node",pid=101,fd=8))
+LISTEN 0      4096               *:9229             *:* users:(("node",pid=101,fd=9),("worker",pid=102,fd=9))
+LISTEN 0      4096   127.0.0.53%lo:53         0.0.0.0:*
+LISTEN 0      4096  [fe80::1]%eth0:3000          [::]:* users:(("bun",pid=303,fd=3))
+LISTEN 0      4096       127.0.0.1:abc        0.0.0.0:* users:(("bad",pid=404,fd=3))
+LISTEN 0      4096       127.0.0.1:4000       0.0.0.0:* users:(("bad",pid=x,fd=3))
+`
+
+func TestPortsParseSSOnLinux(t *testing.T) {
+	got := parseSS(ssFixture)
+	want := []domain.Listener{
+		{Port: 8081, PID: 101, Command: "node"},
+		{Port: 8081, PID: 101, Command: "node"},
+		{Port: 9229, PID: 101, Command: "node"},
+		{Port: 9229, PID: 102, Command: "worker"},
+		{Port: 3000, PID: 303, Command: "bun"},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got  %+v\nwant %+v", got, want)
+	}
+}
+
 func TestPortsPIDListDeduplicatesAndSorts(t *testing.T) {
 	got := pidList([]domain.Listener{{PID: 9}, {PID: 3}, {PID: 9}, {PID: 5}})
 	if want := "3,5,9"; got != want {
