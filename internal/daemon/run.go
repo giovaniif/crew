@@ -118,6 +118,7 @@ func Run(ctx context.Context, home string) (err error) {
 		WithPush(webpush.New(filepath.Join(home, "vapid"), nil)),
 		WithMateSecrets(secrets.Files{Dir: filepath.Join(home, "secrets")}),
 		WithEnvironments(envstore.Store{Home: home}),
+		WithLocalProbe(envstore.NewProbe()),
 		WithSlack(func(bot, appToken string) app.SlackMate { return slack.New(bot, appToken) }, mateSyncEvery),
 		WithHeadlessBrowser(chromium.FromEnv(), filepath.Join(home, "browser", "profiles", "default", "cookies.json"), DefaultHeadlessReap),
 	}

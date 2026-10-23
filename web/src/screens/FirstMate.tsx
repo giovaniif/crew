@@ -1,0 +1,206 @@
+import { useState } from "react";
+import { createEnv, envSSHKey, saveMate, type Authed } from "../api";
+import type { KeyValue } from "../auth";
+import { customParts } from "../envs";
+import { Button, RadioGroup, Select } from "../ui";
+import { MateFace } from "./Mates";
+
+const skipKey = "crew.firstmate";
+
+export function firstMateSkipped(storage: KeyValue): boolean {
+  try {
+    return storage.getItem(skipKey) === "skip";
+  } catch {
+    return false;
+  }
+}
+
+function skip(storage: KeyValue) {
+  try {
+    storage.setItem(skipKey, "skip");
+  } catch {
+    return;
+  }
+}
+
+type Harness = "claude" | "codex" | "omp";
+type Where = "local" | "custom";
+
+const harnesses: { value: Harness; label: string }[] = [
+  { value: "claude", label: "Claude" },
+  { value: "codex", label: "Codex" },
+  { value: "omp", label: "Pi" },
+];
+
+const roles: { label: string; prompt: string }[] = [
+  { label: "Careful reviewer", prompt: "Review the pull requests of the team. Read each change with care and point out bugs, risks and missing tests." },
+  { label: "Fast bug fixer", prompt: "Fix the bugs that the team gives you. Find the cause, make the smallest fix, add a test and open a pull request." },
+  { label: "On-call triage", prompt: "Triage the alerts and the reports that come in. Find the likely cause, tell who owns it and suggest the next step." },
+];
+
+const fallbackPrompt = "Help the team with the tasks that it gives you.";
+
+const handle = /^[a-z0-9][a-z0-9-]*$/;
+
+function message(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+export function FirstMate({ api, storage, wide }: { api: Authed; storage: KeyValue; wide: boolean }) {
+  const [step, setStep] = useState<1 | 2>(1);
+  const [name, setName] = useState("");
+  const [prompt, setPrompt] = useState("");
+  const [agent, setAgent] = useState<Harness>("claude");
+  const [where, setWhere] = useState<Where>("local");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const mate = name.trim().toLowerCase();
+  const valid = handle.test(mate);
+
+  async function create() {
+    setBusy(true);
+    setError("");
+    try {
+      if (where === "custom") {
+        const env = await createEnv(api, { name: mate, kind: "custom", parts: customParts });
+        await envSSHKey(api, env.name, "make");
+        await saveMate(api, { name: mate, prompt: prompt.trim() || fallbackPrompt, agent, env: env.name, enabled: true });
+        window.location.hash = "#/envs/" + encodeURIComponent(env.name);
+        return;
+      }
+      await saveMate(api, { name: mate, prompt: prompt.trim() || fallbackPrompt, agent, enabled: true });
+      window.location.hash = "#/mates/" + encodeURIComponent(mate);
+    } catch (err) {
+      setError(message(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const alert = error ? (
+    <p className="error" role="alert">
+      {error}
+    </p>
+  ) : null;
+
+  const instead = (
+    <p className="fm-instead muted">
+      Only want to run a local agent?{" "}
+      <a
+        href="#/new"
+        onClick={(e) => {
+          e.preventDefault();
+          skip(storage);
+          window.location.hash = "#/new";
+        }}
+      >
+        Start a session
+      </a>{" "}
+      instead.
+    </p>
+  );
+
+  if (!wide) {
+    return (
+      <main className="fm fm-phone">
+        <h1>Make your first mate</h1>
+        <p className="lead">A mate is an agent that stays: a name, a role, its own threads.</p>
+        <input className="ui input" aria-label="Name" placeholder="Name" autoCapitalize="off" spellCheck={false} value={name} onChange={(e) => setName(e.target.value)} />
+        <Select label="Harness" value={agent} options={harnesses} onChange={setAgent} className="fm-select" />
+        <Select
+          label="Environment"
+          value={where}
+          options={[
+            { value: "local" as Where, label: "Environment: Local (this Mac)" },
+            { value: "custom" as Where, label: "Environment: New Custom" },
+          ]}
+          onChange={setWhere}
+          className="fm-select"
+        />
+        <Button variant="primary" disabled={!valid || busy} onClick={() => void create()}>
+          Next
+        </Button>
+        {alert}
+        {instead}
+      </main>
+    );
+  }
+
+  return (
+    <main className="fm">
+      <ol className="fm-steps" aria-label="Progress">
+        <li data-state="on" />
+        <li data-state={step === 2 ? "on" : "off"} />
+      </ol>
+      {step === 1 ? (
+        <>
+          <h1>Make your first mate</h1>
+          <p className="lead">A mate is an agent that stays: it has a name, a role, its own threads, and it can answer in Slack.</p>
+          <form
+            className="fm-composer"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (valid) {
+                setStep(2);
+              }
+            }}
+          >
+            <div className="fm-name">
+              {valid ? <MateFace name={mate} state="idle" px={28} /> : <span className="fm-q" aria-hidden="true">?</span>}
+              <input aria-label="Name" placeholder="Name, for example ada" autoCapitalize="off" spellCheck={false} value={name} onChange={(e) => setName(e.target.value)} />
+            </div>
+            <textarea aria-label="Role" rows={2} placeholder="What should it do? For example: review PRs in api and web." value={prompt} onChange={(e) => setPrompt(e.target.value)} />
+            <div className="fm-foot">
+              <Select label="Harness" value={agent} options={harnesses} onChange={setAgent} className="fm-chip" />
+              <span className="spacer" />
+              <Button variant="primary" type="submit" className="fm-next" disabled={!valid}>
+                Next
+              </Button>
+            </div>
+          </form>
+          <div className="fm-suggest">
+            {roles.map((r) => (
+              <button key={r.label} type="button" className="ui chip" onClick={() => setPrompt(r.prompt)}>
+                {r.label}
+              </button>
+            ))}
+          </div>
+          {instead}
+        </>
+      ) : (
+        <>
+          <h1>{"Where does " + mate + " work?"}</h1>
+          <p className="lead">{"Pick the environment: the git identity, keys and accounts " + mate + " uses. You can change it later."}</p>
+          <RadioGroup
+            label="Environment"
+            className="fm-pick"
+            itemClassName="preset"
+            value={where}
+            onChange={setWhere}
+            options={[
+              {
+                value: "local" as Where,
+                label: <span className="t">Local (this Mac)</span>,
+                detail: <span className="s">Act as you. Uses your git, SSH, gh and Claude logins.</span>,
+              },
+              {
+                value: "custom" as Where,
+                label: <span className="t">New Custom environment</span>,
+                detail: <span className="s">Isolated. Own git name, a new SSH key, its own tokens. Best for a bot account.</span>,
+              },
+            ]}
+          />
+          <div className="fm-buttons">
+            <Button variant="quiet" onClick={() => setStep(1)}>
+              Back
+            </Button>
+            <Button variant="primary" disabled={busy} onClick={() => void create()}>
+              {"Create " + mate}
+            </Button>
+          </div>
+          {alert}
+        </>
+      )}
+    </main>
+  );
+}

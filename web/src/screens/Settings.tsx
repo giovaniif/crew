@@ -30,7 +30,7 @@ import {
   shortcutActions,
   type Shortcuts,
 } from "../shortcuts";
-import { Button, Checkbox, Segmented, Stepper, Switch } from "../ui";
+import { Button, Segmented, Select, Stepper, Switch } from "../ui";
 import {
   AgentsGroup,
   DevicesGroup,
@@ -315,10 +315,15 @@ const events: {
   key: "permission" | "waiting" | "done" | "limitOrError";
   title: string;
 }[] = [
-  { key: "permission", title: "Needs permission" },
-  { key: "waiting", title: "Waits for an answer" },
-  { key: "done", title: "Finishes" },
-  { key: "limitOrError", title: "Hits a limit or an error" },
+  { key: "permission", title: "Session asks permission" },
+  { key: "waiting", title: "Session waits for an answer" },
+  { key: "done", title: "Session finished" },
+  { key: "limitOrError", title: "Session hits a limit or an error" },
+];
+
+const sounds: { value: "none" | "default"; label: string }[] = [
+  { value: "none", label: "None" },
+  { value: "default", label: "Default" },
 ];
 
 function NotificationsPane({
@@ -335,18 +340,15 @@ function NotificationsPane({
   };
   return (
     <>
-      <Group label="Notify me when a session" title="NOTIFY ME WHEN A SESSION">
+      <Group label="Sessions" title="SESSIONS">
+        <div className="nrow h" aria-hidden="true">
+          <span>Event</span>
+          <span>Banner</span>
+          <span>Sound</span>
+        </div>
         {events.map((e) => (
-          <Opt key={e.key} title={e.title}>
-            <Checkbox
-              className="sound"
-              label="Sound"
-              ariaLabel={"Sound when a session " + e.title.toLowerCase()}
-              checked={value[e.key].sound}
-              onChange={(v) =>
-                onChange({ ...value, [e.key]: { ...value[e.key], sound: v } })
-              }
-            />
+          <div key={e.key} className="nrow">
+            <span className="t">{e.title}</span>
             <Switch
               label={null}
               ariaLabel={e.title}
@@ -355,7 +357,15 @@ function NotificationsPane({
                 onChange({ ...value, [e.key]: { ...value[e.key], banner: v } })
               }
             />
-          </Opt>
+            <Select
+              label={"Sound when " + e.title.toLowerCase()}
+              value={value[e.key].sound ? "default" : "none"}
+              options={sounds}
+              onChange={(v) =>
+                onChange({ ...value, [e.key]: { ...value[e.key], sound: v === "default" } })
+              }
+            />
+          </div>
         ))}
       </Group>
       <Group label="Options" title="OPTIONS">

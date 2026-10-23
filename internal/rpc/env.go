@@ -18,6 +18,7 @@ const (
 	EnvSSHKeyRotate  = "rotate"
 	EnvSSHKeyConfirm = "confirm"
 	EnvSSHKeyImport  = "import"
+	EnvSSHKeyCancel  = "cancel"
 )
 
 type EnvSecret struct {
@@ -32,7 +33,23 @@ type EnvInfo struct {
 	Secrets      []EnvSecret      `json:"secrets"`
 	PublicKey    string           `json:"public_key,omitempty"`
 	NewPublicKey string           `json:"new_public_key,omitempty"`
+	KeyCreated   string           `json:"key_created,omitempty"`
+	GitName      string           `json:"git_name,omitempty"`
+	GitEmail     string           `json:"git_email,omitempty"`
 	UsedBy       []string         `json:"used_by"`
+	Local        *EnvLocal        `json:"local,omitempty"`
+}
+
+type EnvLocal struct {
+	GitName    string `json:"git_name"`
+	GitEmail   string `json:"git_email"`
+	SSHAgent   bool   `json:"ssh_agent"`
+	SSHKeys    int    `json:"ssh_keys"`
+	GitHub     bool   `json:"github"`
+	GitHubUser string `json:"github_user"`
+	Claude     bool   `json:"claude"`
+	Codex      bool   `json:"codex"`
+	Pi         bool   `json:"pi"`
 }
 
 type EnvList struct {

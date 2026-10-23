@@ -598,7 +598,23 @@ export type EnvInfo = {
   secrets: EnvSecret[];
   public_key?: string;
   new_public_key?: string;
+  key_created?: string;
+  git_name?: string;
+  git_email?: string;
   used_by: string[];
+  local?: EnvLocal;
+};
+
+export type EnvLocal = {
+  git_name: string;
+  git_email: string;
+  ssh_agent: boolean;
+  ssh_keys: number;
+  github: boolean;
+  github_user: string;
+  claude: boolean;
+  codex: boolean;
+  pi: boolean;
 };
 
 export type EnvCreate = { name: string; kind: "local" | "custom"; parts?: string[]; git_name?: string; git_email?: string };
@@ -633,6 +649,6 @@ export function deleteEnv(a: Authed, name: string): Promise<EnvInfo> {
   return authedRequest<EnvInfo>(a, envPath(name), "DELETE");
 }
 
-export function envSSHKey(a: Authed, name: string, action: "make" | "rotate" | "confirm"): Promise<EnvInfo> {
+export function envSSHKey(a: Authed, name: string, action: "make" | "rotate" | "confirm" | "cancel"):Promise<EnvInfo> {
   return authedRequest<EnvInfo>(a, envPath(name, "ssh-key"), "POST", { action });
 }

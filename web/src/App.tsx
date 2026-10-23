@@ -13,6 +13,7 @@ import { Disk } from "./screens/Disk";
 import { Environments } from "./screens/Environments";
 import { MatePage, NewMate } from "./screens/Mates";
 import { MatesHome } from "./screens/MatesHome";
+import { FirstMate, firstMateSkipped } from "./screens/FirstMate";
 import { More } from "./screens/More";
 import { Install } from "./screens/Install";
 import { NewSession } from "./screens/NewSession";
@@ -286,7 +287,11 @@ function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, g
     };
   }
   if (parseRoute(hash).screen === "home") {
-    return { screen: <MatesHome api={api} now={now} board={snapshot.state?.mates} wide={wide} />, tab: "mates" };
+    const board = snapshot.state?.mates;
+    if (board && board.mates.length === 0 && !firstMateSkipped(env.storage)) {
+      return { screen: <FirstMate api={api} storage={env.storage} wide={wide} />, tab: "mates" };
+    }
+    return { screen: <MatesHome api={api} now={now} board={board} wide={wide} />, tab: "mates" };
   }
   return null;
 }

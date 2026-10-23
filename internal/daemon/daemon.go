@@ -175,6 +175,7 @@ type Daemon struct {
 	push        app.PushProvider
 	mateSecrets app.MateSecrets
 	envs        app.EnvironmentStore
+	localFacts  *localFactsCache
 	envLauncher string
 	slack       slackWorkers
 	presence    presenceCfg
