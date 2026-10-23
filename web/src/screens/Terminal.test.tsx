@@ -96,6 +96,16 @@ describe("the agent screen", () => {
     expect(within(agentScreen()).getByRole("status")).toHaveTextContent("This session's pane closed");
   });
 
+  it("explains a closed pane and offers the chat or a new try", async () => {
+    const d = open("#/sessions/s1/agent");
+    d.terminals.socket("%5").drop(4404, "no pane");
+    const state = within(agentScreen()).getByRole("status");
+    expect(state).toHaveTextContent("The agent is not running in tmux anymore. Its chat and changes are still here.");
+    expect(within(state).getByRole("button", { name: "Open again" })).toBeInTheDocument();
+    await userEvent.click(within(agentScreen()).getByRole("button", { name: "Back to chat" }));
+    expect(window.location.hash).toBe("#/sessions/s1");
+  });
+
   it("says when tmux is not available", async () => {
     const d = open("#/sessions/s1/agent");
     d.terminals.socket("%5").drop(1013);
