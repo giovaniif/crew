@@ -13,6 +13,8 @@ type MateStatus struct {
 	Error string         `json:"error,omitempty"`
 	Guard MateGuardStop  `json:"guard,omitempty"`
 
+	Channels []string `json:"channels,omitempty"`
+
 	Avatar string `json:"avatar,omitempty"`
 	Color  string `json:"color,omitempty"`
 }
