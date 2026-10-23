@@ -311,3 +311,13 @@ describe("Slider", () => {
     expect(s).toHaveAttribute("aria-valuenow", "3");
   });
 });
+
+describe("Menu check", () => {
+  it("draws the check of a chosen item as an icon, not a text mark", () => {
+    render(<Menu label="Pick" items={[{ value: "a", label: "A", checked: true }, { value: "b", label: "B", checked: false }]} onPick={() => undefined} onClose={() => undefined} />);
+    const item = screen.getByRole("menuitemcheckbox", { name: "A" });
+    expect(item.querySelector(".ck svg")).not.toBeNull();
+    expect(item).not.toHaveTextContent("✓");
+    expect(screen.getByRole("menuitemcheckbox", { name: "B" }).querySelector(".ck svg")).toBeNull();
+  });
+});

@@ -70,7 +70,7 @@ Repo tooling. The repo-wide rules are in the [root AGENTS.md](../AGENTS.md).
     - It has a `CREW_HOME` under `/tmp`, its own tmux socket, its own TCP ports and a temporary `HOME`.
     - The e2e fakes (`claude`, `codex`, `gh`, `terminal-notifier`, `osascript`) are first on `PATH`. Slack, ntfy and GitHub tokens are blank.
     - `up` starts `crew serve` and the Vite dev server (`CREW_API`). It pairs the device `TEST-verify` with `crew remote pair` and `POST /api/v1/pair`. It never prints the token.
-    - `--session` makes the repo `TEST-live` and runs `crew new` in it. The fake `claude` runs `$CREW_HOME/chat.sh` through its `run` step. The script echoes each typed line as `TEST echo: <line>`, writes a Claude transcript and fires `UserPromptSubmit` and `Stop`. The result has `session`, `pane` and `worktree`.
+    - `--session` makes the repo `TEST-live` and runs `crew new` in it. The fake `claude` runs `$CREW_HOME/chat.sh` through its `run` step. The script echoes each typed line as `TEST echo: <line>`, writes a Claude transcript and fires `UserPromptSubmit` and `Stop`. Each hook sends the same `session_id` on each start in the worktree, thus the session can resume. The result has `session`, `pane` and `worktree`.
   - `tui shot [--out f] [--size COLSxROWS]` and `tui drive --steps '<json>' [--restart]`: `crew tui` on the tmux server `<iso socket>-tui`.
     - Steps: `keys`, `type`, `wait` (ms), `expect` and `absent` (with `timeout` in ms), `shot`. It renders with `freeze`.
     - On a failure, it writes the pane to `failure.txt`.

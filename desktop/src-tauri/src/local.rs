@@ -60,7 +60,8 @@ pub fn serve_path(parent: Option<&OsStr>, login: Option<String>, home: Option<&P
         add(home.join(".local/bin"));
     }
     FALLBACK_DIRS.iter().map(PathBuf::from).for_each(&mut add);
-    std::env::join_paths(dirs).unwrap_or_else(|_| parent.map(OsStr::to_os_string).unwrap_or_default())
+    std::env::join_paths(dirs)
+        .unwrap_or_else(|_| parent.map(OsStr::to_os_string).unwrap_or_default())
 }
 
 pub fn login_path(shell: &Path, timeout: Duration) -> Option<String> {
@@ -109,35 +110,110 @@ pub fn base_url(port: u16) -> String {
 pub struct LocalServe {
     child: Child,
     pub port: u16,
+    log: Option<PathBuf>,
+    exit: Option<std::process::ExitStatus>,
+}
+
+const TAIL_LINES: usize = 20;
+
+pub fn start_serve(
+    crew: &Path,
+    port: u16,
+    log: &Path,
+    timeout: Duration,
+) -> Result<LocalServe, String> {
+    let mut serve = LocalServe::start(crew, port, log).map_err(|e| e.to_string())?;
+    if serve.wait_ready(timeout) {
+        return Ok(serve);
+    }
+    serve.stop();
+    let first = serve.problem();
+    if !daemon_is_older(&first) {
+        return Err(first);
+    }
+    let _ = Command::new(crew)
+        .args(["daemon", "stop"])
+        .env("PATH", child_path())
+        .stdin(Stdio::null())
+        .output();
+    let mut again = LocalServe::start(crew, port, log).map_err(|e| e.to_string())?;
+    if again.wait_ready(timeout) {
+        return Ok(again);
+    }
+    again.stop();
+    Err(format!(
+        "The app stopped an older crew daemon, but crew serve still did not start.\n{}",
+        again.problem()
+    ))
+}
+
+fn daemon_is_older(problem: &str) -> bool {
+    problem.contains("daemon runs crew") && problem.contains("restart the daemon")
 }
 
 impl LocalServe {
-    pub fn start(crew: &Path, port: u16) -> io::Result<Self> {
+    pub fn start(crew: &Path, port: u16, log: &Path) -> io::Result<Self> {
         let mut command = Command::new(crew);
         command.args(serve_args(port)).env("PATH", child_path());
-        Self::run(command, port)
+        if let Some(dir) = log.parent() {
+            std::fs::create_dir_all(dir)?;
+        }
+        let file = std::fs::File::create(log)?;
+        command.stderr(Stdio::from(file));
+        Self::run(command, port, Some(log.to_path_buf()))
     }
 
     pub fn spawn(program: &OsStr, args: &[String], port: u16) -> io::Result<Self> {
         let mut command = Command::new(program);
-        command.args(args);
-        Self::run(command, port)
+        command.args(args).stderr(Stdio::inherit());
+        Self::run(command, port, None)
     }
 
-    fn run(mut command: Command, port: u16) -> io::Result<Self> {
-        command
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::inherit());
+    fn run(mut command: Command, port: u16, log: Option<PathBuf>) -> io::Result<Self> {
+        command.stdin(Stdio::null()).stdout(Stdio::null());
         stop_with_parent(&mut command);
         let child = command.spawn()?;
-        Ok(LocalServe { child, port })
+        Ok(LocalServe {
+            child,
+            port,
+            log,
+            exit: None,
+        })
+    }
+
+    pub fn problem(&mut self) -> String {
+        let status = self.exit.or_else(|| self.child.try_wait().ok().flatten());
+        let mut text = match status {
+            Some(status) => format!("crew serve stopped ({status})."),
+            None => "crew serve did not answer in time.".to_string(),
+        };
+        let output = self
+            .log
+            .as_ref()
+            .and_then(|l| std::fs::read_to_string(l).ok())
+            .unwrap_or_default();
+        let lines: Vec<&str> = output.lines().filter(|l| !l.trim().is_empty()).collect();
+        let tail = &lines[lines.len().saturating_sub(TAIL_LINES)..];
+        if daemon_is_older(&output) || output.contains("restart this client") {
+            text = format!(
+                "crew serve and the crew daemon are different builds (version mismatch). {text}"
+            );
+        }
+        if !tail.is_empty() {
+            text.push_str("\n\n");
+            text.push_str(&tail.join("\n"));
+        }
+        if let Some(log) = &self.log {
+            text.push_str(&format!("\n\nLog: {}", log.display()));
+        }
+        text
     }
 
     pub fn wait_ready(&mut self, timeout: Duration) -> bool {
         let end = Instant::now() + timeout;
         while Instant::now() < end {
-            if let Ok(Some(_)) = self.child.try_wait() {
+            if let Ok(Some(status)) = self.child.try_wait() {
+                self.exit = Some(status);
                 return false;
             }
             if matches!(
@@ -160,6 +236,9 @@ impl LocalServe {
     }
 
     pub fn stop(&mut self) {
+        if self.exit.is_none() {
+            self.exit = self.child.try_wait().ok().flatten();
+        }
         let _ = self.child.kill();
         let _ = self.child.wait();
     }

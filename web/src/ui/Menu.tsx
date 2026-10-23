@@ -14,6 +14,14 @@ export type MenuProps = {
   className?: string;
 };
 
+export function CheckIcon() {
+  return (
+    <svg className="check-icon" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+      <path d="M2.5 6.2 5 8.6l4.5-5.2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function isItem(e: MenuEntry): e is MenuItem {
   return e.kind === undefined || e.kind === "item";
 }
@@ -137,7 +145,7 @@ export function Menu({ label, items, onPick, onClose, search, role = "menu", id,
             }}
           >
             <span className="ck" aria-hidden="true">
-              {e.checked ? "✓" : ""}
+              {e.checked ? <CheckIcon /> : null}
             </span>
             <span>{e.label}</span>
             {e.hint !== undefined ? <span className="k">{e.hint}</span> : null}
