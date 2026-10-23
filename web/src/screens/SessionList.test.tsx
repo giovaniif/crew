@@ -13,7 +13,7 @@ const goldenDiffs = (): Frame[] => golden("stream-diffs.json") as Frame[];
 const device = { id: "k3m9p2qx", name: "iPhone", created_at: "2026-10-03T10:00:00Z", last_seen: "2026-10-03T10:00:00Z" };
 const halfPastNoon = new Date("2026-10-03T12:30:00Z").getTime();
 
-function setup(hash = "", workspaces: FakeRoute | Error = { status: 200, body: { workspaces: [], last_used: "" } }) {
+function setup(hash = "#/sessions", workspaces: FakeRoute | Error = { status: 200, body: { workspaces: [], last_used: "" } }) {
   window.location.hash = hash;
   const sockets = new FakeSockets();
   const storage = new MemoryStorage();
@@ -128,7 +128,7 @@ describe("the session list", () => {
 
   it("goes back to pairing and says why once an authed request confirms the token is refused", async () => {
     const refused = { status: 401, body: { error: { code: "unauthorized", message: "unknown or revoked device token" } } };
-    const { sockets, storage, server } = setup("", refused);
+    const { sockets, storage, server } = setup("#/sessions", refused);
     sockets.last.open();
     sockets.last.drop(4401, "device revoked");
     expect(await screen.findByRole("heading", { name: "Pair this device" })).toBeInTheDocument();
@@ -145,7 +145,7 @@ describe("the session list", () => {
     ["a proxy answers 502", { status: 502, raw: "Bad Gateway" }],
     ["the network fails", new TypeError("Load failed")],
   ])("keeps its login and reconnects when the stream says 4401 but %s", async (_, workspaces) => {
-    const { sockets, storage, server } = setup("", workspaces);
+    const { sockets, storage, server } = setup("#/sessions", workspaces);
     live(sockets);
     sockets.last.drop(4401, "no token in time");
     await waitFor(() => expect(server.calls.some((c) => c.path === "/api/v1/workspaces")).toBe(true));
@@ -170,6 +170,7 @@ describe("opening a session", () => {
     const { sockets } = setup("#/sessions/s2");
     live(sockets);
     expect(screen.getByRole("heading", { name: "add retries" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Sessions" })).toHaveAttribute("href", "#/sessions");
     await userEvent.click(screen.getByRole("link", { name: "Sessions" }));
     expect(await screen.findByRole("region", { name: "Working" })).toBeInTheDocument();
   });

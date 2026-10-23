@@ -43,9 +43,9 @@ describe("Settings", () => {
   });
 
   it("is a tab next to the session list", () => {
-    const { env } = setup("");
+    const { env } = setup("#/more");
     render(<App env={env} />);
-    expect(screen.getByRole("heading", { name: "Sessions" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "More" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Settings" })).toHaveAttribute("href", "#/settings");
   });
 
@@ -55,7 +55,7 @@ describe("Settings", () => {
     expect(screen.getByRole("heading", { name: "Settings" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Server" })).toHaveTextContent("crew.example.ts.net");
     expect(screen.getByRole("region", { name: "This device" })).toHaveTextContent("work phone");
-    expect(screen.getByRole("link", { name: "Sessions" })).toHaveAttribute("href", "#/");
+    expect(screen.getByRole("link", { name: "Sessions" })).toHaveAttribute("href", "#/sessions");
   });
 
   it("signs out by forgetting the token and going back to pairing", async () => {

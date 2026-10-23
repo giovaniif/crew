@@ -57,7 +57,7 @@ const chat = [
   { id: "a1", cursor: 2, turn: "p1", role: "assistant", text: "I fixed the docs.", at: "2026-10-03T11:01:00Z" },
 ];
 
-function setup(hash = "#/mates", mates: Mates = board, approvals: unknown[] = [], visibility?: PageVisibility) {
+function setup(hash = "#/mates/helper", mates: Mates = board, approvals: unknown[] = [], visibility?: PageVisibility) {
   window.location.hash = "";
   const sockets = new FakeSockets();
   const server = new FakeServer()
@@ -105,6 +105,7 @@ const calls = (server: FakeServer) => server.calls.map((c) => c.method + " " + c
 describe("Mates", () => {
   it("is a tab", () => {
     setup("");
+    expect(screen.getByRole("heading", { name: "Mates", level: 1 })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Mates" })).toHaveAttribute("href", "#/mates");
   });
 
@@ -122,7 +123,7 @@ describe("Mates", () => {
     expect(screen.getByRole("link", { name: "New mate" })).toHaveAttribute("href", "#/mates/new");
   });
 
-  it("shows the profile of the first mate next to the list, and marks its row", async () => {
+  it("shows the profile next to the list, and marks its row", async () => {
     setup();
     expect(await screen.findByRole("heading", { name: "helper" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /^helper,/ })).toHaveAttribute("aria-current", "page");
@@ -163,7 +164,7 @@ describe("Mates", () => {
       At: "2026-10-03T11:00:00Z",
       State: "pending",
     };
-    setup("#/mates", board, [ask]);
+    setup("#/mates/helper", board, [ask]);
     const needs = await screen.findByRole("list", { name: "Needs you" });
     const helper = await within(needs).findByRole("link", { name: "helper, Needs you" });
     expect(within(helper).getByRole("img", { name: "Owl needs" })).toBeInTheDocument();
@@ -191,7 +192,7 @@ describe("Mates", () => {
   });
 
   it("shows a stopped banner over the session list", async () => {
-    setup("", { ...board, stopped: true });
+    setup("#/sessions", { ...board, stopped: true });
     expect(await screen.findByRole("status")).toHaveTextContent("All mates are stopped");
   });
 });
