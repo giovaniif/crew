@@ -30,7 +30,7 @@ var (
 	slackUserID = regexp.MustCompile(`^[UW][A-Z0-9]{8,}$`)
 	mateAvatar  = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,31}$`)
 	mateColor   = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
-	mateAgents  = []Harness{HarnessClaude, HarnessCodex}
+	mateAgents  = []Harness{HarnessClaude, HarnessCodex, HarnessOmp}
 )
 
 func ValidateMate(m Mate, workspaces []Workspace) error {

@@ -36,7 +36,7 @@ func TestValidateMate(t *testing.T) {
 		{"name at the limit", func(m *Mate) { m.Name = strings.Repeat("a", 32) }, ""},
 		{"empty prompt", func(m *Mate) { m.Prompt = "  \n" }, "prompt"},
 		{"unknown harness", func(m *Mate) { m.Agent = "gemini" }, "agent"},
-		{"omp is not a mate harness", func(m *Mate) { m.Agent = "omp" }, "agent"},
+		{"omp", func(m *Mate) { m.Agent = "omp" }, ""},
 		{"no harness", func(m *Mate) { m.Agent = "" }, "agent"},
 		{"unknown effort", func(m *Mate) { m.Effort = "turbo" }, "effort"},
 		{"owner in lower case", func(m *Mate) { m.Owner = "u012abcdef" }, "owner"},

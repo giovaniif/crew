@@ -32,6 +32,13 @@ repos = ["api"]
 env = "test-bot"
 
 [[mate]]
+name = "pi-bot"
+prompt = "You help."
+agent = "omp"
+repos = ["api"]
+env = "test-bot"
+
+[[mate]]
 name = "plain"
 prompt = "You help."
 agent = "claude"
@@ -54,7 +61,11 @@ func startAndResumeMate(t *testing.T, r mateRig, name, harness string) (start, r
 		t.Fatal(err)
 	}
 	start = lastSpec(r)
-	hook := rpc.Hook{Harness: harness, Event: "SessionStart", Pane: s.Pane, At: time.Now(), Payload: []byte(`{"session_id":"r-1"}`)}
+	event := "SessionStart"
+	if harness == "omp" {
+		event = "session_start"
+	}
+	hook := rpc.Hook{Harness: harness, Event: event, Pane: s.Pane, At: time.Now(), Payload: []byte(`{"session_id":"r-1"}`)}
 	if err := r.c.Call(ctx, rpc.MethodHook, hook, nil); err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +80,7 @@ func startAndResumeMate(t *testing.T, r mateRig, name, harness string) (start, r
 
 func TestMateWithAnEnvStartsAndResumesThroughCrewEnvExec(t *testing.T) {
 
-	for _, tc := range []struct{ mate, harness string }{{"claude-bot", "claude"}, {"codex-bot", "codex"}} {
+	for _, tc := range []struct{ mate, harness string }{{"claude-bot", "claude"}, {"codex-bot", "codex"}, {"pi-bot", "omp"}} {
 		r := startMateRigWith(t, &memStore{}, envLaunchMates, daemon.WithEnvLauncher("/opt/crew"))
 		start, resume := startAndResumeMate(t, r, tc.mate, tc.harness)
 		for what, cmd := range map[string][]string{"start": start, "resume": resume} {
@@ -79,6 +90,17 @@ func TestMateWithAnEnvStartsAndResumesThroughCrewEnvExec(t *testing.T) {
 		}
 		if !slices.Contains(resume, "r-1") {
 			t.Errorf("%s resume lost the id: %q", tc.mate, resume)
+		}
+	}
+}
+
+func TestPiMateGetsTheMateSystemPromptOnStartAndResume(t *testing.T) {
+	r := startMateRigWith(t, &memStore{}, envLaunchMates, daemon.WithEnvLauncher("/opt/crew"))
+	start, resume := startAndResumeMate(t, r, "pi-bot", "omp")
+	for what, cmd := range map[string][]string{"start": start, "resume": resume} {
+		i := slices.Index(cmd, "--append-system-prompt")
+		if i < 0 || i+1 >= len(cmd) || !strings.Contains(cmd[i+1], "You help.") {
+			t.Errorf("%s: command %q", what, cmd)
 		}
 	}
 }
