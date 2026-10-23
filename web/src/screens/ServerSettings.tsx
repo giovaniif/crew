@@ -172,6 +172,7 @@ export function WorkspacesGroup({ api, pickFolder }: { api: Authed; pickFolder?:
   const folders = useFolders(api, text, home);
   const known = loaded.state === "ready" ? loaded.value.list.workspaces : [];
   const shown = folders.filter((f) => !known.some((w) => w.Root === f));
+  const near = (loaded.state === "ready" ? loaded.value.list.last_used : "") || known[known.length - 1]?.Root;
 
   const add = async () => {
     const path = expandPath(text, home);
@@ -215,7 +216,7 @@ export function WorkspacesGroup({ api, pickFolder }: { api: Authed; pickFolder?:
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && text.trim() && add()}
           />
-          {pickFolder ? <BrowseButton pick={pickFolder} onPick={setText} /> : null}
+          {pickFolder ? <BrowseButton pick={pickFolder} near={near} onPick={setText} /> : null}
           <Button variant="primary" disabled={!text.trim()} onClick={add}>
             Add workspace
           </Button>

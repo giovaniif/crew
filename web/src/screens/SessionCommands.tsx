@@ -4,7 +4,7 @@ import type { KeyValue } from "../auth";
 import { commandItems, confirmEnd, killedNote, type Command } from "../commands";
 import { openSessionView } from "../route";
 import type { Session } from "../stream";
-import { Button, Dialog, Menu, Toast, type MenuEntry } from "../ui";
+import { Button, CheckIcon, Dialog, Menu, Toast, type MenuEntry } from "../ui";
 import { sessionTitle } from "./SessionList";
 
 export type MenuPoint = { x: number; y: number; n: number };
@@ -269,7 +269,7 @@ function ChoiceDialog({ api, session, kind, onClose, onChoose }: { api: Authed; 
             {choices.map((c) => (
               <div key={c} role="option" aria-selected={c === picked} tabIndex={0} className={"item" + (c === picked ? " hi" : "")} onClick={() => setPicked(c)} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setPicked(c)}>
                 <span className="ck" aria-hidden="true">
-                  {c === picked ? "✓" : ""}
+                  {c === picked ? <CheckIcon /> : null}
                 </span>
                 <span>{c}</span>
                 {c === current ? <span className="k">current</span> : null}

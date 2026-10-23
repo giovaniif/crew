@@ -2,11 +2,12 @@ import { useEffect, useState, type ReactNode } from "react";
 import type { Authed, Fetch } from "../api";
 import type { Auth, KeyValue } from "../auth";
 import { confirmEnd, setConfirmEnd } from "../commands";
+import { loadAlertPrefs, saveAlertPrefs, type AlertPrefs } from "../desktopAttention";
 import { disablePush, enablePush, type PushEnv } from "../push";
 import type { Servers } from "../servers";
-import { applyTheme, clamp, fontSizes, lineHeights, loadSettings, saveSettings, type AppSettings, type Appearance, type General, type NotificationSettings } from "../settings";
+import { applyTheme, clamp, fontSizes, lineHeights, loadSettings, saveSettings, type AppSettings, type Appearance, type General } from "../settings";
 import { assignShortcut, comboFor, comboFromEvent, comboLabel, defaultShortcuts, restoreShortcut, shortcutActions, type Shortcuts } from "../shortcuts";
-import { Button, Segmented, Stepper, Switch } from "../ui";
+import { Button, Checkbox, Segmented, Stepper, Switch } from "../ui";
 import { AgentsGroup, DevicesGroup, PushDelayRow, ServerAppearanceGroup, WorkspacesGroup } from "./ServerSettings";
 import { ServersScreen } from "./Servers";
 import { Group, Opt } from "./SettingsRows";
@@ -185,28 +186,36 @@ function GeneralPane({ general, storage, onChange }: { general: General; storage
   );
 }
 
-const events: { key: keyof Pick<NotificationSettings, "permission" | "waiting" | "done" | "limitOrError">; title: string }[] = [
+const events: { key: "permission" | "waiting" | "done" | "limitOrError"; title: string }[] = [
   { key: "permission", title: "Needs permission" },
   { key: "waiting", title: "Waits for an answer" },
   { key: "done", title: "Finishes" },
   { key: "limitOrError", title: "Hits a limit or an error" },
 ];
 
-function NotificationsPane({ value, api, onChange }: { value: NotificationSettings; api: Authed; onChange: (n: NotificationSettings) => void }) {
-  const sound = events.some((e) => value[e.key].sound);
+function NotificationsPane({ storage, api }: { storage: KeyValue; api: Authed }) {
+  const [value, setValue] = useState<AlertPrefs>(() => loadAlertPrefs(storage));
+  const onChange = (next: AlertPrefs) => {
+    saveAlertPrefs(storage, next);
+    setValue(next);
+  };
   return (
     <>
       <Group label="Notify me when a session" title="NOTIFY ME WHEN A SESSION">
         {events.map((e) => (
-          <SwitchRow key={e.key} title={e.title} checked={value[e.key].banner} onChange={(v) => onChange({ ...value, [e.key]: { ...value[e.key], banner: v } })} />
+          <Opt key={e.key} title={e.title}>
+            <Checkbox
+              className="sound"
+              label="Sound"
+              ariaLabel={"Sound when a session " + e.title.toLowerCase()}
+              checked={value[e.key].sound}
+              onChange={(v) => onChange({ ...value, [e.key]: { ...value[e.key], sound: v } })}
+            />
+            <Switch label={null} ariaLabel={e.title} checked={value[e.key].banner} onChange={(v) => onChange({ ...value, [e.key]: { ...value[e.key], banner: v } })} />
+          </Opt>
         ))}
       </Group>
       <Group label="Options" title="OPTIONS">
-        <SwitchRow
-          title="Play a sound"
-          checked={sound}
-          onChange={(v) => onChange({ ...value, ...Object.fromEntries(events.map((e) => [e.key, { ...value[e.key], sound: v }])) })}
-        />
         <SwitchRow title="Skip the session that is on screen" checked={value.skipSessionInView} onChange={(v) => onChange({ ...value, skipSessionInView: v })} />
         <SwitchRow title="Also notify for muted sessions" checked={value.notifyMuted} onChange={(v) => onChange({ ...value, notifyMuted: v })} />
         <PushDelayRow api={api} />
@@ -447,7 +456,7 @@ export function Settings({ auth, host, installed, fetch, push, onSignOut, storag
       );
       break;
     case "notifications":
-      pane = <NotificationsPane value={settings.notifications} api={api} onChange={(notifications) => update({ ...settings, notifications })} />;
+      pane = <NotificationsPane storage={storage} api={api} />;
       break;
     case "appearance":
       pane = (
@@ -461,7 +470,7 @@ export function Settings({ auth, host, installed, fetch, push, onSignOut, storag
       pane = <ShortcutsPane value={settings.shortcuts} mac={mac} onChange={(shortcuts) => update({ ...settings, shortcuts })} />;
       break;
     case "workspaces":
-      pane = <WorkspacesGroup api={api} pickFolder={servers ? () => servers.pickFolder() : undefined} />;
+      pane = <WorkspacesGroup api={api} pickFolder={servers ? (near) => servers.pickFolder(near) : undefined} />;
       break;
     case "agents":
       pane = <AgentsGroup api={api} />;

@@ -102,9 +102,11 @@ describe("Servers", () => {
     app("", { desktop });
     const chip = await screen.findByRole("button", { name: "Server: This computer" });
     await userEvent.click(chip);
+    expect(chip).toHaveClass("ui", "select");
     const menu = screen.getByRole("menu", { name: "Servers" });
-    expect(within(menu).getByRole("menuitemradio", { name: "This computer" })).toHaveAttribute("aria-checked", "true");
-    await userEvent.click(within(menu).getByRole("menuitemradio", { name: "box" }));
+    expect(menu).toHaveClass("ui", "menu");
+    expect(within(menu).getByRole("menuitemcheckbox", { name: "This computer" })).toHaveAttribute("aria-checked", "true");
+    await userEvent.click(within(menu).getByRole("menuitemcheckbox", { name: "box" }));
     expect(desktop.of("crew_server_open")).toEqual([{ id: "ssh:box" }]);
   });
 
