@@ -70,7 +70,7 @@ describe("the desktop sidebar", () => {
   });
 
   it("shows the shortcut of each of the first nine sessions", () => {
-    const { live } = desktop("", true, "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_0)");
+    const { live } = desktop("#/sessions", true, "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_0)");
     live();
     const rows = [...within(screen.getByRole("region", { name: "Running" })).getAllByRole("link"), ...within(screen.getByRole("region", { name: "Done" })).getAllByRole("link")];
     expect(rows[0]).toHaveAttribute("aria-keyshortcuts", "Meta+1");
@@ -94,7 +94,7 @@ describe("the desktop sidebar", () => {
   });
 
   it("keeps the short Cmd hint on each row on a Mac", () => {
-    const { live } = desktop("", true, "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_0)");
+    const { live } = desktop("#/sessions", true, "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_0)");
     live();
     const rows = [...within(screen.getByRole("region", { name: "Running" })).getAllByRole("link"), ...within(screen.getByRole("region", { name: "Done" })).getAllByRole("link")];
     expect(rows[0].querySelector("kbd")).not.toHaveClass("on-demand");
@@ -117,12 +117,10 @@ describe("the desktop sidebar", () => {
     expect(rows.getByRole("link", { name: /beta/ })).not.toHaveTextContent("muted");
   });
 
-  it("marks the selected session", () => {
+  it("marks Sessions in the nav while a session is open", () => {
     const { live } = desktop("#/sessions/s2");
     live();
-    const rows = [...within(screen.getByRole("region", { name: "Running" })).getAllByRole("link"), ...within(screen.getByRole("region", { name: "Done" })).getAllByRole("link")];
-    const selected = rows.filter((r) => r.getAttribute("aria-current") === "page");
-    expect(selected).toHaveLength(1);
-    expect(selected[0]).toHaveTextContent("add retries");
+    const nav = within(screen.getByRole("navigation", { name: "Sidebar" }));
+    expect(nav.getByRole("link", { name: /^Sessions/ })).toHaveAttribute("aria-current", "page");
   });
 });

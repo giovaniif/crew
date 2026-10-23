@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { resumeSession, type Authed } from "../api";
+import { listApprovals, resumeSession, type Authed } from "../api";
 import type { AppEnv } from "../App";
 import { emptyMain, keyAction, mainTabs, modifierKeys, nextNeeding, sessionPlace, sidebarGroups, sidebarRows, stateDot, type Keys, type MainTab } from "../desktop";
 import { parseRoute } from "../route";
@@ -84,13 +84,39 @@ function Group({ title, sessions, selected, keys, first, onMenu }: { title: stri
   );
 }
 
-type SidebarProps = { env: AppEnv; snapshot: StreamSnapshot; now: number; onRetry: () => void; selected: string | null; hash: string; keys: Keys; onMenu: OnMenu; chip: ReactNode };
+type SidebarProps = { env: AppEnv; snapshot: StreamSnapshot; now: number; onRetry: () => void; hash: string; keys: Keys; chip: ReactNode; approvals: number };
 
-function Sidebar({ env, snapshot, now, onRetry, selected, hash, keys, onMenu, chip }: SidebarProps) {
-  const groups = sidebarGroups(snapshot.state?.sessions ?? []);
-  const mark = (prefix: string) => (hash === prefix || hash.startsWith(prefix + "/") ? "page" : undefined);
+type NavItem = { href: string; icon: string; label: string; on: boolean; meta?: ReactNode };
+
+function NavLink({ item }: { item: NavItem }) {
   return (
-    <nav className="sidebar" aria-label="Sidebar">
+    <li>
+      <a className={"row side-nav" + (item.on ? " on" : "")} href={item.href} aria-current={item.on ? "page" : undefined}>
+        <span className="ico" aria-hidden="true">
+          {item.icon}
+        </span>
+        <span className="nm">{item.label}</span>
+        {item.meta}
+      </a>
+    </li>
+  );
+}
+
+function Sidebar({ env, snapshot, now, onRetry, hash, keys, chip, approvals }: SidebarProps) {
+  const route = parseRoute(hash);
+  const under = (prefix: string) => hash === prefix || hash.startsWith(prefix + "/");
+  const mates = snapshot.state?.mates?.mates.length ?? 0;
+  const live = sidebarRows(snapshot.state?.sessions ?? []).live.length;
+  const count = (n: number) => (n > 0 ? <span className="meta">{n}</span> : null);
+  const items: NavItem[] = [
+    { href: "#/mates", icon: "◉", label: "Mates", on: route.screen === "home" || under("#/mates"), meta: count(mates) },
+    { href: "#/sessions", icon: "▤", label: "Sessions", on: route.screen === "list" || route.screen === "session", meta: count(live) },
+    { href: "#/approvals", icon: "✓", label: "Approvals", on: under("#/approvals"), meta: approvals > 0 ? <span className="pill bad">{approvals}</span> : null },
+    { href: "#/automations", icon: "↻", label: "Automations", on: under("#/automations") },
+    { href: "#/disk", icon: "▥", label: "Disk", on: under("#/disk") },
+  ];
+  return (
+    <nav className="sidebar nav" aria-label="Sidebar">
       <div className="side-head">
         <span className="brand" title={env.host}>
           crew
@@ -101,47 +127,50 @@ function Sidebar({ env, snapshot, now, onRetry, selected, hash, keys, onMenu, ch
       </div>
       {chip ? <div className="side-chip">{chip}</div> : null}
       <Connection snapshot={snapshot} now={now} onRetry={onRetry} fix={env.desktopFix} />
-      <div className="side-scroll">
-        <Group title="Needs you" sessions={groups.needs} selected={selected} keys={keys} first={0} onMenu={onMenu} />
-        <Group title="Running" sessions={groups.running} selected={selected} keys={keys} first={groups.needs.length} onMenu={onMenu} />
-        <Group title="Done" sessions={groups.done} selected={selected} keys={keys} first={groups.needs.length + groups.running.length} onMenu={onMenu} />
-      </div>
+      <a className="ui btn newbtn" href="#/mates/new">
+        + New mate
+      </a>
+      <ul className="side-sec">
+        {items.map((i) => (
+          <NavLink key={i.href} item={i} />
+        ))}
+      </ul>
+      <div className="side-scroll" />
       <div className="side-foot">
         {snapshot.state?.mates?.stopped ? (
           <p className="mates-stopped" role="status">
             All mates are stopped
           </p>
         ) : null}
-        <ul className="side-links">
-          <li>
-            <a href="#/mates" aria-current={mark("#/mates")}>
-              Mates
-            </a>
-          </li>
-          <li>
-            <a href="#/approvals" aria-current={mark("#/approvals")}>
-              Approvals
-            </a>
-          </li>
-          <li>
-            <a href="#/automations" aria-current={mark("#/automations")}>
-              Automations
-            </a>
-          </li>
-          <li>
-            <a href="#/disk" aria-current={mark("#/disk")}>
-              Disk
-            </a>
-          </li>
-          <li>
-            <a href="#/settings" aria-current={mark("#/settings")}>
-              Settings
-            </a>
-          </li>
+        <ul className="side-sec">
+          <NavLink item={{ href: "#/settings", icon: "⚙", label: "Settings", on: under("#/settings") || under("#/servers") }} />
         </ul>
         <Limits snapshot={snapshot} now={now} />
       </div>
     </nav>
+  );
+}
+
+function SessionsPage({ snapshot, selected, keys, onMenu }: { snapshot: StreamSnapshot; selected: string | null; keys: Keys; onMenu: OnMenu }) {
+  const groups = sidebarGroups(snapshot.state?.sessions ?? []);
+  const live = groups.needs.length + groups.running.length + groups.done.length;
+  return (
+    <>
+      <div className="session-bar">
+        <h1 className="title">Sessions</h1>
+        <span className="sub">Agents you run on this computer, one worktree each</span>
+        <span className="spacer" />
+        <a className="ui btn primary sm" href="#/new">
+          New session
+        </a>
+      </div>
+      <div className="sessions-page">
+        {live === 0 ? <Empty snapshot={snapshot} live={0} keys={keys} /> : null}
+        <Group title="Needs you" sessions={groups.needs} selected={selected} keys={keys} first={0} onMenu={onMenu} />
+        <Group title="Running" sessions={groups.running} selected={selected} keys={keys} first={groups.needs.length} onMenu={onMenu} />
+        <Group title="Done" sessions={groups.done} selected={selected} keys={keys} first={groups.needs.length + groups.running.length} onMenu={onMenu} />
+      </div>
+    </>
   );
 }
 
@@ -269,6 +298,20 @@ function Sheet({ children, onClose, label }: { children: ReactNode; onClose: () 
   );
 }
 
+function usePendingApprovals(api: Authed, hash: string): number {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    let on = true;
+    listApprovals(api)
+      .then((list) => on && setN(list.filter((a) => a.State === "pending").length))
+      .catch(() => undefined);
+    return () => {
+      on = false;
+    };
+  }, [api, hash]);
+  return n;
+}
+
 export type DesktopProps = {
   env: AppEnv;
   token: string;
@@ -352,6 +395,8 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
     return () => window.removeEventListener("keydown", onKey);
   }, [rows.live, selectedId, go, keys.mac]);
 
+  const onMenu: OnMenu = (id, x, y) => setMenu((m) => ({ id, x, y, n: (m?.n ?? 0) + 1 }));
+  const approvals = usePendingApprovals(api, hash);
   let main: ReactNode;
   if (route.screen === "new") {
     main = (
@@ -361,6 +406,8 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
     );
   } else if (other) {
     main = <div className="main-other">{other}</div>;
+  } else if (route.screen === "list") {
+    main = <SessionsPage snapshot={snapshot} selected={selectedId} keys={keys} onMenu={onMenu} />;
   } else if (session) {
     const back = () => go(sessionHref(session.ID));
     const onBrowser = () => {
@@ -424,7 +471,6 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
   }
 
   const menuSession = menu ? sessions.find((s) => s.ID === menu.id) : undefined;
-  const onMenu: OnMenu = (id, x, y) => setMenu((m) => ({ id, x, y, n: (m?.n ?? 0) + 1 }));
 
   return (
     <div className="desktop">
@@ -433,10 +479,9 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
         snapshot={snapshot}
         now={now}
         onRetry={onRetry}
-        selected={selectedId}
         hash={hash}
         keys={keys}
-        onMenu={onMenu}
+        approvals={approvals}
         chip={servers ? <ServerChip servers={servers} listing={listing} go={go} /> : null}
       />
       {menu && menuSession ? <SessionCommands key={"menu-" + menu.id} api={api} session={menuSession} storage={env.storage} openAt={menu} /> : null}

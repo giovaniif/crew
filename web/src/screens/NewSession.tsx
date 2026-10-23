@@ -175,7 +175,7 @@ export function NewSession({ env, token, home: atHome }: { env: AppEnv; token: s
   return (
     <Root className={"screen new-home" + (atHome ? " at-home" : "")}>
       {atHome ? null : (
-        <a className="back" href="#/">
+        <a className="back" href="#/sessions">
           <span aria-hidden="true">{"‹ "}</span>
           Sessions
         </a>

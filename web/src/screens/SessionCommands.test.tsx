@@ -10,7 +10,7 @@ afterEach(() => {
 const options = { harnesses: [{ harness: "claude", name: "Claude Code", tag: "CC", models: ["opus", "sonnet"], efforts: ["low", "high"], model: "", effort: "" }], home: "/home/me" };
 
 function menuOf(name: string) {
-  fireEvent.contextMenu(within(screen.getByRole("navigation", { name: "Sidebar" })).getByRole("link", { name: new RegExp(name) }));
+  fireEvent.contextMenu(within(screen.getByRole("main")).getByRole("link", { name: new RegExp(name) }));
   return screen.getByRole("menu", { name: "Session commands" });
 }
 
@@ -30,7 +30,7 @@ function opened(menu: HTMLElement, name: string): HTMLElement {
   return hit;
 }
 
-function setup(extra: Parameters<typeof session>[2] = {}, hash = "") {
+function setup(extra: Parameters<typeof session>[2] = {}, hash = "#/sessions") {
   const d = desktop(hash);
   d.live({ ...goldenState(), sessions: [session("a", "alpha", { Harness: "claude", Model: "sonnet", Effort: "high", ...extra })] });
   return d;

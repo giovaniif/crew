@@ -1,8 +1,11 @@
 export type SessionView = "shell" | "editor" | "agent" | "browser";
 
-export type Route = { screen: "list" } | { screen: "new" } | { screen: "session"; id: string; view?: SessionView };
+export type Route = { screen: "home" } | { screen: "list" } | { screen: "new" } | { screen: "session"; id: string; view?: SessionView };
 
 export function parseRoute(hash: string): Route {
+  if (hash === "" || hash === "#" || hash === "#/" || hash === "#/mates") {
+    return { screen: "home" };
+  }
   if (hash === "#/new") {
     return { screen: "new" };
   }

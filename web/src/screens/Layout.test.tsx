@@ -11,9 +11,10 @@ const tabs = ["Chat", "Changes"];
 
 describe("the layout", () => {
   it("shows the sidebar, the toolbar and the main column on a wide screen", () => {
-    const { live } = desktop();
+    const { live } = desktop("#/sessions/none");
     live();
     expect(screen.getByRole("navigation", { name: "Sidebar" })).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Running" })).toBeNull();
     const toolbar = screen.getByRole("tablist", { name: "Views" });
     expect(within(toolbar).getAllByRole("tab").map((t) => t.textContent)).toEqual(tabs);
     expect(screen.getByRole("main")).toBeInTheDocument();
@@ -21,7 +22,7 @@ describe("the layout", () => {
   });
 
   it("keeps the phone layout on a narrow screen", () => {
-    const { live } = desktop("", false);
+    const { live } = desktop("#/sessions", false);
     live();
     expect(screen.getByRole("navigation", { name: "Screens" })).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "Sidebar" })).not.toBeInTheDocument();
@@ -29,7 +30,7 @@ describe("the layout", () => {
   });
 
   it("changes the layout when the window gets wide or narrow", () => {
-    const { live, width } = desktop("", false);
+    const { live, width } = desktop("#/sessions", false);
     live();
     width.set(true);
     expect(screen.getByRole("navigation", { name: "Sidebar" })).toBeInTheDocument();
@@ -40,7 +41,7 @@ describe("the layout", () => {
 
 describe("the toolbar", () => {
   it("disables the tabs that need a session and tells why", () => {
-    const { live } = desktop();
+    const { live } = desktop("#/sessions/none");
     live();
     const tab = (name: string) => screen.getByRole("tab", { name });
     expect(tab("Changes")).toBeDisabled();
@@ -69,7 +70,7 @@ describe("the toolbar", () => {
     live();
     await screen.findByRole("textbox", { name: "Message" });
     expect(within(screen.getByRole("tabpanel", { name: "Chat" })).queryByRole("heading", { name: "fix the login redirect" })).toBeNull();
-    expect(screen.queryByRole("link", { name: /Sessions/ })).toBeNull();
+    expect(screen.queryByRole("link", { name: "‹ Sessions" })).toBeNull();
   });
 
   it("shows the session title and where it runs in the bar", () => {
@@ -137,7 +138,7 @@ describe("the empty main column", () => {
   });
 
   it("asks to select a session", () => {
-    const { live } = desktop();
+    const { live } = desktop("#/sessions/none");
     live();
     expect(within(screen.getByRole("main")).getByText("Select a session")).toBeInTheDocument();
   });
@@ -148,16 +149,16 @@ describe("the keys", () => {
     const { live } = desktop();
     live();
     await userEvent.keyboard("{Control>}2{/Control}");
-    expect(window.location.hash).toBe("");
+    expect(window.location.hash).toBe("#/sessions");
     await userEvent.keyboard("{Control>}{Shift>}2{/Shift}{/Control}");
     expect(window.location.hash).toBe("#/sessions/s2");
   });
 
   it("selects a session with Cmd and a number on a Mac", async () => {
-    const { live } = desktop("", true, "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_0)");
+    const { live } = desktop("#/sessions", true, "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_0)");
     live();
     await userEvent.keyboard("{Control>}2{/Control}");
-    expect(window.location.hash).toBe("");
+    expect(window.location.hash).toBe("#/sessions");
     await userEvent.keyboard("{Meta>}1{/Meta}");
     expect(window.location.hash).toBe("#/sessions/s1");
   });
@@ -166,13 +167,13 @@ describe("the keys", () => {
     const { live } = desktop();
     live({ ...goldenState(), sessions: [session("a", "alpha", { State: "permission" })] });
     await userEvent.keyboard("{Control>}[Space]{/Control}");
-    expect(window.location.hash).toBe("");
+    expect(window.location.hash).toBe("#/sessions");
     await userEvent.keyboard("{Control>}{Shift>}[Space]{/Shift}{/Control}");
     expect(window.location.hash).toBe("#/sessions/a");
   });
 
   it("goes to the next session that needs you with Ctrl+Space on a Mac", async () => {
-    const { live } = desktop("", true, "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_0)");
+    const { live } = desktop("#/sessions", true, "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_0)");
     live({
       ...goldenState(),
       sessions: [
@@ -201,7 +202,7 @@ describe("the keys", () => {
     const { live } = desktop();
     live();
     await userEvent.keyboard("{Control>}n{/Control}");
-    expect(window.location.hash).toBe("");
+    expect(window.location.hash).toBe("#/sessions");
     await userEvent.keyboard("{Control>}{Shift>}n{/Shift}{/Control}");
     const main = screen.getByRole("main");
     expect(await within(main).findByRole("heading", { name: "What should the agent do?" })).toBeInTheDocument();
@@ -211,9 +212,9 @@ describe("the keys", () => {
   });
 
   it("does not use the keys on a narrow screen", async () => {
-    const { live } = desktop("", false);
+    const { live } = desktop("#/sessions", false);
     live();
     await userEvent.keyboard("{Control>}{Shift>}2{/Shift}{/Control}");
-    expect(window.location.hash).toBe("");
+    expect(window.location.hash).toBe("#/sessions");
   });
 });
