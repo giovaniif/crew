@@ -8,7 +8,7 @@ import {
   viewFor,
   type AlertPrefs,
 } from "./desktopAttention";
-import type { Quota, Session, StreamState } from "./stream";
+import type { Alert, Quota, Session, StreamState } from "./stream";
 
 const now = Date.parse("2026-10-03T12:00:00Z");
 
@@ -61,6 +61,10 @@ function state(sessions: Session[], limits: Quota[] = []): StreamState {
 }
 
 const away = { session: "", front: false };
+
+function alert(over: Partial<Alert>): Alert {
+  return { id: "x", kind: "pr_checks_failed", title: "t", body: "", at: "2026-10-03T12:00:00Z", ...over };
+}
 
 class Memory {
   items = new Map<string, string>();
@@ -120,6 +124,42 @@ describe("Attention banners", () => {
     const sessions = [session({ ID: "a", State: "waiting", banner: "waits" })];
     const seen = bannerStep({}, sessions, defaultAlertPrefs, { session: "a", front: true });
     expect(bannerStep(seen.shown, sessions, defaultAlertPrefs, away).posts).toEqual([]);
+  });
+
+  it("uses the mate rows for the sessions of a mate", () => {
+    const mate = { Name: "ada" };
+    const prefs: AlertPrefs = {
+      ...defaultAlertPrefs,
+      mateNeeds: { banner: true, sound: true },
+      mateDone: { banner: false, sound: false },
+      permission: { banner: false, sound: false },
+    };
+    const asks = bannerStep({}, [session({ ID: "a", name: "ada", State: "permission", Mate: mate, banner: "wants Bash" })], prefs, away);
+    expect(asks.posts).toEqual([{ id: "a", title: "ada", body: "wants Bash", kind: "permission", sound: true }]);
+    expect(bannerStep({}, [session({ ID: "a", State: "waiting", Mate: mate, banner: "asks" })], prefs, away).posts).toHaveLength(1);
+    expect(bannerStep({}, [session({ ID: "a", State: "done", Mate: mate, banner: "finished" })], prefs, away).posts).toEqual([]);
+    expect(bannerStep({}, [session({ ID: "a", State: "done", banner: "finished" })], prefs, away).posts).toHaveLength(1);
+  });
+
+  it("posts each new alert one time, with the setting of its kind", () => {
+    const pr = alert({ id: "p1", kind: "pr_checks_failed", title: "PR #42 checks failed", body: "lint", session: "a" });
+    const auto = alert({ id: "r1", kind: "automation_failed", title: "Automation fix-ci failed", body: "no repo" });
+    const first = bannerStep(null, [], defaultAlertPrefs, away, [pr]);
+    expect(first.posts).toEqual([]);
+    const next = bannerStep(first.shown, [], defaultAlertPrefs, away, [pr, auto]);
+    expect(next.posts).toEqual([{ id: "r1", title: "Automation fix-ci failed", body: "no repo", kind: "other", sound: true }]);
+    expect(bannerStep(next.shown, [], defaultAlertPrefs, away, [pr, auto]).posts).toEqual([]);
+    const off: AlertPrefs = { ...defaultAlertPrefs, prChecksFailed: { banner: false, sound: false } };
+    expect(bannerStep({}, [], off, away, [pr]).posts).toEqual([]);
+    expect(bannerStep({}, [], defaultAlertPrefs, away, [pr]).posts.map((p) => p.title)).toEqual(["PR #42 checks failed"]);
+  });
+
+  it("keeps the quiet rules for an alert of a session", () => {
+    const pr = alert({ id: "p1", kind: "pr_checks_failed", session: "a" });
+    expect(bannerStep({}, [], defaultAlertPrefs, { session: "a", front: true }, [pr]).posts).toEqual([]);
+    const muted = [session({ ID: "a", Muted: true })];
+    expect(bannerStep({}, muted, defaultAlertPrefs, away, [pr]).posts).toEqual([]);
+    expect(bannerStep({}, muted, { ...defaultAlertPrefs, notifyMuted: true }, away, [pr]).posts).toHaveLength(1);
   });
 
   it("leaves out ended sessions", () => {
