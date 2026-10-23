@@ -55,7 +55,7 @@ func envArgsOK(args []string) bool {
 }
 
 func envLoginArgv(name string) []string {
-	return []string{"exec", name, "--", "claude", "setup-token"}
+	return []string{"exec", name, "--harness", "claude", "--", "claude", "setup-token"}
 }
 
 func envCLI(args []string, stdout io.Writer) error {

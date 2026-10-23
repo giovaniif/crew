@@ -54,6 +54,21 @@ var envParts = map[EnvPart]envPartSpec{
 	EnvPi:     {dirVar: "PI_CODING_AGENT_DIR", dir: "omp", secrets: envPiKeys},
 }
 
+var envHarnessParts = map[Harness]EnvPart{HarnessClaude: EnvClaude, HarnessCodex: EnvCodex, HarnessOmp: EnvPi}
+
+func EnvPartForHarness(p EnvPart, harness Harness) bool {
+	own, ok := envHarnessParts[harness]
+	if harness == "" || !slices.Contains([]EnvPart{EnvClaude, EnvCodex, EnvPi}, p) {
+		return true
+	}
+	return ok && own == p
+}
+
+func ValidEnvHarness(h Harness) bool {
+	_, ok := envHarnessParts[h]
+	return ok
+}
+
 var envPartOrder = []EnvPart{EnvGit, EnvSSH, EnvGitHub, EnvClaude, EnvCodex, EnvPi}
 
 var envAllow = []string{"PATH", "HOME", "USER", "LOGNAME", "SHELL", "TERM", "COLORTERM", "LANG", "TZ", "TMPDIR", "TMUX", "TMUX_PANE",
@@ -141,7 +156,7 @@ func envAllowed(name string) bool {
 	return slices.Contains(envAllow, name) || strings.HasPrefix(name, "LC_")
 }
 
-func BuildEnv(env Environment, secrets map[string]string, environ []string) []string {
+func BuildEnv(env Environment, harness Harness, secrets map[string]string, environ []string) []string {
 	set := map[string]string{}
 	var order []string
 	put := func(k, v string) {
@@ -158,7 +173,7 @@ func BuildEnv(env Environment, secrets map[string]string, environ []string) []st
 	}
 	if env.Kind == EnvCustom {
 		for _, p := range envPartOrder {
-			if !slices.Contains(env.Parts, p) {
+			if !slices.Contains(env.Parts, p) || !EnvPartForHarness(p, harness) {
 				continue
 			}
 			spec := envParts[p]

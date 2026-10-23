@@ -13,7 +13,7 @@ import (
 	"github.com/giovaniif/crew/internal/rpc"
 )
 
-const envUsage = "usage: crew env list | show <env> | create <env> [--kind custom|local] [--part p]... [--git-name n] [--git-email e] | set <env> <VAR> (the value comes from stdin or a prompt) | set <env> [--part p]... [--git-name n] [--git-email e] | unset <env> <VAR> | login <env> | ssh-key <env> [--make|--rotate|--confirm|--import] | delete <env> | exec [<env>] -- <program> [args...]"
+const envUsage = "usage: crew env list | show <env> | create <env> [--kind custom|local] [--part p]... [--git-name n] [--git-email e] | set <env> <VAR> (the value comes from stdin or a prompt) | set <env> [--part p]... [--git-name n] [--git-email e] | unset <env> <VAR> | login <env> | ssh-key <env> [--make|--rotate|--confirm|--import] | delete <env> | exec [<env> [--harness claude|codex|omp]] -- <program> [args...]"
 
 func runEnv(args []string, stdout, stderr io.Writer) int {
 	if len(args) > 0 && args[0] == "exec" {
@@ -36,6 +36,15 @@ func runEnv(args []string, stdout, stderr io.Writer) int {
 
 func execInEnv(args []string, stderr io.Writer) int {
 	rest := args[1:]
+	var harness domain.Harness
+	if len(rest) > 2 && rest[1] == "--harness" {
+		harness = domain.Harness(rest[2])
+		if !domain.ValidEnvHarness(harness) {
+			fmt.Fprintln(stderr, envUsage)
+			return 2
+		}
+		rest = append([]string{rest[0]}, rest[3:]...)
+	}
 	sep := slices.Index(rest, "--")
 	if sep < 0 || sep > 1 || sep == len(rest)-1 {
 		fmt.Fprintln(stderr, envUsage)
@@ -51,7 +60,7 @@ func execInEnv(args []string, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "crew env exec: %v\n", err)
 		return 1
 	}
-	environ, err := envFor(envstore.Store{Home: home}, name, os.Environ())
+	environ, err := envForHarness(envstore.Store{Home: home}, name, harness, os.Environ())
 	if err != nil {
 		fmt.Fprintf(stderr, "crew env exec: %v\n", err)
 		return 1
@@ -80,6 +89,10 @@ func envLabel(name string) string {
 }
 
 func envFor(store envstore.Store, name string, environ []string) ([]string, error) {
+	return envForHarness(store, name, "", environ)
+}
+
+func envForHarness(store envstore.Store, name string, harness domain.Harness, environ []string) ([]string, error) {
 	env, err := store.Get(name)
 	if err != nil {
 		return nil, err
@@ -91,5 +104,5 @@ func envFor(store envstore.Store, name string, environ []string) ([]string, erro
 	if err != nil {
 		return nil, err
 	}
-	return domain.BuildEnv(env, secrets, environ), nil
+	return domain.BuildEnv(env, harness, secrets, environ), nil
 }

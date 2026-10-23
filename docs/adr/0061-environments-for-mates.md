@@ -86,3 +86,8 @@ Facts:
 - The Claude subscription login in a custom directory needs `claude setup-token`. The real-token check passed on Linux. The check of the macOS keychain is open. Do it on a Mac.
 - Codex and Pi use API keys in v1. Their logins are later issues.
 - The allowlist is fixed in v1.
+
+## Amended (2026-10-23)
+
+- Least access: a mate in a custom environment gets only the account part of its harness. A `claude` mate gets `CLAUDE_CONFIG_DIR` and the Claude token or key. A `codex` mate gets `CODEX_HOME` and `OPENAI_API_KEY`. An `omp` mate gets `PI_CODING_AGENT_DIR` and the Pi keys. The shared parts (`git`, `ssh`, `github`) and the extra variables go to each mate.
+- The daemon starts the pane as `crew env exec <env> --harness <harness> -- ...`. `domain.BuildEnv` takes the harness. `crew env exec` seeds only the dir of that harness. With no `--harness`, all parts apply, as before.

@@ -30,7 +30,7 @@ func envMap(env []string) map[string]string {
 }
 
 func TestBuildEnvCustomKeepsOnlyTheAllowlist(t *testing.T) {
-	got := envMap(BuildEnv(customEnv(), nil, boxEnviron))
+	got := envMap(BuildEnv(customEnv(), "", nil, boxEnviron))
 	keep := []string{"PATH", "HOME", "USER", "LOGNAME", "SHELL", "TERM", "COLORTERM", "LANG", "LC_ALL", "LC_TIME", "TZ", "TMPDIR",
 		"TMUX", "TMUX_PANE", "CREW_HOME", "XDG_RUNTIME_DIR", "DISPLAY", "WAYLAND_DISPLAY"}
 	for _, k := range keep {
@@ -50,11 +50,11 @@ func TestBuildEnvCustomKeepsOnlyTheAllowlist(t *testing.T) {
 
 func TestBuildEnvLocal(t *testing.T) {
 	local := Environment{Name: "local", Kind: EnvLocal}
-	if got := BuildEnv(local, map[string]string{"GH_TOKEN": "TEST-x"}, boxEnviron); !slices.Equal(got, boxEnviron) {
+	if got := BuildEnv(local, "", map[string]string{"GH_TOKEN": "TEST-x"}, boxEnviron); !slices.Equal(got, boxEnviron) {
 		t.Errorf("local with no extras changed the environ: %v", got)
 	}
 	local.Extra = []string{"LINEAR_API_KEY", "EDITOR", "PATH", "MISSING"}
-	got := envMap(BuildEnv(local, map[string]string{"LINEAR_API_KEY": "TEST-lin", "EDITOR": "nano", "PATH": "/evil"}, boxEnviron))
+	got := envMap(BuildEnv(local, "", map[string]string{"LINEAR_API_KEY": "TEST-lin", "EDITOR": "nano", "PATH": "/evil"}, boxEnviron))
 	if got["LINEAR_API_KEY"] != "TEST-lin" || got["EDITOR"] != "nano" || got["SSH_AUTH_SOCK"] != "/run/agent" {
 		t.Errorf("local extras not applied: %v", got)
 	}
@@ -89,7 +89,7 @@ func TestBuildEnvManagedVarsOnlyForSetParts(t *testing.T) {
 	all := []string{"GIT_CONFIG_GLOBAL", "GIT_SSH_COMMAND", "GH_TOKEN", "GH_CONFIG_DIR", "CLAUDE_CONFIG_DIR", "CLAUDE_CODE_OAUTH_TOKEN",
 		"ANTHROPIC_API_KEY", "CODEX_HOME", "OPENAI_API_KEY", "PI_CODING_AGENT_DIR", "GEMINI_API_KEY"}
 	for _, tc := range cases {
-		got := envMap(BuildEnv(customEnv(tc.parts...), secrets, nil))
+		got := envMap(BuildEnv(customEnv(tc.parts...), "", secrets, nil))
 		for _, k := range all {
 			if got[k] != tc.want[k] {
 				t.Errorf("parts %v: %s=%q, want %q", tc.parts, k, got[k], tc.want[k])
@@ -99,7 +99,7 @@ func TestBuildEnvManagedVarsOnlyForSetParts(t *testing.T) {
 }
 
 func TestBuildEnvSkipsManagedSecretsWithNoValue(t *testing.T) {
-	got := envMap(BuildEnv(customEnv(EnvGitHub), nil, nil))
+	got := envMap(BuildEnv(customEnv(EnvGitHub), "", nil, nil))
 	if _, ok := got["GH_TOKEN"]; ok {
 		t.Error("GH_TOKEN set with no value")
 	}
@@ -111,7 +111,7 @@ func TestBuildEnvSkipsManagedSecretsWithNoValue(t *testing.T) {
 func TestBuildEnvCustomExtras(t *testing.T) {
 	env := customEnv(EnvGitHub)
 	env.Extra = []string{"LINEAR_API_KEY", "GH_TOKEN", "LD_PRELOAD", "TERM"}
-	got := envMap(BuildEnv(env, map[string]string{"LINEAR_API_KEY": "TEST-lin", "GH_TOKEN": "TEST-gh", "LD_PRELOAD": "x.so", "TERM": "dumb"}, boxEnviron))
+	got := envMap(BuildEnv(env, "", map[string]string{"LINEAR_API_KEY": "TEST-lin", "GH_TOKEN": "TEST-gh", "LD_PRELOAD": "x.so", "TERM": "dumb"}, boxEnviron))
 	if got["LINEAR_API_KEY"] != "TEST-lin" || got["GH_TOKEN"] != "TEST-gh" || got["TERM"] != "dumb" {
 		t.Errorf("extras: %v", got)
 	}
@@ -181,5 +181,37 @@ func TestEnvSecretNames(t *testing.T) {
 	want := []string{"GH_TOKEN", "OPENAI_API_KEY", "LINEAR_API_KEY"}
 	if got := EnvSecretNames(env); !slices.Equal(got, want) {
 		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestBuildEnvGivesAMateOnlyTheAccountOfItsHarness(t *testing.T) {
+	env := customEnv(EnvGit, EnvSSH, EnvGitHub, EnvClaude, EnvCodex, EnvPi)
+	env.Extra = []string{"LINEAR_API_KEY"}
+	secrets := map[string]string{
+		"GH_TOKEN": "TEST-gh", "CLAUDE_CODE_OAUTH_TOKEN": "TEST-oat", "ANTHROPIC_API_KEY": "TEST-ant",
+		"OPENAI_API_KEY": "TEST-oai", "GEMINI_API_KEY": "TEST-gem", "LINEAR_API_KEY": "TEST-lin",
+	}
+	shared := []string{"GIT_CONFIG_GLOBAL", "GIT_SSH_COMMAND", "GH_CONFIG_DIR", "GH_TOKEN", "LINEAR_API_KEY"}
+	cases := []struct {
+		harness Harness
+		has     []string
+		absent  []string
+	}{
+		{HarnessClaude, []string{"CLAUDE_CONFIG_DIR", "CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_API_KEY"}, []string{"CODEX_HOME", "OPENAI_API_KEY", "PI_CODING_AGENT_DIR", "GEMINI_API_KEY"}},
+		{HarnessCodex, []string{"CODEX_HOME", "OPENAI_API_KEY"}, []string{"CLAUDE_CONFIG_DIR", "CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_API_KEY", "PI_CODING_AGENT_DIR", "GEMINI_API_KEY"}},
+		{HarnessOmp, []string{"PI_CODING_AGENT_DIR", "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY"}, []string{"CLAUDE_CONFIG_DIR", "CLAUDE_CODE_OAUTH_TOKEN", "CODEX_HOME"}},
+	}
+	for _, tc := range cases {
+		got := envMap(BuildEnv(env, tc.harness, secrets, nil))
+		for _, k := range append(slices.Clone(shared), tc.has...) {
+			if got[k] == "" {
+				t.Errorf("%s: %s missing", tc.harness, k)
+			}
+		}
+		for _, k := range tc.absent {
+			if _, ok := got[k]; ok {
+				t.Errorf("%s: %s present", tc.harness, k)
+			}
+		}
 	}
 }

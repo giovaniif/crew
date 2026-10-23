@@ -31,3 +31,4 @@ go run ./scripts/verify iso down
 
 - The PWA recipe uses `seed-session-3`.
 - `crew notify stream` runs until it is stopped. Do not run it in a recipe without a timeout.
+- "Do not disturb when the screen is shared" is not a crew setting. macOS hides notifications while you share or mirror the screen, so crew uses that and Settings has no such row.

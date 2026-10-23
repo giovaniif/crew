@@ -45,7 +45,12 @@ agent = "claude"
 repos = ["api"]
 `
 
-var envPrefix = []string{"/opt/crew", "env", "exec", "test-bot", "--"}
+var envPrefix = []string{"/opt/crew", "env", "exec", "test-bot", "--harness"}
+
+func envWrapped(cmd []string, harness string) bool {
+	n := len(envPrefix)
+	return len(cmd) > n+2 && slices.Equal(cmd[:n], envPrefix) && cmd[n] == harness && cmd[n+1] == "--" && cmd[n+2] == harness
+}
 
 func lastSpec(r mateRig) []string {
 	r.host.mu.Lock()
@@ -84,7 +89,7 @@ func TestMateWithAnEnvStartsAndResumesThroughCrewEnvExec(t *testing.T) {
 		r := startMateRigWith(t, &memStore{}, envLaunchMates, daemon.WithEnvLauncher("/opt/crew"))
 		start, resume := startAndResumeMate(t, r, tc.mate, tc.harness)
 		for what, cmd := range map[string][]string{"start": start, "resume": resume} {
-			if len(cmd) <= len(envPrefix) || !slices.Equal(cmd[:len(envPrefix)], envPrefix) || cmd[len(envPrefix)] != tc.harness {
+			if !envWrapped(cmd, tc.harness) {
 				t.Errorf("%s %s: command %q", tc.mate, what, cmd)
 			}
 		}
@@ -120,7 +125,7 @@ func TestSlackMateWithAnEnvStartsThroughCrewEnvExec(t *testing.T) {
 	r.hub.send(m, mention(mateGuest, "<@U0BOT0001> please look", "1700.0001"))
 	waitFor(t, func() bool { return len(r.mateSessions(t)) == 1 })
 	cmd := lastSpec(r)
-	if len(cmd) <= len(envPrefix) || !slices.Equal(cmd[:len(envPrefix)], envPrefix) || cmd[len(envPrefix)] != "claude" {
+	if !envWrapped(cmd, "claude") {
 		t.Fatalf("command %q", cmd)
 	}
 }

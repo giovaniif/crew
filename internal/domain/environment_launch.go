@@ -8,7 +8,7 @@ func EnvLaunchCommand(crew, env string, harness Harness, command []string) []str
 	if env == "" || len(command) == 0 {
 		return command
 	}
-	out := []string{crew, "env", "exec", env, "--", command[0]}
+	out := []string{crew, "env", "exec", env, "--harness", string(harness), "--", command[0]}
 	rest := command[1:]
 	if harness == HarnessCodex {
 		if len(rest) > 0 && rest[0] == "resume" {
