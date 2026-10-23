@@ -137,7 +137,7 @@ describe("the automations table", () => {
 });
 
 describe("touch targets", () => {
-  it.each([".session-card", ".back", ".retry", ".new-session", ".choice", ".interrupt", ".queued-action", ".permission-choice", ".load-older", ".tool summary", ".automations .chip", ".automations .subtabs button", ".automations .run-list .link", ".run-actions button", ".approval-actions button", ".kill-actions button", ".mate-actions button", ".mate-threads a", ".open-session", ".term-retry", ".phone-views button", ".settings-nav button", ".folders li", ".shortcut-actions button", ".settings-list button", ".disk-actions button", ".disk-tabs button", ".disk-kill", ".where-choice", ".first-run-buttons button", ".first-run-body .fields button", ".server-row-buttons button", ".chip-button", ".chip-menu button", ".change-server", ".swatches .swatch"])("%s is at least 44px tall", (selector) => {
+  it.each([".session-card", ".back", ".retry", ".new-session", ".choice", ".interrupt", ".queued-action", ".permission-choice", ".load-older", ".tool summary", ".automations .chip", ".automations .subtabs button", ".automations .run-list .link", ".run-actions button", ".approval-actions button", ".kill-actions button", ".mate-actions button", ".mate-threads a", ".open-session", ".term-retry", ".phone-views button", ".opt", ".folders li", ".disk-actions button", ".disk-tabs button", ".disk-kill", ".where-choice", ".first-run-buttons button", ".first-run-body .fields button", ".chip-button", ".chip-menu button", ".change-server", ".swatches .swatch"])("%s is at least 44px tall", (selector) => {
     expect(parseInt(rule(selector)["min-height"] ?? "0", 10)).toBeGreaterThanOrEqual(44);
   });
 });
@@ -228,11 +228,11 @@ describe("a mate color swatch", () => {
     expect(rule(".automation-prompt")["overflow-wrap"]).toBe("anywhere");
   });
 
-  it("wraps the last seen date below a long device name instead of squeezing the name", () => {
-    expect(rule(".settings-list li > :first-child").flex).toBe("1 1 12rem");
+  it("lets the label of a settings row shrink so a long device name wraps", () => {
+    expect(rule(".opt .l")["min-width"]).toBe("0");
   });
 
   it("keeps the theme color swatch a fixed circle in its settings row", () => {
-    expect(rule(".settings-list li > .swatch").flex).toBe("none");
+    expect(rule(".opt > .swatch").flex).toBe("none");
   });
 });
