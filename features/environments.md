@@ -103,7 +103,7 @@ go run ./scripts/verify iso leaks TEST-gemini-key --api /api/v1/envs --api /api/
 
 ```sh
 { go run ./scripts/verify iso crew -- env delete test-bot || true; } | grep -q 'environment test-bot is used by mate test-mate'
-go run ./scripts/verify iso api DELETE /api/v1/envs/test-bot --status 500 --expect '"code":"failed"' --expect test-mate
+go run ./scripts/verify iso api DELETE /api/v1/envs/test-bot --status 409 --expect '"code":"in_use"' --expect test-mate
 go run ./scripts/verify iso crew --expect test-bot -- env list
 go run ./scripts/verify iso crew -- env create test-spare --kind custom --part github
 go run ./scripts/verify iso crew -- env delete test-spare
@@ -114,6 +114,7 @@ go run ./scripts/verify iso crew --absent test-spare -- env list
 
 ```sh
 go run ./scripts/verify iso crew --expect "new key, not in use yet" -- env ssh-key test-bot --rotate
+go run ./scripts/verify iso crew --expect "new ssh key, not in use yet" -- env show test-bot
 go run ./scripts/verify iso api GET /api/v1/envs/test-bot --expect '"new_public_key":"ssh-ed25519 '
 go run ./scripts/verify web drive /#/envs/test-bot --viewport desktop --out-dir /tmp/crew-verify-map/environments --steps '[{"expect":{"text":"New ed25519 key"}},{"shot":"ssh-new-key.png"},{"click":{"role":"button","name":"Cancel new key"}},{"expect":{"text":"New ed25519 key"},"absent":true}]'
 go run ./scripts/verify iso api GET /api/v1/envs/test-bot --absent new_public_key
@@ -147,7 +148,6 @@ go run ./scripts/verify iso down
 
 - A mate in a custom environment gets only the account part of its harness: `claude` gets the `claude` part, `codex` gets the `codex` part, `omp` gets the `pi` part. The shared parts (`git`, `ssh`, `github`) and the extra variables go to each mate. Thus a `claude` mate on `test-bot` does not get `CODEX_HOME` or `OPENAI_API_KEY`. `crew env exec` with no `--harness` applies all parts.
 - The Environments page shows a set or not-set state for each part (GitHub token, Claude, Codex, Pi), not the variable names. `crew env show` and `GET /api/v1/envs/{name}` show the variable names.
-- `DELETE /api/v1/envs/{name}` answers 500 with the code `failed` while a mate uses the environment, as each `failed` RPC error does.
 - Use only TEST values. Never put a real token in the isolated crew.
 - Environment names allow only lower case letters, digits, `-` and `_`. Use the `test-` prefix.
 - `crew env exec` replaces itself with the agent (`syscall.Exec`). Thus `ps` shows the agent, and the tmux pane start command shows `crew env exec <env> --`. `iso panes` reads the pane start commands.

@@ -80,7 +80,7 @@ func (d *Daemon) envMethod(req rpc.Request) *rpc.Response {
 		return result(req.ID, d.envInfo(env, mates))
 	case rpc.MethodEnvDelete:
 		if users := domain.MatesUsingEnv(mates, env.Name); len(users) > 0 {
-			return errorResponse(req.ID, rpc.CodeFailed, fmt.Sprintf("environment %s is used by mate %s", env.Name, strings.Join(users, ", ")))
+			return errorResponse(req.ID, rpc.CodeInUse, fmt.Sprintf("environment %s is used by mate %s", env.Name, strings.Join(users, ", ")))
 		}
 		if err := d.envs.Delete(env.Name); err != nil {
 			return errorResponse(req.ID, rpc.CodeNotFound, err.Error())

@@ -8,6 +8,7 @@ import { modifierKeys } from "./desktop";
 import { parseRoute } from "./route";
 import { Approvals } from "./screens/Approvals";
 import { Automations } from "./screens/Automations";
+import { automationRoute } from "./matepage";
 import { Desktop } from "./screens/Desktop";
 import { Disk } from "./screens/Disk";
 import { Environments } from "./screens/Environments";
@@ -21,7 +22,7 @@ import { Pair } from "./screens/Pair";
 import { SessionScreen } from "./screens/Session";
 import { SessionList } from "./screens/SessionList";
 import { FirstRun } from "./screens/FirstRun";
-import { Settings } from "./screens/Settings";
+import { Settings, type UpdateCheck } from "./screens/Settings";
 import { PhoneSession } from "./screens/PhoneSession";
 import { ReviewPane } from "./screens/Review";
 import { Servers } from "./servers";
@@ -239,6 +240,10 @@ function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, g
   if (hash === "#/automations") {
     return { screen: <Automations api={api} now={now} />, tab: "more" };
   }
+  const auto = automationRoute(hash);
+  if (auto.creating) {
+    return { screen: <Automations key={hash} api={api} now={now} forMate={auto.mate} />, tab: "more" };
+  }
   if (hash === "#/envs" || hash.startsWith("#/envs/")) {
     const name = safeDecode(hash.slice("#/envs/".length));
     return { screen: <Environments api={api} name={hash === "#/envs" ? "" : name} wide={wide} />, tab: "more" };
@@ -280,6 +285,7 @@ function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, g
             local={!!env.desktopAuth}
             servers={servers}
             initial={hash === "#/servers" ? "servers" : undefined}
+            checkUpdate={env.desktop ? () => env.desktop!.invoke("crew_check_update") as Promise<UpdateCheck> : undefined}
           />
         </>
       ),

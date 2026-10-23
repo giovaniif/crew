@@ -57,6 +57,7 @@ The Tauri 2 app for desktop and mobile ([ADR 0057](../docs/adr/0057-tauri-apps.m
   - `newer` compares the versions as semver, with prereleases (`0.1.0-beta.2` < `0.1.0-beta.10` < `0.1.0`).
   - If a newer version is available, the app shows a dialog (`prompt`). It installs only when the user selects Install and restart. Then it stops `crew serve`, runs `crew daemon stop` and restarts. The bundle has `crew`, so the update replaces `crew` together with the app. The new `crew` starts a new daemon.
   - Debug builds and `CREW_NO_UPDATE_CHECK=1` do not check.
+  - `crew_check_update` (Settings › About, allowed for the origin of `crew serve`) runs the same check now, also in a debug build. It returns `{current, latest}`. `latest` is `null` when no newer version is available.
   - `tests/update.rs` tests the version compare, the prompt and the steps after the answer.
   - The public key is `plugins.updater.pubkey`. The private key and its password are the repo secrets `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. Do not put them in the repo.
   - The Windows build removes the prerelease part from its version, because the MSI does not accept it. Thus Windows does not get a prerelease update of the same core version.
