@@ -174,6 +174,7 @@ type Daemon struct {
 	tx          *transcripts
 	push        app.PushProvider
 	mateSecrets app.MateSecrets
+	envs        app.EnvironmentStore
 	envLauncher string
 	slack       slackWorkers
 	presence    presenceCfg
@@ -607,6 +608,8 @@ func (d *Daemon) dispatch(c *conn, line []byte) (*rpc.Response, bool) {
 		return d.mateMethod(req), true
 	case rpc.MethodMateMemory, rpc.MethodMateSetMemory:
 		return d.mateMethod(req), true
+	case rpc.MethodEnvList, rpc.MethodEnvShow, rpc.MethodEnvCreate, rpc.MethodEnvSet, rpc.MethodEnvUnset, rpc.MethodEnvDelete, rpc.MethodEnvSSHKey:
+		return d.envMethod(req), true
 	case rpc.MethodMateNew:
 		return d.mateNew(req)
 	case rpc.MethodMateFresh:
