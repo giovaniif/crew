@@ -70,7 +70,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	case cmd == "mate":
 		return runMate(args[1:], stdout, stderr)
 	case cmd == "env":
-		return runEnv(args[1:], stderr)
+		return runEnv(args[1:], stdout, stderr)
 	case cmd == "approval":
 		return runApproval(args[1:], stdout, stderr)
 	case cmd == "focus":

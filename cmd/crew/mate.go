@@ -14,7 +14,7 @@ import (
 	"github.com/giovaniif/crew/internal/rpc"
 )
 
-const mateUsage = "usage: crew mate list | show <name> | remove <name> | add <name> [--agent a] [--prompt p] | new <name> [--repo r] [text] | slack <name> [--no-open] | memory <name> | tokens <name> [--clear] | claim <name> | pause <name> | resume <name> | stop [--off] | set <name> [--agent a] [--prompt p] [--model m] [--effort e] [--repo r]... [--no-repos] [--owner id] [--avatar id] [--color #rrggbb] [--enable|--disable]"
+const mateUsage = "usage: crew mate list | show <name> | remove <name> | add <name> [--agent a] [--prompt p] | new <name> [--repo r] [text] | slack <name> [--no-open] | memory <name> | tokens <name> [--clear] | claim <name> | pause <name> | resume <name> | stop [--off] | set <name> [--agent a] [--prompt p] [--model m] [--effort e] [--repo r]... [--no-repos] [--owner id] [--avatar id] [--color #rrggbb] [--env e] [--enable|--disable]"
 
 func runMate(args []string, stdout, stderr io.Writer) int {
 	if !mateArgsOK(args) {
@@ -75,6 +75,7 @@ func mateFromFlags(base domain.Mate, args []string) (domain.Mate, error) {
 	owner := fs.String("owner", "", "")
 	avatar := fs.String("avatar", "", "")
 	color := fs.String("color", "", "")
+	env := fs.String("env", "", "")
 	fs.Var(&repos, "repo", "")
 	noRepos := fs.Bool("no-repos", false, "")
 	enable := fs.Bool("enable", false, "")
@@ -106,6 +107,8 @@ func mateFromFlags(base domain.Mate, args []string) (domain.Mate, error) {
 			base.Avatar = *avatar
 		case "color":
 			base.Color = *color
+		case "env":
+			base.Env = *env
 		case "repo":
 			base.Repos = []string(repos)
 		case "no-repos":
@@ -190,7 +193,7 @@ func mateCommand(args []string, stdout io.Writer) error {
 		if err := c.Call(ctx, rpc.MethodMateSet, rpc.MateSetParams{Mate: m}, &saved); err != nil {
 			return err
 		}
-		fmt.Fprintf(stdout, "saved %s\n", saved.Name)
+		reportMateSaved(stdout, saved, saved.Env != base.Env)
 	default:
 		var list rpc.MateList
 		if err := c.Call(ctx, rpc.MethodMateList, struct{}{}, &list); err != nil {
@@ -231,6 +234,7 @@ func printMate(w io.Writer, m domain.Mate) {
 	row("owner", m.Owner)
 	row("avatar", m.Avatar)
 	row("color", m.Color)
+	row("env", m.Env)
 	row("enabled", yesNo(m.Enabled))
 	fmt.Fprintln(w, "prompt:")
 	for _, line := range strings.Split(strings.TrimRight(m.Prompt, "\n"), "\n") {
@@ -261,4 +265,11 @@ func mateControl(ctx context.Context, c mateCaller, out io.Writer, args []string
 	}
 	fmt.Fprintf(out, "%s %s\n", word, args[1])
 	return nil
+}
+
+func reportMateSaved(w io.Writer, m domain.Mate, envChanged bool) {
+	fmt.Fprintf(w, "saved %s\n", m.Name)
+	if envChanged {
+		fmt.Fprintf(w, "the environment %s applies at the next start or resume of %s; a running agent does not restart\n", envLabel(m.Env), m.Name)
+	}
 }
