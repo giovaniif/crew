@@ -2,7 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { Automation, AutomationRun } from "../api";
-import { automationOf, automationRows, draftOf, type AutomationQuery } from "../automations";
+import { automationOf, automationRows, draftOf, newDraft, type AutomationQuery } from "../automations";
 import { desktop } from "../test/desktop";
 
 afterEach(() => {
@@ -44,6 +44,13 @@ describe("the automation rows", () => {
 
   it("turns a draft back into the automation it came from", () => {
     expect(automationOf(draftOf(list[0]))).toEqual({ name: "fix-ci", agent: "claude", target: "new-worktree", prompt: "Fix the CI of {{work_item}}.", on: ["pr.ci_failed"], enabled: true, session: "fresh" });
+  });
+
+  it("keeps the mate of an automation and starts a new one for a mate", () => {
+    const a: Automation = { name: "test-weekly", agent: "claude", mate: "test-ada", prompt: "TEST", enabled: true, source: "/h/config.toml" };
+    expect(automationOf(draftOf(a))).toMatchObject({ mate: "test-ada" });
+    expect(automationOf({ ...newDraft("test-ada"), name: "test-new", prompt: "TEST" })).toMatchObject({ mate: "test-ada" });
+    expect(automationOf({ ...newDraft(), name: "test-new", prompt: "TEST" })).not.toHaveProperty("mate");
   });
 
   it("keeps the fields that the form does not show", () => {
