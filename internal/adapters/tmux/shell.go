@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/giovaniif/crew/internal/app"
 )
@@ -89,8 +88,6 @@ func (h *Host) Popup(ctx context.Context, pane app.PaneID) error {
 	go func() { _ = cmd.Wait() }()
 	return nil
 }
-
-const popupLaunchGrace = 300 * time.Millisecond
 
 func (h *Host) parkedWindow(ctx context.Context, pane app.PaneID) (string, error) {
 	out, err := h.run(ctx, "", "display-message", "-p", "-t", string(pane), "#{window_id} #{window_panes}")

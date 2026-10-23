@@ -56,7 +56,7 @@ Repo tooling. The repo-wide rules are in the [root AGENTS.md](../AGENTS.md).
 - **`verify`** (`go run ./scripts/verify <command>`): the agent verification CLI (ADR [0055](../docs/adr/0055-agent-verification.md)). It is not in the `crew` binary. Agents (Claude Code and Codex) follow the skill in [.claude/skills/verify/SKILL.md](../.claude/skills/verify/SKILL.md).
   - Each command prints exactly one JSON object with `ok`, `problems` (`{msg, hint}`) and its data. The exit code is 0 for ok, 1 for a failure and 2 for a usage error.
   - Its state is in `VERIFY_HOME` (default `/tmp/crew-verify-$UID-<hash of the checkout path>`). Thus each checkout has its own isolated crew, and parallel verifiers in different worktrees do not collide. `verify` exports `VERIFY_HOME` to the recipes that it runs.
-  - `doctor`: the tools (go, git, tmux, node 22.18+, `web/node_modules`, the Playwright Chromium, freeze), the branch, the machine load, TCP port 5199 and `/tmp`.
+  - `doctor`: the tools (go, git, tmux, node 22.18+, `web/node_modules`, the Playwright Chromium), the branch, the machine load, TCP port 5199 and `/tmp`.
   - `iso up [--session]|down|seed [--sessions n] [--codex]`: an isolated crew.
     - It has a `CREW_HOME` under `/tmp`, its own tmux socket, its own TCP ports and a temporary `HOME`.
     - The e2e fakes (`claude`, `codex`, `gh`, `terminal-notifier`, `osascript`) are first on `PATH`. Slack, ntfy and GitHub tokens are blank.
