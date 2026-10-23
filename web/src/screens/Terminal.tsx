@@ -1,4 +1,4 @@
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { Session } from "../stream";
 import type { PaneKind, TermStatus, TerminalStore } from "../terminal";
 
@@ -25,7 +25,9 @@ function notice(status: TermStatus): { text: string; action: string | null } | n
   }
 }
 
-export function TerminalPane({ store, session, kind, onBack }: { store: TerminalStore | null; session: Session; kind: PaneKind; onBack?: () => void }) {
+type PaneProps = { store: TerminalStore | null; session: Session; kind: PaneKind; onBack?: () => void; onResume?: () => Promise<void> };
+
+export function TerminalPane({ store, session, kind, onBack, onResume }: PaneProps) {
   if (!store) {
     return (
       <div className="pane-placeholder">
@@ -34,11 +36,27 @@ export function TerminalPane({ store, session, kind, onBack }: { store: Terminal
       </div>
     );
   }
-  return <Attached key={session.ID + kind} store={store} session={session} kind={kind} onBack={onBack} />;
+  return <Attached key={session.ID + kind} store={store} session={session} kind={kind} onBack={onBack} onResume={onResume} />;
 }
 
-function Attached({ store, session, kind, onBack }: { store: TerminalStore; session: Session; kind: PaneKind; onBack?: () => void }) {
+function Attached({ store, session, kind, onBack, onResume }: PaneProps & { store: TerminalStore }) {
   const entry = store.entry(session, kind);
+  const [resuming, setResuming] = useState(false);
+  const [problem, setProblem] = useState("");
+  const resume = async () => {
+    if (!onResume) {
+      return;
+    }
+    setResuming(true);
+    setProblem("");
+    try {
+      await onResume();
+    } catch (err) {
+      setProblem(err instanceof Error ? err.message : String(err));
+    } finally {
+      setResuming(false);
+    }
+  };
   const status = useSyncExternalStore(entry.subscribe, entry.snapshot);
   const box = useRef<HTMLDivElement>(null);
 
@@ -72,13 +90,21 @@ function Attached({ store, session, kind, onBack }: { store: TerminalStore; sess
         <div className="term-state" role="status">
           <p className="t">{"This session's pane closed"}</p>
           <p className="s">The agent is not running in tmux anymore. Its chat and changes are still here.</p>
+          {!session.Ended && onResume ? <p className="s">Resume session shows here when crew ends the session.</p> : null}
+          {problem ? (
+            <p className="s" role="alert">
+              {problem}
+            </p>
+          ) : null}
           <div className="term-state-actions">
             <button type="button" className="ui btn" onClick={onBack}>
               Back to chat
             </button>
-            <button type="button" className="ui btn primary" onClick={() => entry.retry()}>
-              Open again
-            </button>
+            {session.Ended && onResume ? (
+              <button type="button" className="ui btn primary" disabled={resuming} onClick={() => void resume()}>
+                Resume session
+              </button>
+            ) : null}
           </div>
         </div>
       </div>

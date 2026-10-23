@@ -133,7 +133,7 @@ export class TerminalEntry {
     if (this.kind === "agent") {
       pane = this.session.Pane || null;
       if (!pane) {
-        this.set({ kind: "failed", message: "This session has no terminal pane." });
+        this.set({ kind: "paneClosed" });
         return;
       }
       if (pane === this.closedPane) {

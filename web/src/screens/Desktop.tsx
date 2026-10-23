@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import type { Authed } from "../api";
+import { resumeSession, type Authed } from "../api";
 import type { AppEnv } from "../App";
 import { emptyMain, keyAction, mainTabs, modifierKeys, nextNeeding, sessionPlace, sidebarGroups, sidebarRows, stateDot, type Keys, type MainTab } from "../desktop";
 import { parseRoute } from "../route";
@@ -380,7 +380,7 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
     } else if (view === "agent") {
       body = (
         <ViewOverlay label="Agent screen" onClose={back}>
-          <TerminalPane store={terminals} session={session} kind="agent" onBack={back} />
+          <TerminalPane store={terminals} session={session} kind="agent" onBack={back} onResume={() => resumeSession(api, session.ID)} />
         </ViewOverlay>
       );
     } else {
