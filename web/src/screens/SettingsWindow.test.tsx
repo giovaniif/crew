@@ -221,12 +221,11 @@ describe("the server settings", () => {
     await waitFor(() => expect(server.calls.some((c) => c.method !== "GET" && c.path.startsWith("/api/v1/workspaces"))).toBe(true));
   });
 
-  it("saves a theme colour of the server", async () => {
-    const { server } = await open("Appearance");
-    const blue = await screen.findByRole("textbox", { name: "blue" });
-    await userEvent.type(blue, "#1e66f5");
-    await userEvent.click(screen.getByRole("button", { name: "Save blue" }));
-    await waitFor(() => expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/config")?.body).toEqual({ key: "theme.blue", value: "#1e66f5" }));
+  it("shows no TUI colours under Appearance", async () => {
+    await open("Appearance");
+    await screen.findByRole("radiogroup", { name: "Theme" });
+    expect(screen.queryByRole("region", { name: "TUI colors" })).toBeNull();
+    expect(screen.queryByRole("textbox", { name: "blue" })).toBeNull();
   });
 
   it("shows a note in a group when the server does not have the method", async () => {
@@ -242,7 +241,7 @@ describe("the server settings", () => {
     withServer(view.server).on("GET", "/api/v1/workspaces/dirs?path=%2Fhome%2Fme", { status: 403, body: { error: { code: "forbidden", message: "only the owner device" } } });
     view.server.on("GET", "/api/v1/config", { status: 403, body: { error: { code: "forbidden", message: "only the owner device" } } });
     view.live();
-    await userEvent.click(within(screen.getByRole("navigation", { name: "Settings" })).getByRole("button", { name: "Appearance" }));
+    await userEvent.click(within(screen.getByRole("navigation", { name: "Settings" })).getByRole("button", { name: "Agents" }));
     expect(await screen.findByText("Only the owner device, the app on the computer that runs crew, can change this.")).toBeInTheDocument();
   });
 });

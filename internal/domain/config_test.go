@@ -25,8 +25,6 @@ func TestConfigLiteralValidatesEachKey(t *testing.T) {
 		{"defaults.claude.effort", "turbo", "", false},
 		{"defaults.codex.model", "gpt-6-sol", `"gpt-6-sol"`, true},
 		{"defaults.nope.model", "x", "", false},
-		{"theme.blue", "#1E66F5", `"#1E66F5"`, true},
-		{"theme.added_bg", "#a6e3a1", `"#a6e3a1"`, true},
 		{"theme.blue", "blue", "", false},
 		{"theme.blue", "#12345", "", false},
 		{"theme.purple", "#123456", "", false},
@@ -52,9 +50,20 @@ func TestConfigLiteralOfAnEmptyValueUnsetsAKnownKey(t *testing.T) {
 	}
 }
 
+func TestConfigHasNoTuiThemeKeys(t *testing.T) {
+	for _, k := range ConfigKeys() {
+		if len(k) > 6 && k[:6] == "theme." {
+			t.Errorf("ConfigKeys still has %q", k)
+		}
+	}
+	if _, err := ConfigLiteral("theme.blue", "#1e66f5"); err == nil {
+		t.Error("theme.blue was accepted")
+	}
+}
+
 func TestConfigKeysListEverySettableKey(t *testing.T) {
 	keys := ConfigKeys()
-	for _, want := range []string{"fallback.threshold", "push.away_after", "defaults.claude.model", "defaults.codex.effort", "theme.deleted_bg"} {
+	for _, want := range []string{"fallback.threshold", "push.away_after", "defaults.claude.model", "defaults.codex.effort"} {
 		found := false
 		for _, k := range keys {
 			found = found || k == want

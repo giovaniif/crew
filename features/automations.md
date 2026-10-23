@@ -1,6 +1,6 @@
 # Automations
 
-Automations are `[[automation]]` tables in `$CREW_HOME/config.toml` or a repo's `.crew.toml`. They start sessions on demand (`a` in the TUI, `crew automation run`, the PWA) or on a schedule. With no automations, every surface says how to add one.
+Automations are `[[automation]]` tables in `$CREW_HOME/config.toml` or a repo's `.crew.toml`. They start sessions on demand (`crew automation run`, the app) or on a schedule. With no automations, every surface says how to add one.
 
 ## Setup
 
@@ -16,12 +16,6 @@ go run ./scripts/verify iso seed --sessions 3
 
 ```sh
 go run ./scripts/verify iso crew --expect "no automations" --expect "[[automation]]" -- automation list
-```
-
-### TUI a shows the empty state
-
-```sh
-go run ./scripts/verify tui drive --restart --out-dir /tmp/crew-verify-map/automations --steps '[{"expect":"seeded change 2","timeout":8000},{"keys":"a"},{"expect":"no automations","timeout":5000},{"shot":"empty.png"}]'
 ```
 
 ### PWA automations tab at both viewports

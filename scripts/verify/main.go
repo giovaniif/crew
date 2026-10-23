@@ -50,7 +50,6 @@ const usageHint = "run go run ./scripts/verify help"
 var commands = map[string]func(e *env, args []string, r *result){
 	"doctor":       doctor,
 	"iso":          iso,
-	"tui":          tui,
 	"web":          web,
 	"map":          mapCmd,
 	"evidence":     evidence,

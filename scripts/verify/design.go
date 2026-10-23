@@ -15,12 +15,11 @@ type finding struct {
 }
 
 var (
-	rawLipgloss = regexp.MustCompile(`lipgloss\.Color\(\s*"`)
-	hexColor    = regexp.MustCompile(`#[0-9a-fA-F]{3,8}\b`)
-	rgbColor    = regexp.MustCompile(`\b(rgb|rgba|hsl|hsla)\(`)
-	cssVarDecl  = regexp.MustCompile(`^\s*--[A-Za-z0-9-]+\s*:`)
-	magicPx     = regexp.MustCompile(`\b\d+(\.\d+)?px\b`)
-	hunkHeader  = regexp.MustCompile(`^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@`)
+	hexColor   = regexp.MustCompile(`#[0-9a-fA-F]{3,8}\b`)
+	rgbColor   = regexp.MustCompile(`\b(rgb|rgba|hsl|hsla)\(`)
+	cssVarDecl = regexp.MustCompile(`^\s*--[A-Za-z0-9-]+\s*:`)
+	magicPx    = regexp.MustCompile(`\b\d+(\.\d+)?px\b`)
+	hunkHeader = regexp.MustCompile(`^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@`)
 )
 
 func isTestPath(f string) bool {
@@ -33,15 +32,6 @@ func checkLine(file, line string) []string {
 	}
 	var rules []string
 	switch {
-	case strings.HasPrefix(file, "internal/") && strings.HasSuffix(file, ".go"):
-		if file == "internal/tui/theme.go" {
-			return nil
-		}
-		if rawLipgloss.MatchString(line) {
-			rules = append(rules, "raw lipgloss colour: use a Theme field from internal/tui/theme.go")
-		} else if strings.HasPrefix(file, "internal/tui/") && regexp.MustCompile(`"#[0-9a-fA-F]{6}"`).MatchString(line) {
-			rules = append(rules, "raw hex colour: add it to the Theme in internal/tui/theme.go")
-		}
 	case strings.HasPrefix(file, "web/src/") && strings.HasSuffix(file, ".css"):
 		if cssVarDecl.MatchString(line) {
 			return nil

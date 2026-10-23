@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/giovaniif/crew/internal/domain"
 	"github.com/giovaniif/crew/internal/rpc"
 )
 
@@ -32,13 +31,4 @@ func runFocus(args []string, stderr io.Writer) int {
 		return 1
 	}
 	return 0
-}
-
-func openClientParams(self, home, dir string, getenv func(string) string) rpc.OpenClientParams {
-	return rpc.OpenClientParams{
-		Command:  []string{self, "tui"},
-		Env:      map[string]string{domain.EnvName("HOME"): home, domain.EnvName("LAUNCH_DIR"): dir},
-		Dir:      dir,
-		Terminal: domain.TerminalBundle(getenv("__CFBundleIdentifier"), getenv("TERM_PROGRAM")),
-	}
 }

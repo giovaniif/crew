@@ -6,21 +6,21 @@ This folder is the shared memory of what "working" means in crew (ADR [0055](../
 
 | Area | File | Surfaces |
 |---|---|---|
-| Sessions | [sessions.md](sessions.md) | CLI, TUI, PWA |
+| Sessions | [sessions.md](sessions.md) | CLI, PWA |
 | Live session | [live-session.md](live-session.md) | PWA, app |
-| Review pane | [review-pane.md](review-pane.md) | TUI |
-| Worktrees and cleanup | [worktrees-cleanup.md](worktrees-cleanup.md) | CLI, TUI |
+| Review pane | [review-pane.md](review-pane.md) | PWA |
+| Worktrees and cleanup | [worktrees-cleanup.md](worktrees-cleanup.md) | CLI |
 | PR board | [pr-board.md](pr-board.md) | CLI |
-| Disk view | [disk-view.md](disk-view.md) | TUI |
-| Automations | [automations.md](automations.md) | CLI, TUI, PWA |
-| Mates | [mates.md](mates.md) | CLI, TUI, PWA |
+| Disk view | [disk-view.md](disk-view.md) | PWA |
+| Automations | [automations.md](automations.md) | CLI, PWA |
+| Mates | [mates.md](mates.md) | CLI, PWA |
 | Environments | [environments.md](environments.md) | CLI, PWA, app |
 | Approvals | [approvals.md](approvals.md) | CLI, PWA |
 | Remote, serve and pairing | [remote-pairing.md](remote-pairing.md) | CLI, HTTP |
 | PWA | [pwa.md](pwa.md) | PWA |
 | Notifications | [notifications.md](notifications.md) | CLI |
-| Setup and onboarding | [setup-onboarding.md](setup-onboarding.md) | TUI |
-| nvim | [nvim.md](nvim.md) | TUI |
+| Setup and onboarding | [setup-onboarding.md](setup-onboarding.md) | CLI |
+| nvim | [nvim.md](nvim.md) | nvim |
 
 ## Format
 
@@ -41,7 +41,7 @@ This folder is the shared memory of what "working" means in crew (ADR [0055](../
 ```sh
 go run ./scripts/verify map status
 go run ./scripts/verify map run sessions
-go run ./scripts/verify map run sessions --recipe "sidebar lists the seeded sessions"
+go run ./scripts/verify map run sessions --recipe "PWA desktop sidebar lists the sessions in daemon order"
 ```
 
-A recipe can drive the PWA (`verify web`), the TUI (`verify tui`), the CLI (`verify iso crew`) and the desktop app (`verify app`, the same steps as `web`). For a recipe that needs a real agent pane, use `verify iso up --session` in `## Setup` (see [live-session.md](live-session.md)).
+A recipe can drive the PWA (`verify web`), the CLI (`verify iso crew`) and the desktop app (`verify app`, the same steps as `web`). For a recipe that needs a real agent pane, use `verify iso up --session` in `## Setup` (see [live-session.md](live-session.md)).

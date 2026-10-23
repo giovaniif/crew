@@ -1,6 +1,6 @@
 # internal/serve
 
-`crew serve` is the HTTP and WebSocket API that the phone app (PWA) talks to. It is a separate process. Like the TUI, it gets to the daemon only through `rpc`. It gives an allowlist of the daemon methods, never a passthrough. See [ADR 0046](../../docs/adr/0046-remote-app.md). Pairing and revocation on the daemon side are in [internal/daemon/](../daemon/AGENTS.md).
+`crew serve` is the HTTP and WebSocket API that the phone app (PWA) talks to. It is a separate process. It gets to the daemon only through `rpc`. It gives an allowlist of the daemon methods, never a passthrough. See [ADR 0046](../../docs/adr/0046-remote-app.md). Pairing and revocation on the daemon side are in [internal/daemon/](../daemon/AGENTS.md).
 
 Tests:
 
@@ -167,7 +167,7 @@ The `/` fallback: `Handler(fallback)` mounts `fallback` at `/`. `Handler(nil)` s
   The phone shows these fields and never calculates them again. If a task or worktree diff changes the derived fields of a different session, a `session` diff with the same `seq` follows it.
 - `limits` is `domain.Quotas` of the sessions as `StreamQuota`: the Go fields and `label` (`domain.WindowLabel`), `low` and `stale_at` (`ReportedAt` + `domain.StaleQuotaAfter`).
   - It comes in a diff only when a session change or removal changes it.
-  - Like the limits bar of the TUI, the client hides windows whose `ResetsAt` (Unix seconds, 0 unknown) has passed. It dims the windows after `stale_at`.
+  - The client hides windows whose `ResetsAt` (Unix seconds, 0 unknown) has passed. It dims the windows after `stale_at`.
 - `{"watch":"<session>","after":<cursor>}` adds the messages of a session through `transcript.watch` on the connection of the stream. `after` is the largest `cursor` that the client has, or 0 for all.
   - The first frame is `{"transcript":{"session","messages":[...]}}` with the messages after the cursor. Then one frame comes for each change.
   - `"reset":true` means that the session moved to a different transcript file. Drop its cursor. The messages that follow start the new file.
