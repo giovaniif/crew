@@ -11,7 +11,9 @@ Facts:
 - The daemon starts each mate agent pane with `tmux new-window`. Variables that `tmux -e` sets show in `ps`, and `tmux -e` cannot remove a variable.
 - ADR 0053 keeps secrets in files under `$CREW_HOME/secrets` (file mode 600, directory mode 700). ADR 0016 masks secrets in banners.
 - The `claude` harness reads `CLAUDE_CONFIG_DIR`. The `codex` harness reads `CODEX_HOME`. The `omp` harness reads `PI_CODING_AGENT_DIR` (see `internal/adapters/omp/setup.go`).
-- A test by hand showed this: with a fake `HOME`, a custom `CLAUDE_CONFIG_DIR` and no token, `claude -p` says "Not logged in". It writes only into the custom directory, and the fake `HOME` stays byte-identical. A check with a real token is open.
+- A test by hand showed this: with a fake `HOME`, a custom `CLAUDE_CONFIG_DIR` and no token, `claude -p` says "Not logged in". It writes only into the custom directory, and the fake `HOME` stays byte-identical.
+- A test by hand with a real token (2026-10-23, Claude Code 2.1.309, Linux): with `env -i`, a fake `HOME`, a custom `CLAUDE_CONFIG_DIR` and `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token`, `claude -p` answered correctly. The fake `HOME` stayed byte-identical. The real `~/.claude/.credentials.json` did not change. No file in the custom directory had the token.
+- In that test, Claude wrote only into the custom directory: `.claude.json`, `backups/`, `projects/`, `sessions/`, and the organization files `remote-settings.json` and `policy-limits.json` with their signature and stamp files. Thus the settings that an organization manages for an account stay in the directory of the environment.
 
 ## Decision
 
@@ -79,6 +81,6 @@ Facts:
 ## Limits
 
 - The mate still runs as the same Unix user. A mate can read files in the real HOME if it knows the path. An environment isolates logins and identity, not the file system.
-- The Claude subscription login in a custom directory needs `claude setup-token`. A real-token check is open.
+- The Claude subscription login in a custom directory needs `claude setup-token`. The real-token check passed on Linux. The check of the macOS keychain is open. Do it on a Mac.
 - Codex and Pi use API keys in v1.
 - The allowlist is fixed in v1.
