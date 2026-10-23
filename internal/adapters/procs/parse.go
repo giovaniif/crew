@@ -29,6 +29,54 @@ func parseNetstat(out string) []domain.Listener {
 	return listeners
 }
 
+func parseSS(out string) []domain.Listener {
+	var listeners []domain.Listener
+	for _, line := range strings.Split(out, "\n") {
+		f := strings.Fields(line)
+		if len(f) < 6 || f[0] != "LISTEN" {
+			continue
+		}
+		i := strings.LastIndex(f[3], ":")
+		if i < 0 {
+			continue
+		}
+		port, err := strconv.Atoi(f[3][i+1:])
+		if err != nil {
+			continue
+		}
+		users := strings.Join(f[5:], " ")
+		for _, user := range strings.Split(users, "),(") {
+			command, pid, ok := parseSSUser(user)
+			if ok {
+				listeners = append(listeners, domain.Listener{Port: port, PID: pid, Command: command})
+			}
+		}
+	}
+	return listeners
+}
+
+func parseSSUser(user string) (string, int, bool) {
+	start := strings.Index(user, `"`)
+	end := strings.LastIndex(user, `"`)
+	if start < 0 || end <= start {
+		return "", 0, false
+	}
+	rest := user[end+1:]
+	p := strings.Index(rest, "pid=")
+	if p < 0 {
+		return "", 0, false
+	}
+	digits := rest[p+4:]
+	if c := strings.IndexAny(digits, ",)"); c >= 0 {
+		digits = digits[:c]
+	}
+	pid, err := strconv.Atoi(digits)
+	if err != nil {
+		return "", 0, false
+	}
+	return user[start+1 : end], pid, true
+}
+
 func portAfterLastDot(addr string) (int, bool) {
 	i := strings.LastIndex(addr, ".")
 	if i < 0 {
