@@ -165,6 +165,7 @@ function EditForm({ api, title, initial, fixedName, taken = [], onSaved, onCance
     <form className="automation-form" aria-label={title} onSubmit={submit}>
       {fixedName ? null : <Field label="Name" value={d.name} onChange={set("name")} />}
       {nameTaken ? <p className="mate-error">An automation named {d.name.trim()} exists.</p> : null}
+      {d.mate ? <p className="muted">Runs as the mate {d.mate}.</p> : null}
       <div className="ui-field field">
         Agent
         <Select label="Agent" value={d.agent} onChange={(agent) => setD({ ...d, agent })} options={["claude", "codex", "omp"].map((a) => ({ value: a, label: a }))} />
@@ -342,13 +343,13 @@ function SortHead({ title, sort, query, setQuery }: { title: string; sort: Autom
   );
 }
 
-export function Automations({ api, now = Date.now() }: { api: Authed; now?: number }) {
+export function Automations({ api, now = Date.now(), forMate }: { api: Authed; now?: number; forMate?: string }) {
   const [list, setList] = useState<Automation[] | null>(null);
   const [error, setError] = useState("");
   const [problems, setProblems] = useState<string[]>([]);
   const [runs, setRuns] = useState<AutomationRun[]>([]);
   const [selected, setSelected] = useState("");
-  const [creating, setCreating] = useState(false);
+  const [creating, setCreating] = useState(forMate !== undefined);
   const [query, setQuery] = useState<AutomationQuery>(noQuery);
   const [round, setRound] = useState(0);
   const [toggleError, setToggleError] = useState("");
@@ -498,7 +499,7 @@ export function Automations({ api, now = Date.now() }: { api: Authed; now?: numb
           <div className="detail-head">
             <b>New automation</b>
           </div>
-          <EditForm api={api} title="New automation" initial={newDraft()} fixedName={false} taken={(list ?? []).map((a) => a.name)} onCancel={() => setCreating(false)} onSaved={() => (setCreating(false), reload())} />
+          <EditForm api={api} title="New automation" initial={newDraft(forMate ?? "")} fixedName={false} taken={(list ?? []).map((a) => a.name)} onCancel={() => setCreating(false)} onSaved={() => (setCreating(false), reload())} />
         </aside>
       ) : null}
       {chosen ? <Detail key={chosen.name} api={api} automation={chosen} runs={runsOf(chosen.name, runs)} now={now} onRan={ran} onSaved={reload} /> : null}

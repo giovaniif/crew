@@ -11,6 +11,7 @@ import {
   type MateSetup,
   claimMate,
   listApprovals,
+  listAutomations,
   listMates,
   mateMemory,
   mateSetup,
@@ -22,12 +23,12 @@ import {
   setMateTokens,
   stopAllMates,
 } from "../api";
-import { type FaceState, faceColor, faceOf, faceState, faceSvg, mateCard, mateTagline, type ToneAxis } from "../faces";
+import { ACCENTS, FACES, type FaceState, faceColor, faceOf, faceState, faceSvg, mateCard, mateTagline, type ToneAxis, toneOf } from "../faces";
 import { envTitle } from "../envs";
 import { mateEnvName } from "../mateshome";
-import { type ThreadItem, harnessLabel, mateLine, mateRoute, mateThreads, nameCheck, replyHint, threadSearch } from "../matepage";
+import { type MateAutomation, type ThreadItem, answersIn, harnessLabel, mateAutomations, mateLine, mateRoute, mateThreads, nameCheck, replyHint, threadSearch, toneSteps } from "../matepage";
 import type { Mates as MateBoard, StreamClient, StreamSnapshot } from "../stream";
-import { Button, Dialog, Menu, Segmented, Select } from "../ui";
+import { Button, Dialog, Menu, Segmented, Select, Slider } from "../ui";
 
 function message(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
@@ -406,9 +407,72 @@ function MoreMenu({ api, name, stopped }: { api: Authed; name: string; stopped: 
   );
 }
 
+function useMateAutomations(api: Authed, name: string): MateAutomation[] {
+  const [list, setList] = useState<MateAutomation[]>([]);
+  useEffect(() => {
+    let live = true;
+    listAutomations(api)
+      .then((out) => live && setList(mateAutomations(out.automations ?? [], name)))
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [api, name]);
+  return list;
+}
+
+function MateLook({ name, mate, save }: { name: string; mate: Mate; save: (patch: Partial<Mate>) => void }) {
+  const chosen = faceOf(name, mate.avatar);
+  const color = faceColor(chosen, mate.color, false);
+  return (
+    <div className="kv mp-look">
+      <h4>LOOK</h4>
+      <div className="mt-faces mp-faces">
+        {FACES.map((f) => (
+          <button key={f.id} type="button" aria-label={f.name} aria-pressed={f.id === chosen.id} className={f.id === chosen.id ? "on" : ""} onClick={() => save({ avatar: f.id })}>
+            <MateFace name={f.id} state="idle" color={f.id === chosen.id ? mate.color : undefined} px={24} />
+          </button>
+        ))}
+      </div>
+      <div className="swatches">
+        {ACCENTS.map((c) => (
+          <button key={c} type="button" className={"swatch" + (c === color ? " on" : "")} aria-label={"Color " + c} style={{ background: c }} onClick={() => save({ color: c })} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MateTone({ tones, mate, save }: { tones: ToneAxis[]; mate: Mate; save: (patch: Partial<Mate>) => void }) {
+  if (tones.length === 0) {
+    return null;
+  }
+  const steps = toneSteps(tones, mate.tone);
+  return (
+    <div className="kv">
+      <h4>TONE</h4>
+      {tones.map((t, i) => (
+        <Slider
+          key={t.key}
+          label={t.low + " to " + t.high}
+          low={t.low}
+          high={t.high}
+          min={0}
+          max={4}
+          value={steps[i]}
+          valueText={(v) => v + 1 + " of 5"}
+          onChange={(v) => save({ tone: toneOf(tones, steps.map((x, j) => (j === i ? v : x))) })}
+        />
+      ))}
+    </div>
+  );
+}
+
 function MateSettings({
   api,
   def,
+  tones,
+  channels,
   name,
   connected,
   canConnect,
@@ -419,6 +483,8 @@ function MateSettings({
 }: {
   api: Authed;
   def: Mate;
+  tones: ToneAxis[];
+  channels?: string[];
   name: string;
   connected: boolean;
   canConnect: boolean;
@@ -436,6 +502,7 @@ function MateSettings({
   const [note, setNote] = useState("");
   useEffect(() => setMate(def), [def]);
   const harness = options.find((h) => h.harness === mate.agent);
+  const automations = useMateAutomations(api, name);
 
   async function save(patch: Partial<Mate>): Promise<boolean> {
     const next = { ...mate, ...patch };
@@ -516,6 +583,12 @@ function MateSettings({
             </button>
           )}
         </div>
+        {connected && (
+          <div className="r">
+            <span className="k">Answers in</span>
+            <span className="dim">{answersIn(channels)}</span>
+          </div>
+        )}
         {connecting && canConnect && <Connect api={api} name={name} />}
       </div>
       <div className="kv">
@@ -527,13 +600,24 @@ function MateSettings({
         ) : (
           <>
             <h4>AUTOMATIONS</h4>
-            <span className="muted mp-small">No automation names this mate.</span>
-            <a className="mp-small" href="#/automations">
+            {automations.length === 0 ? (
+              <span className="muted mp-small">No automation names this mate.</span>
+            ) : (
+              automations.map((a) => (
+                <a key={a.name} className="r mp-row" href="#/automations">
+                  <span>{a.name}</span>
+                  <span className="muted mp-small">{a.when}</span>
+                </a>
+              ))
+            )}
+            <a className="mp-small" href={"#/automations/new?mate=" + encodeURIComponent(name)}>
               + Add automation
             </a>
           </>
         )}
       </div>
+      <MateLook name={name} mate={mate} save={(patch) => void save(patch)} />
+      <MateTone tones={tones} mate={mate} save={(patch) => void save(patch)} />
       <div className="kv">
         <h4 className="mp-h">
           MEMORY
@@ -594,7 +678,7 @@ export function MatePage({
   wide: boolean;
 }) {
   const { name, thread, connect } = mateRoute(hash);
-  const { defs, problems, error, reload } = useMateDefs(api);
+  const { defs, tones, problems, error, reload } = useMateDefs(api);
   const { envs } = useEnvs(api);
   const asking = useAskingMates(api);
   const mem = useMemory(api, name);
@@ -653,7 +737,7 @@ export function MatePage({
 
   const settings = (inSheet: boolean) =>
     def ? (
-      <MateSettings api={api} def={def} name={name} connected={connected} canConnect={canConnect} connect={connect} mem={mem} sheet={inSheet} onSaved={reload} />
+      <MateSettings api={api} def={def} tones={tones} channels={row.channels} name={name} connected={connected} canConnect={canConnect} connect={connect} mem={mem} sheet={inSheet} onSaved={reload} />
     ) : (
       <p className="mt-note">Loading…</p>
     );

@@ -124,7 +124,7 @@ export type MateThread = {
   ended: boolean;
 };
 
-export type MateConversation = { session: string; name: string; state: AgentState; ended: boolean; started_at: string };
+export type MateConversation = { session: string; name: string; state: AgentState; ended: boolean; started_at: string; automation?: string };
 
 export type MateRow = {
   name: string;
@@ -133,6 +133,7 @@ export type MateRow = {
   guard?: string;
   avatar?: string;
   color?: string;
+  channels?: string[];
   work: string[];
   threads: MateThread[];
   conversations?: MateConversation[];

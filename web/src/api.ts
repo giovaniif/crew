@@ -299,6 +299,7 @@ export async function tokenRefused(fetchFn: Fetch, token: string): Promise<boole
 export type Automation = {
   name: string;
   agent: string;
+  mate?: string;
   model?: string;
   effort?: string;
   target?: string;

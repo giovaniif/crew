@@ -33,8 +33,18 @@ const board: Mates = {
         },
       ],
       conversations: [],
+      channels: ["api", "web"],
     },
-    { name: "webby", state: "paused", work: [], threads: [], conversations: [{ session: "s2", name: "fix the docs", state: "waiting", ended: false, started_at: "2026-10-03T11:00:00Z" }] },
+    {
+      name: "webby",
+      state: "paused",
+      work: [],
+      threads: [],
+      conversations: [
+        { session: "s2", name: "fix the docs", state: "waiting", ended: false, started_at: "2026-10-03T11:00:00Z" },
+        { session: "s7", name: "weekly deps", state: "idle", ended: false, started_at: "2026-10-03T10:00:00Z", automation: "test-weekly" },
+      ],
+    },
     { name: "fresh", state: "ready", work: [], threads: [], conversations: [] },
   ],
 };
@@ -66,6 +76,15 @@ function setup(hash = "#/mates/helper", mates: Mates = board, approvals: unknown
     .on("GET", "/api/v1/workspaces", { status: 200, body: { workspaces: [], last_used: "" } })
     .on("GET", "/api/v1/mates", { status: 200, body: defs })
     .on("GET", "/api/v1/approvals", { status: 200, body: approvals })
+    .on("GET", "/api/v1/automations", {
+      status: 200,
+      body: {
+        automations: [
+          { name: "test-weekly", agent: "claude", mate: "helper", schedule: "weekly mon 09:00", prompt: "TEST", enabled: true, source: "/h/config.toml" },
+          { name: "test-solo", agent: "claude", prompt: "TEST", enabled: true, source: "/h/config.toml" },
+        ],
+      },
+    })
     .on("GET", "/api/v1/envs", {
       status: 200,
       body: {
@@ -136,7 +155,7 @@ describe("Mate page", () => {
     expect(within(rail).getByRole("radio", { name: "Claude" })).toHaveAttribute("aria-checked", "true");
     expect(await within(rail).findByText(/Help\.\s+With care\./)).toBeInTheDocument();
     expect(within(rail).getByText(/Connected as @helper/)).toBeInTheDocument();
-    expect(within(rail).getByRole("link", { name: "+ Add automation" })).toHaveAttribute("href", "#/automations");
+    expect(within(rail).getByRole("link", { name: "+ Add automation" })).toHaveAttribute("href", "#/automations/new?mate=helper");
   });
 
   it("gives a mate without Slack its app threads, with the normal composer", async () => {
@@ -220,6 +239,44 @@ describe("Mate page", () => {
     await user.type(box, "- Small PRs.");
     await user.click(screen.getByRole("button", { name: "Save memory" }));
     await waitFor(() => expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/mates/helper/memory")?.body).toEqual({ text: "- Small PRs." }));
+  });
+
+  it("lists the automations of the mate and adds one for this mate", async () => {
+    setup("#/mates/helper", board, [], undefined, true);
+    const rail = await screen.findByRole("complementary", { name: "Settings of helper" });
+    expect(await within(rail).findByText("test-weekly")).toBeInTheDocument();
+    expect(within(rail).getByText("weekly mon 09:00")).toBeInTheDocument();
+    expect(within(rail).queryByText("test-solo")).not.toBeInTheDocument();
+    expect(within(rail).getByRole("link", { name: "+ Add automation" })).toHaveAttribute("href", "#/automations/new?mate=helper");
+  });
+
+  it("tags a thread that an automation started as Automation", async () => {
+    setup("#/mates/webby", board, [], undefined, true);
+    const list = await screen.findByRole("navigation", { name: "Threads of webby" });
+    expect(await within(list).findByText("Automation · idle")).toBeInTheDocument();
+  });
+
+  it("says where the mate answers in Slack", async () => {
+    setup("#/mates/helper", board, [], undefined, true);
+    const rail = await screen.findByRole("complementary", { name: "Settings of helper" });
+    expect(within(rail).getByText("Answers in")).toBeInTheDocument();
+    expect(within(rail).getByText("#api, #web, DMs")).toBeInTheDocument();
+  });
+
+  it("saves the tone, the face and the colour from the rail", async () => {
+    const { server } = setup("#/mates/helper", board, [], undefined, true);
+    const user = userEvent.setup();
+    const rail = await screen.findByRole("complementary", { name: "Settings of helper" });
+    const saved = () => server.calls.filter((c) => c.method === "POST" && c.path === "/api/v1/mates").map((c) => c.body);
+    const slider = within(rail).getByRole("slider", { name: "Brief to Wordy" });
+    slider.focus();
+    await user.keyboard("{ArrowRight}");
+    await waitFor(() => expect(saved().at(-1)).toMatchObject({ mate: { name: "helper", tone: { terse: 4, cautious: 3, formal: 3 } } }));
+    await user.click(within(rail).getByRole("button", { name: "Bolt" }));
+    await waitFor(() => expect(saved().at(-1)).toMatchObject({ mate: { name: "helper", avatar: "bolt" } }));
+    const swatches = within(rail).getAllByRole("button", { name: /^Color / });
+    await user.click(swatches[1]);
+    await waitFor(() => expect((saved().at(-1) as { mate: { color?: string } }).mate.color).toMatch(/^#[0-9a-f]{6}$/i));
   });
 
   it("offers Connect… for a mate without Slack", async () => {
