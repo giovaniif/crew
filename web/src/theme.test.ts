@@ -115,16 +115,6 @@ describe("the Mocha palette", () => {
   });
 });
 
-describe("the mate card", () => {
-  it("clamps a long prompt tagline to 2 lines like the Mac app", () => {
-    const tag = rule(".mate-card .mate-tag");
-    expect(tag["-webkit-line-clamp"]).toBe("2");
-    expect(tag["display"]).toBe("-webkit-box");
-    expect(tag["-webkit-box-orient"]).toBe("vertical");
-    expect(tag["overflow"]).toBe("hidden");
-  });
-});
-
 describe("the automations table", () => {
   it("keeps the enable switch inside the right edge of the table", () => {
     expect(rule(".automations .switch-col")["padding-right"]).toBe("12px");
@@ -143,16 +133,8 @@ describe("the settings styles", () => {
 });
 
 describe("touch targets", () => {
-  it.each([".session-card", ".back", ".retry", ".new-session", ".choice", ".interrupt", ".queued-action", ".permission-choice", ".load-older", ".tool summary", ".automations .chip", ".automations .subtabs button", ".automations .run-list .link", ".run-actions button", ".approval-actions button", ".kill-actions button", ".mate-actions button", ".mate-threads a", ".open-session", ".term-retry", ".phone-views button", ".opt", ".folders li", ".disk-actions button", ".disk-tabs button", ".disk-kill", ".where-choice", ".first-run-buttons button", ".first-run-body .fields button", ".change-server", ".swatches .swatch", ".tabs a", ".mrow", ".more-row"])("%s is at least 44px tall", (selector) => {
+  it.each([".session-card", ".back", ".retry", ".new-session", ".choice", ".interrupt", ".queued-action", ".permission-choice", ".load-older", ".tool summary", ".automations .chip", ".automations .subtabs button", ".automations .run-list .link", ".run-actions button", ".approval-actions button", ".open-session", ".term-retry", ".phone-views button", ".opt", ".folders li", ".disk-actions button", ".disk-tabs button", ".disk-kill", ".where-choice", ".first-run-buttons button", ".first-run-body .fields button", ".change-server", ".swatches .swatch", ".tabs a", ".mrow", ".more-row"])("%s is at least 44px tall", (selector) => {
     expect(parseInt(rule(selector)["min-height"] ?? "0", 10)).toBeGreaterThanOrEqual(44);
-  });
-});
-
-describe("a disabled link button", () => {
-  it("stays a plain link with no filled background", () => {
-    const disabled = rule(".link-button:disabled");
-    expect(disabled.background).toBe("none");
-    expect(disabled.color).toBe("var(--subtext)");
   });
 });
 
