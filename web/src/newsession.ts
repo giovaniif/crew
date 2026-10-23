@@ -47,6 +47,24 @@ export function loadChoices(storage: KeyValue): Choices {
   }
 }
 
+export function rememberWorkspace(storage: KeyValue, path: string): void {
+  saveChoices(storage, { ...loadChoices(storage), workspace: path.trim() });
+}
+
+export function rememberedRoot(remembered: string, roots: string[]): string {
+  if (!remembered) {
+    return "";
+  }
+  if (roots.includes(remembered)) {
+    return remembered;
+  }
+  if (!remembered.startsWith("~/")) {
+    return "";
+  }
+  const tail = remembered.slice(1);
+  return roots.find((r) => r.endsWith(tail)) ?? "";
+}
+
 export function saveChoices(storage: KeyValue, choices: Choices): void {
   try {
     storage.setItem(key, JSON.stringify(choices));
