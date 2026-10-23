@@ -13,6 +13,7 @@ fn main() {
             "crew_server_workspace",
             "crew_browser_open",
             "crew_pick_folder",
+            "crew_check_update",
         ])),
     )
     .expect("the tauri build failed")

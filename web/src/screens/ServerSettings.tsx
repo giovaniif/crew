@@ -709,3 +709,75 @@ export function DevicesGroup({ api, self }: { api: Authed; self: string }) {
     </>
   );
 }
+
+const mateLimits: { key: string; title: string; sub: string; save: string }[] = [
+  { key: "mates.hop_limit", title: "Hop limit", sub: "Steps from mate to mate in one thread", save: "Save hop limit" },
+  { key: "mates.turns_per_hour", title: "Turns each hour", sub: "For each mate", save: "Save turns each hour" },
+  { key: "mates.daily_turns", title: "Turns each day", sub: "For each mate", save: "Save turns each day" },
+  { key: "mates.daily_tokens", title: "Tokens each day", sub: "For each mate. 0 is no limit", save: "Save tokens each day" },
+];
+
+function LimitRow({
+  title,
+  sub,
+  save,
+  value,
+  onSave,
+}: {
+  title: string;
+  sub: string;
+  save: string;
+  value: string;
+  onSave: (v: string) => void;
+}) {
+  const [text, setText] = useState(value);
+  useEffect(() => setText(value), [value]);
+  return (
+    <Opt title={title} sub={sub}>
+      <Stepper label={title} min={0} value={text} onChange={setText} />
+      <Button className="sm" onClick={() => onSave(text)}>
+        {save}
+      </Button>
+    </Opt>
+  );
+}
+
+export function MatesGroup({ api }: { api: Authed }) {
+  const load = useCallback(() => getConfig(api), [api]);
+  const [loaded] = useLoad(load);
+  const [config, setConfigState] = useState<ConfigValues | null>(null);
+  const { run, view } = useFeedback();
+  useEffect(() => {
+    if (loaded.state === "ready") {
+      setConfigState(loaded.value);
+    }
+  }, [loaded]);
+  return (
+    <>
+      <Heading title="Mates and Slack" server />
+      {loaded.state === "failed" ? <Note text={loaded.note} /> : null}
+      {config ? (
+        <Group label="Limits" title="LIMITS">
+          {mateLimits.map((l) => (
+            <LimitRow
+              key={l.key}
+              title={l.title}
+              sub={l.sub}
+              save={l.save}
+              value={config.values[l.key] ?? ""}
+              onSave={(v) =>
+                void run(async () => {
+                  const next = await setConfig(api, l.key, v);
+                  setConfigState(next);
+                  return "Saved " + l.key + " in " + next.path;
+                })
+              }
+            />
+          ))}
+        </Group>
+      ) : null}
+      {view}
+      <Note text="Connect Slack on the page of each mate. A change to a limit applies at the next sync of the mates." />
+    </>
+  );
+}

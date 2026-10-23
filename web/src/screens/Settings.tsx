@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import type { Authed, Fetch } from "../api";
+import { hello, type Authed, type Fetch } from "../api";
 import type { Auth, KeyValue } from "../auth";
 import { confirmEnd, setConfirmEnd } from "../commands";
 import {
@@ -34,6 +34,7 @@ import { Button, Segmented, Select, Stepper, Switch } from "../ui";
 import {
   AgentsGroup,
   DevicesGroup,
+  MatesGroup,
   PushDelayRow,
   WorkspacesGroup,
 } from "./ServerSettings";
@@ -52,22 +53,26 @@ export type GroupId =
   | "general"
   | "notifications"
   | "appearance"
+  | "mates"
+  | "sessions"
   | "shortcuts"
-  | "workspaces"
-  | "agents"
   | "devices"
-  | "servers";
+  | "servers"
+  | "about";
 
 const allGroups: { id: GroupId; title: string }[] = [
   { id: "general", title: "General" },
   { id: "notifications", title: "Notifications" },
   { id: "appearance", title: "Appearance" },
+  { id: "mates", title: "Mates and Slack" },
+  { id: "sessions", title: "Sessions" },
   { id: "shortcuts", title: "Shortcuts" },
-  { id: "workspaces", title: "Workspaces" },
-  { id: "agents", title: "Agents" },
   { id: "devices", title: "Devices" },
   { id: "servers", title: "Servers" },
+  { id: "about", title: "About" },
 ];
+
+export type UpdateCheck = { current: string; latest: string | null };
 
 export type SettingsProps = {
   auth: Auth;
@@ -83,6 +88,7 @@ export type SettingsProps = {
   local?: boolean;
   servers?: Servers;
   initial?: GroupId;
+  checkUpdate?: () => Promise<UpdateCheck>;
 };
 
 function PushCard({
@@ -262,50 +268,124 @@ function SwitchRow({
 
 function GeneralPane({
   general,
-  storage,
   onChange,
 }: {
   general: General;
-  storage: KeyValue;
   onChange: (g: General) => void;
 }) {
+  return (
+    <Group label="Sidebar" title="SIDEBAR">
+      <Opt
+        title="Ended sessions shown"
+        sub="The most recent ones, under Ended"
+      >
+        <Count
+          label="Ended sessions shown"
+          value={general.endedShown}
+          onCommit={(n) =>
+            onChange({ ...general, endedShown: Math.max(0, Math.round(n)) })
+          }
+        />
+      </Opt>
+      <SwitchRow
+        title="Show worktrees"
+        checked={general.showWorktrees}
+        onChange={(v) => onChange({ ...general, showWorktrees: v })}
+      />
+      <SwitchRow
+        title="Show subagents"
+        sub="Nested under the session that started them"
+        checked={general.showSubagents}
+        onChange={(v) => onChange({ ...general, showSubagents: v })}
+      />
+    </Group>
+  );
+}
+
+function SessionsPane({ storage }: { storage: KeyValue }) {
   const [askEnd, setAskEnd] = useState(() => confirmEnd(storage));
   return (
+    <Group label="Sessions" title="SESSIONS">
+      <SwitchRow
+        title="Ask before I end a session"
+        checked={askEnd}
+        onChange={(v) => {
+          setAskEnd(v);
+          setConfirmEnd(storage, v);
+        }}
+      />
+    </Group>
+  );
+}
+
+function AboutPane({
+  fetch,
+  checkUpdate,
+}: {
+  fetch: Fetch;
+  checkUpdate?: () => Promise<UpdateCheck>;
+}) {
+  const [build, setBuild] = useState("");
+  const [status, setStatus] = useState("");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    let live = true;
+    hello(fetch).then(
+      (h) => live && setBuild(h.build),
+      () => undefined,
+    );
+    return () => {
+      live = false;
+    };
+  }, [fetch]);
+  const check = async () => {
+    if (!checkUpdate) {
+      return;
+    }
+    setBusy(true);
+    try {
+      const r = await checkUpdate();
+      setStatus(
+        r.latest
+          ? "crew " + r.latest + " is available."
+          : "crew " + r.current + " is the newest version.",
+      );
+    } catch (err) {
+      setStatus("The update check failed: " + String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
     <>
-      <Group label="Sidebar" title="SIDEBAR">
-        <Opt
-          title="Ended sessions shown"
-          sub="The most recent ones, under Ended"
-        >
-          <Count
-            label="Ended sessions shown"
-            value={general.endedShown}
-            onCommit={(n) =>
-              onChange({ ...general, endedShown: Math.max(0, Math.round(n)) })
-            }
-          />
+      <Group label="Version" title="VERSION">
+        <Opt title="Server build">
+          <span className="mono">{build}</span>
         </Opt>
-        <SwitchRow
-          title="Show worktrees"
-          checked={general.showWorktrees}
-          onChange={(v) => onChange({ ...general, showWorktrees: v })}
-        />
-        <SwitchRow
-          title="Show subagents"
-          sub="Nested under the session that started them"
-          checked={general.showSubagents}
-          onChange={(v) => onChange({ ...general, showSubagents: v })}
-        />
+        {checkUpdate ? (
+          <Opt title="Updates" sub="The app also checks at start and every 6 hours">
+            <Button className="sm" disabled={busy} onClick={() => void check()}>
+              Check for updates
+            </Button>
+          </Opt>
+        ) : null}
       </Group>
-      <Group label="Sessions" title="SESSIONS">
-        <SwitchRow
-          title="Ask before I end a session"
-          checked={askEnd}
-          onChange={(v) => {
-            setAskEnd(v);
-            setConfirmEnd(storage, v);
-          }}
-        />
+      {status ? (
+        <p className="settings-notice" role="status">
+          {status}
+        </p>
+      ) : null}
+      <Group label="Links" title="LINKS">
+        <Opt title="Source on GitHub">
+          <a className="ui btn sm" href="https://github.com/giovaniif/crew" target="_blank" rel="noreferrer">
+            Source on GitHub
+          </a>
+        </Opt>
+        <Opt title="Releases">
+          <a className="ui btn sm" href="https://github.com/giovaniif/crew/releases" target="_blank" rel="noreferrer">
+            Releases
+          </a>
+        </Opt>
       </Group>
     </>
   );
@@ -657,6 +737,7 @@ export function Settings({
   local,
   servers,
   initial,
+  checkUpdate,
 }: SettingsProps) {
   const [group, setGroup] = useState<GroupId>(initial ?? "general");
   const [settings, setSettings] = useState<AppSettings>(() =>
@@ -698,7 +779,6 @@ export function Settings({
         <>
           <GeneralPane
             general={settings.general}
-            storage={storage}
             onChange={(general) => update({ ...settings, general })}
           />
           <section className="set-section" aria-label="This device">
@@ -759,29 +839,32 @@ export function Settings({
         />
       );
       break;
-    case "workspaces":
-      pane = (
-        <WorkspacesGroup
-          api={api}
-          pickFolder={servers ? (near) => servers.pickFolder(near) : undefined}
-        />
-      );
-      break;
-    case "agents":
-      pane = <AgentsGroup api={api} />;
-      break;
     case "devices":
       pane = <DevicesGroup api={api} self={auth.device.id} />;
+      break;
+    case "mates":
+      pane = <MatesGroup api={api} />;
+      break;
+    case "sessions":
+      pane = (
+        <>
+          <SessionsPane storage={storage} />
+          <WorkspacesGroup
+            api={api}
+            pickFolder={servers ? (near) => servers.pickFolder(near) : undefined}
+          />
+          <AgentsGroup api={api} />
+        </>
+      );
+      break;
+    case "about":
+      pane = <AboutPane fetch={fetch} checkUpdate={checkUpdate} />;
       break;
     case "servers":
       pane = servers ? <ServersScreen servers={servers} /> : null;
       break;
   }
-  const own =
-    group === "workspaces" ||
-    group === "agents" ||
-    group === "devices" ||
-    group === "servers";
+  const own = group === "mates" || group === "devices" || group === "servers";
 
   return (
     <main className="screen settings-screen">
