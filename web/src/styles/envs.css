@@ -499,3 +499,8 @@ button.chip.env-chip .chev {
   font-size: 9px;
   color: var(--ink-3);
 }
+
+.env-kv a {
+  color: var(--accent);
+  text-decoration: none;
+}
