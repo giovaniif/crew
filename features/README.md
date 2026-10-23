@@ -14,6 +14,7 @@ This folder is the shared memory of what "working" means in crew (ADR [0055](../
 | Disk view | [disk-view.md](disk-view.md) | TUI |
 | Automations | [automations.md](automations.md) | CLI, TUI, PWA |
 | Mates | [mates.md](mates.md) | CLI, TUI, PWA |
+| Environments | [environments.md](environments.md) | CLI, PWA, app |
 | Approvals | [approvals.md](approvals.md) | CLI, PWA |
 | Remote, serve and pairing | [remote-pairing.md](remote-pairing.md) | CLI, HTTP |
 | PWA | [pwa.md](pwa.md) | PWA |

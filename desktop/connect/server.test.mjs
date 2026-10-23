@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { forgetServer, rememberServer, savedServers, serverUrl } from "./server.js";
+import { failureText, forgetServer, rememberServer, savedServers, serverUrl } from "./server.js";
 
 test("a bare host gets https and a trailing slash", () => {
   assert.equal(serverUrl("crew.example.ts.net"), "https://crew.example.ts.net/");
@@ -36,4 +36,13 @@ test("a remembered server goes first and is not repeated", () => {
 
 test("a forgotten server leaves the list", () => {
   assert.deepEqual(forgetServer(["https://a/", "https://b/"], "https://a/"), ["https://b/"]);
+});
+
+test("a fix error gives its text, or a reason when it has none", () => {
+  const none = "Fix stopped and gave no reason. See serve.log in the app log folder.";
+  assert.equal(failureText("crew serve did not start"), "crew serve did not start");
+  assert.equal(failureText(new Error("boom")), "boom");
+  assert.equal(failureText({ message: "denied" }), "denied");
+  assert.equal(failureText("  "), none);
+  assert.equal(failureText(undefined), none);
 });
