@@ -197,14 +197,16 @@ describe("the keys", () => {
     expect(await screen.findByRole("region", { name: "Editor" })).toBeInTheDocument();
   });
 
-  it("opens New session as a sheet with Ctrl+Shift+N", async () => {
+  it("opens New session as the home composer in the main column with Ctrl+Shift+N", async () => {
     const { live } = desktop();
     live();
     await userEvent.keyboard("{Control>}n{/Control}");
-    expect(screen.queryByRole("dialog", { name: "New session" })).not.toBeInTheDocument();
+    expect(window.location.hash).toBe("");
     await userEvent.keyboard("{Control>}{Shift>}n{/Shift}{/Control}");
-    const sheet = await screen.findByRole("dialog", { name: "New session" });
-    expect(within(sheet).getByRole("heading", { name: "New session" })).toBeInTheDocument();
+    const main = screen.getByRole("main");
+    expect(await within(main).findByRole("heading", { name: "What should the agent do?" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "New session" })).not.toBeInTheDocument();
+    expect(within(main).queryByRole("link", { name: /Sessions/ })).toBeNull();
     expect(screen.getByRole("navigation", { name: "Sidebar" })).toBeInTheDocument();
   });
 

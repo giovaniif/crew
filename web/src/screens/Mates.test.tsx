@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { App, type AppEnv, type PageVisibility } from "../App";
@@ -325,7 +325,10 @@ describe("New mate", () => {
     await user.click(screen.getByRole("button", { name: "Next" }));
     await user.type(screen.getByLabelText("Prompt"), "Scout the repo.");
     expect(screen.getByRole("region", { name: "Added to the prompt" })).toHaveTextContent("Middle step. Adds no text.");
-    fireEvent.change(screen.getByLabelText("Brief to Wordy"), { target: { value: "1" } });
+    const brief = screen.getByRole("slider", { name: "Brief to Wordy" });
+    expect(brief.tagName).not.toBe("INPUT");
+    brief.focus();
+    await user.keyboard("{ArrowLeft}");
     expect(screen.getAllByText("Brief 2/5").length).toBeGreaterThan(0);
     expect(screen.getByRole("region", { name: "Added to the prompt" })).toHaveTextContent("Write one line per answer.");
     await user.click(screen.getByRole("button", { name: "Next" }));
@@ -420,7 +423,8 @@ describe("New mate", () => {
     await user.type(await screen.findByLabelText("Name"), "scout");
     await user.click(screen.getByRole("button", { name: "Next" }));
     const slider = (await screen.findAllByRole("slider"))[0];
-    fireEvent.change(slider, { target: { value: "0" } });
+    slider.focus();
+    await user.keyboard("{Home}");
     expect(screen.getByText("Write a personality prompt or pick a preset.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
     await user.type(screen.getByLabelText("Prompt"), "Pair programmer.");

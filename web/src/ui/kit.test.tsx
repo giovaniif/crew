@@ -1,8 +1,8 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { Button, Checkbox, Dialog, Menu, RadioGroup, Segmented, Select, Stepper, Suggest, Switch, Toast } from "./index.ts";
+import { Button, Checkbox, Dialog, Menu, RadioGroup, Segmented, Select, Slider, Stepper, Suggest, Switch, Toast } from "./index.ts";
 
 const fruits = [
   { value: "apple", label: "Apple" },
@@ -241,5 +241,73 @@ describe("Dialog and Toast", () => {
     expect(screen.getByRole("status")).toHaveTextContent("The pane closed.");
     await userEvent.click(screen.getByRole("button", { name: "Restart" }));
     expect(onAction).toHaveBeenCalled();
+  });
+});
+
+describe("Slider", () => {
+  function Tone({ onChange }: { onChange?: (v: number) => void }) {
+    const [value, setValue] = useState(2);
+    return (
+      <Slider
+        label="Terse to Chatty"
+        low="Terse"
+        high="Chatty"
+        min={0}
+        max={4}
+        value={value}
+        valueText={(v) => v + 1 + " of 5"}
+        onChange={(v) => {
+          setValue(v);
+          onChange?.(v);
+        }}
+      />
+    );
+  }
+
+  it("is a slider with its end labels and value, not a native range", () => {
+    render(<Tone />);
+    const s = screen.getByRole("slider", { name: "Terse to Chatty" });
+    expect(s.tagName).not.toBe("INPUT");
+    expect(s).toHaveAttribute("aria-valuemin", "0");
+    expect(s).toHaveAttribute("aria-valuemax", "4");
+    expect(s).toHaveAttribute("aria-valuenow", "2");
+    expect(s).toHaveAttribute("aria-valuetext", "3 of 5");
+    expect(screen.getByText("Terse")).toBeInTheDocument();
+    expect(screen.getByText("Chatty")).toBeInTheDocument();
+  });
+
+  it("moves with the arrows, Home, End, PageUp and PageDown within its bounds", async () => {
+    const onChange = vi.fn();
+    render(<Tone onChange={onChange} />);
+    const s = screen.getByRole("slider");
+    s.focus();
+    await userEvent.keyboard("{ArrowRight}");
+    expect(s).toHaveAttribute("aria-valuenow", "3");
+    await userEvent.keyboard("{ArrowUp}{ArrowUp}");
+    expect(s).toHaveAttribute("aria-valuenow", "4");
+    await userEvent.keyboard("{Home}");
+    expect(s).toHaveAttribute("aria-valuenow", "0");
+    await userEvent.keyboard("{ArrowLeft}{ArrowDown}");
+    expect(s).toHaveAttribute("aria-valuenow", "0");
+    await userEvent.keyboard("{End}");
+    expect(s).toHaveAttribute("aria-valuenow", "4");
+    await userEvent.keyboard("{PageDown}");
+    expect(s).toHaveAttribute("aria-valuenow", "2");
+    await userEvent.keyboard("{PageUp}");
+    expect(s).toHaveAttribute("aria-valuenow", "4");
+    expect(onChange).toHaveBeenLastCalledWith(4);
+  });
+
+  it("takes the value at the pointer on the track and follows a drag", () => {
+    render(<Tone />);
+    const s = screen.getByRole("slider");
+    s.getBoundingClientRect = () => ({ left: 100, width: 200, top: 0, right: 300, bottom: 4, height: 4, x: 100, y: 0, toJSON: () => ({}) });
+    fireEvent.pointerDown(s, { clientX: 110, pointerId: 1 });
+    expect(s).toHaveAttribute("aria-valuenow", "0");
+    fireEvent.pointerMove(s, { clientX: 260, pointerId: 1 });
+    expect(s).toHaveAttribute("aria-valuenow", "3");
+    fireEvent.pointerUp(s, { pointerId: 1 });
+    fireEvent.pointerMove(s, { clientX: 100, pointerId: 1 });
+    expect(s).toHaveAttribute("aria-valuenow", "3");
   });
 });

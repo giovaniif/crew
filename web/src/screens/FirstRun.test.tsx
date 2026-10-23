@@ -48,6 +48,41 @@ describe("FirstRun", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it("fills the first workspace from the folder dialog of this computer", async () => {
+    const desktop = new FakeDesktop();
+    desktop.handlers.crew_pick_folder = () => "/home/me/web";
+    start(false, desktop);
+    await press("Continue");
+    await within(screen.getByRole("list", { name: "Set up" })).findByText("crew daemon started");
+    await press("Continue");
+    await press("Browse…");
+    expect(screen.getByRole("textbox", { name: "First workspace" })).toHaveValue("/home/me/web");
+  });
+
+  it("keeps the typed workspace when the folder dialog is cancelled", async () => {
+    const desktop = new FakeDesktop();
+    desktop.handlers.crew_pick_folder = () => null;
+    start(false, desktop);
+    await press("Continue");
+    await within(screen.getByRole("list", { name: "Set up" })).findByText("crew daemon started");
+    await press("Continue");
+    await userEvent.type(screen.getByRole("textbox", { name: "First workspace" }), "~/code/api");
+    await press("Browse…");
+    expect(screen.getByRole("textbox", { name: "First workspace" })).toHaveValue("~/code/api");
+  });
+
+  it("has no folder dialog for a server over SSH", async () => {
+    start(false);
+    await userEvent.click(screen.getByRole("radio", { name: /over SSH/ }));
+    await press("Continue");
+    await userEvent.type(screen.getByRole("combobox", { name: "SSH host" }), "gpu");
+    await press("Continue");
+    await within(screen.getByRole("list", { name: "Set up" })).findByText("crew set up on gpu");
+    await press("Continue");
+    expect(screen.getByRole("textbox", { name: "First workspace" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Browse…" })).toBeNull();
+  });
+
   it("skips the first workspace and still opens crew", async () => {
     const { desktop, onClose } = start(false);
     await press("Continue");

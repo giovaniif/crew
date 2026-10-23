@@ -137,7 +137,6 @@
 }
 
 .first-run-buttons button,
-.server-row-buttons button,
 .flow-button {
   min-height: 44px;
   padding: 8px 16px;
@@ -369,4 +368,14 @@
   .ob-buttons .ui.btn {
     min-height: 44px;
   }
+}
+
+.ob-path {
+  display: flex;
+  gap: 8px;
+}
+
+.ob-path .ui.input {
+  flex: 1;
+  min-width: 0;
 }

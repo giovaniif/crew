@@ -109,18 +109,20 @@ fn serve_path_puts_the_login_shell_path_first_and_keeps_each_dir_once() {
 }
 
 #[cfg(unix)]
-fn fake_shell(name: &str, script: &str) -> PathBuf {
+fn fake_shell(name: &str, script: &str) -> (std::sync::MutexGuard<'static, ()>, PathBuf) {
     use std::os::unix::fs::PermissionsExt;
+    static SPAWN: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    let guard = SPAWN.lock().unwrap_or_else(|e| e.into_inner());
     let shell = temp_dir(name).join("fake-shell");
     fs::write(&shell, script).unwrap();
     fs::set_permissions(&shell, fs::Permissions::from_mode(0o755)).unwrap();
-    shell
+    (guard, shell)
 }
 
 #[cfg(unix)]
 #[test]
 fn login_path_reads_the_path_that_the_shell_prints() {
-    let shell = fake_shell("login-shell", "#!/bin/sh\nprintf %s /opt/homebrew/bin:/usr/bin\n");
+    let (_spawn, shell) = fake_shell("login-shell", "#!/bin/sh\nprintf %s /opt/homebrew/bin:/usr/bin\n");
     assert_eq!(
         login_path(&shell, Duration::from_secs(5)).as_deref(),
         Some("/opt/homebrew/bin:/usr/bin")
@@ -130,7 +132,7 @@ fn login_path_reads_the_path_that_the_shell_prints() {
 #[cfg(unix)]
 #[test]
 fn login_path_gives_up_on_a_shell_that_hangs() {
-    let shell = fake_shell("login-hang", "#!/bin/sh\nexec sleep 30\n");
+    let (_spawn, shell) = fake_shell("login-hang", "#!/bin/sh\nexec sleep 30\n");
     let start = Instant::now();
     assert_eq!(login_path(&shell, Duration::from_millis(300)), None);
     assert!(start.elapsed() < Duration::from_secs(5));
