@@ -1,15 +1,17 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { endSession, killDevServers, muteSession, renameSession, resumeSession, sessionOptions, switchSession, type Authed, type SwitchKind } from "../api";
+import { endSession, interrupt, killDevServers, muteSession, renameSession, resumeSession, sessionOptions, switchSession, type Authed, type SwitchKind } from "../api";
 import type { KeyValue } from "../auth";
 import { commandItems, confirmEnd, killedNote, type Command } from "../commands";
+import { openSessionView } from "../route";
 import type { Session } from "../stream";
+import { Button, Dialog, Menu, Toast, type MenuEntry } from "../ui";
 import { sessionTitle } from "./SessionList";
 
 export type MenuPoint = { x: number; y: number; n: number };
 
-type Dialog = "rename" | "model" | "effort" | "end" | null;
+type Open = "rename" | "model" | "effort" | "end" | "interrupt" | null;
 
-type Note = { text: string; error: boolean } | null;
+type Note = { text: string; error: boolean; undo?: () => void } | null;
 
 function errorText(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
@@ -25,7 +27,7 @@ export type SessionCommandsProps = {
 
 export function SessionCommands({ api, session, storage, button, openAt }: SessionCommandsProps) {
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
-  const [dialog, setDialog] = useState<Dialog>(null);
+  const [dialog, setDialog] = useState<Open>(null);
   const [note, setNote] = useState<Note>(null);
 
   useEffect(() => {
@@ -34,11 +36,11 @@ export function SessionCommands({ api, session, storage, button, openAt }: Sessi
     }
   }, [openAt]);
 
-  const run = async (call: () => Promise<string | null>) => {
+  const run = async (call: () => Promise<string | null>, undo?: () => void) => {
     setNote(null);
     try {
       const text = await call();
-      setNote(text === null ? null : { text, error: false });
+      setNote(text === null ? null : { text, error: false, undo });
       return true;
     } catch (err) {
       setNote({ text: errorText(err), error: true });
@@ -53,6 +55,7 @@ export function SessionCommands({ api, session, storage, button, openAt }: Sessi
       case "rename":
       case "model":
       case "effort":
+      case "interrupt":
         setDialog(command);
         return;
       case "end":
@@ -71,28 +74,45 @@ export function SessionCommands({ api, session, storage, button, openAt }: Sessi
       case "kill":
         void run(() => killDevServers(api, id).then((r) => killedNote(r.killed ?? [])));
         return;
+      case "agent":
+        openSessionView(id, "agent");
+        return;
+      case "editor":
+        openSessionView(id, "editor");
+        return;
+      case "browser":
+        openSessionView(id, "browser");
+        return;
     }
   };
 
   const openFromButton = (el: HTMLElement) => {
     const r = el.getBoundingClientRect();
-    setMenu({ x: r.left, y: r.bottom + 4 });
+    setMenu({ x: r.right - 240, y: r.bottom + 4 });
+  };
+
+  const rename = (name: string, undo: boolean) => {
+    const before = sessionTitle(session);
+    return run(
+      () => renameSession(api, session.ID, name).then(() => (undo ? "Renamed to “" + name + "”" : null)),
+      undo ? () => void rename(before, false) : undefined,
+    );
   };
 
   return (
     <>
       {button ? (
-        <button type="button" className="secondary commands-button" aria-haspopup="menu" aria-label="Session commands" aria-expanded={menu !== null} onClick={(e) => openFromButton(e.currentTarget)}>
+        <Button variant="icon" className="commands-button" aria-haspopup="menu" aria-label="Session commands" aria-expanded={menu !== null} onClick={(e) => openFromButton(e.currentTarget)}>
           ⋯
-        </button>
+        </Button>
       ) : null}
-      {menu ? <Menu session={session} at={menu} onChoose={choose} onClose={() => setMenu(null)} /> : null}
+      {menu ? <CommandMenu session={session} at={menu} onChoose={choose} onClose={() => setMenu(null)} /> : null}
       {dialog === "rename" ? (
         <RenameDialog
           session={session}
           onClose={() => setDialog(null)}
           onRename={async (name) => {
-            if (await run(() => renameSession(api, session.ID, name).then(() => null))) {
+            if (await rename(name, true)) {
               setDialog(null);
             }
           }}
@@ -113,50 +133,70 @@ export function SessionCommands({ api, session, storage, button, openAt }: Sessi
         />
       ) : null}
       {dialog === "end" ? (
-        <EndDialog
-          session={session}
+        <ConfirmDialog
+          title="End this session?"
+          body="The agent stops. The worktree and branch stay; you can resume it later from the Ended group."
+          action="End session"
           onClose={() => setDialog(null)}
-          onEnd={async () => {
+          onConfirm={async () => {
             if (await run(() => endSession(api, session.ID).then(() => null))) {
               setDialog(null);
             }
           }}
         />
       ) : null}
+      {dialog === "interrupt" ? (
+        <ConfirmDialog
+          title="Interrupt this session?"
+          body="The agent stops what it is doing, as if you pressed Escape in its terminal."
+          action="Interrupt"
+          onClose={() => setDialog(null)}
+          onConfirm={async () => {
+            if (await run(() => interrupt(api, session.ID).then(() => null))) {
+              setDialog(null);
+            }
+          }}
+        />
+      ) : null}
       {note ? (
-        <div className={"command-note" + (note.error ? " error" : "")} role={note.error ? "alert" : "status"}>
-          <span>{note.text}</span>
-          <button type="button" className="secondary" onClick={() => setNote(null)}>
-            Dismiss
-          </button>
+        <div className="command-note">
+          {note.error ? (
+            <div className="ui toast error" role="alert">
+              <span>{note.text}</span>
+              <Button onClick={() => setNote(null)}>Dismiss</Button>
+            </div>
+          ) : note.undo ? (
+            <Toast
+              message={note.text}
+              action="Undo"
+              onAction={() => {
+                const undo = note.undo;
+                setNote(null);
+                undo?.();
+              }}
+            />
+          ) : (
+            <Toast message={note.text} action="Dismiss" onAction={() => setNote(null)} />
+          )}
         </div>
       ) : null}
     </>
   );
 }
 
-function Menu({ session, at, onChoose, onClose }: { session: Session; at: { x: number; y: number }; onChoose: (c: Command) => void; onClose: () => void }) {
-  const items = commandItems(session);
+function CommandMenu({ session, at, onChoose, onClose }: { session: Session; at: { x: number; y: number }; onChoose: (c: Command) => void; onClose: () => void }) {
+  const items: MenuEntry[] = commandItems(session).map((e) => (e === "sep" ? { kind: "sep" } : { value: e.id, label: e.title, hint: e.hint }));
   return (
-    <div className="menu-backdrop" onClick={onClose} onContextMenu={(e) => { e.preventDefault(); onClose(); }}>
-      <div
-        className="command-menu"
-        role="menu"
-        aria-label="Session commands"
-        style={{ left: Math.max(8, Math.min(at.x, window.innerWidth - 240)), top: Math.max(8, Math.min(at.y, window.innerHeight - 340)) }}
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") {
-            onClose();
-          }
-        }}
-      >
-        <p className="menu-title">{sessionTitle(session)}</p>
-        {items.map((item, i) => (
-          <button key={item.id} type="button" role="menuitem" autoFocus={i === 0} className={item.id === "end" ? "menu-danger" : undefined} onClick={() => onChoose(item.id)}>
-            {item.title}
-          </button>
-        ))}
+    <div
+      className="menu-backdrop"
+      onMouseDown={(e) => e.target === e.currentTarget && onClose()}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onClose();
+      }}
+    >
+      <div className="session-menu-at" style={{ left: Math.max(8, Math.min(at.x, window.innerWidth - 248)), top: Math.max(8, Math.min(at.y, window.innerHeight - 380)) }}>
+        <Menu label="Session commands" className={"session-menu" + (session.Ended ? " ended" : "")} items={items} onPick={(v) => onChoose(v as Command)} onClose={onClose} />
       </div>
     </div>
   );
@@ -172,29 +212,27 @@ function RenameDialog({ session, onClose, onRename }: { session: Session; onClos
     setBusy(false);
   };
   return (
-    <div className="dialog-backdrop">
-      <form className="dialog" role="dialog" aria-modal="true" aria-labelledby="rename-title" onSubmit={(e) => void submit(e)}>
-        <h2 id="rename-title">Rename session</h2>
-        <p className="muted">The name stays when the PR or the task changes.</p>
-        <label className="field">
-          <span>Name</span>
-          <input autoFocus value={name} onChange={(e) => setName(e.target.value)} />
-        </label>
-        <div className="dialog-actions">
-          <button type="button" className="secondary" onClick={onClose}>
+    <Dialog title="Rename session" onClose={onClose}>
+      <form className="command-dialog" onSubmit={(e) => void submit(e)}>
+        <p>The name stays when the PR or the task changes.</p>
+        <input className="ui input" aria-label="Name" value={name} onChange={(e) => setName(e.target.value)} />
+        <div className="actions">
+          <Button variant="quiet" onClick={onClose}>
             Cancel
-          </button>
-          <button type="submit" disabled={busy || name.trim() === ""}>
+          </Button>
+          <Button variant="primary" type="submit" disabled={busy || name.trim() === ""}>
             Rename
-          </button>
+          </Button>
         </div>
       </form>
-    </div>
+    </Dialog>
   );
 }
 
 function ChoiceDialog({ api, session, kind, onClose, onChoose }: { api: Authed; session: Session; kind: SwitchKind; onClose: () => void; onChoose: (value: string) => Promise<void> }) {
+  const current = kind === "model" ? session.Model : session.Effort;
   const [choices, setChoices] = useState<string[] | null>(null);
+  const [picked, setPicked] = useState(current);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   useEffect(() => {
@@ -215,77 +253,74 @@ function ChoiceDialog({ api, session, kind, onClose, onChoose }: { api: Authed; 
       live = false;
     };
   }, [api, session.Harness, kind]);
-  const current = kind === "model" ? session.Model : session.Effort;
-  const title = kind === "model" ? "Switch model" : "Switch effort";
   return (
-    <div className="dialog-backdrop">
-      <div className="dialog" role="dialog" aria-modal="true" aria-labelledby="choice-title">
-        <h2 id="choice-title">{title}</h2>
-        <p className="muted">The agent gets the change before its next turn.</p>
+    <Dialog title={kind === "model" ? "Switch model" : "Switch effort"} onClose={onClose}>
+      <div className="command-dialog">
+        <p>The agent gets the change before its next turn.</p>
         {error ? (
           <p className="error" role="alert">
             {error}
           </p>
         ) : null}
-        {choices === null && !error ? <p className="muted">Loading…</p> : null}
-        {choices !== null && choices.length === 0 ? <p className="muted">This agent has no {kind} choices.</p> : null}
+        {choices === null && !error ? <p>Loading…</p> : null}
+        {choices !== null && choices.length === 0 ? <p>This agent has no {kind} choices.</p> : null}
         {choices && choices.length > 0 ? (
-          <div className="choice-list">
+          <div className="choice-list" role="listbox" aria-label={kind === "model" ? "Model" : "Effort"}>
             {choices.map((c) => (
-              <button
-                key={c}
-                type="button"
-                className={c === current ? "" : "secondary"}
-                aria-pressed={c === current}
-                disabled={busy}
-                onClick={async () => {
-                  setBusy(true);
-                  await onChoose(c);
-                  setBusy(false);
-                }}
-              >
-                {c}
-              </button>
+              <div key={c} role="option" aria-selected={c === picked} tabIndex={0} className={"item" + (c === picked ? " hi" : "")} onClick={() => setPicked(c)} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setPicked(c)}>
+                <span className="ck" aria-hidden="true">
+                  {c === picked ? "✓" : ""}
+                </span>
+                <span>{c}</span>
+                {c === current ? <span className="k">current</span> : null}
+              </div>
             ))}
           </div>
         ) : null}
-        <div className="dialog-actions">
-          <button type="button" className="secondary" onClick={onClose}>
+        <div className="actions">
+          <Button variant="quiet" onClick={onClose}>
             Cancel
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function EndDialog({ session, onClose, onEnd }: { session: Session; onClose: () => void; onEnd: () => Promise<void> }) {
-  const [busy, setBusy] = useState(false);
-  return (
-    <div className="dialog-backdrop">
-      <div className="dialog" role="alertdialog" aria-modal="true" aria-labelledby="end-title" aria-describedby="end-body">
-        <h2 id="end-title">End this session?</h2>
-        <p id="end-body">
-          {sessionTitle(session)} stops. Its worktrees and branches stay. You can resume it later from the Ended group.
-        </p>
-        <div className="dialog-actions">
-          <button type="button" className="secondary" autoFocus onClick={onClose}>
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="danger"
-            disabled={busy}
+          </Button>
+          <Button
+            variant="primary"
+            disabled={busy || !picked || picked === current}
             onClick={async () => {
               setBusy(true);
-              await onEnd();
+              await onChoose(picked);
               setBusy(false);
             }}
           >
-            End session
-          </button>
+            Switch
+          </Button>
         </div>
       </div>
-    </div>
+    </Dialog>
+  );
+}
+
+function ConfirmDialog({ title, body, action, onClose, onConfirm }: { title: string; body: string; action: string; onClose: () => void; onConfirm: () => Promise<void> }) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <Dialog title={title} onClose={onClose}>
+      <div className="command-dialog">
+        <p>{body}</p>
+        <div className="actions">
+          <Button variant="quiet" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              await onConfirm();
+              setBusy(false);
+            }}
+          >
+            {action}
+          </Button>
+        </div>
+      </div>
+    </Dialog>
   );
 }
