@@ -129,7 +129,7 @@ describe("DesktopAttention", () => {
     const { env, sockets, desktop, storage } = setup("#/settings");
     render(<App env={env} />);
     await userEvent.click(screen.getByRole("button", { name: "Notifications" }));
-    const done = screen.getByRole("switch", { name: "Finishes" });
+    const done = screen.getByRole("switch", { name: "Session finished" });
     expect(done).toHaveAttribute("aria-checked", "true");
     await userEvent.click(done);
     expect(JSON.parse(storage.getItem("crew.alerts") ?? "{}").done.banner).toBe(false);

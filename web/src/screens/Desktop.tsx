@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { listApprovals, resumeSession, type Authed } from "../api";
 import type { AppEnv } from "../App";
-import { emptyMain, keyAction, mainTabs, modifierKeys, nextNeeding, sessionPlace, sidebarGroups, sidebarRows, stateDot, type Keys, type MainTab } from "../desktop";
+import { emptyMain, keyAction, mainTabs, modifierKeys, nextNeeding, sessionPlace, sidebarRows, stateDot, type Keys, type MainTab } from "../desktop";
 import { parseRoute } from "../route";
-import type { Session, StreamClient, StreamSnapshot } from "../stream";
+import type { PullRequest, Session, StreamClient, StreamSnapshot, Worktree } from "../stream";
+import { timeInState } from "../sessions";
+import { Segmented } from "../ui";
 import type { Servers } from "../servers";
 import type { DesktopBridge } from "../desktopBridge";
 import { FirstRun } from "./FirstRun";
@@ -38,13 +40,20 @@ export const panes: Record<MainTab, (props: PaneProps) => ReactNode> = {
 
 type OnMenu = (id: string, x: number, y: number) => void;
 
-function Row({ session, current, shortcut, keys, onMenu }: { session: Session; current: boolean; shortcut: number | null; keys: Keys; onMenu: OnMenu }) {
+function prOf(session: Session, worktrees: Worktree[]): PullRequest | null {
+  const ids = session.WorktreeIDs ?? [];
+  return worktrees.find((w) => ids.includes(w.ID) && w.PR)?.PR ?? null;
+}
+
+function TableRow({ session, worktrees, now, shortcut, keys, onMenu }: { session: Session; worktrees: Worktree[]; now: number; shortcut: number | null; keys: Keys; onMenu: OnMenu }) {
+  const pr = prOf(session, worktrees);
+  const sub = session.Mate ? session.Mate.Name : session.Ended ? "ended" : String(session.State);
+  const passed = pr?.Checks === "pass" || pr?.Checks === "success";
   return (
     <li>
       <a
-        className={"row side-row state-" + (session.Ended ? "ended" : session.State) + (session.Unread ? " unread" : "") + (current ? " on" : "")}
+        className={"tl-row state-" + (session.Ended ? "ended" : session.State) + (session.Unread ? " unread" : "")}
         href={sessionHref(session.ID)}
-        aria-current={current ? "page" : undefined}
         aria-keyshortcuts={shortcut === null ? undefined : keys.aria + "+" + shortcut}
         onContextMenu={(e) => {
           e.preventDefault();
@@ -52,33 +61,41 @@ function Row({ session, current, shortcut, keys, onMenu }: { session: Session; c
         }}
       >
         <span className={"dot " + stateDot(session)} aria-hidden="true" />
-        <span className="nm">{sessionTitle(session)}</span>
-        {session.Muted ? <span className="badge muted-badge">muted</span> : null}
-        {shortcut === null ? null : <kbd className={keys.mac ? undefined : "on-demand"}>{keys.label + shortcut}</kbd>}
-        <span className="meta">{sessionPlace(session.where ?? "").repo}</span>
+        <span className="tl-name" data-col="session">
+          <span className="nm">{sessionTitle(session)}</span>
+          <span className="sub">{sub}</span>
+        </span>
+        <span data-col="harness">
+          <span className="hz">{session.Harness + " · " + (session.Model || session.Effort || "default")}</span>
+        </span>
+        <span className="dim" data-col="repo">
+          {session.where || "—"}
+        </span>
+        <span data-col="pr">{pr ? <span className={"pill" + (passed ? " ok" : "")}>{"#" + pr.Number + (passed ? " ✓" : "")}</span> : "—"}</span>
+        <span className="muted tl-last" data-col="last">
+          {timeInState(session.since, now) || "—"}
+        </span>
       </a>
     </li>
   );
 }
 
-function Group({ title, sessions, selected, keys, first, onMenu }: { title: string; sessions: Session[]; selected: string | null; keys: Keys; first: number; onMenu: OnMenu }) {
+function shortcutOf(live: Session[], s: Session): number | null {
+  const i = live.indexOf(s);
+  return i >= 0 && i < 9 ? i + 1 : null;
+}
+
+function SessionTable({ title, label, sessions, worktrees, now, keys, onMenu, shortcuts }: { title?: string; label: string; sessions: Session[]; worktrees: Worktree[]; now: number; keys: Keys; onMenu: OnMenu; shortcuts: Session[] }) {
   if (sessions.length === 0) {
     return null;
   }
-  const id = "side-" + title.toLowerCase().replace(/ /g, "-");
   return (
-    <section className="side-group" aria-labelledby={id}>
-      <h2 id={id} className="side-label">
-        <span>{title}</span>
-        <span className="count" aria-hidden="true">
-          {sessions.length}
-        </span>
-      </h2>
+    <section aria-label={label} className="tl-group">
+      {title ? <div className="section-title">{title}</div> : null}
       <ul>
-        {sessions.map((s, i) => {
-          const n = first + i;
-          return <Row key={s.ID} session={s} current={s.ID === selected} shortcut={!s.Ended && n < 9 ? n + 1 : null} keys={keys} onMenu={onMenu} />;
-        })}
+        {sessions.map((s) => (
+          <TableRow key={s.ID} session={s} worktrees={worktrees} now={now} shortcut={shortcutOf(shortcuts, s)} keys={keys} onMenu={onMenu} />
+        ))}
       </ul>
     </section>
   );
@@ -152,24 +169,48 @@ function Sidebar({ env, snapshot, now, onRetry, hash, keys, chip, approvals }: S
   );
 }
 
-function SessionsPage({ snapshot, selected, keys, onMenu }: { snapshot: StreamSnapshot; selected: string | null; keys: Keys; onMenu: OnMenu }) {
-  const groups = sidebarGroups(snapshot.state?.sessions ?? []);
-  const live = groups.needs.length + groups.running.length + groups.done.length;
+function SessionsPage({ snapshot, now, keys, onMenu }: { snapshot: StreamSnapshot; now: number; keys: Keys; onMenu: OnMenu }) {
+  const [show, setShow] = useState<"active" | "ended">("active");
+  const { live, ended } = sidebarRows(snapshot.state?.sessions ?? []);
+  const worktrees = snapshot.state?.worktrees ?? [];
+  const rows = show === "active" ? live : ended;
+  const own = rows.filter((s) => !s.Mate);
+  const mates = rows.filter((s) => s.Mate);
+  const name = show === "active" ? "Active sessions" : "Ended sessions";
   return (
     <>
       <div className="session-bar">
         <h1 className="title">Sessions</h1>
         <span className="sub">Agents you run on this computer, one worktree each</span>
         <span className="spacer" />
+        <Segmented
+          label="Show"
+          value={show}
+          onChange={setShow}
+          options={[
+            { value: "active", label: "Active" },
+            { value: "ended", label: "Ended" },
+          ]}
+        />
         <a className="ui btn primary sm" href="#/new">
           New session
         </a>
       </div>
-      <div className="sessions-page">
-        {live === 0 ? <Empty snapshot={snapshot} live={0} keys={keys} /> : null}
-        <Group title="Needs you" sessions={groups.needs} selected={selected} keys={keys} first={0} onMenu={onMenu} />
-        <Group title="Running" sessions={groups.running} selected={selected} keys={keys} first={groups.needs.length} onMenu={onMenu} />
-        <Group title="Done" sessions={groups.done} selected={selected} keys={keys} first={groups.needs.length + groups.running.length} onMenu={onMenu} />
+      <div className="sessions-page sess">
+        {show === "active" && live.length === 0 ? <Empty snapshot={snapshot} live={0} keys={keys} /> : null}
+        {rows.length > 0 ? (
+          <div className="tl-row h" aria-hidden="true">
+            <span />
+            <span>Session</span>
+            <span>Harness</span>
+            <span>Repo</span>
+            <span>PR</span>
+            <span>Last</span>
+          </div>
+        ) : null}
+        {show === "ended" && rows.length === 0 ? <p className="muted tl-none">No ended sessions.</p> : null}
+        <SessionTable label={name} sessions={own} worktrees={worktrees} now={now} keys={keys} onMenu={onMenu} shortcuts={show === "active" ? live : []} />
+        <SessionTable title="STARTED BY MATES" label="Started by mates" sessions={mates} worktrees={worktrees} now={now} keys={keys} onMenu={onMenu} shortcuts={show === "active" ? live : []} />
       </div>
     </>
   );
@@ -408,7 +449,7 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
   } else if (other) {
     main = <div className="main-other">{other}</div>;
   } else if (route.screen === "list") {
-    main = <SessionsPage snapshot={snapshot} selected={selectedId} keys={keys} onMenu={onMenu} />;
+    main = <SessionsPage snapshot={snapshot} now={now} keys={keys} onMenu={onMenu} />;
   } else if (session) {
     const back = () => go(sessionHref(session.ID));
     const onBrowser = () => {
