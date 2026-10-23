@@ -44,12 +44,6 @@ restart() {
 		return 1
 	fi
 	"$bin" daemon start >>"$log" 2>&1
-	tmux -L "$socket" list-panes -a -F '#{pane_id} #{pane_start_command}' 2>/dev/null |
-		while read -r pane cmd; do
-			case $cmd in
-			*"$bin"*tui*) tmux -L "$socket" respawn-pane -k -t "$pane" ;;
-			esac
-		done || true
 	note "reloaded $("$bin" version)"
 }
 
@@ -112,4 +106,5 @@ watcher=$!
 echo "$watcher" >"$pidfile"
 trap stop_own_watcher EXIT
 echo "crew dev: home $home, tmux -L $socket, log $log"
-"$bin"
+echo "crew dev: point the app or CREW_HOME=$home $bin serve at it; ctrl-c stops the watcher"
+wait "$watcher"

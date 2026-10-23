@@ -1,6 +1,6 @@
 # ADR 0042: Mouse support
 
-Status: accepted, 2026-10-01.
+Status: accepted, 2026-10-01. Superseded by [ADR 0061](0061-remove-the-tui.md): the TUI was removed.
 
 ## Decision
 

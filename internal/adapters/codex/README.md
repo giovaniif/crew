@@ -44,7 +44,7 @@ Context left is `100 * (window - 12000 - max(used - 12000, 0)) / (window - 12000
 
 `Usage.LimitUsedPercent` is the highest window. After a hook, the daemon reads the last 512 KiB of the rollout in a worker, never on the event loop. It always reads on `Stop`, `SessionStart` and `UserPromptSubmit`, and at most every 2 s on other events.
 
-Rate limits also show in these places, which the adapter does not use: the TUI `/status` and status line, and the app-server `account/rateLimits` API. The rollout needs no running process and no credentials.
+Rate limits also show in these places, which the adapter does not use: the Codex TUI `/status` and status line, and the app-server `account/rateLimits` API. The rollout needs no running process and no credentials.
 
 ## Panes
 

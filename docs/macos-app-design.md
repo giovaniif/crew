@@ -1,6 +1,6 @@
 # crew for macOS: UX design
 
-Status: superseded by [ADR 0057](adr/0057-tauri-apps.md), 2026-10-21. #531 removed the SwiftUI app. The Tauri app keeps these screens. Mockups: the "crew for macOS" design canvas. Architecture: [ADR 0049](adr/0049-macos-app.md).
+Status: superseded by [ADR 0057](adr/0057-tauri-apps.md), 2026-10-21. #531 removed the SwiftUI app. The Tauri app keeps these screens. Mockups: the "crew for macOS" design canvas. Architecture: [ADR 0049](adr/0049-macos-app.md). The TUI that this page names was removed ([ADR 0061](adr/0061-remove-the-tui.md)).
 
 ## Goal
 

@@ -18,15 +18,15 @@ func main() {
 }
 
 func run(args []string, stdout, stderr io.Writer) int {
-	if len(args) == 0 || slices.Contains([]string{"tui", "daemon", "setup", "serve"}, args[0]) {
+	if len(args) == 0 || slices.Contains([]string{"daemon", "setup", "serve"}, args[0]) {
 		migrateState(len(args) > 0 && args[0] == "setup", stderr)
 	}
 	if len(args) == 0 {
-		return attach(stderr)
+		fmt.Fprintln(stderr, "crew: open the crew app, or run `crew serve` for the web app.")
+		usage(stderr)
+		return 2
 	}
 	switch cmd := args[0]; {
-	case cmd == "tui":
-		return runTUI(args[1:], stderr)
 	case cmd == "debug":
 		return runDebug(args[1:], stdout, stderr)
 	case cmd == "version" && len(args) == 2 && args[1] == "--build":
@@ -37,8 +37,6 @@ func run(args []string, stdout, stderr io.Writer) int {
 	case cmd == "hook":
 		home, _ := rpc.Home()
 		return runHook(args[1:], os.Stdin, stdout, home, os.Getenv("TMUX_PANE"))
-	case cmd == "setup" && len(args) == 1:
-		return runTUI([]string{"--setup"}, stderr)
 	case cmd == "setup":
 		self, err := os.Executable()
 		if err != nil {
@@ -72,7 +70,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	case cmd == "mate":
 		return runMate(args[1:], stdout, stderr)
 	case cmd == "env":
-		return runEnv(args[1:], stderr)
+		return runEnv(args[1:], stdout, stderr)
 	case cmd == "approval":
 		return runApproval(args[1:], stdout, stderr)
 	case cmd == "focus":
@@ -110,5 +108,5 @@ func buildCommit() string {
 }
 
 func usage(w io.Writer) {
-	fmt.Fprintln(w, "usage: crew [daemon|workspace|worktree|pr|setup|setup-worktree|tui|debug|hook|statusline|new|automation|mate|env|approval|review|browser|focus|notify|remote|serve|rpc|cleanup|version [--build]]")
+	fmt.Fprintln(w, "usage: crew [daemon|workspace|worktree|pr|setup|setup-worktree|debug|hook|statusline|new|automation|mate|env|approval|review|browser|focus|notify|remote|serve|rpc|cleanup|version [--build]]")
 }

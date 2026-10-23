@@ -26,21 +26,13 @@ Repo tooling. The repo-wide rules are in the [root AGENTS.md](../AGENTS.md).
 - **`mutate`** (`make mutate`): runs `gremlins` on `domain` and `app`. It fails below 80% efficacy. It skips a package with no tests. On a pull request, CI's `mutate` job runs `gremlins` only on a package whose non-test files changed, and only on the changed lines (`--diff` against the base commit). A push to `main` runs the full `make mutate`. Install it with `go install github.com/go-gremlins/gremlins/cmd/gremlins@v0.6.0`.
 - **`ci-changes`**: the `changes` job of `ci.yml` and `ios.yml`. It writes the flags `go`, `web`, `desktop`, `android` and `ios` to `GITHUB_OUTPUT` from the diff of a pull request. A push, a tag, a manual run, a change in `.github/`, in `Makefile` or in the script itself sets all flags. `desktop`, `desktop-macos`, `android` and `ios` run only when their flag is true. `build`, `tdd` and `mutate` always run, because they are required checks, but they skip their heavy steps. A docs-only change runs only `lint-comments` and `lint-agents` in `build`. When `changes` fails, `build`, `tdd` and `mutate` fail too.
 - **`bench-hook.sh [bin]`**: times 200 `crew hook` runs with the daemon up and down. It prints p50/p95 and fails over budget (20 ms / 60 ms p95). Each side gets 20 warmup runs that it does not count, then at least three rounds of 200. It judges the p95 of the lowest round. When no round meets the budget, it adds rounds, up to six. A noisy neighbour only adds time, and one bad burst must not fail a fast hook. CI runs it with `BUDGET_SCALE=2`, because its runners start processes about 3x slower.
-- **`dev`** (`make dev [SEED=3] [FAKES=1]`): runs crew from this checkout and attaches to the dev layout.
+- **`dev`** (`make dev [SEED=3] [FAKES=1]`): runs crew from this checkout: it builds, starts the dev daemon and rebuilds on each change.
   - It uses its own `CREW_HOME` (`/tmp/crew-dev-$UID`) and tmux socket (`crew-dev`). Thus the installed crew and `~/.crew` do not change.
-  - In the background, it polls the Go sources each second. On a change, it builds again, restarts the dev daemon and starts the dev TUI pane again on the new binary. Sessions continue, as they do across all daemon restarts.
+  - In the background, it polls the Go sources each second. On a change, it builds again, restarts the dev daemon. Sessions continue, as they do across all daemon restarts.
   - A failed build does not stop the running instance. It shows the first error on the dev tmux server. The full output goes to `dev.log` in the dev home.
   - `SEED=n` runs `crew debug seed n`. `FAKES=1` puts the e2e fake `claude` and `codex` first on `PATH`. They hold their pane and use no quota.
   - `scripts/dev stop` stops the watcher and the dev daemon.
   - `CREW_DEV_HOME` and `CREW_DEV_SOCKET` move the instance. Keep the home short and under `/tmp`, because macOS limits Unix socket paths to 104 bytes. See [ADR 0039](../docs/adr/0039-dev-loop-and-build-handshake.md).
-- **`screenshot <out.png> [COLSxROWS] < steps`**: renders a pane to PNG for the body of a UI PR.
-  - It builds, and starts a temporary daemon and tmux server. It runs `crew tui --new-session` (or a `run <command>` step), with the launch dir set to the cwd.
-  - It plays the stdin steps: `type <text>`, `key <tmux keys>`, `wait <s>`, and `shot <file>` for an intermediate frame. It renders with `freeze` (`go install github.com/charmbracelet/freeze@latest`).
-  - It splits a `run` step like a shell line (quotes kept, no globbing) and shell-quotes each word. A word that is exactly `crew` or `crew` becomes the built binary. It skips blank lines.
-  - The pane runs with true color. It is rendered on Latte's base (`SHOT_BACKGROUND`, default `#eff1f5`), because crew paints no background of its own.
-  - All that it starts (daemon, tmux server, pane, popups) runs with a temporary `HOME`, `XDG_CONFIG_HOME`, `XDG_DATA_HOME`, `CLAUDE_CONFIG_DIR` and `CODEX_HOME` in its temp `CREW_HOME`. That home is marked onboarded, so the first-run walkthrough never shows. It builds before it changes `HOME`. It refuses a step that sets a variable to the real `HOME` or a path under it.
-  - Its tests are in `scripts/screenshottest`, with fake `crew`, `tmux` and `freeze`.
-  - Run it from a demo folder tree, and pass `run env HOME=<demo home> crew ...`, so that no real paths show. The images are on the orphan `pr-assets` branch, not in main.
 - **`web-screenshot < steps`**: renders the web app for the body of a PWA PR. It starts the Vite dev server with the fake API on 127.0.0.1 (`WEB_SHOT_PORT`, default 5199). The fake API (`web/fake-api.ts`) does these things:
   - `hello` reports `v1` and build `v0.12.0+demo`.
   - Pairing accepts `ABCD2345`, answers `ZZZZZZZZ` with 429 and all other codes with 401.
@@ -52,7 +44,7 @@ Repo tooling. The repo-wide rules are in the [root AGENTS.md](../AGENTS.md).
   - With `CREW_FAKE_STREAM=late`, it closes the first stream with 4401 after 300 ms, while `GET /api/v1/workspaces` still answers. Thus the app keeps its login and connects again.
   - With `CREW_FAKE_STREAM=revoked`, it does the same, but `GET /api/v1/workspaces` answers 401. This gives the pairing screen with its signed-out note.
 
-  It controls Playwright's Chromium from stdin steps: `device <Playwright device>` (default `iPhone 15`), `mode browser|installed` (installed sets `navigator.standalone`), `goto <path>`, `fill <label>=<text>`, `click <button name>`, `tab <tab name>`, `see <text>`, `wait <ms>`, `shot <file>` (full page, relative to the cwd). `device` and `mode` start a fresh browser context. Playwright is pinned in `web/package.json`. Install its browser one time with `cd web && npx playwright install chromium`. Push the images to the orphan `pr-assets` branch, as for `screenshot`.
+  It controls Playwright's Chromium from stdin steps: `device <Playwright device>` (default `iPhone 15`), `mode browser|installed` (installed sets `navigator.standalone`), `goto <path>`, `fill <label>=<text>`, `click <button name>`, `tab <tab name>`, `see <text>`, `wait <ms>`, `shot <file>` (full page, relative to the cwd). `device` and `mode` start a fresh browser context. Playwright is pinned in `web/package.json`. Install its browser one time with `cd web && npx playwright install chromium`. Push the images to the orphan `pr-assets` branch.
 - **`install.sh`**: installs the newest beta or stable release (an alpha only with `CREW_VERSION`) as `crew`. It also copies `nvim/lua` and `nvim/plugin` to `${XDG_DATA_HOME:-~/.local/share}/crew/nvim`. To try a release build:
   1. Run `goreleaser release --snapshot --clean`.
   2. Serve `dist/` with `python3 -m http.server`.
@@ -60,7 +52,6 @@ Repo tooling. The repo-wide rules are in the [root AGENTS.md](../AGENTS.md).
 
   See [ADR 0040](../docs/adr/0040-first-run-walkthrough.md).
 - **`readme-shots`** (`make readme-shots`): makes all README images in `docs/images/readme/` from seeded demo data in a temp folder, never a real home or project.
-  - TUI: `scripts/screenshot` with `crew debug seed 6` (`tui-*.png`).
   - Desktop and phone: `scripts/web-screenshot` with the fake API, light theme (`desktop-*.png` at 1280x720, `phone-*.png`).
   - If `oxipng` is on `PATH`, it optimizes each PNG. It fails when a PNG is larger than `README_SHOT_LIMIT` (default 400 KB).
 - **`verify`** (`go run ./scripts/verify <command>`): the agent verification CLI (ADR [0055](../docs/adr/0055-agent-verification.md)). It is not in the `crew` binary. Agents (Claude Code and Codex) follow the skill in [.claude/skills/verify/SKILL.md](../.claude/skills/verify/SKILL.md).
@@ -72,9 +63,6 @@ Repo tooling. The repo-wide rules are in the [root AGENTS.md](../AGENTS.md).
     - The e2e fakes (`claude`, `codex`, `gh`, `terminal-notifier`, `osascript`) are first on `PATH`. Slack, ntfy and GitHub tokens are blank.
     - `up` starts `crew serve` and the Vite dev server (`CREW_API`). It pairs the device `TEST-verify` with `crew remote pair` and `POST /api/v1/pair`. It never prints the token.
     - `--session` makes the repo `TEST-live` and runs `crew new` in it. The fake `claude` runs `$CREW_HOME/chat.sh` through its `run` step. The script echoes each typed line as `TEST echo: <line>`, writes a Claude transcript and fires `UserPromptSubmit` and `Stop`. Each hook sends the same `session_id` on each start in the worktree, thus the session can resume. The result has `session`, `pane` and `worktree`.
-  - `tui shot [--out f] [--size COLSxROWS]` and `tui drive --steps '<json>' [--restart]`: `crew tui` on the tmux server `<iso socket>-tui`.
-    - Steps: `keys`, `type`, `wait` (ms), `expect` and `absent` (with `timeout` in ms), `shot`. It renders with `freeze`.
-    - On a failure, it writes the pane to `failure.txt`.
   - `web shot <route> [--viewport mobile|desktop|both]` and `web drive <route> --steps '<json>'`: `web/scripts/verify-drive.ts` with the Playwright of `web/`.
     - Steps: `goto`, `click`, `fill` (with `value`), `press`, `wait`, `expect` (`absent`), `shot`, `aria`, `eval`.
     - A locator has one of `role`+`name`, `testId`, `label`, `placeholder` or `text`. It acts on the first visible match.
@@ -88,7 +76,6 @@ Repo tooling. The repo-wide rules are in the [root AGENTS.md](../AGENTS.md).
   - `map status` and `map run <area> [--recipe <label>]`: the recipes in `features/`.
   - `evidence init|add|verify <dir>`: the evidence bundle and the proof bar of ADR 0055. `add` refuses a proof when the checkout is not at the ref of the proof.
   - `design-check [--base ref] [--diff file]`: added lines only.
-    - In `internal/`, no `lipgloss.Color("...")` outside `internal/tui/theme.go`.
     - In `web/src`, no raw colours outside `--token:` lines, and no `px` in `.ts` or `.tsx`.
   - `design compare <shot.png> <frame|ref.png> [--crop x0,y0,x1,y1] [--max-diff 0..1] [--out f]`: puts a shot next to an approved design frame and a pixel diff.
     - A frame number `1` to `6` is `docs/design/redesign/<n>.png`. `--crop` selects one frame of that canvas, in reference pixels. The tool scales the crop to the size of the shot.

@@ -1,6 +1,6 @@
 ---
 name: verify
-description: Start an isolated crew, drive the TUI, the PWA and the desktop app, and prove a change with an evidence bundle. Use it before you claim that a crew change works, to reproduce a bug, to run the feature map, or to make PR screenshots.
+description: Start an isolated crew, drive the PWA and the desktop app, and prove a change with an evidence bundle. Use it before you claim that a crew change works, to reproduce a bug, to run the feature map, or to make PR screenshots.
 ---
 
 # Verify a crew change
@@ -28,16 +28,6 @@ go run ./scripts/verify iso seed --sessions 3
 - `iso up` builds crew from the checkout. After each checkout or code change, run `iso down` and `iso up` again. The isolated crew does not watch the sources.
 
 ## 2. Drive
-
-TUI (tmux server `<iso socket>-tui`):
-
-```sh
-go run ./scripts/verify tui drive --restart --steps '[{"expect":"seeded change 2","timeout":8000},{"keys":"w"},{"expect":"WORKTREES & DISK"},{"shot":"disk.png"}]'
-```
-
-- Steps: `keys` (tmux key names, for example `Escape`, `Enter`, `j`), `type` (literal text), `wait` (ms), `expect` and `absent` (with `timeout`), `shot`.
-- On a failure, read `failure_capture`: it is the pane text at the failure.
-- `verify tui` runs `crew tui` alone, not in the client layout. Keys that swap panes into the slot (`enter`, `t`, `e`) need `make dev`.
 
 PWA (real isolated `crew serve` through Vite):
 
@@ -104,7 +94,7 @@ go run ./scripts/verify map run <area>
    go run ./scripts/verify evidence add /tmp/ev-<n> --ref head --kind design --run "go run ./scripts/verify design-check"
    ```
 
-   For a TUI fix, use `--viewport tui`. A PWA fix needs both `mobile` and `desktop`.
+   A PWA fix needs both `mobile` and `desktop`. A desktop app fix uses `--viewport mac`.
 5. Run `go run ./scripts/verify evidence verify /tmp/ev-<n>`. It must be `ok`.
 
 `evidence add` refuses a proof when the checkout is not at its ref. Do not edit artifacts after you record them.

@@ -1,6 +1,6 @@
 # internal/rpc
 
-This package holds the protocol types (`protocol.go`) and the client. The TUI, the hook, the CLI and nvim use them. See [ADR 0005](../../docs/adr/0005-daemon-rpc.md). The daemon side is in [internal/daemon/](../daemon/AGENTS.md).
+This package holds the protocol types (`protocol.go`) and the client. `crew serve`, `crew rpc`, the hook, the CLI and nvim use them. See [ADR 0005](../../docs/adr/0005-daemon-rpc.md). The daemon side is in [internal/daemon/](../daemon/AGENTS.md).
 
 ## Protocol
 
@@ -140,7 +140,7 @@ Each RPC request and response contains the build (`version.String()`). The daemo
   - `slot` is the client window: the TUI pane on the left runs `command`, and the main slot is on the right. The first call creates the window. Later calls use it again while it exists.
   - `attach` is the argv that attaches a terminal to it.
 - `client.focus_main` makes the main slot of that window the active pane.
-- `client.popup` `{"command":[…],"env":{…}}` runs `command` in a centred popup over the attached client. The popup closes when the command exits. The TUI uses it for the new-session dialog (ADR 0037).
+- `client.popup` `{"command":[…],"env":{…}}` runs `command` in a centred popup over the attached client. The popup closes when the command exits. No client in this repo uses it since the TUI was removed (ADR 0061).
 - The `client.*` methods run tmux on the connection goroutine, never on the loop. Without a terminal host, they return `unavailable`. A tmux failure returns `failed`.
 - `client.native` `{"cols","rows"}` returns `{"argv","session","panes"}` for the Mac app (ADR 0049).
   - `argv` attaches a tmux control-mode client (`tmux -L <socket> -f <conf> -C attach-session -t =<session>`) to its own session.

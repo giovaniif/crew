@@ -141,8 +141,8 @@ func evAdd(e *env, dir string, o opts, r *result) {
 		r.bad("--kind must be repro, fix, test, design, regression or note", "--kind fix")
 		return
 	}
-	if p.Viewport != "" && p.Viewport != "mobile" && p.Viewport != "desktop" && p.Viewport != "tui" && p.Viewport != "mac" {
-		r.bad("--viewport must be mobile, desktop, tui or mac", "--viewport mobile")
+	if p.Viewport != "" && p.Viewport != "mobile" && p.Viewport != "desktop" && p.Viewport != "mac" {
+		r.bad("--viewport must be mobile, desktop or mac", "--viewport mobile")
 		return
 	}
 	if p.Kind == "regression" && p.Regression == "" {
@@ -204,7 +204,7 @@ func isUIFile(f string) bool {
 	if strings.HasSuffix(f, "_test.go") || strings.Contains(f, ".test.") || strings.Contains(f, "/testdata/") {
 		return false
 	}
-	return strings.HasPrefix(f, "internal/tui/") || strings.HasPrefix(f, "web/src/")
+	return strings.HasPrefix(f, "web/src/")
 }
 
 func isWebFile(f string) bool { return strings.HasPrefix(f, "web/src/") && isUIFile(f) }

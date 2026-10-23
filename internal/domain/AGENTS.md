@@ -22,7 +22,7 @@ Pure types and rules. This package does no IO and does not import other `interna
 - `WorktreeLabel(worktrees)`: `repo@branch +N`, as banner titles and the phone show it.
 - `Quotas(sessions)`, `Quota.Low`/`Stale`, `Advise(quotas, harness)`: the usage bar and the low-quota warning. See [ADR 0017](../../docs/adr/0017-usage-and-limits-bar.md).
 - `OfferFallback(quotas, cfg, request)`: a mapped Codex start instead of a Claude start, when the shortest window of Claude is under the configured threshold. See [ADR 0027](../../docs/adr/0027-codex-fallback.md).
-- `ParseWorkItem`, `PlanSessionStart`, `NextInView`, `AgentTitle`, `Sidebar`, `BuildSessionCard`, `SubagentTree`: session start, end, title strips and sidebar rules (see [internal/daemon/](../daemon/AGENTS.md) and [internal/tui/](../tui/AGENTS.md)).
+- `ParseWorkItem`, `PlanSessionStart`, `NextInView`, `AgentTitle`, `Sidebar`, `BuildSessionCard`, `SubagentTree`: session start, end, title strips and sidebar rules (see [internal/daemon/](../daemon/AGENTS.md)).
 - `Recipe.Validate`, `PlanDeps`, `InstallCommand`: setup recipes (see [internal/adapters/setup/](../adapters/setup/AGENTS.md)).
 - `OnboardSteps`, `NextOnboardStep`, `DefaultOnboardPicks`, `HarnessOffer`, `NvimOfferFor`, `OnboardingNeeded`, the `CodexTrustStep` text: the first-run walkthrough (see [ADR 0040](../../docs/adr/0040-first-run-walkthrough.md)).
 - `SendableText`, `NextSend`, `Unsend`, `DropSends`, `RequeueSend`: the `session.send` queue (see [internal/daemon/](../daemon/AGENTS.md)).

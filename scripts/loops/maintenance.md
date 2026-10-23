@@ -9,7 +9,6 @@ Read these first: the root `AGENTS.md`, `scripts/AGENTS.md`, `docs/adr/0055-agen
 3. Make a branch `features-maintenance-<YYYYMMDD>` from `origin/main` in a new worktree under `$CREW_LOOP_WORK`. Push before the run ends. After the run, the runner backs up the uncommitted changes there as a patch and removes the worktree. It keeps the branch.
 4. **Index hygiene.** Compare the user-facing surfaces of crew with the map:
    - the CLI subcommands in `cmd/crew/`
-   - the TUI views and keys in `internal/tui/`
    - the PWA routes in `web/src`
    - the HTTP routes in `internal/serve/`.
 

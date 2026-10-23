@@ -130,7 +130,7 @@ func TestEvidenceTestThatPassesOnBaseIsNotAFailingTestFirst(t *testing.T) {
 	mustOK(t, e, "evidence", "add", dir, "--ref", "base", "--kind", "note", "--note", "no-repro: daemon only")
 	mustOK(t, e, "evidence", "add", dir, "--ref", "base", "--kind", "test", "--run", "true")
 	git(t, r.dir, "checkout", "-q", "fix")
-	mustOK(t, e, "evidence", "add", dir, "--ref", "head", "--kind", "fix", "--viewport", "tui")
+	mustOK(t, e, "evidence", "add", dir, "--ref", "head", "--kind", "fix", "--viewport", "mac")
 	mustOK(t, e, "evidence", "add", dir, "--ref", "head", "--kind", "test", "--run", "true")
 	got, code := runJSON(t, e, "evidence", "verify", dir)
 	text := problemText(got)

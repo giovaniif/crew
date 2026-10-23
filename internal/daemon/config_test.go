@@ -48,9 +48,12 @@ func TestConfigGetReadsTheSettableKeysAndIgnoresAnOldLauncherTable(t *testing.T)
 	if err := c.Call(context.Background(), rpc.MethodConfigGet, struct{}{}, &got); err != nil {
 		t.Fatal(err)
 	}
-	want := map[string]string{"fallback.threshold": "30", "defaults.codex.model": "gpt-6-sol", "theme.blue": "#000000"}
+	want := map[string]string{"fallback.threshold": "30", "defaults.codex.model": "gpt-6-sol"}
 	if got.Path != path || len(got.Values) != len(want) {
 		t.Fatalf("got %+v, want %v at %s", got, want, path)
+	}
+	if _, ok := got.Values["theme.blue"]; ok {
+		t.Error("config.get still reports theme.blue")
 	}
 	for k, v := range want {
 		if got.Values[k] != v {

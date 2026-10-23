@@ -7,26 +7,7 @@ import (
 	"testing"
 )
 
-const designDiff = `diff --git a/internal/tui/view.go b/internal/tui/view.go
---- a/internal/tui/view.go
-+++ b/internal/tui/view.go
-@@ -1,3 +1,6 @@
- package tui
-+var a = lipgloss.NewStyle().Foreground(lipgloss.Color("#ff0000"))
-+var b = lipgloss.NewStyle().Foreground(lipgloss.Color(t.Red))
-+var c = lipgloss.Color("12")
--var d = lipgloss.Color("#00ff00")
-diff --git a/internal/tui/theme.go b/internal/tui/theme.go
---- a/internal/tui/theme.go
-+++ b/internal/tui/theme.go
-@@ -1,1 +1,2 @@
-+	Red: "#d20f39",
-diff --git a/internal/tui/view_test.go b/internal/tui/view_test.go
---- a/internal/tui/view_test.go
-+++ b/internal/tui/view_test.go
-@@ -1,1 +1,2 @@
-+var x = lipgloss.Color("#123456")
-diff --git a/web/src/theme.css b/web/src/theme.css
+const designDiff = `diff --git a/web/src/theme.css b/web/src/theme.css
 --- a/web/src/theme.css
 +++ b/web/src/theme.css
 @@ -1,2 +1,5 @@
@@ -57,8 +38,6 @@ func TestDesignCheckFlagsRawColorsAndMagicPixelsOnAddedLinesOnly(t *testing.T) {
 		where = append(where, m["file"].(string)+":"+strconv.Itoa(int(m["line"].(float64))))
 	}
 	want := []string{
-		"internal/tui/view.go:2",
-		"internal/tui/view.go:4",
 		"web/src/theme.css:2",
 		"web/src/theme.css:3",
 		"web/src/screens/Foo.tsx:1",
@@ -82,5 +61,11 @@ func TestDesignCheckCleanDiffIsOK(t *testing.T) {
 	}
 	if got["ui_change"] != true {
 		t.Error("a web/src change is a UI change")
+	}
+}
+
+func TestDesignCheckHasNoRulesForGoFilesNowThatTheTuiIsGone(t *testing.T) {
+	if got := checkLine("internal/view/view.go", `var a = lipgloss.Color("#ff0000")`); len(got) != 0 {
+		t.Fatalf("rules %v", got)
 	}
 }
