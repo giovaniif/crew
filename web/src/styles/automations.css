@@ -1,38 +1,384 @@
-.automations ul {
-  list-style: none;
+.screen.automations {
+  max-width: none;
   margin: 0;
+  gap: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  min-height: 100%;
   padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: var(--fs-md);
 }
 
-.automation-row {
+.automations.with-detail {
+  grid-template-columns: minmax(0, 1fr) 380px;
+}
+
+.automations .page {
+  min-width: 0;
+  padding: 20px 24px;
+}
+
+.automations .page-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.automations .page-head h1 {
+  margin: 0;
+  font-size: var(--fs-lg);
+  font-weight: 600;
+}
+
+.automations .page-head .sub {
+  color: var(--ink-3);
+  font-size: var(--fs-sm);
+}
+
+.automations .page-head .ui.btn {
+  white-space: nowrap;
+}
+
+.automations .spacer {
+  flex: 1;
+}
+
+.automations .filters {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.automations .filters .ui-anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+.automations button.chip {
+  min-height: 0;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 9px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 400;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.automations .chip::before {
+  content: none;
+}
+
+.automations .chip:hover {
+  background: var(--bg-hover);
+  color: var(--ink);
+}
+
+.automations .chip .chev {
+  font-size: 9px;
+  color: var(--ink-3);
+}
+
+.automations .filters .search {
+  width: 180px;
+}
+
+.automations .table-wrap {
+  overflow-x: auto;
+}
+
+.automations .table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-md);
+}
+
+.automations .table th {
+  text-align: left;
+  font-weight: 400;
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.automations .table th .sort {
+  min-height: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.automations .table th .sort.on {
+  color: var(--ink-2);
+}
+
+.automations .table td {
+  height: 34px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.automations .table tbody tr {
+  cursor: pointer;
+}
+
+.automations .table tbody tr:hover td {
+  background: var(--bg-hover);
+}
+
+.automations .table tbody tr.on td {
+  background: var(--accent-soft);
+}
+
+.automations .table td.name:not(.muted) {
+  font-weight: 500;
+}
+
+.automations .mono {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+}
+
+.automations .dim {
+  color: var(--ink-2);
+}
+
+.automations .muted {
+  color: var(--ink-3);
+}
+
+.automations .switch-col {
+  width: 52px;
+  padding-right: 12px;
+  text-align: right;
+}
+
+.automations .switch-col .ui.toggle {
+  min-height: 0;
+  padding: 0;
+  gap: 0;
+}
+
+.automations .pill {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: var(--r-pill);
+  background: var(--bg-sunken);
+  color: var(--ink-2);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+}
+
+.automations .pill.ok {
+  background: color-mix(in oklch, var(--ok) 16%, var(--bg));
+  color: color-mix(in oklch, var(--ok) 70%, var(--ink));
+}
+
+.automations .pill.bad {
+  background: color-mix(in oklch, var(--danger) 16%, var(--bg));
+  color: color-mix(in oklch, var(--danger) 75%, var(--ink));
+}
+
+.auto-detail {
+  align-self: stretch;
+  min-width: 0;
+  border-left: 1px solid var(--line);
+  padding: 16px 18px;
+  overflow: auto;
+}
+
+.auto-detail .detail-head {
+  display: flex;
+  align-items: center;
   gap: 8px;
-  padding: 8px 0;
+  margin-bottom: 10px;
 }
 
-.automation-row span {
-  color: var(--subtext);
+.auto-detail .detail-head b {
+  font-size: var(--fs-lg);
+  font-weight: 600;
 }
 
-.automation-row button {
-  min-height: 44px;
-  margin-left: auto;
-  padding: 8px 16px;
+.auto-detail .ui.btn.small {
+  height: 26px;
+  font-size: var(--fs-sm);
 }
 
+.automations .subtabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 10px;
+}
+
+.automations .subtabs button[role="tab"] {
+  min-height: 0;
+  height: 30px;
+  padding: 0 10px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  font: inherit;
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.automations .subtabs button.on {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+  font-weight: 500;
+}
+
+.auto-detail .kv {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 6px 10px;
+  margin: 0;
+  font-size: var(--fs-md);
+}
+
+.auto-detail .kv .fact {
+  display: contents;
+}
+
+.auto-detail .kv dt {
+  color: var(--ink-3);
+}
+
+.auto-detail .kv dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.auto-detail .section-title {
+  margin: 18px 0 8px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+.automation-prompt {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--bg-sunken);
+  color: var(--ink-2);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+}
+
+.auto-detail .source {
+  margin: 8px 0 0;
+  font-size: var(--fs-sm);
+}
+
+.automations .run-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+
+.automations .run-list .li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 4px 10px;
+  border-top: 1px solid var(--line);
+  font-size: var(--fs-md);
+  background: transparent;
+}
+
+.automations .run-list .li:first-child {
+  border-top: 0;
+}
+
+.automations .run-list .grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.automations .run-list .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ink-3);
+  flex: none;
+}
+
+.automations .run-list .dot.ok {
+  background: var(--ok);
+}
+
+.automations .run-list .dot.ask {
+  background: var(--danger);
+}
+
+.automations .run-list button.link {
+  min-height: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+}
+
+.automations .run-list a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.automation-form,
 .run-form {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding-bottom: 12px;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
-.run-form label {
+.automations .field {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.automations .ui.input.area {
+  height: auto;
+  padding: 6px 10px;
+  resize: vertical;
+  font-family: var(--font-sans);
+  font-size: var(--fs-md);
 }
 
 .run-actions {
@@ -41,124 +387,34 @@
   gap: 8px;
 }
 
-.run-actions button {
-  min-height: 44px;
-  padding: 8px 16px;
+.automation-problem {
+  color: var(--danger);
+  font-size: var(--fs-sm);
 }
 
-.automation-meta .history {
-  min-height: 44px;
-  background: none;
-  border: none;
-  color: var(--link);
-  font: inherit;
-  padding: 0 4px;
+@media (max-width: 900px) {
+  .automations.with-detail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .auto-detail {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .automations .filters .search {
+    width: 100%;
+  }
 }
 
-.automations ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.automations > ul > li {
-  background: var(--mantle);
-  border: 1px solid var(--surface);
-  border-radius: var(--radius);
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.automations .runs li {
-  background: var(--base);
-}
-
-.automation-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 10px;
-}
-
-.automation-row button {
-  margin-left: auto;
-}
-
-.automation-meta {
-  align-items: center;
-}
-
-.automations-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.automation-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-}
-
-.automation-filters label {
-  flex: 1 1 8rem;
-}
-
-.automation-filters label:first-child {
-  flex: 2 1 14rem;
-}
-
-.automation-detail {
-  margin-top: 8px;
-  padding: 12px;
-  background: var(--paper);
-  border: 1px solid var(--surface);
-  border-radius: var(--radius);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.detail-tabs {
-  display: flex;
-  gap: 6px;
-}
-
-.detail-tabs button {
-  min-height: 44px;
-  background: var(--mantle);
-  color: var(--text);
-  font-weight: 500;
-}
-
-.automation-detail .fact {
-  display: contents;
-}
-
-.automation-prompt {
-  margin: 0;
-  padding: 10px 12px;
-  background: var(--mantle);
-  border-radius: 8px;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  font-family: var(--mono);
-  font-size: 14px;
-}
-
-.automation-form {
-  padding: 12px;
-  background: var(--mantle);
-  border-radius: var(--radius);
-}
-
-.automation-form h2 {
-  margin: 0;
-  font-size: 17px;
+@media (pointer: coarse) {
+  .automations .chip,
+  .automations .subtabs button,
+  .automations .run-list .link,
+  .run-actions button,
+  .screen.automations button.chip,
+  .screen.automations .subtabs button[role="tab"],
+  .screen.automations .run-list button.link {
+    min-height: 44px;
+  }
 }

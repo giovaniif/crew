@@ -65,11 +65,12 @@ Repo tooling. The repo-wide rules are in the [root AGENTS.md](../AGENTS.md).
 - **`verify`** (`go run ./scripts/verify <command>`): the agent verification CLI (ADR [0055](../docs/adr/0055-agent-verification.md)). It is not in the `crew` binary. Agents (Claude Code and Codex) follow the skill in [.claude/skills/verify/SKILL.md](../.claude/skills/verify/SKILL.md).
   - Each command prints exactly one JSON object with `ok`, `problems` (`{msg, hint}`) and its data. The exit code is 0 for ok, 1 for a failure and 2 for a usage error.
   - Its state is in `VERIFY_HOME` (default `/tmp/crew-verify-$UID-<hash of the checkout path>`). Thus each checkout has its own isolated crew, and parallel verifiers in different worktrees do not collide. `verify` exports `VERIFY_HOME` to the recipes that it runs.
-  - `doctor`: the tools (go, git, tmux, node 22.18+, the Playwright Chromium, freeze), the branch, the machine load, TCP port 5199 and `/tmp`.
-  - `iso up|down|seed [--sessions n] [--codex]`: an isolated crew.
+  - `doctor`: the tools (go, git, tmux, node 22.18+, `web/node_modules`, the Playwright Chromium, freeze), the branch, the machine load, TCP port 5199 and `/tmp`.
+  - `iso up [--session]|down|seed [--sessions n] [--codex]`: an isolated crew.
     - It has a `CREW_HOME` under `/tmp`, its own tmux socket, its own TCP ports and a temporary `HOME`.
     - The e2e fakes (`claude`, `codex`, `gh`, `terminal-notifier`, `osascript`) are first on `PATH`. Slack, ntfy and GitHub tokens are blank.
     - `up` starts `crew serve` and the Vite dev server (`CREW_API`). It pairs the device `TEST-verify` with `crew remote pair` and `POST /api/v1/pair`. It never prints the token.
+    - `--session` makes the repo `TEST-live` and runs `crew new` in it. The fake `claude` runs `$CREW_HOME/chat.sh` through its `run` step. The script echoes each typed line as `TEST echo: <line>`, writes a Claude transcript and fires `UserPromptSubmit` and `Stop`. The result has `session`, `pane` and `worktree`.
   - `tui shot [--out f] [--size COLSxROWS]` and `tui drive --steps '<json>' [--restart]`: `crew tui` on the tmux server `<iso socket>-tui`.
     - Steps: `keys`, `type`, `wait` (ms), `expect` and `absent` (with `timeout` in ms), `shot`. It renders with `freeze`.
     - On a failure, it writes the pane to `failure.txt`.
@@ -79,6 +80,10 @@ Repo tooling. The repo-wide rules are in the [root AGENTS.md](../AGENTS.md).
     - The viewports are 390x844 and 1440x900 at 2x. It refuses a shot of a different size.
     - It waits until no `/api/` request runs for 700 ms. Console errors, page errors and failed API calls fail the command.
     - `--fake` uses the fake API with no `iso`. `--video` records each viewport (mp4 when `ffmpeg` is on `PATH`).
+  - `app shot <route>` and `app drive <route> --steps '<json>'`: the real Tauri app through `tauri-driver`, with the steps and locators of `web`.
+    - It builds the web app, `crew` (next to `crew-desktop`) and the debug app. Cargo uses `VERIFY_CARGO_TARGET` (default `/tmp/crew-verify-cargo`).
+    - The app runs with the iso `CREW_HOME`, tmux socket and `HOME`, no `CREW_URL` and `PATH=/usr/bin:/bin` (a macOS GUI launch). Thus it starts its own `crew serve`. Under `xvfb-run` when there is no `DISPLAY`.
+    - `desktop/e2e/verify-drive.mjs` plays the steps over WebDriver. It closes the first-run sheet after each `goto`. It does not capture console errors or failed API calls.
   - `map status` and `map run <area> [--recipe <label>]`: the recipes in `features/`.
   - `evidence init|add|verify <dir>`: the evidence bundle and the proof bar of ADR 0055. `add` refuses a proof when the checkout is not at the ref of the proof.
   - `design-check [--base ref] [--diff file]`: added lines only.

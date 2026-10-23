@@ -119,3 +119,61 @@ export function automationOf(d: AutomationDraft): SavedAutomation {
   set("session", d.session);
   return out as SavedAutomation;
 }
+
+export function sinceLabel(start: string | undefined, now: number): string {
+  const at = start ? Date.parse(start) : NaN;
+  if (Number.isNaN(at)) {
+    return "";
+  }
+  const minutes = Math.floor((now - at) / 60000);
+  if (minutes < 1) {
+    return "just now";
+  }
+  if (minutes < 60) {
+    return minutes + "m ago";
+  }
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) {
+    return hours + "h ago";
+  }
+  return hours < 48 ? "yesterday" : Math.floor(hours / 24) + "d ago";
+}
+
+const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+export function runLabel(start: string | undefined, now: number): string {
+  const at = start ? new Date(start) : null;
+  if (!at || Number.isNaN(at.getTime())) {
+    return "";
+  }
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const clock = pad(at.getHours()) + ":" + pad(at.getMinutes());
+  const day = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const days = Math.round((day(new Date(now)) - day(at)) / 86400000);
+  if (days === 0) {
+    return "Today " + clock;
+  }
+  if (days === 1) {
+    return "Yesterday " + clock;
+  }
+  if (days > 1 && days < 7) {
+    return weekdays[at.getDay()] + " " + clock;
+  }
+  return `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())} ${clock}`;
+}
+
+export function runDuration(start: string | undefined, end: string | undefined): string {
+  const a = start ? Date.parse(start) : NaN;
+  const b = end ? Date.parse(end) : NaN;
+  if (Number.isNaN(a) || Number.isNaN(b) || b < a) {
+    return "";
+  }
+  const s = Math.round((b - a) / 1000);
+  if (s < 60) {
+    return s + "s";
+  }
+  if (s < 3600) {
+    return Math.floor(s / 60) + "m " + (s % 60) + "s";
+  }
+  return Math.floor(s / 3600) + "h " + Math.floor((s % 3600) / 60) + "m";
+}
