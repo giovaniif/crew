@@ -421,5 +421,16 @@
 }
 
 .mt-faces.mp-faces button {
-  height: 34px;
+  height: 30px;
+}
+
+.mp:not(.mp-phone) .mp-look .swatches {
+  gap: 6px;
+}
+
+.mp:not(.mp-phone) .mp-look .swatches .swatch {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  min-height: 20px;
 }

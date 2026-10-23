@@ -425,7 +425,7 @@ function MateLook({ name, mate, save }: { name: string; mate: Mate; save: (patch
   const chosen = faceOf(name, mate.avatar);
   const color = faceColor(chosen, mate.color, false);
   return (
-    <div className="kv">
+    <div className="kv mp-look">
       <h4>LOOK</h4>
       <div className="mt-faces mp-faces">
         {FACES.map((f) => (
@@ -531,7 +531,6 @@ function MateSettings({
 
   return (
     <>
-      <MateLook name={name} mate={mate} save={(patch) => void save(patch)} />
       <EnvRail envs={envs} value={mate.env} onChange={(env) => void save({ env })} />
       <div className="kv">
         <h4>HARNESS</h4>
@@ -617,6 +616,7 @@ function MateSettings({
           </>
         )}
       </div>
+      <MateLook name={name} mate={mate} save={(patch) => void save(patch)} />
       <MateTone tones={tones} mate={mate} save={(patch) => void save(patch)} />
       <div className="kv">
         <h4 className="mp-h">
