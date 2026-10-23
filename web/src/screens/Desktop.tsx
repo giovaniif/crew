@@ -453,6 +453,8 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
           <FirstRun
             servers={servers}
             welcome={firstRun}
+            storage={env.storage}
+            mac={/Macintosh/.test(env.userAgent)}
             onClose={() => {
               setFirstRun(false);
               if (hash === "#/servers/add") {

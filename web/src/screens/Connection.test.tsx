@@ -15,6 +15,25 @@ function banner() {
 }
 
 describe("the connection banner", () => {
+  it("is a thin row with a spinner and Retry while it reconnects", async () => {
+    const { live, sockets } = desktop("", true, undefined, { retryDelay: () => 7000 });
+    live();
+    sockets.last.drop(1006);
+    expect(banner().querySelector(".spin")).not.toBeNull();
+    await userEvent.click(within(banner()).getByRole("button", { name: "Retry" }));
+    expect(sockets.opened).toHaveLength(2);
+  });
+
+  it("copies the update command on a build mismatch", async () => {
+    const user = userEvent.setup();
+    const { live, sockets } = desktop("", true, undefined, slow);
+    live();
+    sockets.last.drop(4502, "daemon runs crew v0.13.0 but this client is v0.12.0");
+    await user.click(within(banner()).getByRole("button", { name: "Copy update command" }));
+    expect(await navigator.clipboard.readText()).toContain("scripts/install.sh | sh");
+    expect(banner()).toHaveTextContent("Copied");
+  });
+
   it("says there is no crew daemon when the daemon is not reachable", () => {
     const { live, sockets } = desktop("", true, undefined, slow);
     live();
@@ -34,7 +53,7 @@ describe("the connection banner", () => {
     const { live, sockets } = desktop("", true, undefined, { retryDelay: () => 5 });
     live();
     sockets.last.drop(4502, "daemon runs crew v0.13.0 but this client is v0.12.0");
-    expect(banner()).toHaveTextContent("Build mismatch · stopped");
+    expect(banner()).toHaveTextContent("The server runs another crew version");
     expect(banner()).toHaveTextContent("daemon runs crew v0.13.0");
     await act(() => new Promise((r) => setTimeout(r, 30)));
     expect(sockets.opened).toHaveLength(1);

@@ -1,0 +1,134 @@
+.spin {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid var(--line-2);
+  border-top-color: var(--ink-2);
+  border-radius: 50%;
+  animation: state-spin 0.8s linear infinite;
+}
+
+@keyframes state-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.connection.banner-info,
+.connection.banner-warn,
+.connection.banner-bad,
+.sidebar > .connection {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  margin: 10px;
+  padding: 8px 10px;
+  min-height: 0;
+  border: 0;
+  border-radius: 10px;
+  background: oklch(0.97 0.03 75);
+  color: oklch(0.42 0.09 75);
+  font-size: var(--fs-sm);
+}
+
+.connection.banner-bad {
+  flex-wrap: wrap;
+  background: oklch(0.97 0.02 25);
+  color: oklch(0.45 0.14 25);
+}
+
+.connection .banner-text {
+  flex: 1;
+  gap: 0;
+}
+
+.connection .banner-title {
+  font-weight: 500;
+}
+
+.connection .banner-detail {
+  color: inherit;
+  opacity: 0.8;
+  font-size: var(--fs-xs);
+}
+
+.connection .spin {
+  border-color: currentColor;
+  border-top-color: transparent;
+}
+
+.connection .dot-bad {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--danger);
+}
+
+.connection .retry {
+  min-height: 0;
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.connection .retry.primary {
+  font-weight: 600;
+}
+
+.state-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 32px 16px;
+  text-align: center;
+}
+
+.state-empty .t {
+  margin: 0;
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.state-empty .s {
+  margin: 0;
+  max-width: 340px;
+  color: var(--ink-3);
+}
+
+.state-empty .ui.btn {
+  margin-top: 6px;
+  text-decoration: none;
+}
+
+.state-empty kbd {
+  padding: 0 4px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font-size: var(--fs-xs);
+}
+
+@media (max-width: 899px) {
+  .connection .retry {
+    min-height: 44px;
+    padding: 0 8px;
+  }
+
+  .state-empty .ui.btn {
+    min-height: 44px;
+  }
+
+  .state-empty kbd {
+    display: none;
+  }
+}

@@ -185,3 +185,188 @@
     border-radius: var(--radius) var(--radius) 0 0;
   }
 }
+
+.ob {
+  display: flex;
+  justify-content: center;
+  padding: 28px 16px;
+  font-size: var(--fs-md);
+}
+
+.ob-body {
+  display: flex;
+  flex-direction: column;
+  width: 440px;
+  max-width: 100%;
+}
+
+.ob-progress {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 22px;
+  padding: 0;
+  list-style: none;
+}
+
+.ob-progress li {
+  width: 22px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--bg-active);
+}
+
+.ob-progress li[data-state="on"] {
+  background: var(--ink);
+}
+
+.ob h1 {
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.ob .lead {
+  margin: 0 0 20px;
+  color: var(--ink-2);
+  font-size: var(--fs-md);
+}
+
+.ob .where-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ob .ui.toggle.where-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 12px 14px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-lg);
+  background: var(--bg);
+  text-align: left;
+}
+
+.ob .ui.toggle.where-choice.on {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 1px var(--ink);
+}
+
+.ob .where-choice .radio {
+  margin-top: 3px;
+}
+
+.ob .where-choice > span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.ob .where-title {
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.ob .where-detail {
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+}
+
+.ob-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ob-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-weight: 500;
+}
+
+.ob-note {
+  margin: 4px 0 0;
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+}
+
+.ob-section {
+  margin: 0 0 6px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ink-3);
+}
+
+.ob-checklist {
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+}
+
+.ob-checklist li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 4px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.ob-checklist li:last-child {
+  border-bottom: 0;
+}
+
+.ob-checklist .grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.ob-checklist .ok {
+  color: var(--ok);
+}
+
+.ob-checklist .bad {
+  color: var(--danger);
+}
+
+.spin {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid var(--line-2);
+  border-top-color: var(--ink-2);
+  border-radius: 50%;
+  animation: ob-spin 0.8s linear infinite;
+}
+
+@keyframes ob-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ob-buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 18px;
+}
+
+.ob-buttons .spacer {
+  flex: 1;
+}
+
+@media (max-width: 899px) {
+  .ob-buttons .ui.btn {
+    min-height: 44px;
+  }
+}

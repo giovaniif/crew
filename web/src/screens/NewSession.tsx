@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { addWorkspace, expandPath, listWorkspaces, removeWorkspace, resolveWorkItem, sessionOptions, startSession, type HarnessOptions, type WorkItemResolved, type WorkspaceList } from "../api";
 import type { AppEnv } from "../App";
-import { defaultLabel, effortChoices, harnesses, loadChoices, modelChoices, saveChoices } from "../newsession";
+import { defaultLabel, effortChoices, harnesses, loadChoices, modelChoices, rememberedRoot, saveChoices } from "../newsession";
 import { Segmented, Select, Suggest } from "../ui";
 
 type Resolution = { state: "idle" } | { state: "checking" } | { state: "ok"; item: WorkItemResolved } | { state: "bad"; message: string };
@@ -97,7 +97,7 @@ export function NewSession({ env, token }: { env: AppEnv; token: string }) {
           if (select && has(select)) {
             return select;
           }
-          return has(current) ? current : list.last_used || list.workspaces[0]?.Root || "";
+          return rememberedRoot(current, list.workspaces.map((w) => w.Root)) || list.last_used || list.workspaces[0]?.Root || "";
         });
       },
       (err) => live && setWorkspaces({ state: "failed", message: message(err) }),
