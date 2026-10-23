@@ -26,13 +26,14 @@ Facts:
 
 ### Kinds
 
-- **local**: the mate uses the HOME, ssh-agent, `gh` login and harness logins of this machine. This is the behavior of today. The launch command does not change.
+- **local**: the mate uses the HOME, ssh-agent, `gh` login and harness logins of this machine. This is the behavior of today. A local environment can also hold extra secret variables.
+- The kind is fixed when you create the environment. The app shows a local environment as read-only, with "Duplicate as Custom…".
 - **custom**: the mate is isolated. Each part is optional:
 
 | Part | How crew applies it |
 |---|---|
 | Git identity | crew writes `$CREW_HOME/envs/<env>/gitconfig` with only `user.name` and `user.email`, and sets `GIT_CONFIG_GLOBAL` to it. Thus the credential helpers of `~/.gitconfig` do not go into the mate. |
-| SSH | crew makes one ed25519 key for each environment and shows the public key. The user adds it on GitHub. crew sets `GIT_SSH_COMMAND="ssh -i <key> -o IdentitiesOnly=yes"` and removes `SSH_AUTH_SOCK`. You can also import a key. |
+| SSH | crew makes one ed25519 key for each environment and shows the public key. The user adds it on GitHub. crew sets `GIT_SSH_COMMAND="ssh -i <key> -o IdentitiesOnly=yes"` and removes `SSH_AUTH_SOCK`. You can also import a key. To rotate the key, crew keeps the old key until the user confirms that the new key is on GitHub. |
 | GitHub | crew sets `GH_TOKEN` and an empty `GH_CONFIG_DIR` (`$CREW_HOME/envs/<env>/gh`). |
 | Claude | `CLAUDE_CONFIG_DIR=$CREW_HOME/envs/<env>/claude`, and `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`) or `ANTHROPIC_API_KEY`. |
 | Codex | `CODEX_HOME=$CREW_HOME/envs/<env>/codex` and `OPENAI_API_KEY`. The ChatGPT device login is a later issue. |
@@ -43,7 +44,7 @@ Facts:
 
 - Each mate agent pane starts with `crew env exec <env> -- <harness argv>`. This applies to the start and to the resume, for the `claude`, `codex` and `omp` harnesses.
 - `crew env exec` reads the definition and the secrets. Then it calls a pure `domain` function that makes the environment. Then it calls `syscall.Exec`.
-- For `local`, the function returns the current environment with no change.
+- For `local`, the function returns the current environment and adds only its extra variables. With no extra variables, the environment does not change.
 - For `custom`, the function does these steps:
   1. It keeps only the variables of a fixed allowlist: `PATH HOME USER LOGNAME SHELL TERM COLORTERM LANG LC_* TZ TMPDIR TMUX TMUX_PANE CREW_HOME XDG_RUNTIME_DIR DISPLAY WAYLAND_DISPLAY`.
   2. It sets the managed variables of the parts in the table above.
@@ -66,9 +67,10 @@ Facts:
 
 ### Product
 
-- Mates come first. Local harness sessions come second.
-- The app (PWA and Tauri desktop) gets an Environments page and an environment picker on the mate page. Mates becomes the home screen, and Sessions moves to second place in the navigation.
-- The owner approves the design in Claude Design first. The UI issues copy the approved frames in `docs/design/`.
+- Mates come first. Local harness sessions come second. Local sessions always use this machine and have no environment.
+- Mates get threads in the app. Slack is optional.
+- The app (PWA and Tauri desktop) gets an Environments page as its own navigation item, not in Settings, and an environment picker on the mate page. Mates becomes the home screen, and Sessions moves to second place in the navigation. The phone tabs are Mates, Sessions, Approvals and More.
+- The owner approves the design in Claude Design first. The frames are files 7 to 10 of the Claude Design project `0b297492-6939-4049-b2a2-75e8d6501de3`. The design issue puts them in `docs/design/mates/`. The UI issues copy them exactly.
 - The TUI gets no environment work. A separate change removes the TUI.
 
 ## Why
@@ -82,5 +84,5 @@ Facts:
 
 - The mate still runs as the same Unix user. A mate can read files in the real HOME if it knows the path. An environment isolates logins and identity, not the file system.
 - The Claude subscription login in a custom directory needs `claude setup-token`. The real-token check passed on Linux. The check of the macOS keychain is open. Do it on a Mac.
-- Codex and Pi use API keys in v1.
+- Codex and Pi use API keys in v1. Their logins are later issues.
 - The allowlist is fixed in v1.
