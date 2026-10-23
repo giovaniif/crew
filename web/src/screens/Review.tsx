@@ -24,7 +24,8 @@ import {
   type ReviewWorktree,
   type Scope,
 } from "../review";
-import { Checkbox, Segmented, Select } from "../ui";
+import { openSessionView } from "../route";
+import { Button, Checkbox, Menu, Segmented, Select } from "../ui";
 
 type Layout = "unified" | "split";
 
@@ -130,24 +131,21 @@ function HunkHeader({ header, onStage, onRevert, busy }: { header: string; onSta
 
 function ComposerRow({ composer, colSpan, onText, onCancel, onSubmit }: { composer: Composer; colSpan: number; onText: (t: string) => void; onCancel: () => void; onSubmit: () => void }) {
   const anchor = commentAnchor(composer.lines);
-  const range = anchor ? (anchor.start === anchor.end ? String(anchor.start) : anchor.start + "-" + anchor.end) : "";
+  const range = anchor ? (anchor.start === anchor.end ? "line " + anchor.start : "lines " + anchor.start + "-" + anchor.end) : "";
   return (
     <tr className="composer-row">
       <td colSpan={colSpan}>
         <div className="review-composer">
-          <label>
-            <span className="muted">
-              {composer.key.path}:{range}
-            </span>
-            <textarea aria-label="Comment" autoFocus value={composer.text} onChange={(e) => onText(e.target.value)} rows={3} />
-          </label>
+          <textarea aria-label="Comment" placeholder="Leave a comment" autoFocus value={composer.text} onChange={(e) => onText(e.target.value)} rows={2} />
           <div className="review-composer-actions">
-            <button type="button" onClick={onCancel}>
+            <span className="muted">· {range}</span>
+            <span className="spacer" />
+            <Button variant="quiet" onClick={onCancel}>
               Cancel
-            </button>
-            <button type="button" className="primary" disabled={composer.text.trim() === ""} onClick={onSubmit}>
-              Comment
-            </button>
+            </Button>
+            <Button variant="primary" disabled={composer.text.trim() === ""} onClick={onSubmit}>
+              Add comment
+            </Button>
           </div>
         </div>
       </td>
@@ -169,7 +167,30 @@ type DiffProps = {
   busy: boolean;
   viewed: boolean;
   onViewed: (v: boolean) => void;
+  onEditor: () => void;
 };
+
+function FileMenu({ viewed, onViewed }: { viewed: boolean; onViewed: (v: boolean) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="ui-anchor file-menu">
+      <Button variant="icon" aria-label="File actions" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        ⋯
+      </Button>
+      {open ? (
+        <Menu
+          label="File actions"
+          items={[{ value: "viewed", label: viewed ? "Mark as not viewed" : "Mark as viewed" }]}
+          onPick={() => {
+            setOpen(false);
+            onViewed(!viewed);
+          }}
+          onClose={() => setOpen(false)}
+        />
+      ) : null}
+    </span>
+  );
+}
 
 function DiffView(p: DiffProps) {
   const { file } = p.selected;
@@ -183,13 +204,33 @@ function DiffView(p: DiffProps) {
   return (
     <section className="review-diff" aria-label={file.Path}>
       <header className="diff-file-head">
+        <Checkbox className="viewed-toggle" label="" ariaLabel="Viewed" checked={p.viewed} onChange={p.onViewed} />
         <span className="diff-path">{file.OldPath && file.OldPath !== file.Path ? file.OldPath + " → " + file.Path : file.Path}</span>
-        <Checkbox className="viewed-toggle" label="Viewed" checked={p.viewed} onChange={p.onViewed} />
+        <span className="spacer" />
+        <Button variant="quiet" className="open-editor" onClick={p.onEditor}>
+          Open in editor
+        </Button>
+        <FileMenu viewed={p.viewed} onViewed={p.onViewed} />
       </header>
       {file.Binary ? <p className="muted diff-note">Binary file</p> : null}
       {!file.Binary && file.Hunks.length === 0 ? <p className="muted diff-note">No text changes</p> : null}
       {file.Hunks.length > 0 ? (
         <table className={"diff-table diff-" + p.layout}>
+          {p.layout === "unified" ? (
+            <colgroup>
+              <col className="col-ln-old" />
+              <col className="col-ln" />
+              <col className="col-sign" />
+              <col />
+            </colgroup>
+          ) : (
+            <colgroup>
+              <col className="col-ln" />
+              <col />
+              <col className="col-ln" />
+              <col />
+            </colgroup>
+          )}
           {file.Hunks.map((h, hi) => (
             <tbody key={hi}>
               <tr className="hunk-row">
@@ -302,6 +343,7 @@ export function ReviewPane({ session, sessionState, api, initial }: ReviewPanePr
   const rows = draftRows(review, draft);
   const commented = useMemo(() => (selected ? commentedLines(draft, selected.worktree, selected.file.Path) : () => false), [draft, selected]);
   const fileCount = tree.reduce((n, g) => n + g.files.length, 0);
+  const viewedCount = tree.reduce((n, g) => n + g.files.filter((f) => f.viewed).length, 0);
 
   const setViewed = (worktreeId: string, path: string, blob: string, viewed: boolean) => {
     setReview((r) => {
@@ -395,8 +437,8 @@ export function ReviewPane({ session, sessionState, api, initial }: ReviewPanePr
       <div className="review-bar">
         <Segmented label="Scope" value={scope} onChange={(s) => choose(s, worktree)} options={reviewScopes.map((s) => ({ value: s.id, label: s.title }))} />
         <Select className="review-worktree" label="Worktree" value={worktree} onChange={(w) => choose(scope, w)} options={(review ? worktreeMenu(review) : [{ id: "", title: "All" }]).map((c) => ({ value: c.id, label: c.title }))} />
-        <span className="muted">{fileCount === 1 ? "1 file" : fileCount + " files"}</span>
         <span className="spacer" />
+        <span className="muted viewed-count">{viewedCount + " of " + fileCount + " viewed"}</span>
         <Segmented<Layout>
           label="Layout"
           value={layout}
@@ -406,9 +448,9 @@ export function ReviewPane({ session, sessionState, api, initial }: ReviewPanePr
             { value: "split", label: "Split" },
           ]}
         />
-        <button type="button" onClick={() => void load(scope, worktree)}>
-          Reload
-        </button>
+        <Button variant="icon" aria-label="Reload" title="Reload" onClick={() => void load(scope, worktree)}>
+          ↻
+        </Button>
       </div>
       {error ? (
         <p className="review-error" role="alert">
@@ -430,10 +472,9 @@ export function ReviewPane({ session, sessionState, api, initial }: ReviewPanePr
                       <li key={f.path} className={current ? "current" : undefined}>
                         <Checkbox label="" ariaLabel={"Viewed " + f.path} checked={f.viewed} onChange={(v) => setViewed(f.worktree, f.path, f.blob, v)} />
                         <button type="button" aria-current={current ? "true" : undefined} onClick={() => setKey({ worktree: f.worktree, path: f.path })}>
-                          <span className={"file-status status-" + f.status}>{f.status}</span>
                           <span className="file-path">{f.path}</span>
-                          <span className="file-added">+{f.added}</span>
-                          <span className="file-deleted">−{f.deleted}</span>
+                          {f.added > 0 ? <span className="file-added">+{f.added}</span> : null}
+                          {f.deleted > 0 ? <span className="file-deleted">−{f.deleted}</span> : null}
                         </button>
                       </li>
                     );
@@ -459,6 +500,7 @@ export function ReviewPane({ session, sessionState, api, initial }: ReviewPanePr
                 busy={busy}
                 viewed={tree.some((g) => g.files.some((f) => f.worktree === selected.worktree.ID && f.path === selected.file.Path && f.viewed))}
                 onViewed={(v) => setViewed(selected.worktree.ID, selected.file.Path, selected.file.Blob, v)}
+                onEditor={() => openSessionView(session, "editor")}
               />
             ) : (
               <div className="pane-placeholder">
@@ -469,7 +511,7 @@ export function ReviewPane({ session, sessionState, api, initial }: ReviewPanePr
           </div>
           <section className="draft-panel" aria-label="Draft review">
             <h3>
-              Draft review <span className="count">{rows.length}</span>
+              Draft review <span className="pill">{rows.length}</span>
             </h3>
             {status ? <p className="draft-status">{status}</p> : null}
             {rows.length === 0 ? <p className="muted">Click + next to a line number to comment. Shift-click to select a range.</p> : null}
@@ -481,19 +523,17 @@ export function ReviewPane({ session, sessionState, api, initial }: ReviewPanePr
                 </li>
               ))}
             </ul>
-            <label className="draft-note">
-              <span>Overall note</span>
-              <textarea aria-label="Overall note" value={note} rows={3} onChange={(e) => setNote(e.target.value)} />
-            </label>
+            <textarea className="ui input draft-note" aria-label="Overall note" placeholder="Overall note (optional)" value={note} rows={3} onChange={(e) => setNote(e.target.value)} />
+            <span className="spacer" />
             {notice && canSend(draft) ? <p className="muted">{notice}</p> : null}
             {sendError ? (
               <p className="review-error" role="alert">
                 {sendError}
               </p>
             ) : null}
-            <button type="button" className="primary" disabled={!canSend(draft)} onClick={() => void send()}>
+            <Button variant="primary" className="send-review" disabled={!canSend(draft)} onClick={() => void send()}>
               Send to agent
-            </button>
+            </Button>
           </section>
         </div>
       ) : null}

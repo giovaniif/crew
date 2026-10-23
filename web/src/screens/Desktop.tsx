@@ -32,7 +32,7 @@ export type PaneProps = {
 };
 
 export const panes: Record<MainTab, (props: PaneProps) => ReactNode> = {
-  chat: (p) => <SessionScreen key={p.session.ID} id={p.session.ID} snapshot={p.snapshot} now={p.now} onRetry={p.onRetry} client={p.client} api={p.api} onBrowser={p.onBrowser} />,
+  chat: (p) => <SessionScreen key={p.session.ID} id={p.session.ID} snapshot={p.snapshot} now={p.now} onRetry={p.onRetry} client={p.client} api={p.api} onBrowser={p.onBrowser} inBar />,
   review: (p) => <ReviewPane key={p.session.ID} session={p.session.ID} sessionState={p.session.State} api={p.api} />,
 };
 
@@ -374,7 +374,7 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
     } else if (view === "agent") {
       body = (
         <ViewOverlay label="Agent screen" onClose={back}>
-          <TerminalPane store={terminals} session={session} kind="agent" />
+          <TerminalPane store={terminals} session={session} kind="agent" onBack={back} />
         </ViewOverlay>
       );
     } else {

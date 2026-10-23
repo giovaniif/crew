@@ -1,0 +1,11 @@
+{
+  "items": [
+    {
+      "path": "/w/web-old",
+      "branch": "old",
+      "action": "remove",
+      "reason": "PR #77 merged",
+      "outcome": "removed"
+    }
+  ]
+}

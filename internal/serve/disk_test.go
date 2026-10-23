@@ -113,3 +113,29 @@ func TestServeKillPortsRefusesNoProcessGroups(t *testing.T) {
 		t.Fatalf("params %s", params)
 	}
 }
+
+func TestServeCleanupRunReturnsTheItemsOfTheDaemon(t *testing.T) {
+	f := diskFake()
+	f.results[rpc.MethodCleanupRun] = []rpc.CleanupItem{{Path: "/w/web-old", Branch: "old", Action: domain.CleanupRemove, Reason: "PR #77 merged", Outcome: "removed"}}
+	_, ts := startServer(t, f, serve.Config{URL: publicURL})
+	status, out := do(t, ts, "POST", "/api/v1/cleanup/run", goodToken, "")
+	if status != http.StatusOK {
+		t.Fatalf("status %d %s", status, out)
+	}
+	golden(t, "cleanup-run.json", out)
+	if len(f.paramsOf(rpc.MethodCleanupRun)) != 1 {
+		t.Fatalf("methods %v", f.methods())
+	}
+}
+
+func TestServeCleanupRunIsOnlyForTheOwnerDevice(t *testing.T) {
+	f := diskFake()
+	_, ts := startServer(t, f, serve.Config{URL: publicURL})
+	status, out := do(t, ts, "POST", "/api/v1/cleanup/run", goodToken, "", "X-Forwarded-For", "100.91.145.6")
+	if status != http.StatusForbidden || errorCode(t, out) != "forbidden" {
+		t.Fatalf("status %d %s", status, out)
+	}
+	if len(f.paramsOf(rpc.MethodCleanupRun)) != 0 {
+		t.Fatalf("a remote phone reached the daemon: %v", f.methods())
+	}
+}
