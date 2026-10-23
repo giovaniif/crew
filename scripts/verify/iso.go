@@ -80,6 +80,10 @@ func iso(e *env, args []string, r *result) {
 		isoLeaks(e, args[1:], r)
 	case "panes":
 		isoPanes(e, args[1:], r)
+	case "file":
+		isoFile(e, args[1:], r)
+	case "api":
+		isoAPI(e, args[1:], r)
 	default:
 		r.bad("unknown iso command "+args[0], "use up, down or seed")
 	}
@@ -103,6 +107,7 @@ func isoEnv(e *env, home, socket string) []string {
 		"CLAUDE_CONFIG_DIR=" + filepath.Join(h, ".claude"),
 		"CODEX_HOME=" + filepath.Join(h, ".codex"),
 		"CREW_E2E=" + filepath.Join(home, "e2e"),
+		"SSH_AUTH_SOCK=" + filepath.Join(home, "TEST-ssh-agent.sock"),
 		"PATH=" + fakes + string(os.PathListSeparator) + e.sys.getenv("PATH"),
 		"TERM=xterm-256color",
 		"COLORTERM=truecolor",

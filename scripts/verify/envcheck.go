@@ -307,7 +307,7 @@ func isoLeaks(e *env, args []string, r *result) {
 }
 
 func isoPanes(e *env, args []string, r *result) {
-	o, ok := parse(args, []string{"expect"}, nil, r)
+	o, ok := parse(args, []string{"expect", "start", "kill"}, nil, r)
 	if !ok {
 		return
 	}
@@ -315,15 +315,110 @@ func isoPanes(e *env, args []string, r *result) {
 	if !ok {
 		return
 	}
-	out, errs, code := e.sys.exec(cmd{name: "tmux", args: []string{"-L", st.Socket, "list-panes", "-a", "-F", "#{pane_start_command}"}})
+	out, errs, code := e.sys.exec(cmd{name: "tmux", args: []string{"-L", st.Socket, "list-panes", "-a", "-F", "#{pane_id} #{pane_start_command}"}})
 	if code != 0 {
 		r.fail("tmux list-panes failed: "+strings.TrimSpace(errs), "is the isolated crew up?")
 		return
 	}
-	r.set("panes", strings.Split(strings.TrimSpace(out), "\n"))
+	var ids, panes []string
+	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
+		id, command, _ := strings.Cut(line, " ")
+		ids, panes = append(ids, id), append(panes, command)
+	}
+	r.set("panes", panes)
 	for _, want := range o.vals["expect"] {
-		if !strings.Contains(out, want) {
-			r.fail("no pane starts with "+strconv.Quote(want), "read panes in the result")
+		if !strings.Contains(strings.Join(panes, "\n"), want) {
+			r.fail("no pane command has "+strconv.Quote(want), "read panes in the result")
+		}
+	}
+	for _, want := range o.vals["start"] {
+		found := false
+		for _, p := range panes {
+			found = found || strings.HasPrefix(p, want)
+		}
+		if !found {
+			r.fail("no pane command starts with "+strconv.Quote(want), "read panes in the result")
+		}
+	}
+	for _, want := range o.vals["kill"] {
+		n := 0
+		for i, p := range panes {
+			if strings.Contains(p, want) {
+				e.sys.exec(cmd{name: "tmux", args: []string{"-L", st.Socket, "kill-pane", "-t", ids[i]}})
+				n++
+			}
+		}
+		if n == 0 {
+			r.fail("no pane command has "+strconv.Quote(want), "read panes in the result")
+		}
+	}
+}
+
+func isoFile(e *env, args []string, r *result) {
+	o, ok := parse(args, []string{"expect"}, nil, r)
+	if !ok {
+		return
+	}
+	if len(o.pos) != 1 || !strings.HasPrefix(o.pos[0], "{home}/") {
+		r.bad("iso file needs one path that starts with {home}/", "go run ./scripts/verify iso file {home}/envs/test-bot/claude/settings.json --expect crew")
+		return
+	}
+	st, ok := needIso(e, r)
+	if !ok {
+		return
+	}
+	path := filepath.Join(st.Home, strings.TrimPrefix(o.pos[0], "{home}/"))
+	r.set("path", path)
+	b, err := os.ReadFile(path)
+	if err != nil {
+		r.fail("cannot read "+path, "the file is not there")
+		return
+	}
+	for _, want := range o.vals["expect"] {
+		if !strings.Contains(string(b), want) {
+			r.fail(filepath.Base(path)+" has no "+strconv.Quote(want), "read "+path)
+		}
+	}
+}
+
+func isoAPI(e *env, args []string, r *result) {
+	o, ok := parse(args, []string{"body", "expect", "absent", "status"}, nil, r)
+	if !ok {
+		return
+	}
+	if len(o.pos) != 2 || !strings.HasPrefix(o.pos[1], "/api/") {
+		r.bad("iso api needs a method and a path", "go run ./scripts/verify iso api GET /api/v1/envs")
+		return
+	}
+	st, ok := needIso(e, r)
+	if !ok {
+		return
+	}
+	a := []string{"-sS", "-X", o.pos[0], "-H", "Authorization: Bearer " + st.Token, "-w", "\n%{http_code}"}
+	if b := o.get("body", ""); b != "" {
+		a = append(a, "-H", "Content-Type: application/json", "--data", b)
+	}
+	out, errs, code := e.sys.exec(cmd{name: "curl", args: append(a, st.ServeURL+o.pos[1])})
+	if code != 0 {
+		r.fail(o.pos[0]+" "+o.pos[1]+" failed: "+strings.TrimSpace(errs), "read "+filepath.Join(st.Home, "serve.log"))
+		return
+	}
+	i := strings.LastIndex(out, "\n")
+	body, status := out[:max(i, 0)], out[i+1:]
+	n, _ := strconv.Atoi(strings.TrimSpace(status))
+	r.set("status", n)
+	r.set("body", tail(body, 20000))
+	if want := o.get("status", ""); want != "" && want != strconv.Itoa(n) || want == "" && (n < 200 || n > 299) {
+		r.fail(o.pos[0]+" "+o.pos[1]+" answered "+strconv.Itoa(n), "read body in the result")
+	}
+	for _, want := range o.vals["expect"] {
+		if !strings.Contains(body, want) {
+			r.fail("the answer has no "+strconv.Quote(want), "read body in the result")
+		}
+	}
+	for _, not := range o.vals["absent"] {
+		if strings.Contains(body, not) {
+			r.fail("the answer has "+strconv.Quote(not), "read body in the result")
 		}
 	}
 }
