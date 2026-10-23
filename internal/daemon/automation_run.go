@@ -87,11 +87,20 @@ func (d *Daemon) automationRepo(a domain.Automation, repo string) string {
 		return filepath.Dir(a.Source)
 	}
 	var root string
+	var workspaces []domain.Workspace
 	d.query(func(s *state) {
-		if ws, found := domain.LastUsedWorkspace(sorted(s.workspaces)); found {
+		workspaces = sorted(s.workspaces)
+		if ws, found := domain.LastUsedWorkspace(workspaces); found {
 			root = ws.Root
 		}
 	})
+	if a.Mate != "" {
+		if m, _, ok := d.findMate(a.Mate); ok {
+			if mateRoot, err := domain.MateStartRoot(m, workspaces, ""); err == nil {
+				return mateRoot
+			}
+		}
+	}
 	return root
 }
 
@@ -166,6 +175,9 @@ func (d *Daemon) precheck(a domain.Automation, plan domain.AutomationStart, repo
 }
 
 func (d *Daemon) startPlanned(a domain.Automation, plan domain.AutomationStart) (domain.Session, *rpc.Error, bool) {
+	if a.Mate != "" && plan.Kind != domain.AutomationStartSend {
+		return d.startAsMate(a, plan)
+	}
 	switch plan.Kind {
 	case domain.AutomationStartSend:
 		resp, ok := d.sessionSend(rpc.Request{Method: rpc.MethodSessionSend, Params: mustJSON(rpc.SessionSendParams{Session: plan.Session, Text: plan.Prompt})})
@@ -183,6 +195,27 @@ func (d *Daemon) startPlanned(a domain.Automation, plan domain.AutomationStart) 
 	default:
 		return d.startSession(rpc.NewSessionParams{Workspace: plan.Workspace, WorkItem: plan.WorkItem, Harness: a.Agent, Model: a.Model, Effort: a.Effort, Prompt: plan.Prompt}, "")
 	}
+}
+
+func (d *Daemon) startAsMate(a domain.Automation, plan domain.AutomationStart) (domain.Session, *rpc.Error, bool) {
+	m, _, found := d.findMate(a.Mate)
+	if !found {
+		return domain.Session{}, &rpc.Error{Code: rpc.CodeNotFound, Message: fmt.Sprintf("no mate %q", a.Mate)}, true
+	}
+	memory, err := d.readMateMemory(m.Name)
+	if err != nil {
+		return domain.Session{}, &rpc.Error{Code: rpc.CodeFailed, Message: err.Error()}, true
+	}
+	p := rpc.NewSessionParams{Workspace: plan.Workspace, WorkItem: plan.WorkItem, Harness: m.Agent, Model: m.Model, Effort: m.Effort, Prompt: plan.Prompt}
+	extra := sessionExtras{
+		system: domain.MateSystemPrompt(m, memory, d.mateMemoryPath(m.Name)),
+		seat:   &domain.MateSeat{Name: m.Name, Owner: m.Owner, Local: true, Automation: a.Name},
+		env:    m.Env,
+	}
+	if plan.Kind == domain.AutomationStartLaunch {
+		p.Workspace, extra.dir = plan.Dir, plan.Dir
+	}
+	return d.startSessionWith(p, "", extra)
 }
 
 func (d *Daemon) automationRunsMethod(req rpc.Request) (*rpc.Response, bool) {
