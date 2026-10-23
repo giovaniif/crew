@@ -162,6 +162,25 @@ func TestNativeClientGetsOutputOfEveryParkedPaneAndNewWindows(t *testing.T) {
 	}
 }
 
+func TestNativeClientReachesAPaneWhenTheDaemonHasNoUTF8Locale(t *testing.T) {
+	for _, k := range []string{"LC_ALL", "LC_CTYPE", "LANG"} {
+		t.Setenv(k, "")
+	}
+	ctx := context.Background()
+	h := newHost(t)
+	pane, err := h.Create(ctx, catPane("a"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	native, err := h.OpenNative(ctx, 100, 30)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.ContainsFunc(native.Panes, func(p app.NativePane) bool { return p.Pane == pane }) {
+		t.Fatalf("native panes = %+v; want pane %s", native.Panes, pane)
+	}
+}
+
 func TestNativeClientsGetTheirOwnSessionsWhichGoWhenTheyDetach(t *testing.T) {
 	ctx := context.Background()
 	h := newHost(t)
