@@ -39,6 +39,14 @@ go run ./scripts/verify web drive / --viewport desktop --out-dir /tmp/crew-verif
 
 Expect: the text of the fake agent pane.
 
+### Resume session from the agent screen connects to the new pane
+
+```sh
+go run ./scripts/verify web drive / --viewport desktop --out-dir /tmp/crew-verify-map/live-session --steps '[{"click":{"text":"TEST live session","exact":false}},{"click":{"role":"button","name":"Session commands"}},{"click":{"role":"menuitem","name":"End session…"}},{"click":{"role":"button","name":"End session"}},{"wait":3000},{"eval":"location.hash = location.hash + \"/agent\""},{"wait":3000},{"click":{"role":"button","name":"Resume session"}},{"wait":5000},{"eval":"const t = document.querySelector(\"[aria-label=\\\"Agent screen\\\"] .xterm-rows\").textContent; if (!t.includes(\"TEST fake claude\")) throw new Error(\"agent screen: \" + t.slice(-200))"},{"shot":"resume.png"}]'
+```
+
+Expect: the session ends, Resume session shows on the agent screen, and then the agent screen shows the new pane of the fake agent.
+
 ### the Shell drawer opens a shell in the worktree
 
 ```sh
