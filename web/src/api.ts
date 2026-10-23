@@ -378,6 +378,7 @@ export type Mate = {
   avatar?: string;
   color?: string;
   tone?: Record<string, number>;
+  env?: string;
   enabled: boolean;
 };
 

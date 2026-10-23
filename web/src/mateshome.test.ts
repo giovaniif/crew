@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Approval } from "./api";
 import { mateCard } from "./faces";
-import { agoLabel, homeCards, homeSummary, recentActivity } from "./mateshome";
+import { agoLabel, envBadge, homeCards, homeSummary, recentActivity } from "./mateshome";
 import type { MateRow } from "./stream";
 
 const now = Date.parse("2026-10-03T12:00:00Z");
@@ -10,7 +10,7 @@ function row(name: string, extra: Partial<MateRow> = {}): MateRow {
   return { name, state: "connected", work: [], threads: [], conversations: [], ...extra };
 }
 
-const def = (name: string, agent: string) => ({ name, prompt: name + " role.\n\nMore.", agent, enabled: true });
+const def = (name: string, agent: string, env?: string) => ({ name, prompt: name + " role.\n\nMore.", agent, env, enabled: true });
 
 const ask: Approval = {
   ID: "ap1",
@@ -24,8 +24,8 @@ const ask: Approval = {
 
 const cards = () => [
   mateCard(row("ada", { conversations: [{ session: "s1", name: "review 42", state: "running", ended: false, started_at: "2026-10-03T12:00:00Z" }] }), def("ada", "claude"), []),
-  mateCard(row("june", { state: "paused" }), def("june", "pi"), []),
-  mateCard(row("rex"), def("rex", "codex"), ["rex"]),
+  mateCard(row("june", { state: "paused" }), def("june", "omp"), []),
+  mateCard(row("rex"), def("rex", "codex", "test-work"), ["rex"]),
 ];
 
 describe("homeCards", () => {
@@ -37,9 +37,14 @@ describe("homeCards", () => {
     expect(out[2]).toMatchObject({ pill: "paused", tone: "", approval: null, when: "" });
   });
 
-  it("filters by harness, also Pi", () => {
-    expect(homeCards(cards(), [], "pi", now).map((c) => c.card.name)).toEqual(["june"]);
+  it("filters by harness, also Pi, whose agent is omp", () => {
+    expect(homeCards(cards(), [], "omp", now).map((c) => c.card.name)).toEqual(["june"]);
     expect(homeCards(cards(), [], "codex", now).map((c) => c.card.name)).toEqual(["rex"]);
+  });
+
+  it("filters by environment, and an empty env is local", () => {
+    expect(homeCards(cards(), [], "all", now, "test-work").map((c) => c.card.name)).toEqual(["rex"]);
+    expect(homeCards(cards(), [], "all", now, "local").map((c) => c.card.name)).toEqual(["ada", "june"]);
   });
 
   it("ignores decided approvals", () => {
@@ -87,5 +92,20 @@ describe("recentActivity", () => {
       { name: "milo", text: "started “three”", when: "2h ago", href: "#/sessions/s3" },
       { name: "ada", text: "started “one”", when: "3h ago", href: "#/sessions/s1" },
     ]);
+  });
+});
+
+describe("envBadge", () => {
+  const envs = [
+    { name: "local", kind: "local" as const, parts: [], secrets: [], used_by: [] },
+    { name: "test-work", kind: "custom" as const, parts: [], secrets: [], used_by: [] },
+    { name: "test-mine", kind: "local" as const, parts: [], secrets: [], used_by: [] },
+  ];
+  it("shows Local grey for no env and the name in blue for a custom env", () => {
+    expect(envBadge(undefined, envs)).toEqual({ label: "Local", kind: "local" });
+    expect(envBadge("local", envs)).toEqual({ label: "Local", kind: "local" });
+    expect(envBadge("test-work", envs)).toEqual({ label: "test-work", kind: "custom" });
+    expect(envBadge("test-mine", envs)).toEqual({ label: "test-mine", kind: "local" });
+    expect(envBadge("test-gone", [])).toEqual({ label: "test-gone", kind: "custom" });
   });
 });

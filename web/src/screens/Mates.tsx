@@ -1,4 +1,6 @@
 import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { useEnvs } from "./Environments";
+import { EnvChip, EnvRail } from "./EnvPicker";
 import {
   type Authed,
   type Mate,
@@ -181,6 +183,7 @@ function KillSwitch({ api, stopped }: { api: Authed; stopped: boolean }) {
 
 function MateForm({ api, start, onSaved }: { api: Authed; start: Mate; onSaved: (m: Mate) => void }) {
   const [mate, setMate] = useState<Mate>(start);
+  const { envs } = useEnvs(api);
   const [repos, setRepos] = useState((start.repos ?? []).join(", "));
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
@@ -200,6 +203,7 @@ function MateForm({ api, start, onSaved }: { api: Authed; start: Mate; onSaved: 
 
   return (
     <form className="mt-form mt-panel" onSubmit={submit} aria-label={"Settings of " + start.name}>
+      <EnvRail envs={envs} value={mate.env} onChange={(env) => setMate({ ...mate, env })} />
       <Brains mate={mate} repos={repos} onMate={setMate} onRepos={setRepos} />
       <label className="mt-field">
         Prompt
@@ -241,6 +245,7 @@ function Brains({ mate, repos, onMate, onRepos }: { mate: Mate; repos: string; o
           options={[
             { value: "claude", label: "Claude" },
             { value: "codex", label: "Codex" },
+            { value: "omp", label: "Pi" },
           ]}
         />
       </div>
@@ -388,7 +393,7 @@ const sources: { value: MateSource; label: string }[] = [
 ];
 
 function agentName(agent: string): string {
-  return agent === "codex" ? "Codex" : agent === "claude" ? "Claude" : agent;
+  return agent === "codex" ? "Codex" : agent === "claude" ? "Claude" : agent === "omp" ? "Pi" : agent;
 }
 
 function subtitle(card: MateCard): string {
@@ -806,6 +811,7 @@ function nameProblemOf(name: string, defs: Mate[]): string {
 
 export function NewMate({ api }: { api: Authed }) {
   const { defs, tones } = useMateDefs(api);
+  const { envs } = useEnvs(api);
   const [step, setStep] = useState(0);
   const [face, setFace] = useState(FACES[0].id);
   const [color, setColor] = useState("");
@@ -982,6 +988,12 @@ export function NewMate({ api }: { api: Authed }) {
             <form className="mt-form" aria-label="Brains" onSubmit={(e) => (e.preventDefault(), setStep(3))}>
               {head("Which brains does " + mate.name + " use?")}
               <Brains mate={mate} repos={repos} onMate={setMate} onRepos={setRepos} />
+              <div className="mt-field">
+                <span>Environment</span>
+                <span>
+                  <EnvChip envs={envs} value={mate.env} onChange={(env) => setMate({ ...mate, env })} />
+                </span>
+              </div>
               {nav(
                 1,
                 <Button type="submit" variant="primary">

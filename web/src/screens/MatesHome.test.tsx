@@ -21,8 +21,8 @@ const board: Mates = {
 const defs = {
   mates: [
     { name: "ada", prompt: "Careful reviewer", agent: "claude", enabled: true },
-    { name: "rex", prompt: "Release helper", agent: "codex", enabled: true },
-    { name: "june", prompt: "Patient explainer", agent: "pi", enabled: true },
+    { name: "rex", prompt: "Release helper", agent: "codex", env: "test-work", enabled: true },
+    { name: "june", prompt: "Patient explainer", agent: "omp", enabled: true },
   ],
   tones: [],
 };
@@ -33,6 +33,15 @@ const routes = (server: FakeServer) => {
   server
     .on("GET", "/api/v1/mates", { status: 200, body: defs })
     .on("GET", "/api/v1/approvals", { status: 200, body: [ask] })
+    .on("GET", "/api/v1/envs", {
+      status: 200,
+      body: {
+        envs: [
+          { name: "local", kind: "local", parts: [], secrets: [], used_by: ["ada", "june"] },
+          { name: "test-work", kind: "custom", parts: [], secrets: [], used_by: ["rex"] },
+        ],
+      },
+    })
     .on("POST", "/api/v1/approvals/ap1/approve", { status: 200, body: { ...ask, State: "granted" } });
 };
 
@@ -59,6 +68,23 @@ describe("the Mates home", () => {
     expect(nav.getByRole("link", { name: "+ New mate" })).toHaveAttribute("href", "#/mates/new");
   });
 
+  it("shows the real environment badge: Local grey, Custom blue", async () => {
+    home();
+    await screen.findByText("Asks: git push --tags");
+    const rex = within(screen.getAllByRole("article")[0]);
+    expect(await rex.findByText("test-work")).toHaveClass("envb", "custom");
+    expect(within(screen.getAllByRole("article")[1]).getByText("Local")).toHaveClass("envb", "local");
+  });
+
+  it("filters by environment", async () => {
+    home();
+    await screen.findByText("Asks: git push --tags");
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("combobox", { name: "Environment" }));
+    await user.click(await screen.findByRole("option", { name: "test-work" }));
+    expect(cardNames()).toEqual(["rex"]);
+  });
+
   it("shows the needs-you mate first, with the summary, the harness tag and the Local badge", async () => {
     home();
     await screen.findByText("Asks: git push --tags");
@@ -67,7 +93,6 @@ describe("the Mates home", () => {
     const rex = within(screen.getAllByRole("article")[0]);
     expect(rex.getByText("needs you")).toBeInTheDocument();
     expect(rex.getByText("Codex")).toBeInTheDocument();
-    expect(rex.getByText("Local")).toBeInTheDocument();
     expect(rex.getByText("Release helper")).toBeInTheDocument();
     expect(screen.getByRole("status", { name: "Needs you" })).toHaveTextContent("rex waits for your answer.");
     expect(screen.getByRole("link", { name: "Open thread" })).toHaveAttribute("href", "#/sessions/s9");

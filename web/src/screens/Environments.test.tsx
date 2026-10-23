@@ -64,6 +64,12 @@ describe("the environments page", () => {
     expect(within(nav).getByRole("link", { name: /Sessions/ })).not.toHaveAttribute("aria-current");
   });
 
+  it("marks only Mates as the current nav item on a mate page", async () => {
+    open("#/mates/rex");
+    const nav = screen.getByRole("navigation", { name: "Sidebar" });
+    expect(within(nav).getByRole("link", { name: /Sessions/ })).not.toHaveAttribute("aria-current");
+  });
+
   it("shows the Claude account with Replace and no Remove", async () => {
     open("#/envs/test-work");
     const claude = await screen.findByRole("group", { name: "Claude" });
