@@ -152,7 +152,9 @@ func TestIsoHomesumDetectsAChangeInThePersonalHome(t *testing.T) {
 
 func TestIsoLeaksFindsATextInPsLogsAndServeAnswers(t *testing.T) {
 	e, fs, home := upWithEnvFakes(t)
-	fs.handlers["ps"] = func(cmd) (string, string, int) { return "sh claude\n", "", 0 }
+	fs.handlers["ps"] = func(cmd) (string, string, int) {
+		return "sh claude\ngo run ./scripts/verify iso leaks sk-ant-oat01-TEST\nsh -c go run ./scripts/verify iso leaks sk-ant-oat01-TEST --api /x\n", "", 0
+	}
 	var auth string
 	fs.handlers["curl"] = func(c cmd) (string, string, int) {
 		auth = strings.Join(c.args, " ")
