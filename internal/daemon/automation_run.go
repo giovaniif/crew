@@ -144,6 +144,17 @@ func (d *Daemon) startAutomation(a domain.Automation, t automationTrigger) (doma
 func (s *state) putAutomationRun(run domain.AutomationRun) {
 	s.automationRuns[run.ID] = run
 	s.store.PutAutomationRun(run)
+	if a, ok := domain.AutomationAlert(run); ok {
+		s.emit(AlertsChanged{Alerts: domain.AddAlert(s.alerts, a)})
+	}
+}
+
+type AlertsChanged struct{ Alerts []domain.Alert }
+
+func (e AlertsChanged) apply(s *state) rpc.Diff {
+	s.alerts = e.Alerts
+	list := slices.Clone(e.Alerts)
+	return rpc.Diff{Alerts: &list}
 }
 
 func (d *Daemon) precheck(a domain.Automation, plan domain.AutomationStart, repo string) string {

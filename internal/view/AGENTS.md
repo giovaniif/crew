@@ -17,6 +17,7 @@ depguard: from `internal/`, the package imports only `rpc` and `domain`. It neve
     - `threads`: its Slack threads, newest first. Each is the `domain.MateLink` (with the Slack `url`) and `session` (the derived name), `state` and `ended` of the session.
     - `work`: the IDs of its thread sessions that are not ended and that run, wait or ask for permission (`domain.MateWorking`). This is the current work of the mate.
     - A diff sets the whole `mates` when the board, a thread link or a thread session changes it. It comes after the other session diffs of the same `seq`, so the names are new.
+  - `alerts` (also in the phone state): the alerts of the daemon (`id`, `kind` `pr_checks_failed` or `automation_failed`, `title`, `body`, `session`, `at`), oldest first. A diff sets the full list.
   - A diff sets `seq` and one or more fields of the phone diff. It also sets `project`, `removed_project`, `event`, `subagent`, `draft` or `comment` as the daemon sent them. The phone stream does not include projects.
   - A session is the phone's (`name`, `where`, `banner`, `since`, `order`) plus `board`.
   - `order`: its index from the rule of `domain.Sidebar` over one flat list. Sessions that need you come first, then the others in the daemon's order. An ended session has `-1`.
