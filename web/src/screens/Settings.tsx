@@ -461,7 +461,7 @@ export function Settings({ auth, host, installed, fetch, push, onSignOut, storag
       pane = <ShortcutsPane value={settings.shortcuts} mac={mac} onChange={(shortcuts) => update({ ...settings, shortcuts })} />;
       break;
     case "workspaces":
-      pane = <WorkspacesGroup api={api} />;
+      pane = <WorkspacesGroup api={api} pickFolder={servers ? () => servers.pickFolder() : undefined} />;
       break;
     case "agents":
       pane = <AgentsGroup api={api} />;

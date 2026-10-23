@@ -369,3 +369,13 @@
     min-height: 44px;
   }
 }
+
+.ob-path {
+  display: flex;
+  gap: 8px;
+}
+
+.ob-path .ui.input {
+  flex: 1;
+  min-width: 0;
+}
