@@ -71,15 +71,15 @@ describe("the first run of mates", () => {
     expect(screen.getByRole("textbox", { name: "Name" })).toHaveValue("test-ada");
   });
 
-  it("offers a plain session instead and then shows the Mates home", () => {
+  it("offers a plain session instead and then shows the Mates home", async () => {
     const { live } = desktop("#/mates", true, undefined, {}, routes);
     live();
     const link = screen.getByRole("link", { name: "Start a session" });
     expect(link).toHaveAttribute("href", "#/new");
     fireEvent.click(link);
+    await waitFor(() => expect(screen.queryByRole("heading", { name: "Make your first mate" })).not.toBeInTheDocument());
     window.location.hash = "#/mates";
-    fireEvent(window, new HashChangeEvent("hashchange"));
-    expect(screen.queryByRole("heading", { name: "Make your first mate" })).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Mates" })).toBeInTheDocument());
   });
 
   it("asks for the name, the harness and the environment on one phone step", async () => {
