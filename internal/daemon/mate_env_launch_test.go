@@ -61,14 +61,16 @@ func startAndResumeMate(t *testing.T, r mateRig, name, harness string) (start, r
 	waitFor(t, func() bool {
 		var got domain.Session
 		_ = r.c.Call(ctx, rpc.MethodEndSession, rpc.SessionRef{ID: s.ID}, &got)
-		return r.c.Call(ctx, rpc.MethodResumeSession, rpc.SessionRef{ID: s.ID}, nil) == nil
+		err := r.c.Call(ctx, rpc.MethodResumeSession, rpc.SessionRef{ID: s.ID}, nil)
+		return err == nil
 	})
 	return start, lastSpec(r)
 }
 
 func TestMateWithAnEnvStartsAndResumesThroughCrewEnvExec(t *testing.T) {
-	r := startMateRigWith(t, &memStore{}, envLaunchMates, daemon.WithEnvLauncher("/opt/crew"))
+
 	for _, tc := range []struct{ mate, harness string }{{"claude-bot", "claude"}, {"codex-bot", "codex"}} {
+		r := startMateRigWith(t, &memStore{}, envLaunchMates, daemon.WithEnvLauncher("/opt/crew"))
 		start, resume := startAndResumeMate(t, r, tc.mate, tc.harness)
 		for what, cmd := range map[string][]string{"start": start, "resume": resume} {
 			if len(cmd) <= len(envPrefix) || !slices.Equal(cmd[:len(envPrefix)], envPrefix) || cmd[len(envPrefix)] != tc.harness {
