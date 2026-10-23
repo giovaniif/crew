@@ -135,7 +135,7 @@ func TestEnvSeedIntegrationFreshEnvReachesThePromptAndFiresACrewHook(t *testing.
 				return true
 			}
 		}
-		return strings.Contains(s, "❯") && strings.Contains(s, "shortcuts")
+		return strings.Contains(s, "❯") && strings.Contains(s, "Claude Code v")
 	})
 	noDialog("claude", screen)
 	for deadline := time.Now().Add(20 * time.Second); !hooks.has(`"harness":"claude"`) && time.Now().Before(deadline); {
