@@ -25,23 +25,23 @@ function open(hash = "#/sessions/s1", wide = true) {
 
 const tab = (name: string) => screen.getByRole("tab", { name });
 const panel = (name: string) => screen.getByRole("tabpanel", { name });
+const agentScreen = () => screen.getByRole("region", { name: "Agent screen" });
+const shellButton = () => screen.getByRole("button", { name: "Shell" });
 const posts = (d: ReturnType<typeof open>, path: string) => d.server.calls.filter((c) => c.method === "POST" && c.path === path).length;
 
-describe("the Terminal tab", () => {
+describe("the agent screen", () => {
   it("shows the agent pane with the grid size of the terminal", async () => {
-    const d = open();
-    await userEvent.click(tab("Terminal"));
+    const d = open("#/sessions/s1/agent");
     const socket = d.terminals.socket("%5");
     socket.open();
     expect(socket.frames[0]).toEqual({ token: "t0k", cols: 120, rows: 40 });
     socket.screen("$ make test\r\n");
     socket.output("ok\r\n");
-    expect(within(panel("Terminal")).getByTestId("term-screen")).toHaveTextContent("$ make test ok");
+    expect(within(agentScreen()).getByTestId("term-screen")).toHaveTextContent("$ make test ok");
   });
 
   it("sends typed keys as binary frames, also Ctrl+C and Esc", async () => {
-    const d = open();
-    await userEvent.click(tab("Terminal"));
+    const d = open("#/sessions/s1/agent");
     const socket = d.terminals.socket("%5");
     socket.open();
     const term = d.terminals.terms[0];
@@ -61,8 +61,7 @@ describe("the Terminal tab", () => {
   });
 
   it("sends the new grid size on each resize", async () => {
-    const d = open();
-    await userEvent.click(tab("Terminal"));
+    const d = open("#/sessions/s1/agent");
     const socket = d.terminals.socket("%5");
     socket.open();
     d.terminals.terms[0].resize(200, 60);
@@ -70,68 +69,65 @@ describe("the Terminal tab", () => {
   });
 
   it("fits the terminal to its pane when it opens", async () => {
-    const d = open();
-    await userEvent.click(tab("Terminal"));
+    const d = open("#/sessions/s1/agent");
     expect(d.terminals.terms[0].fits).toBeGreaterThan(0);
   });
 
   it("keeps the scrollback of each pane when the session changes", async () => {
-    const d = open();
-    await userEvent.click(tab("Terminal"));
+    const d = open("#/sessions/s1/agent");
     const first = d.terminals.socket("%5");
     first.open();
     first.screen("first session output\r\n");
-    await userEvent.click(screen.getByRole("link", { name: /add retries/ }));
+    window.location.hash = "#/sessions/s2/agent";
+    await screen.findByRole("link", { name: /add retries/, current: "page" });
     const second = d.terminals.socket("%9");
     second.open();
     second.screen("second session output\r\n");
     expect(first.closed).toBeNull();
-    await userEvent.click(screen.getByRole("link", { name: /fix the login redirect/ }));
+    window.location.hash = "#/sessions/s1/agent";
+    await screen.findByRole("link", { name: /fix the login redirect/, current: "page" });
     expect(d.terminals.sockets.filter((s) => s.pane === "%5")).toHaveLength(1);
-    expect(within(panel("Terminal")).getByTestId("term-screen")).toHaveTextContent("first session output");
+    expect(within(agentScreen()).getByTestId("term-screen")).toHaveTextContent("first session output");
   });
 
   it("says when the pane is gone", async () => {
-    const d = open();
-    await userEvent.click(tab("Terminal"));
+    const d = open("#/sessions/s1/agent");
     d.terminals.socket("%5").drop(4404, "no pane");
-    expect(within(panel("Terminal")).getByRole("status")).toHaveTextContent("This session's pane closed");
+    expect(within(agentScreen()).getByRole("status")).toHaveTextContent("This session's pane closed");
   });
 
   it("says when tmux is not available", async () => {
-    const d = open();
-    await userEvent.click(tab("Terminal"));
+    const d = open("#/sessions/s1/agent");
     d.terminals.socket("%5").drop(1013);
-    expect(within(panel("Terminal")).getByRole("status")).toHaveTextContent("tmux is not available");
-    await userEvent.click(within(panel("Terminal")).getByRole("button", { name: "Try again" }));
+    expect(within(agentScreen()).getByRole("status")).toHaveTextContent("tmux is not available");
+    await userEvent.click(within(agentScreen()).getByRole("button", { name: "Try again" }));
     expect(d.terminals.sockets.filter((s) => s.pane === "%5")).toHaveLength(2);
   });
 });
 
-describe("the Shell and nvim tabs", () => {
+describe("the shell drawer and the editor", () => {
   it("opens the shell of the session one time and keeps it", async () => {
     const d = open();
-    await userEvent.click(tab("Shell"));
+    await userEvent.click(shellButton());
     await waitFor(() => expect(d.terminals.socket("%7")).toBeTruthy());
-    await userEvent.click(tab("Chat"));
-    await userEvent.click(tab("Shell"));
+    await userEvent.click(shellButton());
+    await userEvent.click(shellButton());
     expect(posts(d, "/api/v1/sessions/s1/shell")).toBe(1);
     expect(d.terminals.sockets.filter((s) => s.pane === "%7")).toHaveLength(1);
   });
 
   it("toggles nvim only one time, so a second visit does not hide it", async () => {
-    const d = open();
-    await userEvent.click(tab("nvim"));
+    const d = open("#/sessions/s1/editor");
     await waitFor(() => expect(d.terminals.socket("%8")).toBeTruthy());
-    await userEvent.click(tab("Terminal"));
-    await userEvent.click(tab("nvim"));
-    await userEvent.click(tab("nvim"));
+    await userEvent.click(screen.getByRole("button", { name: "Close editor" }));
+    window.location.hash = "#/sessions/s1/editor";
+    await screen.findByRole("region", { name: "Editor" });
     expect(posts(d, "/api/v1/sessions/s1/nvim")).toBe(1);
   });
 
   it("keeps a shell for each session", async () => {
     const d = open();
-    await userEvent.click(tab("Shell"));
+    await userEvent.click(shellButton());
     await waitFor(() => expect(d.terminals.socket("%7")).toBeTruthy());
     await userEvent.click(screen.getByRole("link", { name: /add retries/ }));
     await waitFor(() => expect(d.terminals.socket("%11")).toBeTruthy());
@@ -140,14 +136,26 @@ describe("the Shell and nvim tabs", () => {
     expect(posts(d, "/api/v1/sessions/s2/shell")).toBe(1);
   });
 
-  it("opens Shell with Ctrl+Shift+T and nvim with Ctrl+Shift+E", async () => {
+  it("opens the shell drawer with Ctrl+Shift+T and the editor with Ctrl+Shift+E", async () => {
     open();
     await userEvent.keyboard("{Control>}t{/Control}");
-    expect(tab("Chat")).toHaveAttribute("aria-selected", "true");
+    expect(screen.queryByRole("region", { name: "Shell" })).not.toBeInTheDocument();
     await userEvent.keyboard("{Control>}{Shift>}t{/Shift}{/Control}");
-    expect(tab("Shell")).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("region", { name: "Shell" })).toBeInTheDocument();
     await userEvent.keyboard("{Control>}{Shift>}e{/Shift}{/Control}");
-    expect(tab("nvim")).toHaveAttribute("aria-selected", "true");
+    expect(await screen.findByRole("region", { name: "Editor" })).toBeInTheDocument();
+  });
+
+  it("opens the shell drawer from the shell route of Disk", async () => {
+    const d = open("#/sessions/s1/shell");
+    expect(screen.getByRole("region", { name: "Shell" })).toBeInTheDocument();
+    await waitFor(() => expect(d.terminals.socket("%7")).toBeTruthy());
+  });
+
+  it("passes Ctrl+` to the app, not to the terminal", async () => {
+    const d = open("#/sessions/s1/agent");
+    d.terminals.socket("%5").open();
+    expect(d.terminals.terms[0].passes({ key: "`", code: "Backquote", ctrlKey: true })).toBe(false);
   });
 });
 

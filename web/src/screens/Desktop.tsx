@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { Authed } from "../api";
 import type { AppEnv } from "../App";
-import { emptyMain, keyAction, mainTabs, modifierKeys, nextNeeding, sidebarRows, type Keys, type MainTab } from "../desktop";
+import { emptyMain, keyAction, mainTabs, modifierKeys, nextNeeding, sessionPlace, sidebarGroups, sidebarRows, stateDot, type Keys, type MainTab } from "../desktop";
 import { parseRoute } from "../route";
-import { sessionMeta, stateStyle } from "../sessions";
 import type { Session, StreamClient, StreamSnapshot } from "../stream";
 import type { Servers } from "../servers";
 import type { DesktopBridge } from "../desktopBridge";
-import { Brand } from "./Brand";
 import { FirstRun } from "./FirstRun";
 import { ServerChip, useServerListing } from "./Servers";
 import { BrowserPane, type BrowserStore } from "./Browser";
@@ -30,15 +28,12 @@ export type PaneProps = {
   host: string;
   browsers: BrowserStore;
   desktop?: DesktopBridge;
+  onBrowser?: () => void;
 };
 
 export const panes: Record<MainTab, (props: PaneProps) => ReactNode> = {
-  chat: (p) => <SessionScreen key={p.session.ID} id={p.session.ID} snapshot={p.snapshot} now={p.now} onRetry={p.onRetry} client={p.client} api={p.api} />,
-  terminal: (p) => <TerminalPane store={p.terminals} session={p.session} kind="agent" />,
+  chat: (p) => <SessionScreen key={p.session.ID} id={p.session.ID} snapshot={p.snapshot} now={p.now} onRetry={p.onRetry} client={p.client} api={p.api} onBrowser={p.onBrowser} />,
   review: (p) => <ReviewPane key={p.session.ID} session={p.session.ID} sessionState={p.session.State} api={p.api} />,
-  shell: (p) => <TerminalPane store={p.terminals} session={p.session} kind="shell" />,
-  nvim: (p) => <TerminalPane store={p.terminals} session={p.session} kind="nvim" />,
-  browser: (p) => <BrowserPane key={p.session.ID} session={p.session.ID} worktrees={p.snapshot.state?.worktrees ?? []} host={p.host} store={p.browsers} api={p.api} desktop={p.desktop} />,
 };
 
 type OnMenu = (id: string, x: number, y: number) => void;
@@ -47,7 +42,7 @@ function Row({ session, current, shortcut, keys, onMenu }: { session: Session; c
   return (
     <li>
       <a
-        className={"side-row state-" + (session.Ended ? "ended" : session.State) + (session.Unread ? " unread" : "")}
+        className={"row side-row state-" + (session.Ended ? "ended" : session.State) + (session.Unread ? " unread" : "") + (current ? " on" : "")}
         href={sessionHref(session.ID)}
         aria-current={current ? "page" : undefined}
         aria-keyshortcuts={shortcut === null ? undefined : keys.aria + "+" + shortcut}
@@ -56,34 +51,34 @@ function Row({ session, current, shortcut, keys, onMenu }: { session: Session; c
           onMenu(session.ID, e.clientX, e.clientY);
         }}
       >
-        <span className="glyph" aria-hidden="true">
-          {stateStyle(session.State).glyph}
-        </span>
-        <span className="side-text">
-          <span className="name">{sessionTitle(session)}</span>
-          <span className="meta">{sessionMeta(session)}</span>
-        </span>
+        <span className={"dot " + stateDot(session)} aria-hidden="true" />
+        <span className="nm">{sessionTitle(session)}</span>
         {session.Muted ? <span className="badge muted-badge">muted</span> : null}
         {shortcut === null ? null : <kbd className={keys.mac ? undefined : "on-demand"}>{keys.label + shortcut}</kbd>}
+        <span className="meta">{sessionPlace(session.where ?? "").repo}</span>
       </a>
     </li>
   );
 }
 
-function Group({ title, sessions, selected, keys, numbered, onMenu }: { title: string; sessions: Session[]; selected: string | null; keys: Keys; numbered: boolean; onMenu: OnMenu }) {
-  const id = "side-" + title.toLowerCase();
+function Group({ title, sessions, selected, keys, first, onMenu }: { title: string; sessions: Session[]; selected: string | null; keys: Keys; first: number; onMenu: OnMenu }) {
+  if (sessions.length === 0) {
+    return null;
+  }
+  const id = "side-" + title.toLowerCase().replace(/ /g, "-");
   return (
     <section className="side-group" aria-labelledby={id}>
-      <h2 id={id}>
+      <h2 id={id} className="side-label">
         <span>{title}</span>
         <span className="count" aria-hidden="true">
           {sessions.length}
         </span>
       </h2>
       <ul>
-        {sessions.map((s, i) => (
-          <Row key={s.ID} session={s} current={s.ID === selected} shortcut={numbered && i < 9 ? i + 1 : null} keys={keys} onMenu={onMenu} />
-        ))}
+        {sessions.map((s, i) => {
+          const n = first + i;
+          return <Row key={s.ID} session={s} current={s.ID === selected} shortcut={!s.Ended && n < 9 ? n + 1 : null} keys={keys} onMenu={onMenu} />;
+        })}
       </ul>
     </section>
   );
@@ -92,21 +87,24 @@ function Group({ title, sessions, selected, keys, numbered, onMenu }: { title: s
 type SidebarProps = { env: AppEnv; snapshot: StreamSnapshot; now: number; onRetry: () => void; selected: string | null; hash: string; keys: Keys; onMenu: OnMenu; chip: ReactNode };
 
 function Sidebar({ env, snapshot, now, onRetry, selected, hash, keys, onMenu, chip }: SidebarProps) {
-  const rows = sidebarRows(snapshot.state?.sessions ?? []);
+  const groups = sidebarGroups(snapshot.state?.sessions ?? []);
   const mark = (prefix: string) => (hash === prefix || hash.startsWith(prefix + "/") ? "page" : undefined);
   return (
     <nav className="sidebar" aria-label="Sidebar">
       <div className="side-head">
-        <Brand host={env.host} />
-        {chip}
-        <a className="new-session" href="#/new" aria-keyshortcuts={keys.aria + "+N"}>
-          New session
+        <span className="brand" title={env.host}>
+          crew
+        </span>
+        <a className={"ui icon-btn" + (hash === "#/new" ? " on" : "")} href="#/new" aria-label="New session" title={"New session  " + keys.label + "N"} aria-keyshortcuts={keys.aria + "+N"}>
+          +
         </a>
       </div>
+      {chip ? <div className="side-chip">{chip}</div> : null}
       <Connection snapshot={snapshot} now={now} onRetry={onRetry} fix={env.desktopFix} />
       <div className="side-scroll">
-        <Group title="Sessions" sessions={rows.live} selected={selected} keys={keys} numbered onMenu={onMenu} />
-        {rows.ended.length > 0 ? <Group title="Ended" sessions={rows.ended} selected={selected} keys={keys} numbered={false} onMenu={onMenu} /> : null}
+        <Group title="Needs you" sessions={groups.needs} selected={selected} keys={keys} first={0} onMenu={onMenu} />
+        <Group title="Running" sessions={groups.running} selected={selected} keys={keys} first={groups.needs.length} onMenu={onMenu} />
+        <Group title="Done" sessions={groups.done} selected={selected} keys={keys} first={groups.needs.length + groups.running.length} onMenu={onMenu} />
       </div>
       <div className="side-foot">
         {snapshot.state?.mates?.stopped ? (
@@ -147,31 +145,93 @@ function Sidebar({ env, snapshot, now, onRetry, selected, hash, keys, onMenu, ch
   );
 }
 
-function Toolbar({ tab, hasSession, onTab, children }: { tab: MainTab; hasSession: boolean; onTab: (tab: MainTab) => void; children?: ReactNode }) {
+function Tabs({ tab, hasSession, onTab }: { tab: MainTab; hasSession: boolean; onTab: (tab: MainTab) => void }) {
   return (
-    <div className="toolbar">
-      <div className="view-tabs" role="tablist" aria-label="Views">
-        {mainTabs.map((t) => {
-          const enabled = hasSession || t.needs === null;
-          return (
-            <button
-              key={t.id}
-              type="button"
-              role="tab"
-              id={"tab-" + t.id}
-              aria-controls={"pane-" + t.id}
-              aria-selected={t.id === tab}
-              disabled={!enabled}
-              title={enabled ? undefined : (t.needs ?? undefined)}
-              onClick={() => onTab(t.id)}
-            >
-              {t.title}
-            </button>
-          );
-        })}
-      </div>
-      {children ? <div className="toolbar-actions">{children}</div> : null}
+    <div className="view-tabs" role="tablist" aria-label="Views">
+      {mainTabs.map((t) => {
+        const enabled = hasSession || t.needs === null;
+        return (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            className={"tab" + (t.id === tab ? " on" : "")}
+            id={"tab-" + t.id}
+            aria-controls={"pane-" + t.id}
+            aria-selected={t.id === tab}
+            disabled={!enabled}
+            title={enabled ? undefined : (t.needs ?? undefined)}
+            onClick={() => onTab(t.id)}
+          >
+            {t.title}
+          </button>
+        );
+      })}
     </div>
+  );
+}
+
+type ToolbarProps = { session: Session | null; tab: MainTab; onTab: (tab: MainTab) => void; shell?: boolean; onShell?: () => void; children?: ReactNode };
+
+function Toolbar({ session, tab, onTab, shell, onShell, children }: ToolbarProps) {
+  const sub = session ? sessionPlace(session.where ?? "").sub : "";
+  return (
+    <div className="session-bar" role="toolbar" aria-label="Session bar">
+      {session ? <span className="title">{sessionTitle(session)}</span> : null}
+      {sub ? <span className="sub">{sub}</span> : null}
+      <span className="spacer" />
+      <Tabs tab={tab} hasSession={session !== null} onTab={onTab} />
+      {onShell ? (
+        <button type="button" className={"ui icon-btn" + (shell ? " on" : "")} aria-label="Shell" title="Shell  ⌃`" aria-pressed={shell ? "true" : "false"} onClick={onShell}>
+          ›_
+        </button>
+      ) : null}
+      {children}
+    </div>
+  );
+}
+
+function ViewOverlay({ label, onClose, children }: { label: string; onClose: () => void; children: ReactNode }) {
+  return (
+    <section className="view-overlay" role="region" aria-label={label}>
+      <div className="drawer-bar">
+        <span className="drawer-title">{label}</span>
+        <span className="spacer" />
+        <button type="button" className="ui icon-btn" aria-label={"Close " + label.toLowerCase()} onClick={onClose}>
+          ✕
+        </button>
+      </div>
+      <div className="view-body">{children}</div>
+    </section>
+  );
+}
+
+function ShellDrawer({ session, terminals, onClose }: { session: Session; terminals: TerminalStore | null; onClose: () => void }) {
+  return (
+    <section className="drawer" role="region" aria-label="Shell">
+      <div className="drawer-bar">
+        <span className="drawer-title">Shell</span>
+        <span className="drawer-path">{session.Dir || sessionPlace(session.where ?? "").sub}</span>
+        <span className="spacer" />
+        <button type="button" className="ui icon-btn" aria-label="Close shell" onClick={onClose}>
+          ✕
+        </button>
+      </div>
+      <div className="drawer-body">
+        <TerminalPane store={terminals} session={session} kind="shell" />
+      </div>
+    </section>
+  );
+}
+
+function BrowserPanel({ onClose, children }: { onClose: () => void; children: ReactNode }) {
+  return (
+    <aside className="browser-panel" aria-label="Browser">
+      <button type="button" className="ui icon-btn browser-close" aria-label="Close browser" onClick={onClose}>
+        ✕
+      </button>
+      {children}
+    </aside>
   );
 }
 
@@ -182,7 +242,7 @@ function Empty({ snapshot, live, keys }: { snapshot: StreamSnapshot; live: numbe
       <p className="pane-title">{empty.title}</p>
       {empty.detail ? <p className="muted">{empty.detail}</p> : null}
       {empty.offersNew ? (
-        <a className="new-session" href="#/new">
+        <a className="ui btn primary" href="#/new">
           New session
         </a>
       ) : null}
@@ -241,13 +301,17 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
   const sessions = snapshot.state?.sessions ?? [];
   const rows = sidebarRows(sessions);
   const session = sessions.find((s) => s.ID === selectedId) ?? null;
-  const routeTab = route.screen === "session" ? route.tab : undefined;
+  const view = route.screen === "session" ? route.view : undefined;
+  const [shell, setShell] = useState(false);
+  const [browser, setBrowser] = useState(false);
+  const autoBrowsed = useRef(new Set<string>());
 
   useEffect(() => {
-    if (routeTab) {
-      setTab(routeTab);
+    setBrowser(view === "browser");
+    if (view === "shell") {
+      setShell(true);
     }
-  }, [routeTab, selectedId]);
+  }, [view, selectedId]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -269,8 +333,14 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
         go("#/new");
         return;
       }
-      if (action.kind === "tab") {
-        setTab(action.tab);
+      if (action.kind === "shell") {
+        setShell((v) => !v);
+        return;
+      }
+      if (action.kind === "editor") {
+        if (selectedId) {
+          go(sessionHref(selectedId) + "/editor");
+        }
         return;
       }
       const next = nextNeeding(rows.live, selectedId);
@@ -286,20 +356,62 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
   if (other) {
     main = <div className="main-other">{other}</div>;
   } else if (session) {
+    const back = () => go(sessionHref(session.ID));
+    const onBrowser = () => {
+      if (!autoBrowsed.current.has(session.ID)) {
+        autoBrowsed.current.add(session.ID);
+        setBrowser(true);
+      }
+    };
+    const overlay = view === "editor" || view === "agent";
+    let body: ReactNode;
+    if (view === "editor") {
+      body = (
+        <ViewOverlay label="Editor" onClose={back}>
+          <TerminalPane store={terminals} session={session} kind="nvim" />
+        </ViewOverlay>
+      );
+    } else if (view === "agent") {
+      body = (
+        <ViewOverlay label="Agent screen" onClose={back}>
+          <TerminalPane store={terminals} session={session} kind="agent" />
+        </ViewOverlay>
+      );
+    } else {
+      body = (
+        <section className={"pane pane-" + tab} role="tabpanel" id={"pane-" + tab} aria-labelledby={"tab-" + tab}>
+          {panes[tab]({ session, snapshot, now, onRetry, client, api, terminals, host: env.host, browsers: browsers.current, desktop: env.desktop, onBrowser })}
+        </section>
+      );
+    }
+    const onTab = (t: MainTab) => {
+      setTab(t);
+      if (overlay) {
+        back();
+      }
+    };
     main = (
       <>
-        <Toolbar tab={tab} hasSession={session !== null} onTab={setTab}>
-          {session ? <SessionCommands key={session.ID} api={api} session={session} storage={env.storage} button /> : null}
+        <Toolbar session={session} tab={tab} onTab={onTab} shell={shell} onShell={() => setShell((v) => !v)}>
+          <SessionCommands key={session.ID} api={api} session={session} storage={env.storage} button />
         </Toolbar>
-        <section className={"pane pane-" + tab} role="tabpanel" id={"pane-" + tab} aria-labelledby={"tab-" + tab}>
-          {panes[tab]({ session, snapshot, now, onRetry, client, api, terminals, host: env.host, browsers: browsers.current, desktop: env.desktop })}
-        </section>
+        <div className={"split" + (browser ? " with-browser" : "")}>
+          <div className="split-main">
+            {body}
+            {shell ? <ShellDrawer session={session} terminals={terminals} onClose={() => setShell(false)} /> : null}
+          </div>
+          {browser ? (
+            <BrowserPanel onClose={() => setBrowser(false)}>
+              <BrowserPane key={session.ID} session={session.ID} worktrees={snapshot.state?.worktrees ?? []} host={env.host} store={browsers.current} api={api} desktop={env.desktop} />
+            </BrowserPanel>
+          ) : null}
+        </div>
       </>
     );
   } else {
     main = (
       <>
-        <Toolbar tab={tab} hasSession={false} onTab={setTab} />
+        <Toolbar session={null} tab={tab} onTab={setTab} />
         <Empty snapshot={snapshot} live={rows.live.length} keys={keys} />
       </>
     );
