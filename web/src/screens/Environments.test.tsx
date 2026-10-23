@@ -147,15 +147,72 @@ describe("the environments page", () => {
     expect(server.calls.filter((c) => c.path === "/api/v1/envs/test-work/ssh-key").map((c) => (c.body as { action: string }).action)).toEqual(["rotate", "confirm"]);
   });
 
-  it("cancels a new key without a confirm", async () => {
+  it("cancels a new key: it posts cancel and the old key stays", async () => {
     const user = userEvent.setup();
     const { server } = open("#/envs/test-work", true, (s) =>
-      s.on("POST", "/api/v1/envs/test-work/ssh-key", { status: 200, body: { ...work, new_public_key: "ssh-ed25519 AAAATESTNEW crew-test-work" } }),
+      s.on("POST", "/api/v1/envs/test-work/ssh-key", (call) => {
+        const action = (call.body as { action: string }).action;
+        return { status: 200, body: action === "rotate" ? { ...work, new_public_key: "ssh-ed25519 AAAATESTNEW crew-test-work" } : work };
+      }),
     );
     await user.click(await screen.findByRole("button", { name: "New key…" }));
     await user.click(await screen.findByRole("button", { name: "Cancel new key" }));
-    expect(screen.queryByText("waiting for you")).not.toBeInTheDocument();
-    expect(server.calls.filter((c) => c.path === "/api/v1/envs/test-work/ssh-key")).toHaveLength(1);
+    await waitFor(() => expect(screen.queryByText("waiting for you")).not.toBeInTheDocument());
+    expect(screen.getByText("ssh-ed25519 AAAATESTOLD crew-test-work")).toBeInTheDocument();
+    expect(server.calls.filter((c) => c.path === "/api/v1/envs/test-work/ssh-key").map((c) => (c.body as { action: string }).action)).toEqual(["rotate", "cancel"]);
+  });
+
+  it("shows a pending new key from the server after a reload", async () => {
+    open("#/envs/test-work", true, (s) =>
+      s.on("GET", "/api/v1/envs/test-work", { status: 200, body: { ...work, new_public_key: "ssh-ed25519 AAAATESTNEW crew-test-work" } }),
+    );
+    expect(await screen.findByText("ssh-ed25519 AAAATESTNEW crew-test-work")).toBeInTheDocument();
+    expect(screen.getByText("waiting for you")).toBeInTheDocument();
+  });
+
+  it("shows the date of the SSH key", async () => {
+    open("#/envs/test-work", true, (s) =>
+      s.on("GET", "/api/v1/envs/test-work", { status: 200, body: { ...work, key_created: "2026-10-21T12:00:00Z" } }),
+    );
+    expect(await screen.findByText("· Oct 21")).toBeInTheDocument();
+  });
+
+  it("fills the git identity from the server", async () => {
+    open("#/envs/test-work", true, (s) =>
+      s.on("GET", "/api/v1/envs/test-work", { status: 200, body: { ...work, git_name: "TEST bot", git_email: "bot@example.com" } }),
+    );
+    expect(await screen.findByLabelText("Name")).toHaveValue("TEST bot");
+    expect(screen.getByLabelText("Email")).toHaveValue("bot@example.com");
+  });
+
+  it("shows what crew found on this machine for Local, and how to log in", async () => {
+    const user = userEvent.setup();
+    open("#/envs/local", true, (s) =>
+      s.on("GET", "/api/v1/envs/local", {
+        status: 200,
+        body: { ...local, local: { git_name: "TEST Owner", git_email: "owner@example.com", ssh_agent: true, ssh_keys: 2, github: true, github_user: "owner", claude: true, codex: true, pi: false } },
+      }),
+    );
+    expect(await screen.findByRole("group", { name: "Git identity" })).toHaveTextContent("TEST Owner · from ~/.gitconfig");
+    expect(screen.getByRole("group", { name: "SSH" })).toHaveTextContent("ssh-agent · 2 keys");
+    expect(screen.getByRole("group", { name: "GitHub CLI" })).toHaveTextContent("logged in as @owner");
+    expect(screen.getByRole("group", { name: "Claude" })).toHaveTextContent("logged in");
+    expect(screen.getByRole("group", { name: "Codex" })).toHaveTextContent("logged in");
+    const pi = screen.getByRole("group", { name: "Pi" });
+    expect(pi).toHaveTextContent("not found");
+    expect(within(screen.getByRole("group", { name: "Claude" })).queryByRole("button", { name: "How to log in" })).not.toBeInTheDocument();
+    await user.click(within(pi).getByRole("button", { name: "How to log in" }));
+    expect(within(pi).getByText("omp")).toBeInTheDocument();
+  });
+
+  it("shows how to log in to a harness of a custom environment that has no login", async () => {
+    const user = userEvent.setup();
+    open("#/envs/test-sandbox", true, (s) =>
+      s.on("GET", "/api/v1/envs/test-sandbox", { status: 200, body: { ...sandbox, parts: ["claude"], secrets: [{ name: "CLAUDE_CODE_OAUTH_TOKEN", set: false }, { name: "ANTHROPIC_API_KEY", set: false }] } }),
+    );
+    const claude = await screen.findByRole("group", { name: "Claude" });
+    await user.click(within(claude).getByRole("button", { name: "How to log in" }));
+    expect(within(claude).getByText("crew env login test-sandbox")).toBeInTheDocument();
   });
 
   it("shows Local as read-only with extra variables and Duplicate as Custom…", async () => {
