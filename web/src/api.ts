@@ -587,3 +587,4 @@ export async function resumeSession(a: Authed, session: string): Promise<void> {
 export function killDevServers(a: Authed, session: string): Promise<{ killed: number[] }> {
   return authedRequest<{ killed: number[] }>(a, sessionPath(session, "/kill-dev-servers"), "POST");
 }
+
