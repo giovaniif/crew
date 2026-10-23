@@ -77,7 +77,7 @@ Unknown paths under `/api/` answer `not_found`.
 | `POST /api/v1/approvals/{id}/approve` | yes | `approval.decide` | → the granted `Approval`; `stale` (409) when it is decided or expired, `not_found` for an unknown ID |
 | `POST /api/v1/approvals/{id}/deny` | yes | `approval.decide` | → the denied `Approval`; the same errors |
 | `GET /api/v1/mates` | yes | `mate.list` | → `{"mates","problems","states","limits"}`, the definitions of the mates (`[]` when none) |
-| `POST /api/v1/mates` | yes | `mate.set` | `{"mate"}` → the saved mate; adds a mate or changes its settings |
+| `POST /api/v1/mates` | yes | `mate.set` | `{"mate"}` → the saved mate; adds a mate or changes its settings, also its `env` |
 | `POST /api/v1/mates/stop` | yes | `mate.stop_all` | `{"stop"}` → the limits; the kill switch for all mates |
 | `POST /api/v1/mates/{name}/pause` | yes | `mate.pause` | → the saved mate |
 | `POST /api/v1/mates/{name}/resume` | yes | `mate.resume` | → the saved mate |
@@ -87,6 +87,14 @@ Unknown paths under `/api/` answer `not_found`.
 | `POST /api/v1/mates/{name}/new` | yes | `mate.new` | `{"repo","prompt"}` (both optional, the body can be empty) → the new session |
 | `GET /api/v1/mates/{name}/memory` | yes | `mate.memory` | → `{"name","path","text","limit"}` |
 | `POST /api/v1/mates/{name}/memory` | yes | `mate.set_memory` | `{"text"}` → the same; an empty text clears the memory |
+| `GET /api/v1/envs` | yes | `env.list` | → `{"envs":[EnvInfo]}`; an `EnvInfo` is `{"name","kind","parts","secrets":[{"name","set"}],"public_key","new_public_key","used_by"}` (ADR 0061). No response holds a secret value |
+| `POST /api/v1/envs` | yes | `env.create` | `{"name","kind","parts","git_name","git_email"}` → the `EnvInfo`; the kind is fixed at creation |
+| `GET /api/v1/envs/{name}` | yes | `env.show` | → the `EnvInfo` |
+| `POST /api/v1/envs/{name}` | yes | `env.set` | `{"parts","git_name","git_email","secret","value"}` → the `EnvInfo`; the name comes from the path. Secrets are write-only: `value` goes in and never comes out |
+| `DELETE /api/v1/envs/{name}` | yes | `env.delete` | → the `EnvInfo`; `failed` while a mate uses it |
+| `POST /api/v1/envs/{name}/unset` | yes | `env.unset` | `{"secret"}` → the `EnvInfo` |
+| `GET /api/v1/envs/{name}/ssh-key` | yes | `env.ssh_key` | → the `EnvInfo` with the public key |
+| `POST /api/v1/envs/{name}/ssh-key` | yes | `env.ssh_key` | `{"action","private_key"}` (`make`, `rotate`, `confirm` or `import`) → the `EnvInfo`; after `rotate`, `new_public_key` has the new key until `confirm` |
 | `POST /api/v1/sessions/{id}/shell` | yes | `shell.focus` | `{"worktree"}` (optional, the body can be empty) → `{"pane","dir","shown"}`; open `pane` with the terminal route |
 | `POST /api/v1/sessions/{id}/nvim` | yes | `nvim.toggle` | `{"worktree"}` (optional, the body can be empty) → `{"pane","socket","shown"}`; open `pane` with the terminal route |
 | `GET /api/v1/sessions/{id}/review?scope=&worktree=` | yes | `review.open` | → `{"scope","worktrees":[{Worktree,From,Files,Err}],"viewed","draft"}`; each diff line has `Spans` (`[start, end, class]`, see [internal/syntax/](../syntax/AGENTS.md)); an empty `scope` is the last scope of the session, an empty `worktree` is all worktrees |
