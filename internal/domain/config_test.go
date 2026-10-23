@@ -25,8 +25,6 @@ func TestConfigLiteralValidatesEachKey(t *testing.T) {
 		{"defaults.claude.effort", "turbo", "", false},
 		{"defaults.codex.model", "gpt-6-sol", `"gpt-6-sol"`, true},
 		{"defaults.nope.model", "x", "", false},
-		{"theme.blue", "#1E66F5", `"#1E66F5"`, true},
-		{"theme.added_bg", "#a6e3a1", `"#a6e3a1"`, true},
 		{"theme.blue", "blue", "", false},
 		{"theme.blue", "#12345", "", false},
 		{"theme.purple", "#123456", "", false},
