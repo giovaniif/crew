@@ -537,7 +537,7 @@ function Queued({ sends, onEdit, onDrop }: { sends: QueuedSend[]; onEdit: (s: Qu
   );
 }
 
-function Composer({ session, api, sends, persona }: { session: Session; api: Authed; sends: QueuedSend[]; persona?: Persona }) {
+function Composer({ session, api, sends, persona, placeholder }: { session: Session; api: Authed; sends: QueuedSend[]; persona?: Persona; placeholder?: string }) {
   const locked = session.State === "permission" && !session.Ended;
   const [draft, setDraft] = useState("");
   const [posting, setPosting] = useState(false);
@@ -590,7 +590,7 @@ function Composer({ session, api, sends, persona }: { session: Session; api: Aut
         </p>
       ) : null}
       <form className="composer-box" onSubmit={(ev) => void submit(ev)}>
-        <textarea aria-label="Message" rows={1} value={draft} placeholder={busy(session) ? "Queue a message…" : persona ? "Message " + shownName(persona.name) + "…" : "Reply to the agent…"} onChange={(ev) => setDraft(ev.target.value)} onKeyDown={onKey} />
+        <textarea aria-label="Message" rows={1} value={draft} placeholder={placeholder ? placeholder : busy(session) ? "Queue a message…" : persona ? "Message " + shownName(persona.name) + "…" : "Reply to the agent…"} onChange={(ev) => setDraft(ev.target.value)} onKeyDown={onKey} />
         <div className="composer-foot" role="group" aria-label="Composer options">
           <span className="composer-chip">{agentChip(session)}</span>
           {session.Effort ? <span className="composer-chip">{"effort " + session.Effort}</span> : null}
@@ -778,6 +778,25 @@ export function SessionScreen({
       </main>
       <Composer session={session} api={api} sends={sends} persona={persona} />
       {confirming ? <ConfirmInterrupt api={api} session={id} onClose={() => setConfirming(false)} /> : null}
+    </div>
+  );
+}
+
+export function ThreadChat({ id, snapshot, client, api, placeholder }: { id: string; snapshot: StreamSnapshot; client: StreamClient; api: Authed; placeholder: string }) {
+  const session = snapshot.state?.sessions.find((s) => s.ID === id);
+  if (!session) {
+    return <p className="mt-note">{snapshot.state ? "This thread is gone." : "Loading…"}</p>;
+  }
+  const sends = (snapshot.state?.sends ?? []).filter((s) => s.session === id);
+  const persona = personaOf(session, snapshot);
+  return (
+    <div className="chat-screen mp-chat">
+      <main className="chat-main">
+        <Chat id={id} client={client} api={api} status={snapshot.status} persona={persona} freshFrom={session.Mate?.FreshFrom || undefined}>
+          <PermissionCard api={api} session={session} />
+        </Chat>
+      </main>
+      <Composer session={session} api={api} sends={sends} persona={persona} placeholder={placeholder} />
     </div>
   );
 }
