@@ -55,16 +55,22 @@ func (e TaskChanged) apply(s *state) rpc.Diff {
 }
 
 func (e WorktreeChanged) apply(s *state) rpc.Diff {
+	var was *domain.Worktree
 	if old, found := s.worktrees[e.Worktree.ID]; found {
-		s.automationEvents(domain.WorktreeAutomationEvents(&old, e.Worktree))
-	} else {
-		s.automationEvents(domain.WorktreeAutomationEvents(nil, e.Worktree))
+		was = &old
+	}
+	s.automationEvents(domain.WorktreeAutomationEvents(was, e.Worktree))
+	var alerts *[]domain.Alert
+	if a, ok := domain.PRChecksAlert(was, e.Worktree, time.Now()); ok {
+		s.alerts = domain.AddAlert(s.alerts, a)
+		list := slices.Clone(s.alerts)
+		alerts = &list
 	}
 	s.worktrees[e.Worktree.ID] = e.Worktree
 	stored := e.Worktree
 	stored.Ports = nil
 	s.store.PutWorktree(stored)
-	return rpc.Diff{Worktree: &e.Worktree}
+	return rpc.Diff{Worktree: &e.Worktree, Alerts: alerts}
 }
 
 func (e SessionChanged) apply(s *state) rpc.Diff {
@@ -127,6 +133,7 @@ type state struct {
 	pasting         map[string]bool
 	sendDraft       func(session domain.Session, draft domain.ReviewDraft, prompt string)
 	sends           []domain.QueuedSend
+	alerts          []domain.Alert
 	inFlight        map[string]sendFlight
 	booting         map[string]bool
 	earlyHooks      map[string][]earlyHook
@@ -722,6 +729,7 @@ func (s *state) snapshot() rpc.State {
 		ActiveTabs:  maps.Clone(s.activeTabs),
 		Mates:       s.mateBoardCopy(),
 		MateThreads: domain.MateLinks(slices.Collect(maps.Values(s.mateThreads))),
+		Alerts:      append([]domain.Alert{}, s.alerts...),
 	}
 }
 
