@@ -1,4 +1,4 @@
-# ADR 0061: Remove the TUI
+# ADR 0062: Remove the TUI
 
 Status: accepted, 2026-10-23. Issue #752. This ADR supersedes [ADR 0008](0008-tui-shell.md), [ADR 0037](0037-new-session-popup.md), [ADR 0042](0042-mouse.md) and [ADR 0047](0047-workspace-path-input.md). It changes the "The TUI stays" rule of [ADR 0057](0057-tauri-apps.md).
 
@@ -25,5 +25,5 @@ These parts stay: the daemon, `crew hook`, `crew serve`, `crew rpc`, the other C
 
 - A user who runs `crew` in a terminal gets a hint and not a UI.
 - There is less code to change for each new feature.
-- The daemon still has the `client.open` layout methods. No client of this repo calls them now. A later change can remove them.
+- The daemon still has the `client.open` layout methods. No client of this repo calls them now. A later change can remove them. #789 removed `client.popup` and `client.review`.
 - The older ADRs that describe the TUI stay as a record. Their TUI parts do not apply.

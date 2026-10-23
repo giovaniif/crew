@@ -1,6 +1,6 @@
 # ADR 0047: A typed workspace path in the new-session dialog
 
-Status: accepted, 2026-10-03. Extends [ADR 0037](0037-new-session-popup.md)'s Workspace field; `session.new` is unchanged. Superseded by [ADR 0061](0061-remove-the-tui.md): the TUI was removed.
+Status: accepted, 2026-10-03. Extends [ADR 0037](0037-new-session-popup.md)'s Workspace field; `session.new` is unchanged. Superseded by [ADR 0062](0062-remove-the-tui.md): the TUI was removed.
 
 ## Decision
 

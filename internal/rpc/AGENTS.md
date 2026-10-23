@@ -118,7 +118,7 @@ Each RPC request and response contains the build (`version.String()`). The daemo
 - The `State` of `subscribe` has `mates` (`{"stopped","mates":[{"name","state","error","guard"}]}`, sorted by name) and `mate_threads` (`[{"mate","team","channel","thread_ts","session_id","url"}]`). `url` opens the thread in Slack, and it is empty when a part is not known. A diff sets `mates` with the full board when it changes, and `mate_thread` when a thread link changes. The Slack worker makes the board after each sync and each state change of a mate. `guard` comes from `domain.MateGuard`.
 - `approval.list` (`{}` → `[Approval]`, oldest first) gives the pending approvals of mate sessions that did not expire. An `Approval` is `{"ID","SessionID","Mate","Requester","Channel","ThreadTS","Message","Action":{"Kind","Tool","Input"},"At","State"}`.
   - `approval.decide` (`{"id","approve"}` → the decided `Approval`) decides one approval as the owner. A caller on the socket (the CLI, `serve`, the Mac app) has access to the server, thus it is the owner. An unknown ID is `not_found`. An approval that is decided or expired is `stale`.
-- Other methods: `status`, `subscribe`, `session.mute` (`{"id","muted"}`), `session.focus` (`{"id"}`), `session.rename` (`{"id","name"}`), `session.unpin` (`{"id"}`), `ports.kill`, `disk.view`, `cleanup.worktree`, `review.open`, `review.viewed`, `review.comment`, `review.send`, `review.hunk`, `client.review`, `shell.toggle`, `shell.focus`, `nvim.toggle`, `nvim.open`, `onboarding.status`, `onboarding.install`, `onboarding.remove`, `onboarding.finish` and `debug.seed`.
+- Other methods: `status`, `subscribe`, `session.mute` (`{"id","muted"}`), `session.focus` (`{"id"}`), `session.rename` (`{"id","name"}`), `session.unpin` (`{"id"}`), `ports.kill`, `disk.view`, `cleanup.worktree`, `review.open`, `review.viewed`, `review.comment`, `review.send`, `review.hunk`, `shell.toggle`, `shell.focus`, `nvim.toggle`, `nvim.open`, `onboarding.status`, `onboarding.install`, `onboarding.remove`, `onboarding.finish` and `debug.seed`.
   - `onboarding.remove` (`{"harness"}`) copies the hook file to `<file>.crew-removed-<time>.bak`, then removes the hooks. `onboarding.install` puts them back.
 - Workspace and project methods:
   - `workspace.add` (`{"path": abs}` → `Workspace`).
@@ -135,12 +135,10 @@ Each RPC request and response contains the build (`version.String()`). The daemo
   - `review.viewed` (`{"mark":{Worktree,Path,Blob},"viewed"}`).
   - `review.send` (`{"session","note"}` → `ReviewDraft`) queues the draft and sends it when the session is idle, done or waiting. The draft keeps a non-empty `note` and pastes it after the comments under `Overall:`. An empty draft is `bad_request`.
   - `review.hunk` (`{"session","worktree","file","hunk","action"}`, action `stage` or `revert`) also needs `WithHunks`. If git refuses the patch, it is `failed`.
-- `client.review` (`{"open"}`) makes the sidebar pane wider for the review, or puts it back.
 - `client.open` `{"command":[…],"env":{…}}` returns `{"slot","attach"}`.
   - `slot` is the client window: the TUI pane on the left runs `command`, and the main slot is on the right. The first call creates the window. Later calls use it again while it exists.
   - `attach` is the argv that attaches a terminal to it.
 - `client.focus_main` makes the main slot of that window the active pane.
-- `client.popup` `{"command":[…],"env":{…}}` runs `command` in a centred popup over the attached client. The popup closes when the command exits. No client in this repo uses it since the TUI was removed (ADR 0061).
 - The `client.*` methods run tmux on the connection goroutine, never on the loop. Without a terminal host, they return `unavailable`. A tmux failure returns `failed`.
 - `client.native` `{"cols","rows"}` returns `{"argv","session","panes"}` for the Mac app (ADR 0049).
   - `argv` attaches a tmux control-mode client (`tmux -L <socket> -f <conf> -C attach-session -t =<session>`) to its own session.

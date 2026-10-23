@@ -1,6 +1,6 @@
 # Design sources
 
-The v1 TUI mockups (history: the TUI was removed, see [ADR 0061](../adr/0061-remove-the-tui.md)): Catppuccin Latte, JetBrains Mono, 1440×900 boards. The PNGs in [`../images`](../images) are exports of these mockups.
+The v1 TUI mockups (history: the TUI was removed, see [ADR 0062](../adr/0062-remove-the-tui.md)): Catppuccin Latte, JetBrains Mono, 1440×900 boards. The PNGs in [`../images`](../images) are exports of these mockups.
 
 - `Main.dc.html`: sessions sidebar, agent pane, shell.
 - `Review.dc.html`: review pane with scopes, worktree tabs, diff and draft comments.

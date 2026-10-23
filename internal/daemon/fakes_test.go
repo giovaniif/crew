@@ -314,18 +314,16 @@ type fakeClientHost struct {
 	opened      []app.PaneSpec
 	open        map[app.Slot]bool
 	focused     []app.Slot
-	wide        []bool
 	ensured     []app.Slot
 	gone        bool
 	duringCheck func()
 
-	slotPane      map[app.Slot]app.PaneID
-	below         app.PaneID
-	belowLog      []string
-	popups        []app.PaneID
-	commandPopups []app.PaneSpec
-	focusedBelow  int
-	detached      []app.Slot
+	slotPane     map[app.Slot]app.PaneID
+	below        app.PaneID
+	belowLog     []string
+	popups       []app.PaneID
+	focusedBelow int
+	detached     []app.Slot
 
 	native      app.NativeClient
 	nativeSizes [][2]int
@@ -395,16 +393,6 @@ func (h *fakeClientHost) FocusSlot(_ context.Context, slot app.Slot) error {
 		return errors.New("no such slot")
 	}
 	h.focused = append(h.focused, slot)
-	return nil
-}
-
-func (h *fakeClientHost) WidenSidebar(_ context.Context, slot app.Slot, wide bool) error {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	if !h.open[slot] {
-		return errors.New("no such slot")
-	}
-	h.wide = append(h.wide, wide)
 	return nil
 }
 
@@ -947,13 +935,6 @@ func (h *fakeClientHost) FocusBelow(context.Context, app.Slot) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.focusedBelow++
-	return nil
-}
-
-func (h *fakeClientHost) PopupCommand(_ context.Context, spec app.PaneSpec) error {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	h.commandPopups = append(h.commandPopups, spec)
 	return nil
 }
 

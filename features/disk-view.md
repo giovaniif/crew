@@ -12,7 +12,7 @@ go run ./scripts/verify iso seed --sessions 3
 
 ## Recipes
 
-### the Disk screen lists every worktree (manual: no app recipe yet; the TUI recipes were removed with the TUI, see [ADR 0061](../docs/adr/0061-remove-the-tui.md))
+### the Disk screen lists every worktree (manual: no app recipe yet; the TUI recipes were removed with the TUI, see [ADR 0062](../docs/adr/0062-remove-the-tui.md))
 
 ## Cleanup
 
