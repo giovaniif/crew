@@ -55,7 +55,10 @@ func TestEnvFakesFireSessionStartWithTheSameSessionIDInAWorktree(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(home, "bin", "crew"), []byte("#!/bin/sh\necho \"$*\" >>"+log+"\ncat >>"+log+"\necho >>"+log+"\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	work := t.TempDir()
+	work, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, h := range []string{"claude", "claude", "codex"} {
 		c := exec.Command(filepath.Join(home, "fakes", h))
 		c.Dir = work
