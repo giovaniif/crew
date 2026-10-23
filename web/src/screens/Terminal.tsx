@@ -14,6 +14,8 @@ function notice(status: TermStatus): { text: string; action: string | null } | n
       return { text: "Connecting…", action: null };
     case "gone":
       return { text: "The pane is gone.", action: "Open again" };
+    case "paneClosed":
+      return { text: "This session's pane closed.", action: "Open again" };
     case "unavailable":
       return { text: "tmux is not available on the server.", action: "Try again" };
     case "closed":

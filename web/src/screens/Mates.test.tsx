@@ -6,6 +6,7 @@ import { App, type AppEnv, type PageVisibility } from "../App";
 import type { Frame, Mates, StreamState } from "../stream";
 import { FakeServer, MemoryStorage } from "../test/fake-server";
 import { FakeSockets } from "../test/fake-socket";
+import { pick } from "../test/pick";
 
 const golden = (name: string) => JSON.parse(readFileSync(new URL("../../../internal/serve/testdata/" + name, import.meta.url), "utf8"));
 const goldenState = (): StreamState => (golden("stream-state.json") as Frame).state as StreamState;
@@ -359,7 +360,7 @@ describe("New mate", () => {
     expect(screen.getAllByText("Brief 2/5").length).toBeGreaterThan(0);
     expect(screen.getByRole("region", { name: "Added to the prompt" })).toHaveTextContent("Write one line per answer.");
     await user.click(screen.getByRole("button", { name: "Next: brains" }));
-    await user.selectOptions(screen.getByLabelText("Agent"), "codex");
+    await pick(user, screen.getByRole("combobox", { name: "Agent" }), "codex");
     await user.type(screen.getByLabelText("Model"), "gpt-5");
     await user.type(screen.getByLabelText("Effort"), "high");
     await user.type(screen.getByLabelText("Repos"), "api, web");

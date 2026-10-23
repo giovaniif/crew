@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { App, type AppEnv } from "../App";
 import { FakeServer, MemoryStorage } from "../test/fake-server";
 import { FakeSockets } from "../test/fake-socket";
+import { pick } from "../test/pick";
 
 const golden = (name: string) => JSON.parse(readFileSync(new URL("../../../internal/serve/testdata/" + name, import.meta.url), "utf8"));
 const device = { id: "k3m9p2qx", name: "iPhone", created_at: "2026-10-03T10:00:00Z", last_seen: "2026-10-03T10:00:00Z" };
@@ -91,28 +92,28 @@ describe("starting a session from the phone", () => {
 
   it("defaults to the daemon's last used workspace, Claude, and no model or effort", async () => {
     const { server } = setup();
-    const workspace = await screen.findByLabelText("Workspace");
-    await waitFor(() => expect(workspace).toHaveValue("/home/me/api"));
+    const workspace = await screen.findByRole("combobox", { name: "Workspace" });
+    await waitFor(() => expect(workspace).toHaveTextContent("/home/me/api"));
     expect(screen.getByRole("radio", { name: "Claude" })).toBeChecked();
     expect(screen.getByLabelText("Model")).toHaveValue("");
-    expect(screen.getByLabelText("Effort")).toHaveValue("");
+    expect(screen.getByRole("radio", { name: /^default/ })).toBeChecked();
     expect(screen.getByRole("button", { name: "Start session" })).toBeEnabled();
     expect(new Set(server.headers.map((h) => h.authorization))).toEqual(new Set(["Bearer t0k"]));
   });
 
   it("defaults to what this phone used last", async () => {
     setup({ remembered: { workspace: "/home/me/web", harness: "codex", model: "gpt-5.5", effort: "high" } });
-    const workspace = await screen.findByLabelText("Workspace");
-    await waitFor(() => expect(workspace).toHaveValue("/home/me/web"));
+    const workspace = await screen.findByRole("combobox", { name: "Workspace" });
+    await waitFor(() => expect(workspace).toHaveTextContent("/home/me/web"));
     expect(screen.getByRole("radio", { name: "Codex" })).toBeChecked();
     expect(screen.getByLabelText("Model")).toHaveValue("gpt-5.5");
-    expect(screen.getByLabelText("Effort")).toHaveValue("high");
+    expect(screen.getByRole("radio", { name: "high" })).toBeChecked();
   });
 
   it("falls back to the last used workspace when the remembered one is gone", async () => {
     setup({ remembered: { workspace: "/home/me/gone", harness: "claude", model: "", effort: "" } });
-    const workspace = await screen.findByLabelText("Workspace");
-    await waitFor(() => expect(workspace).toHaveValue("/home/me/api"));
+    const workspace = await screen.findByRole("combobox", { name: "Workspace" });
+    await waitFor(() => expect(workspace).toHaveTextContent("/home/me/api"));
   });
 
   it("explains what the task does and how an empty one is named", async () => {
@@ -124,10 +125,10 @@ describe("starting a session from the phone", () => {
     setup();
     const model = await screen.findByLabelText("Model");
     await waitFor(() => expect(model).toHaveAttribute("placeholder", "default (opus)"));
-    expect(screen.getByRole("option", { name: "default (high)" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "default (high)" })).toBeChecked();
     await userEvent.click(screen.getByRole("radio", { name: "Codex" }));
     expect(model).toHaveAttribute("placeholder", "default");
-    expect(screen.getByRole("option", { name: "default" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "default" })).toBeChecked();
   });
 
   it("asks for a PR URL or text as the work item", async () => {
@@ -160,12 +161,12 @@ describe("starting a session from the phone", () => {
     server.on("GET", resolveURL("/home/me/web", "ENG-12"), { status: 200, body: golden("work-item-resolved.json") });
     server.on("POST", "/api/v1/sessions", { status: 200, body: golden("session-new.json") });
     const user = userEvent.setup();
-    await waitFor(() => expect(screen.getByLabelText("Workspace")).toHaveValue("/home/me/api"));
-    await user.selectOptions(screen.getByLabelText("Workspace"), "/home/me/web");
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "Workspace" })).toHaveTextContent("/home/me/api"));
+    await pick(user, screen.getByRole("combobox", { name: "Workspace" }), /\/home\/me\/web/);
     await user.type(screen.getByLabelText("Task (optional)"), "ENG-12");
     await user.click(screen.getByRole("radio", { name: "Codex" }));
     await user.type(screen.getByLabelText("Model"), "gpt-5.5");
-    await user.selectOptions(screen.getByLabelText("Effort"), "high");
+    await user.click(screen.getByRole("radio", { name: "high" }));
     await user.type(screen.getByLabelText("First prompt"), "start with the tests");
     await user.click(screen.getByRole("button", { name: "Start session" }));
     await waitFor(() => expect(window.location.hash).toBe("#/sessions/s9"));
@@ -191,7 +192,7 @@ describe("starting a session from the phone", () => {
     server.on("GET", resolveURL("/home/me/api", "tidy"), { status: 200, body: { source: "text", title: "tidy", worktree: "tidy", workspace: "/home/me/api" } });
     server.on("POST", "/api/v1/sessions", { status: 200, body: golden("session-new.json") });
     const user = userEvent.setup();
-    await waitFor(() => expect(screen.getByLabelText("Workspace")).toHaveValue("/home/me/api"));
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "Workspace" })).toHaveTextContent("/home/me/api"));
     await user.type(screen.getByLabelText("Task (optional)"), "tidy");
     await user.type(screen.getByLabelText("First prompt"), "   ");
     await user.click(screen.getByRole("button", { name: "Start session" }));
@@ -204,7 +205,7 @@ describe("starting a session from the phone", () => {
     server.on("GET", resolveURL("/home/me/api", "tidy"), { status: 200, body: { source: "text", title: "tidy", worktree: "tidy", workspace: "/home/me/api" } });
     server.on("POST", "/api/v1/sessions", { status: 500, body: golden("session-new-failed.json") });
     const user = userEvent.setup();
-    await waitFor(() => expect(screen.getByLabelText("Workspace")).toHaveValue("/home/me/api"));
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "Workspace" })).toHaveTextContent("/home/me/api"));
     await user.type(screen.getByLabelText("Task (optional)"), "tidy");
     await user.click(screen.getByRole("button", { name: "Start session" }));
     const alert = await screen.findByRole("alert");
@@ -219,7 +220,7 @@ describe("starting a session from the phone", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Could not load workspaces: daemon is down");
     server.on("GET", "/api/v1/workspaces", { status: 200, body: workspaces });
     await userEvent.click(screen.getByRole("button", { name: "Retry now" }));
-    await waitFor(() => expect(screen.getByLabelText("Workspace")).toHaveValue("/home/me/api"));
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "Workspace" })).toHaveTextContent("/home/me/api"));
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });
@@ -228,7 +229,7 @@ describe("managing workspaces from the phone", () => {
   it("adds a workspace from a path with ~ and selects it", async () => {
     const { server } = setup();
     server.on("POST", "/api/v1/workspaces", { status: 200, body: { Root: "/home/me/docs", Kind: "single", Repos: [] } });
-    await waitFor(() => expect(screen.getByLabelText("Workspace")).toHaveValue("/home/me/api"));
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "Workspace" })).toHaveTextContent("/home/me/api"));
     server.on("GET", "/api/v1/workspaces", {
       status: 200,
       body: { workspaces: [...workspaces.workspaces, { Root: "/home/me/docs", Kind: "single", Repos: [], LastUsed: "0001-01-01T00:00:00Z" }], last_used: "/home/me/api" },
@@ -237,13 +238,13 @@ describe("managing workspaces from the phone", () => {
     await userEvent.type(screen.getByRole("textbox", { name: "Folder on the server" }), "~/docs");
     await userEvent.click(screen.getByRole("button", { name: "Add" }));
     expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/workspaces")?.body).toEqual({ path: "/home/me/docs" });
-    await waitFor(() => expect(screen.getByLabelText("Workspace")).toHaveValue("/home/me/docs"));
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "Workspace" })).toHaveTextContent("/home/me/docs"));
   });
 
   it("shows why the server refused a folder", async () => {
     const { server } = setup();
     server.on("POST", "/api/v1/workspaces", { status: 400, body: { error: { code: "bad_request", message: "/home/me/nope is not a directory" } } });
-    await waitFor(() => expect(screen.getByLabelText("Workspace")).toHaveValue("/home/me/api"));
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "Workspace" })).toHaveTextContent("/home/me/api"));
     await userEvent.click(screen.getByRole("button", { name: "Add workspace…" }));
     await userEvent.type(screen.getByRole("textbox", { name: "Folder on the server" }), "/home/me/nope");
     await userEvent.click(screen.getByRole("button", { name: "Add" }));
@@ -252,7 +253,7 @@ describe("managing workspaces from the phone", () => {
 
   it("shows the remove workspace confirm with a secondary Cancel and a danger Remove", async () => {
     setup();
-    await waitFor(() => expect(screen.getByLabelText("Workspace")).toHaveValue("/home/me/api"));
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "Workspace" })).toHaveTextContent("/home/me/api"));
     await userEvent.click(screen.getByRole("button", { name: "Remove workspace" }));
     const dialog = screen.getByRole("alertdialog");
     expect(within(dialog).getByRole("button", { name: "Cancel" })).toHaveClass("secondary");
@@ -262,7 +263,7 @@ describe("managing workspaces from the phone", () => {
   it("removes the selected workspace only after a confirmation that no files change", async () => {
     const { server } = setup();
     server.on("POST", "/api/v1/workspaces/remove", { status: 200, body: {} });
-    await waitFor(() => expect(screen.getByLabelText("Workspace")).toHaveValue("/home/me/api"));
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "Workspace" })).toHaveTextContent("/home/me/api"));
     await userEvent.click(screen.getByRole("button", { name: "Remove workspace" }));
     const dialog = screen.getByRole("alertdialog");
     expect(dialog).toHaveTextContent("No files, worktrees or branches on the server change.");
@@ -270,6 +271,6 @@ describe("managing workspaces from the phone", () => {
     server.on("GET", "/api/v1/workspaces", { status: 200, body: { workspaces: [workspaces.workspaces[1]], last_used: "" } });
     await userEvent.click(screen.getByRole("button", { name: "Remove /home/me/api" }));
     expect(server.calls.find((c) => c.path === "/api/v1/workspaces/remove")?.body).toEqual({ root: "/home/me/api" });
-    await waitFor(() => expect(screen.getByLabelText("Workspace")).toHaveValue("/home/me/web"));
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "Workspace" })).toHaveTextContent("/home/me/web"));
   });
 });

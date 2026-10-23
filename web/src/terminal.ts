@@ -39,6 +39,7 @@ export type TermStatus =
   | { kind: "connecting" }
   | { kind: "live" }
   | { kind: "gone" }
+  | { kind: "paneClosed" }
   | { kind: "unavailable" }
   | { kind: "closed" }
   | { kind: "failed"; message: string };
@@ -60,6 +61,7 @@ export class TerminalEntry {
   status: TermStatus = { kind: "idle" };
   private socket: TermSocket | null = null;
   private pane: string | null = null;
+  private closedPane: string | null = null;
   private listeners = new Set<() => void>();
 
   constructor(
@@ -89,6 +91,9 @@ export class TerminalEntry {
 
   update(session: Session): void {
     this.session = session;
+    if (this.status.kind === "paneClosed" && session.Pane && session.Pane !== this.closedPane) {
+      queueMicrotask(() => this.retry());
+    }
   }
 
   subscribe = (listener: () => void): (() => void) => {
@@ -131,6 +136,11 @@ export class TerminalEntry {
         this.set({ kind: "failed", message: "This session has no terminal pane." });
         return;
       }
+      if (pane === this.closedPane) {
+        this.set({ kind: "paneClosed" });
+        return;
+      }
+      this.closedPane = null;
     } else if (!pane) {
       this.set({ kind: "opening" });
       try {
@@ -162,9 +172,12 @@ export class TerminalEntry {
       }
       this.socket = null;
       if (ev.code === closeNoPane) {
-        if (this.kind !== "agent") {
-          this.pane = null;
+        if (this.kind === "agent") {
+          this.closedPane = pane;
+          this.set({ kind: "paneClosed" });
+          return;
         }
+        this.pane = null;
         this.set({ kind: "gone" });
       } else if (ev.code === closeTryLater) {
         this.set({ kind: "unavailable" });

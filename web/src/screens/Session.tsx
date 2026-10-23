@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import Markdown from "react-markdown";
 import { ApiError, answerPrompt, getPrompt, interrupt, markRead, messagesPage, sendMessage, startFresh, unsend, type Authed, type Prompt } from "../api";
 import { faceState, stateWords, type FaceState } from "../faces";
@@ -10,6 +10,7 @@ import { Connection, sessionTitle } from "./SessionList";
 import { SessionCommands } from "./SessionCommands";
 import type { KeyValue } from "../auth";
 import { legacyBrowserWord } from "../legacy";
+import { Checkbox } from "../ui";
 
 const stateLabels: Record<string, string> = {
   running: "working",
@@ -531,9 +532,9 @@ function Composer({ session, api, sends, persona }: { session: Session; api: Aut
   const [error, setError] = useState("");
   const blank = draft.trim() === "";
 
-  const submit = async (ev: FormEvent) => {
+  const submit = async (ev: FormEvent | KeyboardEvent<HTMLTextAreaElement>) => {
     ev.preventDefault();
-    if (blank || posting) {
+    if (blank || posting || locked) {
       return;
     }
     setPosting(true);
@@ -547,6 +548,13 @@ function Composer({ session, api, sends, persona }: { session: Session; api: Aut
     } finally {
       setPosting(false);
     }
+  };
+
+  const onKey = (ev: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (ev.key !== "Enter" || ev.shiftKey || ev.nativeEvent.isComposing || ev.keyCode === 229) {
+      return;
+    }
+    void submit(ev);
   };
 
   const takeBack = async (s: QueuedSend, edit: boolean) => {
@@ -570,7 +578,7 @@ function Composer({ session, api, sends, persona }: { session: Session; api: Aut
         </p>
       ) : null}
       <form onSubmit={(ev) => void submit(ev)}>
-        <textarea aria-label="Message" rows={1} value={draft} disabled={locked} placeholder={locked ? "Answer the permission request first" : busy(session) ? "Queue a message" : persona ? "Message " + shownName(persona.name) + "…" : "Message"} onChange={(ev) => setDraft(ev.target.value)} />
+        <textarea aria-label="Message" rows={1} value={draft} disabled={locked} placeholder={locked ? "Answer the permission request first" : busy(session) ? "Queue a message" : persona ? "Message " + shownName(persona.name) + "…" : "Message"} onChange={(ev) => setDraft(ev.target.value)} onKeyDown={onKey} />
         <button type="submit" disabled={blank || posting || locked}>
           {busy(session) ? "Queue" : "Send"}
         </button>
@@ -666,10 +674,7 @@ function MateTools({ api, session, mate, snapshot }: { api: Authed; session: Ses
           onCancel={() => setAsking(false)}
           onConfirm={() => void fresh()}
         >
-          <label className="mate-bar-keep">
-            <input type="checkbox" checked={keep} onChange={(e) => setKeep(e.target.checked)} />
-            Keep this worktree
-          </label>
+          <Checkbox className="mate-bar-keep" label="Keep this worktree" checked={keep} onChange={setKeep} />
         </Confirm>
       ) : null}
     </>

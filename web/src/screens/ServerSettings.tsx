@@ -23,6 +23,7 @@ import {
   type PairCode,
   type WorkspaceInfo,
 } from "../api";
+import { Select, Stepper } from "../ui";
 
 type Loaded<T> = { state: "loading" } | { state: "ready"; value: T } | { state: "failed"; note: string };
 
@@ -285,28 +286,24 @@ export function AgentsGroup({ api }: { api: Authed }) {
             </div>
             {config ? (
               <>
-                <label>
+                <div className="ui-field">
                   Default model
-                  <select value={value("defaults." + h.harness + ".model")} onChange={(e) => save("defaults." + h.harness + ".model", e.target.value)}>
-                    <option value="">{"default" + (h.default_model ? " (" + h.default_model + ")" : "")}</option>
-                    {(h.models ?? []).map((m) => (
-                      <option key={m} value={m}>
-                        {m}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
+                  <Select
+                    label="Default model"
+                    value={value("defaults." + h.harness + ".model")}
+                    onChange={(v) => save("defaults." + h.harness + ".model", v)}
+                    options={[{ value: "", label: "default" + (h.default_model ? " (" + h.default_model + ")" : "") }, ...(h.models ?? []).map((m) => ({ value: m, label: m }))]}
+                  />
+                </div>
+                <div className="ui-field">
                   Default effort
-                  <select value={value("defaults." + h.harness + ".effort")} onChange={(e) => save("defaults." + h.harness + ".effort", e.target.value)}>
-                    <option value="">{"default" + (h.default_effort ? " (" + h.default_effort + ")" : "")}</option>
-                    {(h.efforts ?? []).map((m) => (
-                      <option key={m} value={m}>
-                        {m}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                  <Select
+                    label="Default effort"
+                    value={value("defaults." + h.harness + ".effort")}
+                    onChange={(v) => save("defaults." + h.harness + ".effort", v)}
+                    options={[{ value: "", label: "default" + (h.default_effort ? " (" + h.default_effort + ")" : "") }, ...(h.efforts ?? []).map((m) => ({ value: m, label: m }))]}
+                  />
+                </div>
               </>
             ) : null}
           </fieldset>
@@ -314,10 +311,10 @@ export function AgentsGroup({ api }: { api: Authed }) {
       })}
       {config ? (
         <div className="settings-row">
-          <label>
+          <div className="ui-field">
             Fallback threshold (%)
-            <input type="number" min={0} max={100} value={threshold} onChange={(e) => setThreshold(e.target.value)} />
-          </label>
+            <Stepper label="Fallback threshold (%)" min={0} max={100} value={threshold} onChange={setThreshold} />
+          </div>
           <button type="button" onClick={() => save("fallback.threshold", threshold)}>
             Save threshold
           </button>

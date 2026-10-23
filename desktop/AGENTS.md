@@ -8,7 +8,7 @@ The Tauri 2 app for desktop and mobile ([ADR 0057](../docs/adr/0057-tauri-apps.m
   - `src/lib.rs` opens the `main` window. If `CREW_URL` is set, the window loads it. Thus the UI and `/api/v1` have the same origin.
   - Else the app starts its own `crew serve` (`src/local.rs`):
     1. It uses the `crew` binary next to the app binary (the bundle), else the first `crew` on `PATH`.
-    2. It runs `crew serve --addr 127.0.0.1:<port> --url http://127.0.0.1:<port>` on a free port and waits for `/api/v1/hello`.
+    2. It runs `crew serve --addr 127.0.0.1:<port> --url http://127.0.0.1:<port>` on a free port and waits for `/api/v1/hello`. A macOS GUI app gets only `/usr/bin:/bin:/usr/sbin:/sbin`. Thus `crew serve`, `crew remote pair` and `crew setup daemon` get the `PATH` of `$SHELL -lc` (3 s timeout), then the app `PATH`, `~/.local/bin`, `/usr/local/bin` and `/opt/homebrew/bin` (`local::serve_path`). The daemon that `crew serve` starts then finds `tmux` and `nvim`.
     3. It uses the token in `auth.json` in the app data directory (600) if the token works. Else it gets a code from `crew remote pair --json --name desktop`, pairs with `POST /api/v1/pair` and writes `auth.json`.
     4. It gives the login to the page as `window.__CREW_DESKTOP_AUTH__` (an initialization script). The web app uses it as `AppEnv.desktopAuth` and does not write it to `localStorage`. Thus the app shows no Install or Pair screen.
     5. It stops `crew serve` when it quits. On Linux, `crew serve` also gets `SIGTERM` when the app process stops (`PR_SET_PDEATHSIG`).

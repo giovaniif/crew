@@ -39,6 +39,7 @@ import {
 import type { MateRow, Mates as MateBoard } from "../stream";
 import type { PageVisibility } from "../App";
 import { ApprovalList } from "./Approvals";
+import { Select } from "../ui";
 
 function message(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
@@ -228,13 +229,18 @@ function Brains({ mate, repos, onMate, onRepos }: { mate: Mate; repos: string; o
   );
   return (
     <>
-      <label>
+      <div className="ui-field">
         Agent
-        <select value={mate.agent} onChange={(e) => onMate({ ...mate, agent: e.target.value })}>
-          <option value="claude">claude</option>
-          <option value="codex">codex</option>
-        </select>
-      </label>
+        <Select
+          label="Agent"
+          value={mate.agent}
+          onChange={(agent) => onMate({ ...mate, agent })}
+          options={[
+            { value: "claude", label: "claude" },
+            { value: "codex", label: "codex" },
+          ]}
+        />
+      </div>
       {field("model")}
       {field("effort")}
       <label>

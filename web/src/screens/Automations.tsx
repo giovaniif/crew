@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { ApiError, type Automation, type AutomationRun, type Authed, automationRuns, listAutomations, rerunAutomation, runAutomation, saveAutomation } from "../api";
 import { automationOf, automationRows, draftOf, newDraft, repoSource, runsOf, type AutomationDraft, type AutomationQuery } from "../automations";
+import { Checkbox, Select } from "../ui";
 
 function trigger(a: Automation): string {
   const parts: string[] = [];
@@ -188,16 +189,10 @@ function EditForm({ api, title, initial, fixedName, taken = [], onSaved, onCance
       <h2>{title}</h2>
       {fixedName ? null : <Field label="Name" value={d.name} onChange={set("name")} />}
       {nameTaken ? <p className="mate-error">An automation named {d.name.trim()} exists.</p> : null}
-      <label>
+      <div className="ui-field">
         Agent
-        <select value={d.agent} onChange={(e) => setD({ ...d, agent: e.target.value })}>
-          {["claude", "codex", "omp"].map((a) => (
-            <option key={a} value={a}>
-              {a}
-            </option>
-          ))}
-        </select>
-      </label>
+        <Select label="Agent" value={d.agent} onChange={(agent) => setD({ ...d, agent })} options={["claude", "codex", "omp"].map((a) => ({ value: a, label: a }))} />
+      </div>
       <Field label="Model" value={d.model} onChange={set("model")} />
       <Field label="Effort" value={d.effort} onChange={set("effort")} />
       <Field label="Target" value={d.target} onChange={set("target")} />
@@ -207,10 +202,7 @@ function EditForm({ api, title, initial, fixedName, taken = [], onSaved, onCance
       <Field label="Events (comma separated)" value={d.on} onChange={set("on")} />
       <Field label="Precheck" value={d.precheck} onChange={set("precheck")} />
       <Field label="Session" value={d.session} onChange={set("session")} />
-      <label className="check">
-        <input type="checkbox" checked={d.enabled} onChange={(e) => setD({ ...d, enabled: e.target.checked })} />
-        Enabled
-      </label>
+      <Checkbox label="Enabled" checked={d.enabled} onChange={(enabled) => setD({ ...d, enabled })} />
       {note ? <p role="alert">{note}</p> : null}
       <div className="run-actions">
         <button type="button" className="secondary" onClick={onCancel}>
@@ -345,42 +337,50 @@ export function Automations({ api }: { api: Authed }) {
           Search automations
           <input type="search" value={query.search} onChange={(e) => setQuery({ ...query, search: e.target.value })} />
         </label>
-        <label>
+        <div className="ui-field">
           State
-          <select value={query.enabled === null ? "" : String(query.enabled)} onChange={(e) => setQuery({ ...query, enabled: e.target.value === "" ? null : e.target.value === "true" })}>
-            <option value="">All</option>
-            <option value="true">Enabled</option>
-            <option value="false">Paused</option>
-          </select>
-        </label>
-        <label>
+          <Select
+            label="State"
+            value={query.enabled === null ? "" : String(query.enabled)}
+            onChange={(v) => setQuery({ ...query, enabled: v === "" ? null : v === "true" })}
+            options={[
+              { value: "", label: "All" },
+              { value: "true", label: "Enabled" },
+              { value: "false", label: "Paused" },
+            ]}
+          />
+        </div>
+        <div className="ui-field">
           Last outcome
-          <select value={query.outcome ?? ""} onChange={(e) => setQuery({ ...query, outcome: e.target.value || null })}>
-            <option value="">Any</option>
-            <option value="succeeded">Succeeded</option>
-            <option value="failed">Failed</option>
-            <option value="skipped">Skipped</option>
-            <option value="never">Never run</option>
-          </select>
-        </label>
-        <label>
+          <Select
+            label="Last outcome"
+            value={query.outcome ?? ""}
+            onChange={(v) => setQuery({ ...query, outcome: v || null })}
+            options={[
+              { value: "", label: "Any" },
+              { value: "succeeded", label: "Succeeded" },
+              { value: "failed", label: "Failed" },
+              { value: "skipped", label: "Skipped" },
+              { value: "never", label: "Never run" },
+            ]}
+          />
+        </div>
+        <div className="ui-field">
           Agent
-          <select value={query.agent ?? ""} onChange={(e) => setQuery({ ...query, agent: e.target.value || null })}>
-            <option value="">All</option>
-            {agents.map((a) => (
-              <option key={a} value={a}>
-                {a}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
+          <Select label="Agent" value={query.agent ?? ""} onChange={(v) => setQuery({ ...query, agent: v || null })} options={[{ value: "", label: "All" }, ...agents.map((a) => ({ value: a, label: a }))]} />
+        </div>
+        <div className="ui-field">
           Sort
-          <select value={query.sort} onChange={(e) => setQuery({ ...query, sort: e.target.value as AutomationQuery["sort"] })}>
-            <option value="name">Name</option>
-            <option value="lastRun">Last run</option>
-          </select>
-        </label>
+          <Select<AutomationQuery["sort"]>
+            label="Sort"
+            value={query.sort}
+            onChange={(sort) => setQuery({ ...query, sort })}
+            options={[
+              { value: "name", label: "Name" },
+              { value: "lastRun", label: "Last run" },
+            ]}
+          />
+        </div>
       </div>
       {error && <p role="alert">{error}</p>}
       {problems.map((p) => (

@@ -7,6 +7,7 @@ This folder is the shared memory of what "working" means in crew (ADR [0055](../
 | Area | File | Surfaces |
 |---|---|---|
 | Sessions | [sessions.md](sessions.md) | CLI, TUI, PWA |
+| Live session | [live-session.md](live-session.md) | PWA, app |
 | Review pane | [review-pane.md](review-pane.md) | TUI |
 | Worktrees and cleanup | [worktrees-cleanup.md](worktrees-cleanup.md) | CLI, TUI |
 | PR board | [pr-board.md](pr-board.md) | CLI |
@@ -41,3 +42,5 @@ go run ./scripts/verify map status
 go run ./scripts/verify map run sessions
 go run ./scripts/verify map run sessions --recipe "sidebar lists the seeded sessions"
 ```
+
+A recipe can drive the PWA (`verify web`), the TUI (`verify tui`), the CLI (`verify iso crew`) and the desktop app (`verify app`, the same steps as `web`). For a recipe that needs a real agent pane, use `verify iso up --session` in `## Setup` (see [live-session.md](live-session.md)).

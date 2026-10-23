@@ -67,7 +67,8 @@ describe("FirstRun", () => {
     await userEvent.click(screen.getByRole("radio", { name: /SSH/ }));
     await press("Continue");
     const host = screen.getByRole("combobox", { name: "SSH host" });
-    expect(await screen.findByRole("option", { name: "gpu", hidden: true })).toBeInTheDocument();
+    await userEvent.click(host);
+    expect(await screen.findByRole("option", { name: "gpu" })).toBeInTheDocument();
     await userEvent.type(host, "-oProxyCommand=sh");
     expect(screen.getByRole("alert")).toHaveTextContent("Type a host name");
     expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();

@@ -1,0 +1,164 @@
+.automations ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.automation-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.automation-row span {
+  color: var(--subtext);
+}
+
+.automation-row button {
+  min-height: 44px;
+  margin-left: auto;
+  padding: 8px 16px;
+}
+
+.run-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 12px;
+}
+
+.run-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.run-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.run-actions button {
+  min-height: 44px;
+  padding: 8px 16px;
+}
+
+.automation-meta .history {
+  min-height: 44px;
+  background: none;
+  border: none;
+  color: var(--link);
+  font: inherit;
+  padding: 0 4px;
+}
+
+.automations ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.automations > ul > li {
+  background: var(--mantle);
+  border: 1px solid var(--surface);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.automations .runs li {
+  background: var(--base);
+}
+
+.automation-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+
+.automation-row button {
+  margin-left: auto;
+}
+
+.automation-meta {
+  align-items: center;
+}
+
+.automations-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.automation-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.automation-filters label {
+  flex: 1 1 8rem;
+}
+
+.automation-filters label:first-child {
+  flex: 2 1 14rem;
+}
+
+.automation-detail {
+  margin-top: 8px;
+  padding: 12px;
+  background: var(--paper);
+  border: 1px solid var(--surface);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.detail-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.detail-tabs button {
+  min-height: 44px;
+  background: var(--mantle);
+  color: var(--text);
+  font-weight: 500;
+}
+
+.automation-detail .fact {
+  display: contents;
+}
+
+.automation-prompt {
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--mantle);
+  border-radius: 8px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: var(--mono);
+  font-size: 14px;
+}
+
+.automation-form {
+  padding: 12px;
+  background: var(--mantle);
+  border-radius: var(--radius);
+}
+
+.automation-form h2 {
+  margin: 0;
+  font-size: 17px;
+}
