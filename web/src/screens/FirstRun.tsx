@@ -1,22 +1,22 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { backStep, flowSteps, nextStep, primaryTitle, sshTarget, stepTitle, type Servers, type Step, type Where } from "../servers";
-import { RadioGroup, Suggest } from "../ui";
+import type { KeyValue } from "../auth";
+import { rememberWorkspace } from "../newsession";
+import { backStep, nextStep, sshTarget, type Servers, type Step, type Where } from "../servers";
+import { Button, RadioGroup, Suggest } from "../ui";
 
 type SetupState = { state: "idle" } | { state: "busy" } | { state: "done"; id: string } | { state: "failed"; message: string };
 
-export type FirstRunProps = { servers: Servers; welcome: boolean; onClose: () => void };
-
-const choices: { where: Where; title: string; detail: string }[] = [
-  { where: "local", title: "This computer", detail: "Agents run here. The app starts crew for you." },
-  { where: "url", title: "A server with crew serve", detail: "Type its address and a code from crew remote pair." },
-  { where: "ssh", title: "A server over SSH", detail: "The app runs crew setup daemon on it, then pairs through an SSH tunnel." },
-];
+export type FirstRunProps = { servers: Servers; welcome: boolean; onClose: () => void; storage?: KeyValue; mac?: boolean };
 
 function errorText(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
-export function FirstRun({ servers, welcome, onClose }: FirstRunProps) {
+function part(step: Step): number {
+  return step === "setup" ? 1 : step === "workspace" || step === "done" ? 2 : 0;
+}
+
+export function FirstRun({ servers, welcome, onClose, storage, mac }: FirstRunProps) {
   const [step, setStep] = useState<Step>(welcome ? "welcome" : "location");
   const [where, setWhere] = useState<Where>("local");
   const [address, setAddress] = useState("");
@@ -25,8 +25,9 @@ export function FirstRun({ servers, welcome, onClose }: FirstRunProps) {
   const [hosts, setHosts] = useState<string[]>([]);
   const [setup, setSetup] = useState<SetupState>({ state: "idle" });
   const [path, setPath] = useState("");
-  const [workspace, setWorkspace] = useState<{ state: "idle" | "busy" | "added" } | { state: "failed"; message: string }>({ state: "idle" });
-  const [openError, setOpenError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const here = mac ? "This Mac" : "This computer";
 
   useEffect(() => {
     if (where !== "ssh") {
@@ -42,11 +43,30 @@ export function FirstRun({ servers, welcome, onClose }: FirstRunProps) {
     };
   }, [servers, where]);
 
-  const steps = flowSteps(where);
-  const at = steps.indexOf(step);
-  const target = where === "ssh" ? host.trim() : where === "url" ? address.trim() : "This computer";
+  const target = where === "ssh" ? host.trim() : where === "url" ? address.trim() : here;
   const hostBad = where === "ssh" && host.trim() !== "" && sshTarget(host) === null;
   const id = setup.state === "done" ? setup.id : "";
+
+  async function runSetup() {
+    setSetup({ state: "busy" });
+    try {
+      if (where === "local") {
+        await servers.fix("local");
+        setSetup({ state: "done", id: "local" });
+      } else {
+        const added = await servers.add(where, where === "ssh" ? host.trim() : address.trim(), where === "url" ? code.trim() : "");
+        setSetup({ state: "done", id: added });
+      }
+    } catch (err) {
+      setSetup({ state: "failed", message: errorText(err) });
+    }
+  }
+
+  useEffect(() => {
+    if (step === "setup" && setup.state === "idle") {
+      runSetup();
+    }
+  });
 
   const ready = (() => {
     switch (step) {
@@ -64,165 +84,172 @@ export function FirstRun({ servers, welcome, onClose }: FirstRunProps) {
     setSetup({ state: "idle" });
   }
 
-  async function runSetup() {
-    setSetup({ state: "busy" });
+  async function open(workspace: string) {
+    setBusy(true);
+    setError("");
     try {
-      if (where === "local") {
-        await servers.fix("local");
-        setSetup({ state: "done", id: "local" });
-      } else {
-        const added = await servers.add(where, where === "ssh" ? host.trim() : address.trim(), where === "url" ? code.trim() : "");
-        setSetup({ state: "done", id: added });
+      if (workspace) {
+        await servers.workspace(id, workspace);
+        if (storage) {
+          rememberWorkspace(storage, workspace);
+        }
       }
-    } catch (err) {
-      setSetup({ state: "failed", message: errorText(err) });
-    }
-  }
-
-  async function addWorkspace(event: FormEvent) {
-    event.preventDefault();
-    setWorkspace({ state: "busy" });
-    try {
-      await servers.workspace(id, path.trim());
-      setWorkspace({ state: "added" });
-    } catch (err) {
-      setWorkspace({ state: "failed", message: errorText(err) });
-    }
-  }
-
-  async function primary() {
-    if (step !== "done") {
-      setStep(nextStep(step, where));
-      return;
-    }
-    setOpenError("");
-    try {
       await servers.open(id);
       onClose();
     } catch (err) {
-      setOpenError(errorText(err));
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
     }
   }
 
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    if (step === "workspace") {
+      open(path.trim());
+    } else if (ready) {
+      setStep(nextStep(step, where));
+    }
+  }
+
+  const doing = where === "local" ? "Starting the crew daemon" : where === "ssh" ? "Setting up crew on " + target + " over SSH" : "Pairing with " + target;
+  const done = where === "local" ? "crew daemon started" : where === "ssh" ? "crew set up on " + target : "Paired with " + target;
+  const at = part(step);
+
   return (
-    <div className="first-run">
-      <ol className="first-run-steps" aria-label="Steps">
-        {steps.map((s, i) => (
-          <li key={s} aria-current={s === step ? "step" : undefined} className={i < at ? "complete" : undefined}>
-            {stepTitle(s)}
-          </li>
-        ))}
-      </ol>
-      <div className="first-run-body">
-        <h2>{stepTitle(step)}</h2>
+    <form className="ob" onSubmit={submit}>
+      <div className="ob-body">
+        {step === "welcome" ? null : (
+          <ol className="ob-progress" aria-label="Progress">
+            {[0, 1, 2].map((i) => (
+              <li key={i} data-state={i <= at ? "on" : "off"} />
+            ))}
+          </ol>
+        )}
         {step === "welcome" ? (
-          <p className="lead">The next steps pick where agents run, set that computer up and add a workspace. Nothing needs sudo.</p>
+          <>
+            <h1>Welcome to crew</h1>
+            <p className="lead">The next steps pick where agents run, set that computer up and add a workspace. Nothing needs sudo.</p>
+          </>
         ) : null}
         {step === "location" ? (
-          <fieldset className="choices">
-            <legend>Where do agents run?</legend>
+          <>
+            <h1>Where do agents run?</h1>
+            <p className="lead">You can add more servers later in Settings.</p>
             <RadioGroup
               label="Where do agents run?"
               className="where-choices"
               itemClassName="where-choice"
               value={where}
               onChange={choose}
-              options={choices.map((c) => ({ value: c.where, label: <span className="where-title">{c.title}</span>, detail: <span className="muted">{c.detail}</span> }))}
+              options={[
+                { value: "local" as Where, title: here, detail: "The app starts crew for you." },
+                { value: "ssh" as Where, title: "Another computer, over SSH", detail: "Hosts from ~/.ssh/config, key login only." },
+                { value: "url" as Where, title: "A paired server", detail: "Its address and a code from crew remote pair." },
+              ].map((c) => ({ value: c.value, label: <span className="where-title">{c.title}</span>, detail: <span className="where-detail">{c.detail}</span> }))}
             />
-          </fieldset>
+          </>
         ) : null}
         {step === "host" && where === "url" ? (
-          <div className="fields">
-            <label>
-              Address
-              <input type="text" inputMode="url" autoCapitalize="off" spellCheck={false} placeholder="crew.example.ts.net" value={address} onChange={(e) => setAddress(e.target.value)} />
-            </label>
-            <label>
-              Pairing code
-              <input type="text" autoCapitalize="characters" spellCheck={false} placeholder="ABCD2345" value={code} onChange={(e) => setCode(e.target.value)} />
-            </label>
-            <p className="muted">
+          <>
+            <h1>A paired server</h1>
+            <p className="lead">
               Run <code>crew remote pair</code> on the server to get a code.
             </p>
-          </div>
+            <div className="ob-fields">
+              <label>
+                Address
+                <input className="ui input" type="text" inputMode="url" autoCapitalize="off" spellCheck={false} placeholder="crew.example.ts.net" value={address} onChange={(e) => setAddress(e.target.value)} />
+              </label>
+              <label>
+                Pairing code
+                <input className="ui input mono" type="text" autoCapitalize="characters" spellCheck={false} placeholder="ABCD2345" value={code} onChange={(e) => setCode(e.target.value)} />
+              </label>
+            </div>
+          </>
         ) : null}
         {step === "host" && where === "ssh" ? (
-          <div className="fields">
-            <label>
-              SSH host
-              <Suggest label="SSH host" suggestions={hosts} autoCapitalize="off" spellCheck={false} placeholder="user@host" value={host} onChange={setHost} />
-            </label>
-            {hostBad ? (
-              <p className="error" role="alert">
-                Type a host name or user@host. Options and spaces are not allowed.
-              </p>
-            ) : (
-              <p className="muted">The hosts come from ~/.ssh/config. The app uses key login only.</p>
-            )}
-          </div>
+          <>
+            <h1>Another computer, over SSH</h1>
+            <p className="lead">The app runs crew setup daemon on it, then pairs through an SSH tunnel.</p>
+            <div className="ob-fields">
+              <label>
+                SSH host
+                <Suggest label="SSH host" suggestions={hosts} autoCapitalize="off" spellCheck={false} placeholder="user@host" value={host} onChange={setHost} />
+              </label>
+              {hostBad ? (
+                <p className="error" role="alert">
+                  Type a host name or user@host. Options and spaces are not allowed.
+                </p>
+              ) : (
+                <p className="ob-note">The hosts come from ~/.ssh/config. The app uses key login only.</p>
+              )}
+            </div>
+          </>
         ) : null}
         {step === "setup" ? (
-          <div className="fields">
-            <p className="muted">
-              {where === "local"
-                ? "The app runs crew setup daemon on this computer."
-                : where === "ssh"
-                  ? "The app runs crew setup daemon on " + target + ", starts crew serve through an SSH tunnel and pairs with it."
-                  : "The app pairs with " + target + " and keeps the login in its data folder."}
-            </p>
-            {setup.state === "done" ? (
-              <p role="status">{target + " is set up."}</p>
-            ) : (
-              <button type="button" className="flow-button" disabled={setup.state === "busy"} onClick={runSetup}>
-                {setup.state === "busy" ? "Setting up…" : setup.state === "failed" ? "Try again" : "Set up"}
-              </button>
-            )}
+          <>
+            <h1>{where === "url" ? "Pairing with " + target : "Setting up " + (where === "local" ? here.replace("This", "this") : target)}</h1>
+            <p className="lead">Nothing needs sudo.</p>
+            <ul className="ob-checklist" aria-label="Set up">
+              <li>
+                {setup.state === "done" ? <span className="ok">✓</span> : setup.state === "failed" ? <span className="bad">✗</span> : <span className="spin" aria-hidden="true" />}
+                <span className="grow">{setup.state === "done" ? done : doing}</span>
+                {setup.state === "failed" ? (
+                  <Button className="sm" onClick={runSetup}>
+                    Try again
+                  </Button>
+                ) : null}
+              </li>
+            </ul>
             {setup.state === "failed" ? (
               <p className="error" role="alert">
                 {setup.message}
               </p>
             ) : null}
-          </div>
+          </>
         ) : null}
-        {step === "workspace" ? (
-          <form className="fields" onSubmit={addWorkspace}>
-            <label>
-              Workspace folder
-              <input type="text" autoCapitalize="off" spellCheck={false} placeholder="~/code/api" value={path} onChange={(e) => setPath(e.target.value)} />
-            </label>
-            <button type="submit" className="flow-button" disabled={path.trim() === "" || workspace.state === "busy"}>
-              Add workspace
-            </button>
-            {workspace.state === "added" ? <p role="status">Added {path.trim()}.</p> : null}
-            {workspace.state === "failed" ? (
-              <p className="error" role="alert">
-                {workspace.message}
-              </p>
-            ) : null}
-            <p className="muted">A workspace is a git repository or a folder of them. You can skip this step.</p>
-          </form>
+        {step === "workspace" || step === "done" ? (
+          <>
+            <h1>{target} is ready</h1>
+            <p className="lead">Add the first workspace, or skip and add one later.</p>
+            <div className="ob-section">FIRST WORKSPACE</div>
+            <input className="ui input mono" aria-label="First workspace" type="text" autoCapitalize="off" spellCheck={false} placeholder="~/code/web" value={path} onChange={(e) => setPath(e.target.value)} />
+            <p className="ob-note">A git repository or a folder of them. It becomes your default project.</p>
+          </>
         ) : null}
-        {step === "done" ? <p className="lead">{target} is ready. Open crew to start a session.</p> : null}
-        {openError ? (
+        {error ? (
           <p className="error" role="alert">
-            {openError}
+            {error}
           </p>
         ) : null}
-        <div className="first-run-buttons">
+        <div className="ob-buttons">
           {step !== "welcome" && !(step === "location" && !welcome) ? (
-            <button type="button" className="flow-button" onClick={() => setStep(backStep(step, where))}>
+            <Button variant="quiet" onClick={() => setStep(backStep(step, where))}>
               Back
-            </button>
+            </Button>
           ) : (
-            <button type="button" className="flow-button" onClick={onClose}>
+            <Button variant="quiet" onClick={onClose}>
               Cancel
-            </button>
+            </Button>
           )}
-          <button type="button" className="flow-button flow-primary" disabled={!ready} onClick={primary}>
-            {primaryTitle(step)}
-          </button>
+          <span className="spacer" />
+          {step === "workspace" || step === "done" ? (
+            <>
+              <Button variant="quiet" disabled={busy} onClick={() => open("")}>
+                Skip
+              </Button>
+              <Button variant="primary" type="submit" disabled={busy || path.trim() === ""}>
+                Open crew
+              </Button>
+            </>
+          ) : (
+            <Button variant="primary" type="submit" disabled={!ready}>
+              {step === "welcome" ? "Get started" : "Continue"}
+            </Button>
+          )}
         </div>
       </div>
-    </div>
+    </form>
   );
 }

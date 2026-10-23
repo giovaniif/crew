@@ -7,7 +7,7 @@ afterEach(() => {
   window.location.hash = "";
 });
 
-const tabs = ["Chat", "Terminal", "Review", "Shell", "nvim", "Browser"];
+const tabs = ["Chat", "Changes"];
 
 describe("the layout", () => {
   it("shows the sidebar, the toolbar and the main column on a wide screen", () => {
@@ -43,30 +43,84 @@ describe("the toolbar", () => {
     const { live } = desktop();
     live();
     const tab = (name: string) => screen.getByRole("tab", { name });
-    expect(tab("Terminal")).toBeDisabled();
-    expect(tab("Terminal")).toHaveAccessibleDescription("Start or select a session to see its terminal");
-    expect(tab("Review")).toBeDisabled();
-    expect(tab("Review")).toHaveAccessibleDescription("Start or select a session to review its changes");
-    expect(tab("Shell")).toBeDisabled();
-    expect(tab("Shell")).toHaveAccessibleDescription("Start or select a session to open a shell in its worktree");
-    expect(tab("nvim")).toBeDisabled();
-    expect(tab("nvim")).toHaveAccessibleDescription("Start or select a session to open nvim in its worktree");
+    expect(tab("Changes")).toBeDisabled();
+    expect(tab("Changes")).toHaveAccessibleDescription("Start or select a session to review its changes");
+    expect(screen.queryByRole("tab", { name: "Terminal" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Shell" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "nvim" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Browser" })).not.toBeInTheDocument();
   });
 
-  it("opens the chat of a selected session and switches to the other tabs", async () => {
+  it("opens the chat of a selected session and switches to Changes", async () => {
     const { live } = desktop();
     live();
     await userEvent.click(screen.getByRole("link", { name: /fix the login redirect/ }));
     expect(window.location.hash).toBe("#/sessions/s1");
-    expect(await screen.findByRole("heading", { name: "fix the login redirect" })).toBeInTheDocument();
+    expect(await screen.findByRole("textbox", { name: "Message" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Chat" })).toHaveAttribute("aria-selected", "true");
-    for (const name of ["Review", "Shell", "nvim"]) {
-      expect(screen.getByRole("tab", { name })).toBeEnabled();
-    }
-    await userEvent.click(screen.getByRole("tab", { name: "Review" }));
-    expect(screen.getByRole("tab", { name: "Review" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByRole("tabpanel", { name: "Review" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "fix the login redirect" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("tab", { name: "Changes" }));
+    expect(screen.getByRole("tab", { name: "Changes" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tabpanel", { name: "Changes" })).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Message" })).not.toBeInTheDocument();
+  });
+
+  it("shows the title only in the bar, not again over the chat", async () => {
+    const { live } = desktop("#/sessions/s1");
+    live();
+    await screen.findByRole("textbox", { name: "Message" });
+    expect(within(screen.getByRole("tabpanel", { name: "Chat" })).queryByRole("heading", { name: "fix the login redirect" })).toBeNull();
+    expect(screen.queryByRole("link", { name: /Sessions/ })).toBeNull();
+  });
+
+  it("shows the session title and where it runs in the bar", () => {
+    const { live } = desktop("#/sessions/s1");
+    live();
+    const bar = screen.getByRole("toolbar", { name: "Session bar" });
+    expect(within(bar).getByText("fix the login redirect")).toHaveClass("title");
+    expect(within(bar).getByText(/·/)).toHaveClass("sub");
+  });
+
+  it("opens and closes the shell drawer with the Shell button", async () => {
+    const { live } = desktop("#/sessions/s1");
+    live();
+    const toggle = screen.getByRole("button", { name: "Shell" });
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    await userEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("region", { name: "Shell" })).toBeInTheDocument();
+    expect(screen.getByRole("tabpanel", { name: "Chat" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Close shell" }));
+    expect(screen.queryByRole("region", { name: "Shell" })).not.toBeInTheDocument();
+  });
+
+  it("toggles the shell drawer with Ctrl+`", async () => {
+    const { live } = desktop("#/sessions/s1");
+    live();
+    await userEvent.keyboard("{Control>}`{/Control}");
+    expect(screen.getByRole("region", { name: "Shell" })).toBeInTheDocument();
+    await userEvent.keyboard("{Control>}`{/Control}");
+    expect(screen.queryByRole("region", { name: "Shell" })).not.toBeInTheDocument();
+  });
+
+  it("opens the editor and the agent screen as views that close back to the tabs", async () => {
+    const { live } = desktop("#/sessions/s1/editor");
+    live();
+    expect(screen.getByRole("region", { name: "Editor" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Close editor" }));
+    expect(window.location.hash).toBe("#/sessions/s1");
+    expect(screen.queryByRole("region", { name: "Editor" })).not.toBeInTheDocument();
+    window.location.hash = "#/sessions/s1/agent";
+    expect(await screen.findByRole("region", { name: "Agent screen" })).toBeInTheDocument();
+  });
+
+  it("opens the browser as a side panel next to the chat", async () => {
+    const { live } = desktop("#/sessions/s1/browser", true, undefined, {}, (s) => s.on("GET", "/api/v1/sessions/s1/browser", { status: 200, body: { live: false } }));
+    live();
+    const panel = screen.getByRole("complementary", { name: "Browser" });
+    expect(within(panel).getByRole("textbox", { name: "Address" })).toBeInTheDocument();
+    expect(screen.getByRole("tabpanel", { name: "Chat" })).toBeInTheDocument();
+    await userEvent.click(within(panel).getByRole("button", { name: "Close browser" }));
+    expect(screen.queryByRole("complementary", { name: "Browser" })).not.toBeInTheDocument();
   });
 });
 
@@ -133,6 +187,14 @@ describe("the keys", () => {
     expect(window.location.hash).toBe("#/sessions/c");
     await userEvent.keyboard("{Control>}[Space]{/Control}");
     expect(window.location.hash).toBe("#/sessions/a");
+  });
+
+  it("opens the editor with Ctrl+Shift+E", async () => {
+    const { live } = desktop("#/sessions/s1");
+    live();
+    await userEvent.keyboard("{Control>}{Shift>}e{/Shift}{/Control}");
+    expect(window.location.hash).toBe("#/sessions/s1/editor");
+    expect(await screen.findByRole("region", { name: "Editor" })).toBeInTheDocument();
   });
 
   it("opens New session as a sheet with Ctrl+Shift+N", async () => {

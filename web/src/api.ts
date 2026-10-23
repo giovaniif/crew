@@ -332,6 +332,7 @@ export type AutomationRun = {
   reason?: string;
   session_id?: string;
   start?: string;
+  end?: string;
 };
 
 export function automationRuns(a: Authed, limit = 100): Promise<{ runs: AutomationRun[] }> {

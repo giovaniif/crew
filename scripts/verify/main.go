@@ -56,6 +56,7 @@ var commands = map[string]func(e *env, args []string, r *result){
 	"evidence":     evidence,
 	"design-check": designCheck,
 	"annotate":     annotate,
+	"app":          app,
 	"assets":       assets,
 	"selftest":     selftest,
 }
