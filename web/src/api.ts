@@ -602,6 +602,7 @@ export type EnvInfo = {
   key_created?: string;
   git_name?: string;
   git_email?: string;
+  codex_login?: boolean;
   used_by: string[];
   local?: EnvLocal;
 };

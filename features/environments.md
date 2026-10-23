@@ -66,6 +66,16 @@ go run ./scripts/verify iso dump claude --has CLAUDE_CONFIG_DIR={home}/envs/test
 go run ./scripts/verify iso panes --expect "env exec test-bot --harness claude -- claude --resume TEST-"
 ```
 
+### a Codex ChatGPT login runs in the codex dir of the environment
+
+`crew env login <env> --harness codex` runs `codex login --device-auth` through `crew env exec <env> --harness codex`. Thus Codex writes `auth.json` into the codex dir of the environment, never into `~/.codex`. The fake `codex` does not write `auth.json`. `go test ./cmd/crew/ -run EnvLoginCodex` checks the file with a stub `codex`.
+
+```sh
+go run ./scripts/verify iso dump --clear
+go run ./scripts/verify iso crew -- env login test-bot --harness codex
+go run ./scripts/verify iso dump codex --has CODEX_HOME={home}/envs/test-bot/codex --has "CREW_ARGV=login --device-auth" --has HOME={home}/home --unset CLAUDE_CONFIG_DIR --unset CLAUDE_CODE_OAUTH_TOKEN --unset SSH_AUTH_SOCK
+```
+
 ### personal HOME files stay byte-identical
 
 The setup saves the checksum before any mate starts. The recipes before this one start and resume mates on `test-bot`.

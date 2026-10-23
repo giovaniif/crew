@@ -707,6 +707,7 @@ function Editor({
   const [changed, setChanged] = useState(false);
   const [ask, setAsk] = useState<SecretAsk | null>(null);
   const [claudeKey, setClaudeKey] = useState("");
+  const [codexKey, setCodexKey] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [note, setNote] = useState("");
   useEffect(() => {
@@ -714,6 +715,7 @@ function Editor({
     setEnvInfo(null);
     setChanged(false);
     setClaudeKey("");
+    setCodexKey("");
     getEnv(api, name)
       .then((out) => on && (setEnvInfo(out), setError("")))
       .catch((err) => on && setError(message(err)));
@@ -757,6 +759,9 @@ function Editor({
     !claude.setKeys.includes("CLAUDE_CODE_OAUTH_TOKEN")
       ? "ANTHROPIC_API_KEY"
       : "CLAUDE_CODE_OAUTH_TOKEN");
+  const codexPick =
+    codexKey ||
+    (!env.codex_login && secretSet(env, "OPENAI_API_KEY") ? "api" : "chatgpt");
   const notice = changed ? (
     <div className="notice" role="status">
       <span className="dot wait" />
@@ -1006,6 +1011,65 @@ function Editor({
                     <HowTo>
                       <span className="mono">{`crew env login ${env.name}`}</span>
                     </HowTo>
+                  )}
+                </Opt>
+              ) : a.part === "codex" ? (
+                <Opt
+                  key={a.part}
+                  label={a.title}
+                  title={a.title}
+                  sub={
+                    codexPick === "chatgpt"
+                      ? "ChatGPT login, kept in this environment"
+                      : "OpenAI API key"
+                  }
+                >
+                  <div
+                    className="ui seg"
+                    role="radiogroup"
+                    aria-label="Codex login"
+                  >
+                    {[
+                      { v: "chatgpt", l: "ChatGPT login" },
+                      { v: "api", l: "API key" },
+                    ].map((o) => (
+                      <button
+                        key={o.v}
+                        type="button"
+                        role="radio"
+                        aria-checked={codexPick === o.v}
+                        className={codexPick === o.v ? "on" : undefined}
+                        onClick={() => setCodexKey(o.v)}
+                      >
+                        {o.l}
+                      </button>
+                    ))}
+                  </div>
+                  {codexPick === "chatgpt" ? (
+                    <span className="secret">
+                      {env.codex_login ? (
+                        <span className="set-y">logged in</span>
+                      ) : (
+                        <>
+                          <span className="set-n">not logged in</span>
+                          <HowTo>
+                            <span className="mono">{`crew env login ${env.name} --harness codex`}</span>
+                          </HowTo>
+                        </>
+                      )}
+                    </span>
+                  ) : (
+                    <SecretButtons
+                      set={a.set}
+                      onSet={() =>
+                        setAsk({
+                          title: "Set Codex API key",
+                          keys: a.keys,
+                          label: "key",
+                        })
+                      }
+                      onRemove={() => a.setKeys.forEach(unset)}
+                    />
                   )}
                 </Opt>
               ) : (
