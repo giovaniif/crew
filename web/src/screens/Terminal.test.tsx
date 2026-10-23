@@ -128,6 +128,13 @@ describe("the agent screen", () => {
     expect(await within(agentScreen()).findByRole("alert")).toHaveTextContent("session s1 has no harness session to resume");
   });
 
+  it("offers Resume session on the agent screen of an ended session with no pane", async () => {
+    const d = open("#/sessions/s1/agent");
+    d.sockets.last.push({ state: { ...two(), sessions: [session("s1", "fix the login redirect", { Pane: "", Ended: true }), session("s2", "add retries", { Pane: "%9" })] } });
+    expect(await within(agentScreen()).findByRole("button", { name: "Resume session" })).toBeInTheDocument();
+    expect(within(agentScreen()).getByRole("status")).toHaveTextContent("This session's pane closed");
+  });
+
   it("offers no resume while the session of the closed pane is not ended yet", async () => {
     const d = open("#/sessions/s1/agent");
     d.terminals.socket("%5").drop(4404, "no pane");
