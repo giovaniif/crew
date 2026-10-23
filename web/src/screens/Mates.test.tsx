@@ -352,7 +352,7 @@ describe("New mate", () => {
     const menu = await screen.findByRole("menu", { name: "Environment" });
     expect(within(menu).getByLabelText("Search environments")).toBeInTheDocument();
     expect(within(menu).getByRole("menuitem", { name: "+ New environment…" })).toBeInTheDocument();
-    await user.click(within(menu).getByRole("menuitem", { name: "test-work" }));
+    await user.click(within(menu).getByRole("menuitemcheckbox", { name: "test-work" }));
     expect(chip).toHaveTextContent("test-work");
     await user.click(screen.getByRole("button", { name: "Next" }));
     await user.click(screen.getByRole("button", { name: "Create" }));
