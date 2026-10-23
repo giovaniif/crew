@@ -1,12 +1,11 @@
 import { readFileSync } from "node:fs";
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { App, type AppEnv, type PageVisibility } from "../App";
 import type { Frame, Mates, StreamState } from "../stream";
 import { FakeServer, MemoryStorage } from "../test/fake-server";
 import { FakeSockets } from "../test/fake-socket";
-import { pick } from "../test/pick";
 
 const golden = (name: string) => JSON.parse(readFileSync(new URL("../../../internal/serve/testdata/" + name, import.meta.url), "utf8"));
 const goldenState = (): StreamState => (golden("stream-state.json") as Frame).state as StreamState;
@@ -109,94 +108,52 @@ describe("Mates", () => {
     expect(screen.getByRole("link", { name: "Mates" })).toHaveAttribute("href", "#/mates");
   });
 
-  it("shows a face card for each mate with its status once and the first paragraph of its prompt, linked to the profile", async () => {
+  it("lists each mate as a row with its face, its name and persona · agent, linked to its profile", async () => {
     setup();
-    const helper = await screen.findByRole("link", { name: /^helper/ });
+    const helper = await screen.findByRole("link", { name: "helper, Working on add login" });
     expect(helper).toHaveAttribute("href", "#/mates/helper");
     expect(await within(helper).findByRole("img", { name: "Owl working" })).toBeInTheDocument();
-    expect(within(helper).getByText("Help. With care.")).toBeInTheDocument();
+    expect(within(helper).getByText("Help. With care. · Claude")).toBeInTheDocument();
     expect(helper).not.toHaveTextContent("More help.");
-    expect(within(helper).getByText(/^Working on /)).toBeInTheDocument();
-    expect(within(helper).queryByText("working")).toBeNull();
-    const webby = screen.getByRole("link", { name: /^webby/ });
-    expect(within(webby).getByText("Paused")).toBeInTheDocument();
-    expect(within(webby).queryByText("paused")).toBeNull();
-    const fresh = screen.getByRole("link", { name: /^fresh/ });
-    expect(within(fresh).getByText("Idle")).toBeInTheDocument();
-    expect(within(fresh).queryByText("idle")).toBeNull();
+    const webby = screen.getByRole("link", { name: "webby, Paused" });
+    expect(within(webby).getByText("paused")).toBeInTheDocument();
+    expect(within(webby).getByText("Web. · Codex")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "fresh, Idle" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "New mate" })).toHaveAttribute("href", "#/mates/new");
-    expect(await screen.findByText("No approvals wait for you.")).toBeInTheDocument();
   });
 
-  it("has the source list with a count for each source", async () => {
+  it("shows the profile of the first mate next to the list, and marks its row", async () => {
     setup();
-    const sources = await screen.findByRole("navigation", { name: "Mate sources" });
-    await screen.findByText("Help. With care.");
-    for (const [name, n] of [["All Mates", "3"], ["Live", "2"], ["Claude", "2"], ["Codex", "1"]]) {
-      expect(within(sources).getByRole("button", { name: new RegExp("^" + name + " " + n + "$") })).toBeInTheDocument();
-    }
-    expect(within(sources).getByRole("button", { name: /^All Mates/ })).toHaveAttribute("aria-pressed", "true");
-    await userEvent.setup().click(within(sources).getByRole("button", { name: /^Codex/ }));
-    expect(screen.getByRole("link", { name: /^webby/ })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /^helper/ })).toBeNull();
-    expect(screen.queryByRole("link", { name: /^fresh/ })).toBeNull();
+    expect(await screen.findByRole("heading", { name: "helper" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^helper,/ })).toHaveAttribute("aria-current", "page");
+  });
+
+  it("filters the mates by agent with All, Claude and Codex", async () => {
+    setup();
+    const sources = await screen.findByRole("radiogroup", { name: "Mate sources" });
+    await screen.findByText("Help. With care. · Claude");
+    expect(within(sources).getByRole("radio", { name: "All" })).toHaveAttribute("aria-checked", "true");
+    await userEvent.setup().click(within(sources).getByRole("radio", { name: "Codex" }));
+    const all = screen.getByRole("list", { name: "All mates" });
+    expect(within(all).getByRole("link", { name: /^webby/ })).toBeInTheDocument();
+    expect(within(all).queryByRole("link", { name: /^helper/ })).toBeNull();
+    expect(within(all).queryByRole("link", { name: /^fresh/ })).toBeNull();
   });
 
   it("searches the mates by name and by the first paragraph of the prompt", async () => {
     setup();
     const user = userEvent.setup();
-    await screen.findByText("Help. With care.");
+    await screen.findByText("Help. With care. · Claude");
+    const all = () => screen.getByRole("list", { name: "All mates" });
     await user.type(screen.getByRole("searchbox", { name: "Search mates" }), "web");
-    expect(screen.getByRole("link", { name: /^webby/ })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /^helper/ })).toBeNull();
+    expect(within(all()).getByRole("link", { name: /^webby/ })).toBeInTheDocument();
+    expect(within(all()).queryByRole("link", { name: /^helper/ })).toBeNull();
     await user.clear(screen.getByRole("searchbox", { name: "Search mates" }));
-    await user.type(screen.getByRole("searchbox", { name: "Search mates" }), "new.");
-    expect(screen.getByRole("link", { name: /^fresh/ })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /^webby/ })).toBeNull();
+    await user.type(screen.getByRole("searchbox", { name: "Search mates" }), "zzz");
+    expect(screen.getByText("No mate matches.")).toBeInTheDocument();
   });
 
-  it("shows the live count and the status line on each card", async () => {
-    setup();
-    await screen.findByText("Help. With care.");
-    const helper = screen.getByRole("link", { name: /^helper/ });
-    expect(helper).toHaveTextContent("1 live");
-    expect(helper).toHaveTextContent("Working on add login");
-    expect(screen.getByRole("link", { name: /^webby/ })).toHaveTextContent("Paused");
-    expect(screen.getByRole("link", { name: /^fresh/ })).toHaveTextContent("No live chats");
-    expect(screen.getByRole("link", { name: /^fresh/ })).toHaveTextContent("Idle");
-  });
-
-  it("loads needs you again when the page is shown again, so an approval decided elsewhere goes", async () => {
-    const page = { visible: false };
-    const listeners = new Set<() => void>();
-    const visibility = {
-      visible: () => page.visible,
-      onChange: (listener: () => void) => {
-        listeners.add(listener);
-        return () => {
-          listeners.delete(listener);
-        };
-      },
-    };
-    const ask = {
-      ID: "a1",
-      SessionID: "s1",
-      Mate: "helper",
-      Requester: "Gus",
-      Action: { Kind: "create_pr", Tool: "Bash", Input: "gh pr create --fill" },
-      At: "2026-10-03T11:00:00Z",
-      State: "pending",
-    };
-    const { server } = setup("#/mates", board, [ask], visibility);
-    expect(await screen.findByRole("listitem", { name: "helper: create pr" })).toBeInTheDocument();
-    server.on("GET", "/api/v1/approvals", { status: 200, body: [] });
-    page.visible = true;
-    act(() => listeners.forEach((l) => l()));
-    expect(await screen.findByText("No approvals wait for you.")).toBeInTheDocument();
-    expect(screen.queryByRole("listitem", { name: "helper: create pr" })).toBeNull();
-  });
-
-  it("shows needs you on the face of a mate with a pending approval", async () => {
+  it("puts a mate with a pending approval in the Needs you group", async () => {
     const ask = {
       ID: "a1",
       SessionID: "s1",
@@ -207,18 +164,20 @@ describe("Mates", () => {
       State: "pending",
     };
     setup("#/mates", board, [ask]);
-    const helper = await screen.findByRole("link", { name: /^helper/ });
-    expect(await within(helper).findByText("Needs you")).toBeInTheDocument();
+    const needs = await screen.findByRole("list", { name: "Needs you" });
+    const helper = await within(needs).findByRole("link", { name: "helper, Needs you" });
     expect(within(helper).getByRole("img", { name: "Owl needs" })).toBeInTheDocument();
-    expect(screen.getByRole("listitem", { name: "helper: merge" })).toBeInTheDocument();
+    expect(within(screen.getByRole("list", { name: "All mates" })).queryByRole("link", { name: /^helper/ })).toBeNull();
   });
 
   it("stops all mates only after a confirm", async () => {
     const { server } = setup();
     const user = userEvent.setup();
-    await user.click(await screen.findByRole("button", { name: "Stop all mates" }));
+    await user.click(await screen.findByRole("button", { name: "Stop all" }));
+    const ask = screen.getByRole("dialog", { name: "Stop all mates?" });
+    expect(ask).toHaveTextContent("They start no new turns until you start them again.");
     expect(server.calls.some((c) => c.path === "/api/v1/mates/stop")).toBe(false);
-    await user.click(screen.getByRole("button", { name: "Stop all" }));
+    await user.click(within(ask).getByRole("button", { name: "Stop all" }));
     await waitFor(() => expect(server.calls.find((c) => c.path === "/api/v1/mates/stop")?.body).toEqual({ stop: true }));
   });
 
@@ -238,13 +197,16 @@ describe("Mates", () => {
 });
 
 describe("Mate profile", () => {
-  it("shows the face, the prompt, the brains, the threads and the memory", async () => {
+  it("shows the face, the fact cards, the threads and the memory", async () => {
     setup("#/mates/helper");
     expect(await screen.findByRole("heading", { name: "helper" })).toBeInTheDocument();
-    expect(await screen.findByRole("img", { name: "Owl working" })).toBeInTheDocument();
-    for (const chip of ["claude", "opus", "effort high", "api"]) {
-      expect(screen.getByText(chip)).toBeInTheDocument();
-    }
+    expect(screen.getByRole("link", { name: /^helper,/ })).toHaveAttribute("aria-current", "page");
+    expect((await screen.findAllByRole("img", { name: "Owl working" })).length).toBe(2);
+    expect(screen.getByRole("group", { name: "Agent" })).toHaveTextContent("Claude · opus");
+    expect(screen.getByRole("group", { name: "Agent" })).toHaveTextContent("effort high");
+    expect(screen.getByRole("group", { name: "Repos" })).toHaveTextContent("api");
+    expect(screen.getByRole("group", { name: "Slack" })).toHaveTextContent("Connected");
+    await waitFor(() => expect(screen.getByRole("group", { name: "Memory" })).toHaveTextContent("19 bytes of 8 KB"));
     const list = screen.getByRole("list", { name: "Conversations of helper" });
     expect(within(list).getByRole("link", { name: /add login/ })).toHaveAttribute("href", "#/sessions/s1");
     expect(within(list).getByRole("link", { name: "Slack" })).toHaveAttribute("href", "https://app.slack.com/client/T1/C1/thread/C1-1700.0001");
@@ -272,6 +234,12 @@ describe("Mate profile", () => {
     expect(calls(server)).toContain("POST /api/v1/mates/helper/new");
   });
 
+  it("says there is no such mate next to the list", async () => {
+    setup("#/mates/ghost");
+    expect(await screen.findByText("There is no mate ghost.")).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "All mates" })).toBeInTheDocument();
+  });
+
   it("shows a failed new conversation next to its button, not under the page", async () => {
     const { server } = setup("#/mates/helper");
     server.on("POST", "/api/v1/mates/helper/new", { status: 400, body: { error: { code: "bad_request", message: "no workspace to start in" } } });
@@ -285,7 +253,7 @@ describe("Mate profile", () => {
     const { server } = setup("#/mates/helper");
     const user = userEvent.setup();
     await screen.findByText("- Tests come first.");
-    await user.click(screen.getByRole("button", { name: "Edit memory" }));
+    await user.click(screen.getByRole("button", { name: "Edit" }));
     const box = screen.getByLabelText("Memory of helper");
     await user.clear(box);
     await user.type(box, "- Small PRs.");
@@ -306,7 +274,7 @@ describe("Mate profile", () => {
     const { server } = setup("#/mates/helper");
     const user = userEvent.setup();
     await screen.findByText("- Tests come first.");
-    await user.click(screen.getByRole("button", { name: "Clear memory" }));
+    await user.click(screen.getByRole("button", { name: "Clear…" }));
     const ask = screen.getByRole("dialog", { name: "Clear the memory of helper?" });
     expect(server.calls.some((c) => c.method === "POST" && c.path === "/api/v1/mates/helper/memory")).toBe(false);
     await user.click(within(ask).getByRole("button", { name: "Clear" }));
@@ -318,18 +286,19 @@ describe("Mate profile", () => {
     const { server } = setup("#/mates/helper");
     const user = userEvent.setup();
     await screen.findByText("- Tests come first.");
-    await user.click(screen.getByRole("button", { name: "Clear memory" }));
+    await user.click(screen.getByRole("button", { name: "Clear…" }));
     await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Cancel" }));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(server.calls.some((c) => c.method === "POST" && c.path === "/api/v1/mates/helper/memory")).toBe(false);
   });
 
-  it("offers Connect to Slack with the Slack mark for a mate without Slack", async () => {
+  it("offers Connect… in the Slack card for a mate without Slack", async () => {
     setup("#/mates/fresh");
     const user = userEvent.setup();
-    const button = await screen.findByRole("button", { name: /Connect to Slack/ });
-    expect(within(button).getByRole("img", { name: "Slack" })).toBeInTheDocument();
-    await user.click(button);
+    const card = await screen.findByRole("group", { name: "Slack" });
+    expect(card).toHaveTextContent("Not connected");
+    expect(within(card).getByRole("img", { name: "Slack" })).toBeInTheDocument();
+    await user.click(within(card).getByRole("button", { name: "Connect…" }));
     expect(await screen.findByRole("link", { name: "Make the Slack app from the manifest" })).toHaveAttribute(
       "href",
       "https://api.slack.com/apps?new_app=1",
@@ -339,7 +308,7 @@ describe("Mate profile", () => {
   it("does not offer Slack to a connected mate", async () => {
     setup("#/mates/helper");
     await screen.findByRole("heading", { name: "helper" });
-    expect(screen.queryByRole("button", { name: /Connect to Slack/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Connect…" })).toBeNull();
   });
 });
 
@@ -353,18 +322,18 @@ describe("New mate", () => {
     await user.click(screen.getByRole("button", { name: "Color #209fb5" }));
     await user.clear(screen.getByLabelText("Name"));
     await user.type(screen.getByLabelText("Name"), "scout");
-    await user.click(screen.getByRole("button", { name: "Next: personality" }));
+    await user.click(screen.getByRole("button", { name: "Next" }));
     await user.type(screen.getByLabelText("Prompt"), "Scout the repo.");
     expect(screen.getByRole("region", { name: "Added to the prompt" })).toHaveTextContent("Middle step. Adds no text.");
     fireEvent.change(screen.getByLabelText("Brief to Wordy"), { target: { value: "1" } });
     expect(screen.getAllByText("Brief 2/5").length).toBeGreaterThan(0);
     expect(screen.getByRole("region", { name: "Added to the prompt" })).toHaveTextContent("Write one line per answer.");
-    await user.click(screen.getByRole("button", { name: "Next: brains" }));
-    await pick(user, screen.getByRole("combobox", { name: "Agent" }), "codex");
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.click(within(screen.getByRole("radiogroup", { name: "Agent" })).getByRole("radio", { name: "Codex" }));
     await user.type(screen.getByLabelText("Model"), "gpt-5");
     await user.type(screen.getByLabelText("Effort"), "high");
     await user.type(screen.getByLabelText("Repos"), "api, web");
-    await user.click(screen.getByRole("button", { name: "Next: meet" }));
+    await user.click(screen.getByRole("button", { name: "Next" }));
     expect(screen.getByLabelText("Step 4 of 4")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Meet scout" })).toBeInTheDocument();
     const facts = screen.getByRole("region", { name: "About scout" });
@@ -396,7 +365,7 @@ describe("New mate", () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Quill" }));
     expect(screen.getByLabelText("Name")).toHaveValue("quill");
-    expect(screen.getByRole("button", { name: "Next: personality" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Next" })).toBeEnabled();
     await user.click(screen.getByRole("button", { name: "Owl" }));
     expect(screen.getByLabelText("Name")).toHaveValue("owl");
     await user.clear(screen.getByLabelText("Name"));
@@ -405,11 +374,25 @@ describe("New mate", () => {
     expect(screen.getByLabelText("Name")).toHaveValue("scout");
   });
 
+  it("has Cancel back to the mates, a 4-step progress bar and preset cards that fill the prompt", async () => {
+    setup("#/mates/new");
+    const user = userEvent.setup();
+    expect(await screen.findByRole("link", { name: "Cancel" })).toHaveAttribute("href", "#/mates");
+    expect(screen.getByRole("progressbar", { name: "Step 1 of 4" })).toHaveAttribute("aria-valuenow", "1");
+    await user.type(screen.getByLabelText("Name"), "scout");
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(screen.getByRole("heading", { name: "How should scout work?" })).toBeInTheDocument();
+    const presets = screen.getByRole("radiogroup", { name: "Presets" });
+    await user.click(within(presets).getByRole("radio", { name: /^Fast bug fixer/ }));
+    expect(within(presets).getByRole("radio", { name: /^Fast bug fixer/ })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByLabelText("Prompt")).toHaveValue("You fix bugs fast. Make the smallest diff that makes the test pass.");
+  });
+
   it("goes back a step and keeps the choices", async () => {
     setup("#/mates/new");
     const user = userEvent.setup();
     await user.type(await screen.findByLabelText("Name"), "scout");
-    await user.click(screen.getByRole("button", { name: "Next: personality" }));
+    await user.click(screen.getByRole("button", { name: "Next" }));
     await user.click(screen.getByRole("button", { name: "Back" }));
     expect(screen.getByLabelText("Name")).toHaveValue("scout");
   });
@@ -420,7 +403,7 @@ describe("New mate", () => {
     await screen.findByRole("button", { name: "Quill" });
     await user.type(screen.getByLabelText("Name"), "helper");
     expect(await screen.findByText("A mate named helper exists.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Next: personality" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
   });
 
   it("refuses a name that is not a mate handle", async () => {
@@ -428,21 +411,21 @@ describe("New mate", () => {
     const user = userEvent.setup();
     await user.type(await screen.findByLabelText("Name"), "scout.dev");
     expect(screen.getByText("Use up to 32 letters, digits, - and _.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Next: personality" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
   });
 
   it("needs a prompt before brains, even with a tone set", async () => {
     setup("#/mates/new");
     const user = userEvent.setup();
     await user.type(await screen.findByLabelText("Name"), "scout");
-    await user.click(screen.getByRole("button", { name: "Next: personality" }));
+    await user.click(screen.getByRole("button", { name: "Next" }));
     const slider = (await screen.findAllByRole("slider"))[0];
     fireEvent.change(slider, { target: { value: "0" } });
     expect(screen.getByText("Write a personality prompt or pick a preset.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Next: brains" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
     await user.type(screen.getByLabelText("Prompt"), "Pair programmer.");
     expect(screen.queryByText("Write a personality prompt or pick a preset.")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Next: brains" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Next" })).toBeEnabled();
   });
 });
 

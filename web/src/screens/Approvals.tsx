@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { type Approval, type Authed, ApiError, decideApproval, listApprovals } from "../api";
 import type { PageVisibility } from "../App";
+import { Button } from "../ui";
+import { MateFace } from "./Mates";
 
 const ttlMs = 24 * 60 * 60 * 1000;
 
@@ -16,6 +18,19 @@ function expiresIn(at: string, now: number): string {
   const minutes = Math.max(0, Math.floor((end - now) / 60000));
   const hours = Math.floor(minutes / 60);
   return "expires in " + (hours > 0 ? hours + "h" : minutes + "m");
+}
+
+function ago(at: string, now: number): string {
+  const start = Date.parse(at);
+  if (Number.isNaN(start)) {
+    return "";
+  }
+  const minutes = Math.max(0, Math.floor((now - start) / 60000));
+  if (minutes < 60) {
+    return minutes + "m ago";
+  }
+  const hours = Math.floor(minutes / 60);
+  return hours < 24 ? hours + "h ago" : Math.floor(hours / 24) + "d ago";
 }
 
 function Card({ api, approval, now }: { api: Authed; approval: Approval; now: number }) {
@@ -41,37 +56,54 @@ function Card({ api, approval, now }: { api: Authed; approval: Approval; now: nu
     }
   }
 
-  const name = (approval.Mate || "crew") + ": " + words(approval.Action.Kind);
+  const mate = approval.Mate || "crew";
+  const session = "#/sessions/" + encodeURIComponent(approval.SessionID);
   return (
-    <li aria-label={name}>
-      <div className="approval-head">
-        <strong>{approval.Mate || "crew"}</strong>
-        <span>{words(approval.Action.Kind)}</span>
-        <span>{expiresIn(approval.At, now)}</span>
+    <li className={"ap-card" + (done ? " resolved" : "")} aria-label={mate + ": " + words(approval.Action.Kind)}>
+      <MateFace name={mate} state={done ? "idle" : "needs"} px={28} />
+      <div className="ap-body">
+        {done ? (
+          <div>
+            <b>{mate}</b>{" "}
+            <span className="ap-muted" role="status">
+              · {done}
+            </span>
+          </div>
+        ) : (
+          <>
+            <div>
+              <b>{mate}</b>{" "}
+              <span className="ap-muted">
+                wants to {words(approval.Action.Kind)}, asked by {approval.Requester || "someone"} with {approval.Action.Tool} · {ago(approval.At, now)} · {expiresIn(approval.At, now)} ·{" "}
+                <a className="open-session" href={session}>
+                  Open session
+                </a>
+              </span>
+            </div>
+            <pre className="ap-input">{approval.Action.Input}</pre>
+            {failed && <p role="alert">{failed}</p>}
+          </>
+        )}
       </div>
-      <p className="muted">
-        Asked by {approval.Requester || "someone"} with {approval.Action.Tool}
-      </p>
-      <pre className="approval-input">{approval.Action.Input}</pre>
-      <a className="open-session" href={"#/sessions/" + encodeURIComponent(approval.SessionID)}>Open session</a>
-      {failed && <p role="alert">{failed}</p>}
       {done ? (
-        <p role="status">{done}</p>
+        <a className="ui btn quiet ap-small open-session" href={session}>
+          Open session
+        </a>
       ) : (
         <div className="approval-actions">
-          <button type="button" className="deny" disabled={busy} onClick={() => decide(false)}>
+          <Button disabled={busy} onClick={() => decide(false)}>
             Deny
-          </button>
-          <button type="button" className="approve" disabled={busy} onClick={() => decide(true)}>
+          </Button>
+          <Button variant="primary" disabled={busy} onClick={() => decide(true)}>
             Approve
-          </button>
+          </Button>
         </div>
       )}
     </li>
   );
 }
 
-export function ApprovalList({ api, now, visibility }: { api: Authed; now: number; visibility?: PageVisibility }) {
+function useApprovals(api: Authed, now: number, visibility?: PageVisibility) {
   const [list, setList] = useState<Approval[] | null>(null);
   const [error, setError] = useState("");
   const [shown, setShown] = useState(0);
@@ -100,27 +132,31 @@ export function ApprovalList({ api, now, visibility }: { api: Authed; now: numbe
       live = false;
     };
   }, [api, now, shown]);
+  return { list, error };
+}
 
+export function Approvals({ api, now, visibility }: { api: Authed; now: number; visibility?: PageVisibility }) {
+  const { list, error } = useApprovals(api, now, visibility);
+  const count = list?.length ?? 0;
   return (
-    <>
+    <main className="screen ap-page">
+      <div className="ap-head">
+        <h1>Approvals</h1>
+        {count > 0 && (
+          <span className="ap-pill" aria-label={count + " waiting"}>
+            {count}
+          </span>
+        )}
+      </div>
+      <p className="ap-explain">A mate asks here before a dangerous action that someone other than you started.</p>
       {error && <p role="alert">{error}</p>}
       {list === null && !error && <p>Loading…</p>}
       {list !== null && list.length === 0 && <p>No approvals wait for you.</p>}
-      <ul className="approval-list">
+      <ul className="ap-list">
         {(list ?? []).map((a) => (
           <Card key={a.ID} api={api} approval={a} now={now} />
         ))}
       </ul>
-    </>
-  );
-}
-
-export function Approvals({ api, now, visibility }: { api: Authed; now: number; visibility?: PageVisibility }) {
-  return (
-    <main className="screen approvals">
-      <h1>Approvals</h1>
-      <p className="muted">A mate asks here before a dangerous action that a person who is not the owner started.</p>
-      <ApprovalList api={api} now={now} visibility={visibility} />
     </main>
   );
 }

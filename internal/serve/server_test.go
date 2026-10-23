@@ -46,7 +46,7 @@ var (
 		rpc.MethodOnboardingRemove, rpc.MethodOnboardingNvim, rpc.MethodOnboardingFinish, rpc.MethodWorkspaceDirs,
 		rpc.MethodDeviceList, rpc.MethodPairCode,
 		rpc.MethodReviewOpen, rpc.MethodReviewViewed, rpc.MethodReviewComment, rpc.MethodReviewSend, rpc.MethodReviewHunk,
-		rpc.MethodSwitch, rpc.MethodPortsKill, rpc.MethodAutomationSave, rpc.MethodDiskView, rpc.MethodCleanupWorktree,
+		rpc.MethodSwitch, rpc.MethodPortsKill, rpc.MethodAutomationSave, rpc.MethodDiskView, rpc.MethodCleanupWorktree, rpc.MethodCleanupRun,
 		rpc.MethodBrowserHeadlessView, rpc.MethodBrowserCookiesImport,
 	}
 )
@@ -86,6 +86,7 @@ var authedEndpoints = append([]authedEndpoint{
 	{"POST", "/api/v1/sessions/s1/nvim", ""},
 	{"GET", "/api/v1/disk", ""},
 	{"POST", "/api/v1/cleanup/worktree", `{"path":"/w/x"}`},
+	{"POST", "/api/v1/cleanup/run", ""},
 	{"POST", "/api/v1/ports/kill", `{"pgids":[1]}`},
 	{"GET", "/api/v1/sessions/s1/review", ""},
 	{"POST", "/api/v1/sessions/s1/review/viewed", `{"mark":{"Worktree":"w1","Path":"a.go","Blob":"b"},"viewed":true}`},

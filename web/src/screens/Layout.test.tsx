@@ -56,12 +56,20 @@ describe("the toolbar", () => {
     live();
     await userEvent.click(screen.getByRole("link", { name: /fix the login redirect/ }));
     expect(window.location.hash).toBe("#/sessions/s1");
-    expect(await screen.findByRole("heading", { name: "fix the login redirect" })).toBeInTheDocument();
+    expect(await screen.findByRole("textbox", { name: "Message" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Chat" })).toHaveAttribute("aria-selected", "true");
     await userEvent.click(screen.getByRole("tab", { name: "Changes" }));
     expect(screen.getByRole("tab", { name: "Changes" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("tabpanel", { name: "Changes" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "fix the login redirect" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Message" })).not.toBeInTheDocument();
+  });
+
+  it("shows the title only in the bar, not again over the chat", async () => {
+    const { live } = desktop("#/sessions/s1");
+    live();
+    await screen.findByRole("textbox", { name: "Message" });
+    expect(within(screen.getByRole("tabpanel", { name: "Chat" })).queryByRole("heading", { name: "fix the login redirect" })).toBeNull();
+    expect(screen.queryByRole("link", { name: /Sessions/ })).toBeNull();
   });
 
   it("shows the session title and where it runs in the bar", () => {
@@ -189,14 +197,16 @@ describe("the keys", () => {
     expect(await screen.findByRole("region", { name: "Editor" })).toBeInTheDocument();
   });
 
-  it("opens New session as a sheet with Ctrl+Shift+N", async () => {
+  it("opens New session as the home composer in the main column with Ctrl+Shift+N", async () => {
     const { live } = desktop();
     live();
     await userEvent.keyboard("{Control>}n{/Control}");
-    expect(screen.queryByRole("dialog", { name: "New session" })).not.toBeInTheDocument();
+    expect(window.location.hash).toBe("");
     await userEvent.keyboard("{Control>}{Shift>}n{/Shift}{/Control}");
-    const sheet = await screen.findByRole("dialog", { name: "New session" });
-    expect(within(sheet).getByRole("heading", { name: "New session" })).toBeInTheDocument();
+    const main = screen.getByRole("main");
+    expect(await within(main).findByRole("heading", { name: "What should the agent do?" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "New session" })).not.toBeInTheDocument();
+    expect(within(main).queryByRole("link", { name: /Sessions/ })).toBeNull();
     expect(screen.getByRole("navigation", { name: "Sidebar" })).toBeInTheDocument();
   });
 
