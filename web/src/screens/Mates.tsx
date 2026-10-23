@@ -1,4 +1,4 @@
-import { type CSSProperties, type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import {
   type Authed,
   type Mate,
@@ -37,7 +37,7 @@ import {
 } from "../faces";
 import type { Mates as MateBoard } from "../stream";
 import type { PageVisibility } from "../App";
-import { Button, Dialog, Segmented } from "../ui";
+import { Button, Dialog, Segmented, Slider } from "../ui";
 
 function message(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
@@ -946,20 +946,17 @@ export function NewMate({ api }: { api: Authed }) {
               </label>
               <p className="mt-sub">The mate also reads its memory file at the start of each conversation.</p>
               {tones.map((t, i) => (
-                <div key={t.key} className="mt-slider">
-                  <span>{t.low}</span>
-                  <input
-                    type="range"
-                    min={0}
-                    max={4}
-                    step={1}
-                    aria-label={t.low + " to " + t.high}
-                    value={tone[i]}
-                    style={{ "--at": tone[i] * 25 + "%" } as CSSProperties}
-                    onChange={(e) => setTone(tone.map((v, j) => (j === i ? Number(e.target.value) : v)))}
-                  />
-                  <span className="hi">{t.high}</span>
-                </div>
+                <Slider
+                  key={t.key}
+                  label={t.low + " to " + t.high}
+                  low={t.low}
+                  high={t.high}
+                  min={0}
+                  max={4}
+                  value={tone[i]}
+                  valueText={(v) => v + 1 + " of 5"}
+                  onChange={(v) => setTone(tone.map((x, j) => (j === i ? v : x)))}
+                />
               ))}
               <section className="mt-added" aria-label="Added to the prompt">
                 <h3>Added to the prompt</h3>
