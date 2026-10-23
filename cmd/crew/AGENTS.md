@@ -22,7 +22,7 @@ Hooks call `crew hook`. It writes one message to the socket and exits. It never 
 
 ## Subcommands
 
-- `crew` with no arguments tells you to open the crew app, prints the usage and exits 2. There is no TUI ([ADR 0061](../../docs/adr/0061-remove-the-tui.md)). Test: `go test ./cmd/crew/ -run CrewWithNoArguments`.
+- `crew` with no arguments tells you to open the crew app, prints the usage and exits 2. There is no TUI ([ADR 0062](../../docs/adr/0062-remove-the-tui.md)). Test: `go test ./cmd/crew/ -run CrewWithNoArguments`.
 - `crew daemon [start|status|stop]`: `crew daemon` runs in the foreground. The other forms are in [internal/daemon/](../../internal/daemon/AGENTS.md).
 - `crew workspace add <path>|list|remove <path>` registers workspaces through the daemon (it starts automatically). This step is optional: `session.new` registers a folder that it does not know. `list` shows `-` for the git facts of a repo until the first background refresh is done.
 - `crew new [--workspace p] [--harness claude|codex|omp] [--model m] [--effort e] [task]` starts a session. Without `--workspace`, it uses the last workspace. New single-repo worktrees go under `$CREW_HOME/worktrees`.

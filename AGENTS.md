@@ -1,6 +1,6 @@
 # agent-workspace
 
-`crew` is a terminal workspace that runs Claude Code and Codex sessions in parallel. Each session works in git worktrees. The tool gives each session a local, PR-style review pane. `crew` is one Go binary. It is the daemon, the CLI, the API server of the app and the hook handler. The app (`web/` and `desktop/`) is the only UI ([ADR 0061](docs/adr/0061-remove-the-tui.md)).
+`crew` is a terminal workspace that runs Claude Code and Codex sessions in parallel. Each session works in git worktrees. The tool gives each session a local, PR-style review pane. `crew` is one Go binary. It is the daemon, the CLI, the API server of the app and the hook handler. The app (`web/` and `desktop/`) is the only UI ([ADR 0062](docs/adr/0062-remove-the-tui.md)).
 
 - What it does: [FEATURES.md](FEATURES.md)
 - How it is built, the layers and the performance budgets: [ARCHITECTURE.md](ARCHITECTURE.md)
