@@ -163,7 +163,7 @@ func BuildEnv(env Environment, secrets map[string]string, environ []string) []st
 			}
 			spec := envParts[p]
 			if p == EnvSSH {
-				put(spec.dirVar, "ssh -i '"+filepath.Join(env.Secrets, EnvSSHKeyFile)+"' -o IdentitiesOnly=yes")
+				put(spec.dirVar, "ssh -i '"+filepath.Join(env.Secrets, "ssh", EnvSSHKeyFile)+"' -o IdentitiesOnly=yes")
 			} else {
 				put(spec.dirVar, filepath.Join(env.Home, spec.dir))
 			}
