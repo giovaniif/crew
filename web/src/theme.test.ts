@@ -136,6 +136,12 @@ describe("the automations table", () => {
   });
 });
 
+describe("the settings styles", () => {
+  it.each([".settings-layout", ".settings-nav", ".settings-pane", ".settings-list", ".server-list", ".server-row-text", ".server-row-buttons", ".alert-row", ".agent-settings", ".shortcut-actions", ".shortcuts", ".theme-colors", ".detail-tabs"])("keeps no rule for the removed %s", (selector) => {
+    expect(() => rule(selector)).toThrow("no rule for " + selector);
+  });
+});
+
 describe("touch targets", () => {
   it.each([".session-card", ".back", ".retry", ".new-session", ".choice", ".interrupt", ".queued-action", ".permission-choice", ".load-older", ".tool summary", ".automations .chip", ".automations .subtabs button", ".automations .run-list .link", ".run-actions button", ".approval-actions button", ".kill-actions button", ".mate-actions button", ".mate-threads a", ".open-session", ".term-retry", ".phone-views button", ".opt", ".folders li", ".disk-actions button", ".disk-tabs button", ".disk-kill", ".where-choice", ".first-run-buttons button", ".first-run-body .fields button", ".chip-button", ".chip-menu button", ".change-server", ".swatches .swatch"])("%s is at least 44px tall", (selector) => {
     expect(parseInt(rule(selector)["min-height"] ?? "0", 10)).toBeGreaterThanOrEqual(44);
