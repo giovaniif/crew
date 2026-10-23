@@ -1,6 +1,6 @@
 ---
 name: verify
-description: Start an isolated crew, drive the TUI and the PWA, and prove a change with an evidence bundle. Use it before you claim that a crew change works, to reproduce a bug, to run the feature map, or to make PR screenshots.
+description: Start an isolated crew, drive the TUI, the PWA and the desktop app, and prove a change with an evidence bundle. Use it before you claim that a crew change works, to reproduce a bug, to run the feature map, or to make PR screenshots.
 ---
 
 # Verify a crew change
@@ -23,7 +23,8 @@ go run ./scripts/verify iso up
 go run ./scripts/verify iso seed --sessions 3
 ```
 
-- `doctor` names each missing tool with the install command.
+- `doctor` names each missing tool with the install command, also a missing `web/node_modules` (`cd web && npm ci`).
+- `iso up --session` also starts a live session, `TEST live session`, in the repo `TEST-live`. It runs the e2e fake `claude` in a real tmux pane. The fake echoes each line it gets as `TEST echo: <line>` and writes a Claude transcript. Thus chat send, the Terminal, Shell and nvim tabs have a real pane. The result has `session`, `pane` and `worktree`.
 - `iso up` builds crew from the checkout. After each checkout or code change, run `iso down` and `iso up` again. The isolated crew does not watch the sources.
 
 ## 2. Drive
@@ -48,6 +49,17 @@ go run ./scripts/verify web drive /#/approvals --viewport both --steps '[{"expec
 - Locators: `{"role":"button","name":"Send"}`, `{"testId":"x"}`, `{"label":"Code"}`, `{"placeholder":"..."}`, `{"text":"..."}`. Add `"exact":false` for a substring match.
 - Console errors, page errors and failed `/api/` calls fail the command. On a failure, read the `failure` shot and the `*-failure.aria.txt` snapshot.
 - `--fake` uses `web/fake-api.ts` with no `iso`. `--installed` sets standalone mode. `--scheme dark`. `--video`.
+
+Desktop app (the real Tauri app through `tauri-driver`):
+
+```sh
+go run ./scripts/verify app drive / --steps '[{"click":{"text":"TEST live session","exact":false},"timeout":15000},{"click":{"role":"tab","name":"Terminal"}},{"shot":"terminal.png"}]'
+```
+
+- The steps and locators are the same as `web drive`. One viewport (`app`, 1440x900). It does not capture console errors or failed API calls.
+- The app starts with `PATH=/usr/bin:/bin`, as a macOS GUI launch does, and with no `CREW_URL`. Thus it starts its own `crew serve` on the iso `CREW_HOME`, as on a Mac. Use it for bugs that only the app shows.
+- It needs `cargo`, `tauri-driver` and `WebKitWebDriver` (see `desktop/AGENTS.md`). The first build takes minutes and needs about 10 GB free (`df -h /`). Cargo reuses `VERIFY_CARGO_TARGET` (default `/tmp/crew-verify-cargo`). Remove it when you are done.
+- After each `goto`, it closes the first-run sheet of the new app data dir.
 
 CLI of the isolated crew:
 
@@ -113,4 +125,4 @@ Embed the `urls` from `assets push`. They are pinned to a commit of the orphan `
 go run ./scripts/verify iso down
 ```
 
-`iso down` stops serve, Vite, the daemon and both tmux servers, and removes the isolated home. Run it also after a failure.
+`iso down` stops serve, Vite, the daemon and both tmux servers, and removes the isolated home. Run it also after a failure. After `verify app`, also run `rm -rf /tmp/crew-verify-cargo` when you do not need the build again.

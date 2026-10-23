@@ -125,7 +125,7 @@ func (h *Host) loadConfig(ctx context.Context) {
 }
 
 func (h *Host) invoke(ctx context.Context, stdin string, args ...string) (string, error) {
-	full := append([]string{"-L", h.socket, "-f", h.configPath}, args...)
+	full := append([]string{"-u", "-L", h.socket, "-f", h.configPath}, args...)
 	cmd := exec.CommandContext(ctx, "tmux", full...)
 	cmd.Env = withoutTmuxEnv(os.Environ())
 	if stdin != "" {
