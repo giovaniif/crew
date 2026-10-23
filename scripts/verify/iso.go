@@ -198,7 +198,6 @@ func viteCmd(e *env, vars []string, port int) cmd {
 func isoReport(st isoState, r *result) {
 	r.set("home", st.Home)
 	r.set("socket", st.Socket)
-	r.set("tui_socket", st.Socket+"-tui")
 	r.set("bin", st.Bin)
 	r.set("serve_url", st.ServeURL)
 	r.set("web_url", st.WebURL)
@@ -317,9 +316,7 @@ func stopIso(e *env, st isoState) {
 		e.sys.kill(pid)
 	}
 	e.sys.exec(cmd{dir: st.Home, env: st.Env, name: st.Bin, args: []string{"daemon", "stop"}})
-	for _, s := range []string{st.Socket + "-tui", st.Socket} {
-		e.sys.exec(cmd{name: "tmux", args: []string{"-L", s, "kill-server"}})
-	}
+	e.sys.exec(cmd{name: "tmux", args: []string{"-L", st.Socket, "kill-server"}})
 	if home := filepath.Clean(st.Home); filepath.Dir(home) == "/tmp" && strings.HasPrefix(home, "/tmp/crew-iso-") {
 		_ = os.RemoveAll(home)
 	}

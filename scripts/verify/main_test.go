@@ -61,7 +61,7 @@ func write(t *testing.T, path, text string) {
 }
 
 func TestUsageErrorsPrintOneJSONObjectAndExit2(t *testing.T) {
-	for _, args := range [][]string{nil, {"nope"}, {"iso"}, {"iso", "sideways"}, {"web", "shot"}, {"evidence"}, {"tui", "drive", "--steps", "not json"}} {
+	for _, args := range [][]string{nil, {"nope"}, {"iso"}, {"iso", "sideways"}, {"web", "shot"}, {"evidence"}} {
 		e, _ := testEnv(t)
 		got, code := runJSON(t, e, args...)
 		if code != 2 {
