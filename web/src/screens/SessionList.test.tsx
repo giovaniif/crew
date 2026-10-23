@@ -102,7 +102,9 @@ describe("the session list", () => {
   it("says when there are no sessions", () => {
     const { sockets } = setup();
     live(sockets, { ...goldenState(), sessions: [], limits: [] });
-    expect(screen.getByText("No sessions yet")).toBeInTheDocument();
+    const empty = screen.getByRole("region", { name: "No sessions yet" });
+    expect(empty).toHaveTextContent("Start one here, or run claude or codex in a terminal.");
+    expect(within(empty).getByRole("link", { name: /New session/ })).toHaveAttribute("href", "#/new");
   });
 
   it("shows an offline state when the connection drops and recovers on its own", async () => {
@@ -120,7 +122,7 @@ describe("the session list", () => {
     const { sockets } = setup();
     live(sockets);
     sockets.last.drop(1006);
-    await userEvent.click(screen.getByRole("button", { name: "Retry now" }));
+    await userEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(sockets.opened.length).toBeGreaterThanOrEqual(2);
   });
 

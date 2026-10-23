@@ -100,12 +100,20 @@ describe("the permission card", () => {
     expect(server.calls.some((c) => c.path === promptPath)).toBe(false);
   });
 
-  it("disables the composer until the prompt is answered", async () => {
+  it("keeps the composer for typing but blocks sending until the prompt is answered", async () => {
     const server = serverWith();
     live(setup(server), asking);
     await screen.findByRole("button", { name: "Yes" });
-    expect(screen.getByRole("textbox", { name: "Message" })).toBeDisabled();
+    expect(screen.getByRole("textbox", { name: "Message" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Queue" })).toBeDisabled();
+    expect(screen.getByTestId("composer-hint")).toHaveTextContent("Answer the permission above to continue · Enter queues");
+  });
+
+  it("marks the first choice as the primary answer", async () => {
+    const server = serverWith();
+    live(setup(server), asking);
+    expect(await screen.findByRole("button", { name: "Yes" })).toHaveClass("primary");
+    expect(screen.getByRole("button", { name: "No" })).not.toHaveClass("primary");
   });
 
   it("posts the chosen id and says it was answered", async () => {
@@ -174,7 +182,7 @@ describe("the permission card", () => {
     expect(raw.tagName).toBe("PRE");
     expect(raw).toHaveTextContent("[a] allow [d] deny");
     expect(screen.queryByRole("button", { name: /allow|deny|Yes/ })).not.toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: "Message" })).toBeDisabled();
+    expect(screen.getByRole("textbox", { name: "Message" })).toBeEnabled();
   });
 
   it("offers Retry when the prompt cannot be loaded", async () => {

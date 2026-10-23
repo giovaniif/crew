@@ -18,3 +18,16 @@ export function parseRoute(hash: string): Route {
     return { screen: "list" };
   }
 }
+
+export function openSessionView(id: string, view: SessionView): void {
+  const base = "#/sessions/" + encodeURIComponent(id);
+  const target = base + "/" + view;
+  if (window.location.hash === target) {
+    window.location.hash = base;
+    setTimeout(() => {
+      window.location.hash = target;
+    }, 0);
+    return;
+  }
+  window.location.hash = target;
+}

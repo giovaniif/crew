@@ -1,4 +1,4 @@
-import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { type CSSProperties, type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import {
   type Authed,
   type Mate,
@@ -26,20 +26,18 @@ import {
   faceState,
   faceSvg,
   gallery,
-  inSource,
   mateCard,
+  type MateCard,
   type MateSource,
   mateTagline,
   memoryMeter,
-  stateWords,
   type ToneAxis,
   toneLines,
   toneOf,
 } from "../faces";
-import type { MateRow, Mates as MateBoard } from "../stream";
+import type { Mates as MateBoard } from "../stream";
 import type { PageVisibility } from "../App";
-import { ApprovalList } from "./Approvals";
-import { Select } from "../ui";
+import { Button, Dialog, Segmented } from "../ui";
 
 function message(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
@@ -144,37 +142,40 @@ function KillSwitch({ api, stopped }: { api: Authed; stopped: boolean }) {
 
   if (stopped) {
     return (
-      <section className="kill-switch stopped" aria-label="Kill switch">
+      <section className="mt-stopped" aria-label="Kill switch">
         <strong>All mates are stopped.</strong>
-        <p className="muted">No mate starts a new turn.</p>
-        <button type="button" disabled={busy} onClick={() => flip(false)}>
+        <span className="mt-sub">No mate starts a new turn.</span>
+        <Button disabled={busy} onClick={() => void flip(false)}>
           Start all mates
-        </button>
+        </Button>
         {note && <p role="alert">{note}</p>}
       </section>
     );
   }
   return (
-    <section className="kill-switch" aria-label="Kill switch">
-      {asking ? (
-        <>
-          <p>Stop all mates? They start no new turns until you start them again.</p>
-          <div className="kill-actions">
-            <button type="button" disabled={busy} onClick={() => setAsking(false)}>
+    <>
+      <Button className="mt-small" onClick={() => setAsking(true)}>
+        Stop all
+      </Button>
+      {asking && (
+        <Dialog title="Stop all mates?" onClose={() => setAsking(false)}>
+          <p>They start no new turns until you start them again.</p>
+          {note && (
+            <p className="error" role="alert">
+              {note}
+            </p>
+          )}
+          <div className="dialog-actions">
+            <Button disabled={busy} onClick={() => setAsking(false)}>
               Cancel
-            </button>
-            <button type="button" className="danger" disabled={busy} onClick={() => flip(true)}>
+            </Button>
+            <Button variant="primary" className="mt-danger-fill" disabled={busy} onClick={() => void flip(true)}>
               Stop all
-            </button>
+            </Button>
           </div>
-        </>
-      ) : (
-        <button type="button" className="danger" onClick={() => setAsking(true)}>
-          Stop all mates
-        </button>
+        </Dialog>
       )}
-      {note && <p role="alert">{note}</p>}
-    </section>
+    </>
   );
 }
 
@@ -198,15 +199,17 @@ function MateForm({ api, start, onSaved }: { api: Authed; start: Mate; onSaved: 
   }
 
   return (
-    <form className="mate-form" onSubmit={submit} aria-label={"Settings of " + start.name}>
+    <form className="mt-form mt-panel" onSubmit={submit} aria-label={"Settings of " + start.name}>
       <Brains mate={mate} repos={repos} onMate={setMate} onRepos={setRepos} />
-      <label>
+      <label className="mt-field">
         Prompt
-        <textarea rows={5} value={mate.prompt} onChange={(e) => setMate({ ...mate, prompt: e.target.value })} />
+        <textarea className="ui input mt-area" rows={5} value={mate.prompt} onChange={(e) => setMate({ ...mate, prompt: e.target.value })} />
       </label>
-      <button type="submit" disabled={busy || mate.prompt.trim() === ""}>
-        Save
-      </button>
+      <div className="mt-actions">
+        <Button type="submit" variant="primary" disabled={busy || mate.prompt.trim() === ""}>
+          Save
+        </Button>
+      </div>
       {note && <p role="alert">{note}</p>}
     </form>
   );
@@ -222,30 +225,32 @@ function splitRepos(text: string): string[] | undefined {
 
 function Brains({ mate, repos, onMate, onRepos }: { mate: Mate; repos: string; onMate: (m: Mate) => void; onRepos: (r: string) => void }) {
   const field = (key: "model" | "effort") => (
-    <label>
+    <label className="mt-field">
       {key === "model" ? "Model" : "Effort"}
-      <input value={mate[key] ?? ""} onChange={(e) => onMate({ ...mate, [key]: e.target.value || undefined })} />
+      <input className="ui input" value={mate[key] ?? ""} onChange={(e) => onMate({ ...mate, [key]: e.target.value || undefined })} />
     </label>
   );
   return (
     <>
-      <div className="ui-field">
+      <div className="mt-field">
         Agent
-        <Select
+        <Segmented
           label="Agent"
           value={mate.agent}
           onChange={(agent) => onMate({ ...mate, agent })}
           options={[
-            { value: "claude", label: "claude" },
-            { value: "codex", label: "codex" },
+            { value: "claude", label: "Claude" },
+            { value: "codex", label: "Codex" },
           ]}
         />
       </div>
-      {field("model")}
-      {field("effort")}
-      <label>
+      <div className="mt-two">
+        {field("model")}
+        {field("effort")}
+      </div>
+      <label className="mt-field">
         Repos
-        <input value={repos} placeholder="api, web" onChange={(e) => onRepos(e.target.value)} />
+        <input className="ui input" value={repos} placeholder="api, web" onChange={(e) => onRepos(e.target.value)} />
       </label>
     </>
   );
@@ -286,7 +291,7 @@ function Connect({ api, name }: { api: Authed; name: string }) {
   }
 
   return (
-    <section className="mate-connect" aria-label={"Connect " + name}>
+    <section className="mt-panel mt-connect" aria-label={"Connect " + name}>
       <ol>
         <li>
           {setup ? (
@@ -306,18 +311,22 @@ function Connect({ api, name }: { api: Authed; name: string }) {
           To become the owner of {name}, send this code to @{name} in a direct message in Slack in the next 10 minutes: <code>{claim.code}</code>
         </p>
       ) : (
-        <form onSubmit={submit}>
-          <label>
-            Bot token
-            <input type="password" autoComplete="off" value={bot} onChange={(e) => setBot(e.target.value)} />
-          </label>
-          <label>
-            App token
-            <input type="password" autoComplete="off" value={app} onChange={(e) => setApp(e.target.value)} />
-          </label>
-          <button type="submit" disabled={busy || bot.trim() === "" || app.trim() === ""}>
-            Save tokens
-          </button>
+        <form className="mt-form" onSubmit={submit}>
+          <div className="mt-two">
+            <label className="mt-field">
+              Bot token
+              <input className="ui input" type="password" autoComplete="off" value={bot} onChange={(e) => setBot(e.target.value)} />
+            </label>
+            <label className="mt-field">
+              App token
+              <input className="ui input" type="password" autoComplete="off" value={app} onChange={(e) => setApp(e.target.value)} />
+            </label>
+          </div>
+          <div className="mt-actions">
+            <Button type="submit" variant="primary" disabled={busy || bot.trim() === "" || app.trim() === ""}>
+              Save tokens
+            </Button>
+          </div>
         </form>
       )}
       {note && <p role="alert">{note}</p>}
@@ -372,88 +381,144 @@ export function Confirm({
   );
 }
 
-function StateWord({ state }: { state: FaceState }) {
+const sources: { value: MateSource; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "claude", label: "Claude" },
+  { value: "codex", label: "Codex" },
+];
+
+function agentName(agent: string): string {
+  return agent === "codex" ? "Codex" : agent === "claude" ? "Claude" : agent;
+}
+
+function subtitle(card: MateCard): string {
+  return [card.tagline, card.agent ? agentName(card.agent) : ""].filter(Boolean).join(" · ");
+}
+
+function rowDot(card: MateCard): string {
+  if (card.face === "needs") {
+    return "dot wait";
+  }
+  if (card.face === "working" || card.face === "thinking") {
+    return "dot run";
+  }
+  return "dot";
+}
+
+function MateRowLink({ card, on }: { card: MateCard; on: boolean }) {
+  const { row, def } = card;
   return (
-    <span className={"face-state face-" + state}>
-      <span className="dot" aria-hidden="true" />
-      {stateWords[state]}
-    </span>
+    <li>
+      <a
+        className={"mt-row" + (on ? " on" : "")}
+        href={"#/mates/" + encodeURIComponent(row.name)}
+        aria-label={row.name + ", " + card.status}
+        aria-current={on ? "page" : undefined}
+      >
+        <MateFace name={row.name} avatar={row.avatar || def?.avatar} color={row.color || def?.color} state={card.face} px={28} />
+        <span className="mt-nm">
+          <span className="mt-name">{row.name}</span>
+          <span className="mt-sub">{subtitle(card)}</span>
+        </span>
+        {card.face === "paused" ? <span className="mt-pill">paused</span> : <span className={rowDot(card)} aria-hidden="true" />}
+      </a>
+    </li>
   );
 }
 
-const sources: [MateSource, string][] = [
-  ["all", "All Mates"],
-  ["live", "Live"],
-  ["claude", "Claude"],
-  ["codex", "Codex"],
-];
-
-export function Mates({ api, now, board, visibility }: { api: Authed; now: number; board?: MateBoard; visibility?: PageVisibility }) {
-  const { defs, problems, error } = useMateDefs(api);
-  const asking = useAskingMates(api);
+function MateList({ api, board, cards, selected }: { api: Authed; board?: MateBoard; cards: MateCard[]; selected?: string }) {
   const [source, setSource] = useState<MateSource>("all");
   const [search, setSearch] = useState("");
+  const shown = gallery(cards, source, search);
+  const needs = shown.filter((c) => c.face === "needs");
+  const rest = shown.filter((c) => c.face !== "needs");
+  const rows = board?.mates ?? [];
+  return (
+    <nav className="mt-list" aria-label="Mates">
+      <div className="mt-list-head">
+        <div className="mt-title-row">
+          <h1>Mates</h1>
+          <span className="spacer" />
+          {!board?.stopped && <KillSwitch api={api} stopped={false} />}
+          <a className="ui btn primary mt-small" href="#/mates/new">
+            New mate
+          </a>
+        </div>
+        {board?.stopped && <KillSwitch api={api} stopped />}
+        <input type="search" className="ui input" aria-label="Search mates" placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <Segmented label="Mate sources" value={source} options={sources} onChange={setSource} />
+      </div>
+      <div className="mt-scroll">
+        {board === undefined && <p className="mt-note">Loading…</p>}
+        {board !== undefined && rows.length === 0 && <p className="mt-note">No mates yet.</p>}
+        {rows.length > 0 && shown.length === 0 && <p className="mt-note">No mate matches.</p>}
+        {needs.length > 0 && (
+          <>
+            <div className="mt-label">Needs you</div>
+            <ul className="mt-rows" aria-label="Needs you">
+              {needs.map((c) => (
+                <MateRowLink key={c.name} card={c} on={c.name === selected} />
+              ))}
+            </ul>
+          </>
+        )}
+        {rest.length > 0 && <div className="mt-label">All mates</div>}
+        {rows.length > 0 && (
+          <ul className="mt-rows" aria-label="All mates">
+            {rest.map((c) => (
+              <MateRowLink key={c.name} card={c} on={c.name === selected} />
+            ))}
+          </ul>
+        )}
+      </div>
+    </nav>
+  );
+}
+
+function MatesLayout({ api, board, name, picked }: { api: Authed; board?: MateBoard; name?: string; picked: boolean }) {
+  const { defs, problems, error, reload } = useMateDefs(api);
+  const asking = useAskingMates(api);
   const rows = board?.mates ?? [];
   const cards = rows.map((row) => mateCard(row, defs.find((d) => d.name === row.name), asking));
-  const shown = gallery(cards, source, search);
-  const live = cards.reduce((n, c) => n + c.live, 0);
+  const first = [...cards.filter((c) => c.face === "needs"), ...cards.filter((c) => c.face !== "needs")][0];
+  const selected = name ?? first?.name;
+  const card = cards.find((c) => c.name === selected);
   return (
-    <main className="screen mates">
-      <div className="mates-top">
-        <h1>Mates</h1>
-        <a className="icon-button" href="#/mates/new" aria-label="New mate">
-          +
-        </a>
-      </div>
-      <p className="muted mates-sum">
-        {cards.length} mate{cards.length === 1 ? "" : "s"} · {live} live
-      </p>
-      {error && <p role="alert">{error}</p>}
-      {problems.map((p) => (
-        <p key={p} className="mate-error">
-          {p}
-        </p>
-      ))}
-      <div className="mate-filters">
-        <nav className="mate-sources" aria-label="Mate sources">
-          {sources.map(([key, label]) => (
-            <button key={key} type="button" aria-pressed={source === key} className={source === key ? "on" : ""} onClick={() => setSource(key)}>
-              {label} <span className="count">{cards.filter((c) => inSource(c, key)).length}</span>
-            </button>
-          ))}
-        </nav>
-        <input type="search" className="mate-search" aria-label="Search mates" placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)} />
-      </div>
-      {board === undefined && <p>Loading…</p>}
-      {board !== undefined && rows.length === 0 && <p>No mates yet.</p>}
-      {rows.length > 0 && shown.length === 0 && <p className="muted">No mate matches.</p>}
-      <div className="mate-grid">
-        {shown.map((card) => {
-          const { row, def } = card;
-          return (
-            <a key={row.name} className="mate-card" href={"#/mates/" + encodeURIComponent(row.name)} aria-label={row.name + ", " + card.status}>
-              <MateFace name={row.name} avatar={row.avatar || def?.avatar} color={row.color || def?.color} state={card.face} px={64} />
-              <strong className="mate-name">{row.name}</strong>
-              <span className={"mate-live" + (card.live > 0 ? " on" : "")}>{card.liveLabel}</span>
-              {card.tagline && <span className="mate-tag">{card.tagline}</span>}
-              <span className="mate-status">{card.status}</span>
-            </a>
-          );
-        })}
-      </div>
-      <KillSwitch api={api} stopped={board?.stopped ?? false} />
-      <h2>Needs you</h2>
-      <ApprovalList api={api} now={now} visibility={visibility} />
+    <main className={"screen mt-split" + (picked ? " picked" : "")}>
+      <MateList api={api} board={board} cards={cards} selected={selected} />
+      <section className="mt-prof" aria-label="Profile">
+        {picked && (
+          <a className="back mt-back" href="#/mates">
+            ‹ Mates
+          </a>
+        )}
+        {error && <p role="alert">{error}</p>}
+        {problems.map((p) => (
+          <p key={p} className="mt-error">
+            {p}
+          </p>
+        ))}
+        {card ? (
+          <Profile key={card.name} api={api} card={card} asking={asking} reload={reload} />
+        ) : name !== undefined ? (
+          <p className="mt-note">{board === undefined ? "Loading…" : "There is no mate " + name + "."}</p>
+        ) : null}
+      </section>
     </main>
   );
 }
 
-function Memory({ api, name }: { api: Authed; name: string }) {
-  const [memory, setMemory] = useState<MateMemory | null>(null);
-  const [draft, setDraft] = useState<string | null>(null);
-  const [clearing, setClearing] = useState(false);
-  const [note, setNote] = useState("");
+export function Mates({ api, board }: { api: Authed; now?: number; board?: MateBoard; visibility?: PageVisibility }) {
+  return <MatesLayout api={api} board={board} picked={false} />;
+}
 
+export function MateProfile({ api, name, board }: { api: Authed; name: string; board?: MateBoard }) {
+  return <MatesLayout api={api} board={board} name={name} picked />;
+}
+
+function useMemory(api: Authed, name: string) {
+  const [memory, setMemory] = useState<MateMemory | null>(null);
+  const [note, setNote] = useState("");
   useEffect(() => {
     let live = true;
     mateMemory(api, name)
@@ -463,92 +528,111 @@ function Memory({ api, name }: { api: Authed; name: string }) {
       live = false;
     };
   }, [api, name]);
+  return { memory, setMemory, note, setNote };
+}
 
-  async function save(text: string) {
-    setNote("");
-    try {
-      setMemory(await setMateMemory(api, name, text));
-      setDraft(null);
-      setClearing(false);
-    } catch (err) {
-      setNote(message(err));
-    }
-  }
-
-  const meter = memoryMeter(draft ?? memory?.text ?? "", memory?.limit ?? 8192);
-
+function Fact({ label, children, sub }: { label: ReactNode; children: ReactNode; sub: ReactNode }) {
   return (
-    <section className="mate-memory" aria-label={"Memory section of " + name}>
-      <div className="sec-row">
+    <div className="mt-fact" role="group" aria-label={typeof label === "string" ? label : undefined}>
+      <div className="k">{label}</div>
+      <div className="v">{children}</div>
+      <div className="s">{sub}</div>
+    </div>
+  );
+}
+
+function Memory({ name, mem, save }: { name: string; mem: ReturnType<typeof useMemory>; save: (text: string) => Promise<boolean> }) {
+  const { memory, note } = mem;
+  const [draft, setDraft] = useState<string | null>(null);
+  const [clearing, setClearing] = useState(false);
+  const limit = memory?.limit ?? 8192;
+  return (
+    <section aria-label={"Memory section of " + name}>
+      <div className="mt-section">
         <h2>Memory</h2>
+        <span className="spacer" />
         {draft === null && (
-          <span className="mem-actions">
-            <button type="button" className="link-button" onClick={() => setDraft(memory?.text ?? "")}>
-              Edit memory
-            </button>
-            <button type="button" className="link-button danger-link" disabled={!memory?.text} onClick={() => setClearing(true)}>
-              Clear memory
-            </button>
-          </span>
+          <>
+            <Button variant="quiet" className="mt-tiny" onClick={() => setDraft(memory?.text ?? "")}>
+              Edit
+            </Button>
+            <Button variant="quiet" className="mt-tiny danger" disabled={!memory?.text} onClick={() => setClearing(true)}>
+              Clear…
+            </Button>
+          </>
         )}
       </div>
-      <div className={"mem-meter" + (meter.full ? " full" : "")}>
-        <meter
-          aria-label="Memory size"
-          min={0}
-          max={memory?.limit ?? 8192}
-          value={new TextEncoder().encode(draft ?? memory?.text ?? "").length}
-          aria-valuenow={new TextEncoder().encode(draft ?? memory?.text ?? "").length}
-          aria-valuemin={0}
-          aria-valuemax={memory?.limit ?? 8192}
-        />
-        <span className="muted">{meter.label}</span>
-      </div>
       {draft === null ? (
-        <pre className="mem">{memory?.text ? memory.text : "Empty. " + name + " writes notes here as it learns."}</pre>
+        <pre className="mt-mem">{memory?.text ? memory.text : "Empty. " + name + " writes notes here as it learns."}</pre>
       ) : (
         <>
-          <textarea aria-label={"Memory of " + name} rows={8} value={draft} onChange={(e) => setDraft(e.target.value)} />
-          <p className="muted">
-            {new TextEncoder().encode(draft).length} of {memory?.limit ?? 8192} bytes. Empty text clears the memory.
+          <textarea className="ui input mt-area" aria-label={"Memory of " + name} rows={8} value={draft} onChange={(e) => setDraft(e.target.value)} />
+          <p className="mt-sub">
+            {new TextEncoder().encode(draft).length} of {limit} bytes. Empty text clears the memory.
           </p>
-          <div className="mate-actions">
-            <button type="button" onClick={() => setDraft(null)}>
+          <div className="mt-actions">
+            <Button variant="quiet" onClick={() => setDraft(null)}>
               Cancel
-            </button>
-            <button type="button" onClick={() => void save(draft ?? "")}>
+            </Button>
+            <Button variant="primary" onClick={() => void save(draft).then((ok) => ok && setDraft(null))}>
               Save memory
-            </button>
+            </Button>
           </div>
         </>
       )}
       {note && !clearing && <p role="alert">{note}</p>}
       {clearing && (
-        <Confirm
-          id="clear-memory"
-          title={"Clear the memory of " + name + "?"}
-          body={name + " forgets all its notes. Its personality stays."}
-          action="Clear"
-          danger
-          note={note}
-          onCancel={() => setClearing(false)}
-          onConfirm={() => void save("")}
-        />
+        <Dialog title={"Clear the memory of " + name + "?"} onClose={() => setClearing(false)}>
+          <p>{name} forgets all its notes. Its personality stays.</p>
+          {note && (
+            <p className="error" role="alert">
+              {note}
+            </p>
+          )}
+          <div className="dialog-actions">
+            <Button onClick={() => setClearing(false)}>Cancel</Button>
+            <Button variant="primary" className="mt-danger-fill" onClick={() => void save("").then((ok) => ok && setClearing(false))}>
+              Clear
+            </Button>
+          </div>
+        </Dialog>
       )}
     </section>
   );
 }
 
-export function MateProfile({ api, name, board }: { api: Authed; name: string; board?: MateBoard }) {
-  const { defs, reload } = useMateDefs(api);
-  const asking = useAskingMates(api);
+function convDot(state: string, ended: boolean): string {
+  if (ended) {
+    return "dot";
+  }
+  if (state === "running") {
+    return "dot run";
+  }
+  if (state === "permission") {
+    return "dot ask";
+  }
+  if (state === "waiting") {
+    return "dot wait";
+  }
+  return state === "done" ? "dot ok" : "dot";
+}
+
+function Profile({ api, card, asking, reload }: { api: Authed; card: MateCard; asking: string[]; reload: () => void }) {
+  const { row, def } = card;
+  const name = row.name;
+  const mem = useMemory(api, name);
   const [editing, setEditing] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
   const [startNote, setStartNote] = useState("");
-  const row: MateRow | undefined = board?.mates.find((m) => m.name === name);
-  const def = defs.find((d) => d.name === name);
+  const state = faceState(row, asking);
+  const paused = row.state === "paused";
+  const local = row.conversations ?? [];
+  const meter = memoryMeter(mem.memory?.text ?? "", mem.memory?.limit ?? 8192);
+  const bytes = new TextEncoder().encode(mem.memory?.text ?? "").length;
+  const repos = def?.repos ?? [];
+  const canConnect = row.state === "ready" || row.state === "no_tokens";
 
   async function run(work: () => Promise<void>) {
     setBusy(true);
@@ -562,98 +646,32 @@ export function MateProfile({ api, name, board }: { api: Authed; name: string; b
     }
   }
 
-  if (!row) {
-    return (
-      <main className="screen mates">
-        <a className="back" href="#/mates">
-          ‹ Mates
-        </a>
-        <p>{board === undefined ? "Loading…" : "There is no mate " + name + "."}</p>
-      </main>
-    );
+  async function save(text: string): Promise<boolean> {
+    mem.setNote("");
+    try {
+      mem.setMemory(await setMateMemory(api, name, text));
+      return true;
+    } catch (err) {
+      mem.setNote(message(err));
+      return false;
+    }
   }
-  const state = faceState(row, asking);
-  const paused = row.state === "paused";
-  const local = row.conversations ?? [];
-  const chips = def ? [def.agent, def.model, def.effort ? "effort " + def.effort : "", (def.repos ?? []).join(", ")].filter(Boolean) : [];
+
   return (
-    <main className="screen mates mate-profile">
-      <a className="back" href="#/mates">
-        ‹ Mates
-      </a>
-      <div className="profile-head">
-        <MateFace name={name} avatar={row.avatar || def?.avatar} color={row.color || def?.color} state={state} px={112} />
-        <h1>{name}</h1>
-        <StateWord state={state} />
-        {def && <p className="mate-tag">{def.prompt}</p>}
-        <div className="mtags">
-          {chips.map((c) => (
-            <span key={c} className="mtag">
-              {c}
-            </span>
-          ))}
+    <div className="mt-profile">
+      <div className="mt-head">
+        <MateFace name={name} avatar={row.avatar || def?.avatar} color={row.color || def?.color} state={state} px={56} />
+        <div className="mt-nm">
+          <h2>{name}</h2>
+          <div className="mt-sub">{[card.tagline, card.status].filter(Boolean).join(" · ")}</div>
         </div>
-      </div>
-      {row.error && <p className="mate-error">{row.error}</p>}
-      <button
-        type="button"
-        className="primary"
-        disabled={busy}
-        onClick={() => {
-          setStartNote("");
-          void run(async () => {
-            try {
-              const s = await newMateConversation(api, name);
-              window.location.hash = "#/sessions/" + encodeURIComponent(s.ID);
-            } catch (err) {
-              setStartNote(message(err));
-            }
-          });
-        }}
-      >
-        + New conversation
-      </button>
-      {startNote && <p role="alert">{startNote}</p>}
-      <h2>Conversations</h2>
-      {local.length === 0 && row.threads.length === 0 && <p className="muted">No conversations yet.</p>}
-      <ul className="mate-threads conv-list" aria-label={"Conversations of " + name}>
-        {local.map((c) => (
-          <li key={c.session}>
-            <a href={"#/sessions/" + encodeURIComponent(c.session)}>
-              <span className={"thread-state state-" + (c.ended ? "ended" : c.state)}>{c.ended ? "ended" : c.state}</span> {c.name || c.session}
-            </a>
-          </li>
-        ))}
-        {row.threads.map((t) => (
-          <li key={t.channel + t.thread_ts}>
-            <a href={"#/sessions/" + encodeURIComponent(t.session_id)}>
-              <span className={"thread-state state-" + (t.ended ? "ended" : t.state)}>{t.ended ? "ended" : t.state}</span> {t.session || t.session_id}
-            </a>
-            {t.url && (
-              <a href={t.url} target="_blank" rel="noreferrer">
-                Slack
-              </a>
-            )}
-          </li>
-        ))}
-      </ul>
-      <Memory api={api} name={name} />
-      <div className="mate-actions">
-        <button type="button" disabled={busy} onClick={() => run(async () => void (await pauseMate(api, name, !paused)))}>
+        <span className="spacer" />
+        <Button disabled={busy} onClick={() => void run(async () => void (await pauseMate(api, name, !paused)))}>
           {paused ? "Resume" : "Pause"}
-        </button>
-        {def && (
-          <button type="button" onClick={() => setEditing(!editing)}>
-            {editing ? "Close settings" : "Settings"}
-          </button>
-        )}
-        {(row.state === "ready" || row.state === "no_tokens") && (
-          <button type="button" className="slack-button" onClick={() => setConnecting(!connecting)}>
-            <SlackMark px={16} />
-            <span>Connect to Slack…</span>
-          </button>
-        )}
+        </Button>
+        {def && <Button onClick={() => setEditing(!editing)}>{editing ? "Close settings" : "Settings"}</Button>}
       </div>
+      {row.error && <p className="mt-error">{row.error}</p>}
       {note && <p role="alert">{note}</p>}
       {editing && def && (
         <MateForm
@@ -665,21 +683,113 @@ export function MateProfile({ api, name, board }: { api: Authed; name: string; b
           }}
         />
       )}
+      <div className="mt-facts">
+        <Fact label="Agent" sub={def?.effort ? "effort " + def.effort : "default effort"}>
+          {def ? [agentName(def.agent), def.model].filter(Boolean).join(" · ") : "—"}
+        </Fact>
+        <Fact label="Repos" sub={repos.length > 0 ? repos[0] + " is the default" : "The first repo of each conversation"}>
+          {repos.length > 0 ? repos.join(", ") : "Any repo"}
+        </Fact>
+        <Fact
+          label="Memory"
+          sub={<meter aria-label="Memory size" min={0} max={mem.memory?.limit ?? 8192} value={bytes} aria-valuenow={bytes} aria-valuemin={0} aria-valuemax={mem.memory?.limit ?? 8192} />}
+        >
+          <span className={meter.full ? "mt-full" : undefined}>{meter.label}</span>
+        </Fact>
+        <div className="mt-fact" role="group" aria-label="Slack">
+          <div className="k">
+            <SlackMark px={11} /> Slack
+          </div>
+          <div className="v">{row.state === "connected" ? "Connected" : "Not connected"}</div>
+          <div className="s">
+            {canConnect ? (
+              <button type="button" className="mt-link" onClick={() => setConnecting(!connecting)}>
+                Connect…
+              </button>
+            ) : (
+              row.state === "connected" ? "" : row.state.replaceAll("_", " ")
+            )}
+          </div>
+        </div>
+      </div>
       {connecting && <Connect api={api} name={name} />}
-    </main>
+      <div className="mt-section">
+        <h2>Conversations</h2>
+        <span className="spacer" />
+        <Button
+          variant="quiet"
+          className="mt-tiny"
+          disabled={busy}
+          onClick={() => {
+            setStartNote("");
+            void run(async () => {
+              try {
+                const s = await newMateConversation(api, name);
+                window.location.hash = "#/sessions/" + encodeURIComponent(s.ID);
+              } catch (err) {
+                setStartNote(message(err));
+              }
+            });
+          }}
+        >
+          + New conversation
+        </Button>
+        {startNote && <p role="alert">{startNote}</p>}
+      </div>
+      {local.length === 0 && row.threads.length === 0 ? (
+        <p className="mt-note">No conversations yet.</p>
+      ) : (
+        <ul className="mt-convs" aria-label={"Conversations of " + name}>
+          {local.map((c) => (
+            <li key={c.session}>
+              <span className={convDot(c.state, c.ended)} aria-hidden="true" />
+              <span className="mt-nm">
+                <span className="mt-name">{c.name || c.session}</span>
+                <span className="mt-sub">{c.ended ? "ended" : c.state}</span>
+              </span>
+              <a className="ui btn quiet mt-tiny" href={"#/sessions/" + encodeURIComponent(c.session)} aria-label={"Open " + (c.name || c.session)}>
+                Open
+              </a>
+            </li>
+          ))}
+          {row.threads.map((t) => (
+            <li key={t.channel + t.thread_ts}>
+              <span className={convDot(t.state, t.ended)} aria-hidden="true" />
+              <span className="mt-nm">
+                <span className="mt-name">{t.session || t.session_id}</span>
+                <span className="mt-sub">
+                  {t.ended ? "ended" : t.state}
+                  {t.url && (
+                    <>
+                      {" · "}
+                      <a href={t.url} target="_blank" rel="noreferrer">
+                        Slack
+                      </a>
+                    </>
+                  )}
+                </span>
+              </span>
+              <a className="ui btn quiet mt-tiny" href={"#/sessions/" + encodeURIComponent(t.session_id)} aria-label={"Open " + (t.session || t.session_id)}>
+                Open
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+      <Memory name={name} mem={mem} save={save} />
+    </div>
   );
 }
 
-const presets: [string, string][] = [
-  ["Careful reviewer", "You are a careful code reviewer. Read the whole diff before you comment. Point at exact lines."],
-  ["Fast bug fixer", "You fix bugs fast. Make the smallest diff that makes the test pass."],
-  ["Patient explainer", "You explain each change as you go, so the owner learns from it."],
-  ["Blank", ""],
+const presets: { label: string; detail: string; text: string }[] = [
+  { label: "Careful reviewer", detail: "Reads first, asks before big changes", text: "You are a careful code reviewer. Read the whole diff before you comment. Point at exact lines." },
+  { label: "Fast bug fixer", detail: "Small fix, test, done", text: "You fix bugs fast. Make the smallest diff that makes the test pass." },
+  { label: "Patient explainer", detail: "Teaches while it works", text: "You explain each change as you go, so the owner learns from it." },
+  { label: "Blank", detail: "No extra prompt", text: "" },
 ];
 
 function brainsLine(mate: Mate): string {
-  const agent = mate.agent === "codex" ? "Codex" : mate.agent === "claude" ? "Claude" : mate.agent;
-  return [agent, mate.model, mate.effort ? mate.effort + " effort" : ""].filter(Boolean).join(" · ");
+  return [agentName(mate.agent), mate.model, mate.effort ? mate.effort + " effort" : ""].filter(Boolean).join(" · ");
 }
 
 const mateHandle = /^[a-z0-9][a-z0-9_-]*$/;
@@ -700,6 +810,7 @@ export function NewMate({ api }: { api: Authed }) {
   const [face, setFace] = useState(FACES[0].id);
   const [color, setColor] = useState("");
   const [mate, setMate] = useState<Mate>({ name: "", prompt: "", agent: "claude", enabled: true });
+  const [preset, setPreset] = useState("");
   const [tone, setTone] = useState([2, 2, 2]);
   const [repos, setRepos] = useState("");
   const [busy, setBusy] = useState(false);
@@ -738,162 +849,192 @@ export function NewMate({ api }: { api: Authed }) {
   }
 
   const lines = toneLines(tones, tone);
+  const nav = (back: number | null, next: ReactNode) => (
+    <div className="mt-actions">
+      {back !== null && (
+        <Button variant="quiet" onClick={() => setStep(back)}>
+          Back
+        </Button>
+      )}
+      {next}
+    </div>
+  );
+  const head = (title: string) => (
+    <div className="mt-wiz-title">
+      <MateFace name={mate.name} avatar={face} color={color} state="idle" px={28} />
+      <h2>{title}</h2>
+    </div>
+  );
   return (
-    <main className="screen mates new-mate">
-      <div className="mates-top">
-        <a className="back" href="#/mates">
-          ✕ Cancel
+    <main className="screen mt-new">
+      <div className="mt-bar">
+        <a className="ui btn quiet" href="#/mates">
+          Cancel
         </a>
+        <span className="spacer" />
         <strong>New mate</strong>
+        <span className="spacer" />
+        <span className="mt-bar-pad" />
       </div>
-      <div className="steps" aria-label={"Step " + (step + 1) + " of 4"}>
-        {[0, 1, 2, 3].map((i) => (
-          <span key={i} className={i <= step ? "on" : ""} />
-        ))}
-      </div>
-      <div className="profile-head">
-        <MateFace name={mate.name} avatar={face} color={color} state="idle" px={72} />
-      </div>
-      {step === 0 && (
-        <>
-          <h2>1 · Face</h2>
-          <div className="face-pick">
-            {FACES.map((f) => (
-              <button key={f.id} type="button" aria-label={f.name} aria-pressed={f.id === face} className={f.id === face ? "on" : ""} onClick={() => pickFace(f.id)}>
-                <MateFace name={f.id} state="idle" color={f.id === face ? color : undefined} px={40} />
-              </button>
-            ))}
-          </div>
-          <div className="swatches">
-            {ACCENTS.map((c) => (
-              <button
-                key={c}
-                type="button"
-                className={"swatch" + (c === faceColor(chosen, color, false) ? " on" : "")}
-                aria-label={"Color " + c}
-                style={{ background: c }}
-                onClick={() => setColor(c)}
-              />
-            ))}
-          </div>
-          <label className="field">
-            Name
-            <input value={mate.name} onChange={(e) => setMate({ ...mate, name: e.target.value.trim().toLowerCase() })} />
-          </label>
-          {nameProblem && <p className="mate-error">{nameProblem}</p>}
-          <p className="muted">Slack is optional. Connect it later from the profile.</p>
-          <button type="button" className="primary" disabled={mate.name === "" || nameProblem !== ""} onClick={() => setStep(1)}>
-            Next: personality
-          </button>
-        </>
-      )}
-      {step === 1 && (
-        <>
-          <h2>2 · Personality</h2>
-          <div className="mtags">
-            {presets.map(([label, text]) => (
-              <button key={label} type="button" className="mtag" onClick={() => setMate({ ...mate, prompt: text })}>
-                {label}
-              </button>
-            ))}
-          </div>
-          <label className="field">
-            Prompt
-            <textarea rows={5} value={mate.prompt} onChange={(e) => setMate({ ...mate, prompt: e.target.value })} />
-          </label>
-          <p className="muted">The mate also reads its memory file at the start of each conversation.</p>
-          <h2>Tone</h2>
-          {tones.map((t, i) => (
-            <div key={t.key} className="tone">
-              <span>{t.low}</span>
-              <input
-                type="range"
-                min={0}
-                max={4}
-                step={1}
-                aria-label={t.low + " to " + t.high}
-                value={tone[i]}
-                onChange={(e) => setTone(tone.map((v, j) => (j === i ? Number(e.target.value) : v)))}
-              />
-              <span>
-                {t.high} <span className="muted">{tone[i] + 1}/5</span>
-              </span>
-            </div>
+      <div className="mt-wiz">
+        <div className="mt-steps" role="progressbar" aria-label={"Step " + (step + 1) + " of 4"} aria-valuemin={1} aria-valuemax={4} aria-valuenow={step + 1}>
+          {[0, 1, 2, 3].map((i) => (
+            <i key={i} className={i <= step ? "on" : ""} />
           ))}
-          <section className="added" aria-label="Added to the prompt">
-            <h3>Added to the prompt</h3>
-            {tones.map((t, i) => (
-              <p key={t.key} className="arow">
-                <span className="muted">
-                  {t.low} {tone[i] + 1}/5
-                </span>
-                <span>{t.steps[tone[i]] ? "“" + t.steps[tone[i]] + "”" : "Middle step. Adds no text."}</span>
-              </p>
-            ))}
-          </section>
-          {mate.prompt.trim() === "" && <p className="mate-error">Write a personality prompt or pick a preset.</p>}
-          <div className="mate-actions">
-            <button type="button" onClick={() => setStep(0)}>
-              Back
-            </button>
-            <button type="button" className="primary" disabled={mate.prompt.trim() === ""} onClick={() => setStep(2)}>
-              Next: brains
-            </button>
-          </div>
-        </>
-      )}
-      {step === 2 && (
-        <>
-          <h2>3 · Brains</h2>
-          <form className="mate-form" aria-label="Brains" onSubmit={(e) => (e.preventDefault(), setStep(3))}>
-            <Brains mate={mate} repos={repos} onMate={setMate} onRepos={setRepos} />
-            <div className="mate-actions">
-              <button type="button" onClick={() => setStep(1)}>
-                Back
-              </button>
-              <button type="submit" className="primary">
-                Next: meet
-              </button>
-            </div>
-          </form>
-        </>
-      )}
-      {step === 3 && (
-        <>
-          <h2>Meet {mate.name}</h2>
-          {mateTagline(mate.prompt) && <p className="mate-tag">{mateTagline(mate.prompt)}</p>}
-          {lines.length > 0 && (
-            <div className="mtags">
-              {tones.map((t, i) =>
-                tone[i] === 2 ? null : (
-                  <span key={t.key} className="mtag">
-                    {tone[i] < 2 ? t.low : t.high}
-                  </span>
-                ),
+        </div>
+        <div className="mt-wiz-body">
+          {step === 0 && (
+            <>
+              {head("Pick a face")}
+              <div className="mt-faces">
+                {FACES.map((f) => (
+                  <button key={f.id} type="button" aria-label={f.name} aria-pressed={f.id === face} className={f.id === face ? "on" : ""} onClick={() => pickFace(f.id)}>
+                    <MateFace name={f.id} state="idle" color={f.id === face ? color : undefined} px={36} />
+                  </button>
+                ))}
+              </div>
+              <div className="swatches">
+                {ACCENTS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    className={"swatch" + (c === faceColor(chosen, color, false) ? " on" : "")}
+                    aria-label={"Color " + c}
+                    style={{ background: c }}
+                    onClick={() => setColor(c)}
+                  />
+                ))}
+              </div>
+              <label className="mt-field">
+                Name
+                <input className="ui input" value={mate.name} onChange={(e) => setMate({ ...mate, name: e.target.value.trim().toLowerCase() })} />
+              </label>
+              {nameProblem && <p className="mt-error">{nameProblem}</p>}
+              <p className="mt-sub">Slack is optional. Connect it later from the profile.</p>
+              {nav(
+                null,
+                <Button variant="primary" disabled={mate.name === "" || nameProblem !== ""} onClick={() => setStep(1)}>
+                  Next
+                </Button>,
               )}
-            </div>
+            </>
           )}
-          <dl className="meet-facts" aria-label={"About " + mate.name} role="region">
-            <dt>Agent</dt>
-            <dd>{brainsLine(mate)}</dd>
-            <dt>Repos</dt>
-            <dd>{splitRepos(repos)?.join(", ") ?? "The first repo of each conversation"}</dd>
-            <dt>Memory</dt>
-            <dd>Empty. {mate.name} writes notes here as it learns.</dd>
-          </dl>
-          <p className="muted">{mate.name} starts with fresh context in each conversation and keeps its personality and memory.</p>
-          <p className="muted">Slack is optional. Connect it later from the profile.</p>
-          <div className="mate-actions">
-            <button type="button" onClick={() => setStep(2)}>
-              Back
-            </button>
-            <button type="button" className="primary" disabled={busy} onClick={() => void create()}>
-              Create
-            </button>
-          </div>
-          {note && <p role="alert">{note}</p>}
-        </>
-      )}
+          {step === 1 && (
+            <>
+              {head("How should " + mate.name + " work?")}
+              <div className="mt-presets" role="radiogroup" aria-label="Presets">
+                {presets.map((p) => (
+                  <button
+                    key={p.label}
+                    type="button"
+                    role="radio"
+                    aria-checked={preset === p.label}
+                    className={"mt-preset" + (preset === p.label ? " on" : "")}
+                    onClick={() => {
+                      setPreset(p.label);
+                      setMate({ ...mate, prompt: p.text });
+                    }}
+                  >
+                    <span className="t">{p.label}</span>
+                    <span className="s">{p.detail}</span>
+                  </button>
+                ))}
+              </div>
+              <label className="mt-field">
+                Prompt
+                <textarea className="ui input mt-area" rows={4} value={mate.prompt} onChange={(e) => setMate({ ...mate, prompt: e.target.value })} />
+              </label>
+              <p className="mt-sub">The mate also reads its memory file at the start of each conversation.</p>
+              {tones.map((t, i) => (
+                <div key={t.key} className="mt-slider">
+                  <span>{t.low}</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={4}
+                    step={1}
+                    aria-label={t.low + " to " + t.high}
+                    value={tone[i]}
+                    style={{ "--at": tone[i] * 25 + "%" } as CSSProperties}
+                    onChange={(e) => setTone(tone.map((v, j) => (j === i ? Number(e.target.value) : v)))}
+                  />
+                  <span className="hi">{t.high}</span>
+                </div>
+              ))}
+              <section className="mt-added" aria-label="Added to the prompt">
+                <h3>Added to the prompt</h3>
+                {tones.map((t, i) => (
+                  <p key={t.key} className="mt-arow">
+                    <span className="mt-sub">
+                      {t.low} {tone[i] + 1}/5
+                    </span>
+                    <span>{t.steps[tone[i]] ? "“" + t.steps[tone[i]] + "”" : "Middle step. Adds no text."}</span>
+                  </p>
+                ))}
+              </section>
+              {mate.prompt.trim() === "" && <p className="mt-error">Write a personality prompt or pick a preset.</p>}
+              {nav(
+                0,
+                <Button variant="primary" disabled={mate.prompt.trim() === ""} onClick={() => setStep(2)}>
+                  Next
+                </Button>,
+              )}
+            </>
+          )}
+          {step === 2 && (
+            <form className="mt-form" aria-label="Brains" onSubmit={(e) => (e.preventDefault(), setStep(3))}>
+              {head("Which brains does " + mate.name + " use?")}
+              <Brains mate={mate} repos={repos} onMate={setMate} onRepos={setRepos} />
+              {nav(
+                1,
+                <Button type="submit" variant="primary">
+                  Next
+                </Button>,
+              )}
+            </form>
+          )}
+          {step === 3 && (
+            <>
+              <div className="mt-wiz-title">
+                <MateFace name={mate.name} avatar={face} color={color} state="idle" px={56} />
+                <h2>Meet {mate.name}</h2>
+              </div>
+              {mateTagline(mate.prompt) && <p className="mt-sub">{mateTagline(mate.prompt)}</p>}
+              {lines.length > 0 && (
+                <div className="mt-tags">
+                  {tones.map((t, i) =>
+                    tone[i] === 2 ? null : (
+                      <span key={t.key} className="mt-pill">
+                        {tone[i] < 2 ? t.low : t.high}
+                      </span>
+                    ),
+                  )}
+                </div>
+              )}
+              <div className="mt-facts three" aria-label={"About " + mate.name} role="region">
+                <Fact label="Agent" sub="">
+                  {brainsLine(mate)}
+                </Fact>
+                <Fact label="Repos" sub="">
+                  {splitRepos(repos)?.join(", ") ?? "The first repo of each conversation"}
+                </Fact>
+                <Fact label="Memory" sub="">
+                  Empty. {mate.name} writes notes here as it learns.
+                </Fact>
+              </div>
+              <p className="mt-sub">{mate.name} starts with fresh context in each conversation and keeps its personality and memory.</p>
+              <p className="mt-sub">Slack is optional. Connect it later from the profile.</p>
+              {nav(
+                2,
+                <Button variant="primary" disabled={busy} onClick={() => void create()}>
+                  Create
+                </Button>,
+              )}
+              {note && <p role="alert">{note}</p>}
+            </>
+          )}
+        </div>
+      </div>
     </main>
   );
 }

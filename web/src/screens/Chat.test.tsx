@@ -278,6 +278,41 @@ describe("the composer", () => {
     expect(server.headers[post].authorization).toBe("Bearer t0k");
   });
 
+  it("shows the agent and model and the effort as chips in the composer", async () => {
+    const server = new FakeServer().on("GET", newest, page([]));
+    const sockets = setup(server);
+    live(sockets, withSession(goldenState(), "s1", { Harness: "claude", Model: "opus", Effort: "high" }));
+    const chips = within(screen.getByRole("group", { name: "Composer options" }));
+    expect(chips.getByText("Claude · Opus")).toBeInTheDocument();
+    expect(chips.getByText("effort high")).toBeInTheDocument();
+  });
+
+  it("shows no effort chip when the session has no effort", async () => {
+    const server = new FakeServer().on("GET", newest, page([]));
+    const sockets = setup(server);
+    live(sockets, withSession(goldenState(), "s1", { Effort: "" }));
+    expect(within(screen.getByRole("group", { name: "Composer options" })).queryByText(/effort/)).toBeNull();
+  });
+
+  it("tells the keys in a hint, and that a message waits while the agent is busy", async () => {
+    const server = new FakeServer().on("GET", newest, page([])).on("GET", "/api/v1/sessions/s2/messages?limit=50", page([]));
+    const sockets = setup(server, "#/sessions/s2");
+    live(sockets);
+    expect(screen.getByTestId("composer-hint")).toHaveTextContent("Enter send · Shift+Enter new line");
+    expect(screen.getByTestId("composer-hint")).not.toHaveTextContent("queue");
+    window.location.hash = "#/sessions/s1";
+    await waitFor(() => expect(screen.getByTestId("composer-hint")).toHaveTextContent("Enter send · Shift+Enter new line · the agent is busy, so a message waits in the queue"));
+  });
+
+  it("sends with a round button labelled Send", async () => {
+    const server = new FakeServer().on("GET", "/api/v1/sessions/s2/messages?limit=50", page([]));
+    const sockets = setup(server, "#/sessions/s2");
+    live(sockets);
+    const send = screen.getByRole("button", { name: "Send" });
+    expect(send).toHaveClass("send");
+    expect(send).toHaveTextContent("↑");
+  });
+
   it("sends with Enter", async () => {
     const server = new FakeServer()
       .on("GET", "/api/v1/sessions/s2/messages?limit=50", page([]))
@@ -334,7 +369,8 @@ describe("the composer", () => {
     state.sessions = state.sessions.map((s) => (s.ID === "s1" ? { ...s, State: "permission", Ended: false } : s));
     live(sockets, state);
     const box = screen.getByRole("textbox", { name: "Message" });
-    expect(box).toBeDisabled();
+    await userEvent.type(box, "after that, rebuild");
+    expect(box).toHaveValue("after that, rebuild");
     fireEvent.keyDown(box, { key: "Enter" });
     await act(async () => {});
     expect(server.calls.some((c) => c.method === "POST" && c.path === "/api/v1/sessions/s1/messages")).toBe(false);

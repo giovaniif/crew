@@ -1,24 +1,32 @@
 import type { KeyValue } from "./auth";
 import type { Session } from "./stream";
 
-export type Command = "rename" | "mute" | "model" | "effort" | "kill" | "end" | "resume";
+export type Command = "rename" | "mute" | "model" | "effort" | "agent" | "editor" | "browser" | "kill" | "interrupt" | "end" | "resume";
 
-export type CommandItem = { id: Command; title: string };
+export type CommandItem = { id: Command; title: string; hint?: string };
+
+export type CommandEntry = CommandItem | "sep";
 
 const confirmEndKey = "crew.confirmEnd";
 
 export const noDevServers = "No dev servers are running in this session's worktrees.";
 
-export function commandItems(s: Session): CommandItem[] {
+export function commandItems(s: Session): CommandEntry[] {
   if (s.Ended) {
     return [{ id: "resume", title: "Resume" }];
   }
   return [
-    { id: "rename", title: "Rename…" },
+    { id: "rename", title: "Rename…", hint: "F2" },
     { id: "mute", title: s.Muted ? "Unmute" : "Mute" },
-    { id: "model", title: "Model…" },
-    { id: "effort", title: "Effort…" },
+    { id: "model", title: "Model…", hint: s.Model || undefined },
+    { id: "effort", title: "Effort…", hint: s.Effort || undefined },
+    "sep",
+    { id: "agent", title: "Show agent screen" },
+    { id: "editor", title: "Open in editor", hint: "⌘E" },
+    { id: "browser", title: "Open browser" },
     { id: "kill", title: "Kill dev servers" },
+    "sep",
+    { id: "interrupt", title: "Interrupt", hint: "Esc" },
     { id: "end", title: "End session…" },
   ];
 }
