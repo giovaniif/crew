@@ -113,6 +113,7 @@ function Sidebar({ env, snapshot, now, onRetry, hash, keys, chip, approvals }: S
     { href: "#/sessions", icon: "▤", label: "Sessions", on: route.screen === "list" || route.screen === "session", meta: count(live) },
     { href: "#/approvals", icon: "✓", label: "Approvals", on: under("#/approvals"), meta: approvals > 0 ? <span className="pill bad">{approvals}</span> : null },
     { href: "#/automations", icon: "↻", label: "Automations", on: under("#/automations") },
+    { href: "#/envs", icon: "⌂", label: "Environments", on: under("#/envs") },
     { href: "#/disk", icon: "▥", label: "Disk", on: under("#/disk") },
   ];
   return (

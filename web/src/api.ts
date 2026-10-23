@@ -587,3 +587,51 @@ export async function resumeSession(a: Authed, session: string): Promise<void> {
 export function killDevServers(a: Authed, session: string): Promise<{ killed: number[] }> {
   return authedRequest<{ killed: number[] }>(a, sessionPath(session, "/kill-dev-servers"), "POST");
 }
+
+export type EnvSecret = { name: string; set: boolean };
+
+export type EnvInfo = {
+  name: string;
+  kind: "local" | "custom";
+  parts: string[];
+  secrets: EnvSecret[];
+  public_key?: string;
+  new_public_key?: string;
+  used_by: string[];
+};
+
+export type EnvCreate = { name: string; kind: "local" | "custom"; parts?: string[]; git_name?: string; git_email?: string };
+
+export type EnvChange = { parts?: string[]; git_name?: string; git_email?: string; secret?: string; value?: string };
+
+function envPath(name: string, verb = ""): string {
+  return "/api/v1/envs/" + encodeURIComponent(name) + (verb ? "/" + verb : "");
+}
+
+export function listEnvs(a: Authed): Promise<{ envs: EnvInfo[] }> {
+  return authedRequest<{ envs: EnvInfo[] }>(a, "/api/v1/envs");
+}
+
+export function getEnv(a: Authed, name: string): Promise<EnvInfo> {
+  return authedRequest<EnvInfo>(a, envPath(name));
+}
+
+export function createEnv(a: Authed, body: EnvCreate): Promise<EnvInfo> {
+  return authedRequest<EnvInfo>(a, "/api/v1/envs", "POST", body);
+}
+
+export function setEnv(a: Authed, name: string, change: EnvChange): Promise<EnvInfo> {
+  return authedRequest<EnvInfo>(a, envPath(name), "POST", change);
+}
+
+export function unsetEnvSecret(a: Authed, name: string, secret: string): Promise<EnvInfo> {
+  return authedRequest<EnvInfo>(a, envPath(name, "unset"), "POST", { secret });
+}
+
+export function deleteEnv(a: Authed, name: string): Promise<EnvInfo> {
+  return authedRequest<EnvInfo>(a, envPath(name), "DELETE");
+}
+
+export function envSSHKey(a: Authed, name: string, action: "make" | "rotate" | "confirm"): Promise<EnvInfo> {
+  return authedRequest<EnvInfo>(a, envPath(name, "ssh-key"), "POST", { action });
+}
