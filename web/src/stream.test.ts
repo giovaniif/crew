@@ -20,7 +20,7 @@ describe("applyDiff", () => {
     for (const frame of goldenDiffs()) {
       state = applyDiff(state, frame.diff!);
     }
-    expect(state.seq).toBe(48);
+    expect(state.seq).toBe(49);
     expect(state.sessions.map((s) => [s.ID, s.State, s.name, s.where, s.banner])).toEqual([
       ["s1", "permission", "login fix", "api@login-v2", "needs permission: Bash: make test"],
     ]);
