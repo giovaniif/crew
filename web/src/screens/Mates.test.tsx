@@ -65,6 +65,15 @@ function setup(hash = "#/mates/helper", mates: Mates = board, approvals: unknown
     .on("GET", "/api/v1/workspaces", { status: 200, body: { workspaces: [], last_used: "" } })
     .on("GET", "/api/v1/mates", { status: 200, body: defs })
     .on("GET", "/api/v1/approvals", { status: 200, body: approvals })
+    .on("GET", "/api/v1/envs", {
+      status: 200,
+      body: {
+        envs: [
+          { name: "local", kind: "local", parts: [], secrets: [], used_by: ["helper"] },
+          { name: "test-work", kind: "custom", parts: ["github"], secrets: [], used_by: [] },
+        ],
+      },
+    })
     .on("POST", "/api/v1/mates/stop", { status: 200, body: defs.limits })
     .on("POST", "/api/v1/mates/helper/pause", { status: 200, body: defs.mates[0] })
     .on("POST", "/api/v1/mates/webby/resume", { status: 200, body: defs.mates[1] })
@@ -314,6 +323,54 @@ describe("Mate profile", () => {
 });
 
 describe("New mate", () => {
+  it("picks the environment in the settings and saves it with the mate", async () => {
+    const { server } = setup();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Settings" }));
+    const picker = await screen.findByRole("combobox", { name: "Environment" });
+    await waitFor(() => expect(picker).toHaveTextContent("Local (this Mac)"));
+    expect(screen.getByText(/apply when the next conversation starts/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Edit environment" })).toHaveAttribute("href", "#/envs/local");
+    await user.click(picker);
+    await user.click(await screen.findByRole("option", { name: "test-work" }));
+    expect(screen.getByRole("link", { name: "Edit environment" })).toHaveAttribute("href", "#/envs/test-work");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/mates")?.body).toMatchObject({ mate: { name: "helper", env: "test-work" } }));
+  });
+
+  it("picks the environment of a new mate from a chip with search and New environment", async () => {
+    const { server } = setup("#/mates/new");
+    const user = userEvent.setup();
+    await user.clear(await screen.findByLabelText("Name"));
+    await user.type(screen.getByLabelText("Name"), "scout");
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.type(screen.getByLabelText("Prompt"), "Scout the repo.");
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    const chip = screen.getByRole("button", { name: /Environment/ });
+    expect(chip).toHaveTextContent("Local (this Mac)");
+    await user.click(chip);
+    const menu = await screen.findByRole("menu", { name: "Environment" });
+    expect(within(menu).getByLabelText("Search environments")).toBeInTheDocument();
+    expect(within(menu).getByRole("menuitem", { name: "+ New environment…" })).toBeInTheDocument();
+    await user.click(within(menu).getByRole("menuitemcheckbox", { name: "test-work" }));
+    expect(chip).toHaveTextContent("test-work");
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.click(screen.getByRole("button", { name: "Create" }));
+    await waitFor(() => expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/mates")?.body).toMatchObject({ mate: { name: "scout", env: "test-work" } }));
+  });
+
+  it("offers Pi with the agent omp", async () => {
+    setup("#/mates/new");
+    const user = userEvent.setup();
+    await user.clear(await screen.findByLabelText("Name"));
+    await user.type(screen.getByLabelText("Name"), "scout");
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.type(screen.getByLabelText("Prompt"), "Scout the repo.");
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.click(within(screen.getByRole("radiogroup", { name: "Agent" })).getByRole("radio", { name: "Pi" }));
+    expect(within(screen.getByRole("radiogroup", { name: "Agent" })).getByRole("radio", { name: "Pi" })).toHaveAttribute("aria-checked", "true");
+  });
+
   it("makes a mate in four steps: face, personality with tone, brains, meet", async () => {
     const { server } = setup("#/mates/new");
     const user = userEvent.setup();

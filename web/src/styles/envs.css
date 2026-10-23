@@ -436,3 +436,71 @@
 .envs-phone .keyhead {
   flex-wrap: wrap;
 }
+
+.env-kv {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.env-kv h4 {
+  margin: 0;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--ink-3);
+  letter-spacing: 0.02em;
+}
+
+.env-kv .ui-anchor,
+.env-kv .ui.select {
+  width: 100%;
+}
+
+.env-kv .env-note {
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+}
+
+.eicon.sm {
+  width: 20px;
+  height: 20px;
+  font-size: 10px;
+  border-radius: 6px;
+}
+
+button.chip.env-chip.on {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+button.chip.env-chip {
+  min-height: 0;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 9px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 400;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+button.chip.env-chip::before {
+  content: none;
+}
+
+button.chip.env-chip .chev {
+  font-size: 9px;
+  color: var(--ink-3);
+}
+
+.env-kv a {
+  color: var(--accent);
+  text-decoration: none;
+}

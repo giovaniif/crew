@@ -1,24 +1,26 @@
 import { useCallback, useEffect, useState } from "react";
 import { type Approval, type Authed, decideApproval, listApprovals } from "../api";
 import { mateCard } from "../faces";
-import { type Harness, type HomeCard, homeCards, homeSummary, recentActivity } from "../mateshome";
+import { envBadge, type Harness, type HomeCard, homeCards, homeSummary, recentActivity } from "../mateshome";
 import type { Mates as MateBoard } from "../stream";
 import { Button, Segmented, Select } from "../ui";
+import { useEnvs } from "./Environments";
 import { MateFace, useMateDefs } from "./Mates";
+import type { EnvInfo } from "../api";
 
 const harnesses: { value: Harness; label: string }[] = [
   { value: "all", label: "All" },
   { value: "claude", label: "Claude" },
   { value: "codex", label: "Codex" },
-  { value: "pi", label: "Pi" },
+  { value: "omp", label: "Pi" },
 ];
 
-const environments: { value: "any" | "local"; label: string }[] = [
-  { value: "any", label: "Any environment" },
-  { value: "local", label: "Local" },
-];
+function envOptions(envs: EnvInfo[]): { value: string; label: string }[] {
+  const named = envs.filter((e) => e.name !== "local").map((e) => ({ value: e.name, label: e.name }));
+  return [{ value: "any", label: "Any environment" }, { value: "local", label: "Local" }, ...named];
+}
 
-const harnessNames: Record<string, string> = { claude: "Claude", codex: "Codex", pi: "Pi" };
+const harnessNames: Record<string, string> = { claude: "Claude", codex: "Codex", omp: "Pi" };
 
 function useApprovals(api: Authed): [Approval[], () => void] {
   const [list, setList] = useState<Approval[]>([]);
@@ -40,11 +42,12 @@ function Face({ c, px }: { c: HomeCard; px: number }) {
   return <MateFace name={row.name} avatar={row.avatar || def?.avatar} color={row.color || def?.color} state={c.card.face} px={px} />;
 }
 
-function Tags({ c }: { c: HomeCard }) {
+function Tags({ c, envs }: { c: HomeCard; envs: EnvInfo[] }) {
+  const badge = envBadge(c.card.def?.env, envs);
   return (
     <>
       {c.card.agent ? <span className="hz">{harnessNames[c.card.agent] ?? c.card.agent}</span> : null}
-      <span className="envb local">Local</span>
+      <span className={"envb " + badge.kind}>{badge.label}</span>
     </>
   );
 }
@@ -72,7 +75,7 @@ function Decide({ api, approval, onDone }: { api: Authed; approval: Approval; on
   );
 }
 
-function Card({ api, c, onDone }: { api: Authed; c: HomeCard; onDone: () => void }) {
+function Card({ api, c, envs, onDone }: { api: Authed; c: HomeCard; envs: EnvInfo[]; onDone: () => void }) {
   const href = "#/mates/" + encodeURIComponent(c.card.name);
   return (
     <article className={"mcard" + (c.card.face === "needs" ? " need" : "")} aria-labelledby={"mcard-" + c.card.name}>
@@ -89,7 +92,7 @@ function Card({ api, c, onDone }: { api: Authed; c: HomeCard; onDone: () => void
       <div className="last">{c.last}</div>
       {c.approval ? <Decide api={api} approval={c.approval} onDone={onDone} /> : null}
       <div className="foot">
-        <Tags c={c} />
+        <Tags c={c} envs={envs} />
         <span className="spacer" />
         <span>{c.when}</span>
       </div>
@@ -103,11 +106,12 @@ export function MatesHome({ api, now, board, wide }: Props) {
   const { defs } = useMateDefs(api);
   const [approvals, reload] = useApprovals(api);
   const [harness, setHarness] = useState<Harness>("all");
-  const [env, setEnv] = useState<"any" | "local">("any");
+  const [env, setEnv] = useState("any");
+  const { envs } = useEnvs(api);
   const rows = board?.mates ?? [];
   const asking = approvals.filter((a) => a.State === "pending").map((a) => a.Mate);
   const cards = rows.map((row) => mateCard(row, defs.find((d) => d.name === row.name), asking));
-  const shown = homeCards(cards, approvals, harness, now);
+  const shown = homeCards(cards, approvals, harness, now, env);
   const need = shown.find((c) => c.card.face === "needs");
   const empty = board === undefined ? "Loading…" : rows.length === 0 ? "No mates yet." : shown.length === 0 ? "No mate matches." : "";
 
@@ -147,7 +151,7 @@ export function MatesHome({ api, now, board, wide }: Props) {
                     </span>
                     <span className="s">{c.last}</span>
                     <span className="tags">
-                      <Tags c={c} />
+                      <Tags c={c} envs={envs} />
                     </span>
                   </span>
                   <span className="when">{c.when}</span>
@@ -168,7 +172,7 @@ export function MatesHome({ api, now, board, wide }: Props) {
         <span className="sub">{homeSummary(cards)}</span>
         <span className="spacer" />
         <Segmented label="Harness" value={harness} options={harnesses} onChange={setHarness} />
-        <Select label="Environment" value={env} options={environments} onChange={setEnv} className="mh-env" />
+        <Select label="Environment" value={env} options={envOptions(envs)} onChange={setEnv} className="mh-env" />
       </div>
       <div className="mh-page">
         {need ? (
@@ -188,7 +192,7 @@ export function MatesHome({ api, now, board, wide }: Props) {
         {empty && board === undefined ? <p className="mt-note">{empty}</p> : null}
         <div className="mgrid">
           {shown.map((c) => (
-            <Card key={c.card.name} api={api} c={c} onDone={reload} />
+            <Card key={c.card.name} api={api} c={c} envs={envs} onDone={reload} />
           ))}
           <a className="mcard mcard-new" href="#/mates/new">
             + New mate

@@ -1,8 +1,10 @@
-import type { Approval } from "./api";
+import type { Approval, EnvInfo } from "./api";
 import type { MateCard } from "./faces";
 import type { MateRow } from "./stream";
 
-export type Harness = "all" | "claude" | "codex" | "pi";
+export type Harness = "all" | "claude" | "codex" | "omp";
+
+export type EnvBadge = { label: string; kind: "local" | "custom" };
 
 export type PillTone = "warn" | "blue" | "";
 
@@ -57,8 +59,22 @@ function homeCard(card: MateCard, approvals: Approval[], now: number): HomeCard 
   return { card, approval, pill, tone, last, when: agoLabel(approval?.At || latest(card.row), now), open: session ? "#/sessions/" + encodeURIComponent(session) : "" };
 }
 
-export function homeCards(cards: MateCard[], approvals: Approval[], harness: Harness, now: number): HomeCard[] {
-  const shown = cards.filter((c) => harness === "all" || c.agent === harness).map((c) => homeCard(c, approvals, now));
+export function mateEnvName(env: string | undefined): string {
+  return env && env !== "" ? env : "local";
+}
+
+export function envBadge(env: string | undefined, envs: EnvInfo[]): EnvBadge {
+  const name = mateEnvName(env);
+  if (name === "local") {
+    return { label: "Local", kind: "local" };
+  }
+  return { label: name, kind: envs.find((e) => e.name === name)?.kind ?? "custom" };
+}
+
+export function homeCards(cards: MateCard[], approvals: Approval[], harness: Harness, now: number, env = "any"): HomeCard[] {
+  const shown = cards
+    .filter((c) => harness === "all" || c.agent === harness)
+    .filter((c) => env === "any" || mateEnvName(c.def?.env) === env).map((c) => homeCard(c, approvals, now));
   return [...shown.filter((c) => c.card.face === "needs"), ...shown.filter((c) => c.card.face !== "needs")];
 }
 
