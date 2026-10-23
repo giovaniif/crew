@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type R
 import { sessionPane, tokenRefused, unpairDevice, type Fetch } from "./api";
 import { clearAuth, loadAuth, saveAuth, type Auth, type KeyValue } from "./auth";
 import { pairCodeFromHash } from "./display";
-import { DesktopAlerts, useDesktopAttention, type DesktopBridge } from "./desktopBridge";
+import { useDesktopAttention, type DesktopBridge } from "./desktopBridge";
 import { disablePush, noPush, type PushEnv } from "./push";
 import { modifierKeys } from "./desktop";
 import { parseRoute } from "./route";
@@ -10,7 +10,9 @@ import { Approvals } from "./screens/Approvals";
 import { Automations } from "./screens/Automations";
 import { Desktop } from "./screens/Desktop";
 import { Disk } from "./screens/Disk";
-import { MateProfile, Mates, NewMate } from "./screens/Mates";
+import { MateProfile, NewMate } from "./screens/Mates";
+import { MatesHome } from "./screens/MatesHome";
+import { More } from "./screens/More";
 import { Install } from "./screens/Install";
 import { NewSession } from "./screens/NewSession";
 import { Pair } from "./screens/Pair";
@@ -61,27 +63,24 @@ export type PageVisibility = {
   onChange: (listener: () => void) => () => void;
 };
 
-type Tab = "sessions" | "mates" | "approvals" | "automations" | "settings";
+type Tab = "mates" | "sessions" | "approvals" | "more";
+
+const tabItems: { tab: Tab; href: string; icon: string; label: string }[] = [
+  { tab: "mates", href: "#/mates", icon: "◉", label: "Mates" },
+  { tab: "sessions", href: "#/sessions", icon: "▤", label: "Sessions" },
+  { tab: "approvals", href: "#/approvals", icon: "✓", label: "Approvals" },
+  { tab: "more", href: "#/more", icon: "⋯", label: "More" },
+];
 
 function Tabs({ current }: { current: Tab }) {
-  const mark = (tab: Tab) => (current === tab ? "page" : undefined);
   return (
     <nav className="tabs" aria-label="Screens">
-      <a href="#/" aria-current={mark("sessions")}>
-        Sessions
-      </a>
-      <a href="#/mates" aria-current={mark("mates")}>
-        Mates
-      </a>
-      <a href="#/approvals" aria-current={mark("approvals")}>
-        Approvals
-      </a>
-      <a href="#/automations" aria-current={mark("automations")}>
-        Automations
-      </a>
-      <a href="#/settings" aria-current={mark("settings")}>
-        Settings
-      </a>
+      {tabItems.map((t) => (
+        <a key={t.tab} href={t.href} aria-current={current === t.tab ? "page" : undefined}>
+          <b aria-hidden="true">{t.icon}</b>
+          {t.label}
+        </a>
+      ))}
     </nav>
   );
 }
@@ -155,7 +154,7 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
   const wide = useWide(env.wide);
   const route = parseRoute(hash);
   const retry = () => client.retryNow();
-  const other = otherScreen(hash, { env, auth, api, now, snapshot, onSignOut, go, servers });
+  const other = otherScreen(hash, { env, auth, api, now, snapshot, onSignOut, go, servers, wide });
   if (wide) {
     return (
       <Desktop
@@ -227,17 +226,18 @@ type OtherInputs = {
   onSignOut: () => Promise<void>;
   go: (hash: string) => void;
   servers?: Servers;
+  wide: boolean;
 };
 
-function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, go, servers }: OtherInputs): { screen: ReactNode; tab: Tab } | null {
+function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, go, servers, wide }: OtherInputs): { screen: ReactNode; tab: Tab } | null {
   if (hash === "#/disk") {
-    return { screen: <Disk api={api} state={snapshot.state} now={now} go={go} />, tab: "sessions" };
+    return { screen: <Disk api={api} state={snapshot.state} now={now} go={go} />, tab: "more" };
   }
   if (hash === "#/automations") {
-    return { screen: <Automations api={api} now={now} />, tab: "automations" };
+    return { screen: <Automations api={api} now={now} />, tab: "more" };
   }
-  if (hash === "#/mates") {
-    return { screen: <Mates api={api} now={now} board={snapshot.state?.mates} visibility={env.visibility} />, tab: "mates" };
+  if (hash === "#/more") {
+    return { screen: <More />, tab: "more" };
   }
   if (hash.startsWith("#/mates/")) {
     const name = hash.slice("#/mates/".length);
@@ -268,11 +268,13 @@ function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, g
             servers={servers}
             initial={hash === "#/servers" ? "servers" : undefined}
           />
-          {env.desktop && <DesktopAlerts storage={env.storage} />}
         </>
       ),
-      tab: "settings",
+      tab: "more",
     };
+  }
+  if (parseRoute(hash).screen === "home") {
+    return { screen: <MatesHome api={api} now={now} board={snapshot.state?.mates} wide={wide} />, tab: "mates" };
   }
   return null;
 }

@@ -68,3 +68,7 @@ go run ./scripts/verify iso down
 
 - Never put real Slack tokens in the isolated crew.
 - Mate names allow only lower case letters, digits, `-` and `_`. Use the `test-` prefix for mates, not `TEST-`.
+
+## Environments
+
+A mate can use an environment (`crew mate set <name> --env <env>`). See [environments.md](environments.md) and ADR [0061](../docs/adr/0061-environments-for-mates.md).

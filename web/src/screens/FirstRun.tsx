@@ -217,7 +217,7 @@ export function FirstRun({ servers, welcome, onClose, storage, mac }: FirstRunPr
             <div className="ob-section">FIRST WORKSPACE</div>
             <div className="ob-path">
               <input className="ui input mono" aria-label="First workspace" type="text" autoCapitalize="off" spellCheck={false} placeholder="~/code/web" value={path} onChange={(e) => setPath(e.target.value)} />
-              {where === "local" ? <BrowseButton pick={() => servers.pickFolder()} onPick={setPath} onError={setError} /> : null}
+              {where === "local" ? <BrowseButton pick={(near) => servers.pickFolder(near)} near={path.trim() || undefined} onPick={setPath} onError={setError} /> : null}
             </div>
             <p className="ob-note">A git repository or a folder of them. It becomes your default project.</p>
           </>

@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { desktop, goldenState, session } from "../test/desktop";
@@ -79,13 +79,14 @@ describe("the agent screen", () => {
     first.open();
     first.screen("first session output\r\n");
     window.location.hash = "#/sessions/s2/agent";
-    await screen.findByRole("link", { name: /add retries/, current: "page" });
+    await screen.findByText("add retries", { selector: ".session-bar .title" });
+    expect(screen.queryByRole("region", { name: "Running" })).toBeNull();
     const second = d.terminals.socket("%9");
     second.open();
     second.screen("second session output\r\n");
     expect(first.closed).toBeNull();
     window.location.hash = "#/sessions/s1/agent";
-    await screen.findByRole("link", { name: /fix the login redirect/, current: "page" });
+    await screen.findByText("fix the login redirect", { selector: ".session-bar .title" });
     expect(d.terminals.sockets.filter((s) => s.pane === "%5")).toHaveLength(1);
     expect(within(agentScreen()).getByTestId("term-screen")).toHaveTextContent("first session output");
   });
@@ -175,9 +176,13 @@ describe("the shell drawer and the editor", () => {
     const d = open();
     await userEvent.click(shellButton());
     await waitFor(() => expect(d.terminals.socket("%7")).toBeTruthy());
-    await userEvent.click(screen.getByRole("link", { name: /add retries/ }));
+    act(() => {
+      window.location.hash = "#/sessions/s2";
+    });
     await waitFor(() => expect(d.terminals.socket("%11")).toBeTruthy());
-    await userEvent.click(screen.getByRole("link", { name: /fix the login redirect/ }));
+    act(() => {
+      window.location.hash = "#/sessions/s1";
+    });
     expect(posts(d, "/api/v1/sessions/s1/shell")).toBe(1);
     expect(posts(d, "/api/v1/sessions/s2/shell")).toBe(1);
   });

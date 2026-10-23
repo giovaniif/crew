@@ -71,7 +71,7 @@ describe("starting a session from the phone", () => {
           fetch: server.fetch,
           storage,
           installed: true,
-          hash: "",
+          hash: "#/sessions",
           host: "h",
           userAgent: "",
           openStream: sockets.open,
@@ -88,6 +88,7 @@ describe("starting a session from the phone", () => {
     expect(link).toHaveAttribute("href", "#/new");
     await userEvent.click(link);
     expect(await screen.findByRole("heading", { name: "What should the agent do?" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Sessions" })).toHaveAttribute("href", "#/sessions");
   });
 
   it("defaults to the daemon's last used project, Claude, and no model or effort", async () => {

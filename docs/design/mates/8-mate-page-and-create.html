@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8" /><link rel="stylesheet" href="../redesign/crew.css" /><link rel="stylesheet" href="../redesign/canvas.css" /><link rel="stylesheet" href="./mates.css" /></head>
+<body><section class="dv-turn" id="t8"><div class="dv-thd"><a class="dv-tid" href="#t8">8</a><span class="dv-tname">Mate page and New mate</span></div><p class="dv-notes"><b>Mate page</b> has three columns: threads at left (each tagged with its source: Slack channel, DM, App or Automation), the conversation in the middle with the normal composer, and a settings rail at right. The rail holds the <b>Environment picker</b> (a styled Select), harness (segmented Claude / Codex / Pi, then model and effort), role, Slack, automations and memory. The rail says that changes apply at the next conversation. <b>New mate</b> is one composer: name on top, the role prompt as the text, and chips for harness, environment, repos and Slack. The environment chip opens a Menu with search and <b>+ New environment…</b>. No wizard steps; role presets are suggestion chips.</p><div class="dv-opts"><div class="dv-opt" id="8a"><div class="dv-olabel"><a class="dv-oid" href="#8a">8a</a>Mate page: threads, conversation, settings rail</div><div class="dv-card"><div class="win" data-screen-label="Mate page" style="width:1280px;height:800px"><div class="titlebar"><span class="tl"></span><span class="tl"></span><span class="tl"></span></div><div class="app"><aside class="side nav"><div class="side-head"><span class="brand">crew</span><button class="icon-btn">⌕</button></div>
+<button class="btn newbtn">+ New mate</button>
+<div class="side-sec"><div class="row on"><span class="ico">◉</span><span class="nm">Mates</span><span class="meta">4</span></div><div class="row"><span class="ico">▤</span><span class="nm">Sessions</span><span class="meta">2</span></div><div class="row"><span class="ico">✓</span><span class="nm">Approvals</span><span class="pill bad">1</span></div><div class="row"><span class="ico">↻</span><span class="nm">Automations</span></div><div class="row"><span class="ico">⌂</span><span class="nm">Environments</span></div><div class="row"><span class="ico">▥</span><span class="nm">Disk</span></div></div>
+<div class="side-scroll"><div class="side-label"><span>Needs you</span><span>1</span></div>
+<div class="row"><span class="face f3" style="width:18px;height:18px;font-size:9px">R</span><span class="nm">rex</span><span class="dot wait"></span></div>
+<div class="side-label"><span>Mates</span></div>
+<div class="row on"><span class="face f1" style="width:18px;height:18px;font-size:9px">A</span><span class="nm">ada</span><span class="dot run"></span></div>
+<div class="row"><span class="face f2" style="width:18px;height:18px;font-size:9px">M</span><span class="nm">milo</span><span class="dot"></span></div>
+<div class="row"><span class="face f4" style="width:18px;height:18px;font-size:9px">J</span><span class="nm">june</span><span class="dot"></span></div></div>
+<div class="side-foot"><div class="row"><span class="ico">⚙</span><span class="nm">Settings</span><span class="meta">⌘,</span></div></div></aside><div class="main">
+<div class="bar"><span class="face f1" style="width:22px;height:22px;font-size:10px">A</span><span class="title">ada</span><span class="sub">Careful reviewer</span><span class="pill blue">working</span><span class="spacer"></span><button class="btn" style="height:26px;font-size:12px">Pause</button><button class="icon-btn">⋯</button></div>
+<div class="split">
+<div class="threads"><div style="padding:8px 8px 4px;display:flex;gap:6px"><input class="input" placeholder="Search threads" style="height:26px;font-size:12px" /><button class="btn" style="height:26px;font-size:12px">New</button></div>
+<div class="side-scroll">
+<div class="row on"><span class="dot run" style="margin-top:6px"></span><div class="nm" style="white-space:normal"><div>Review #42 checkout flake</div><div class="s">Slack #api · @kim · now</div></div></div>
+<div class="row"><span class="dot ok" style="margin-top:6px"></span><div class="nm" style="white-space:normal"><div>Explain the rate limiter</div><div class="s">App · yesterday</div></div></div>
+<div class="row"><span class="dot ok" style="margin-top:6px"></span><div class="nm" style="white-space:normal"><div>Weekly dependency check</div><div class="s">Automation · Mon</div></div></div>
+<div class="row"><span class="dot" style="margin-top:6px"></span><div class="nm" style="white-space:normal"><div>Why is CI slow?</div><div class="s">Slack DM · @sam · Oct 18</div></div></div>
+</div></div>
+<div class="conv"><div class="chat"><div class="thread">
+<div class="src"><span>Slack #api</span><span>·</span><span>thread with @kim</span><span class="spacer"></span><a href="#">Open in Slack</a></div>
+<div class="msg-user"><b>@kim</b> can you look at why checkout_test flakes on main? #42</div>
+<div class="msg-agent"><p>I will read the test and the last 10 CI runs first.</p>
+<div class="tool"><span class="ok">✓</span> Read <code>api/checkout/checkout_test.go</code></div>
+<div class="tool"><span class="ok">✓</span> Ran <code>gh run list -w ci -L 10</code></div>
+<div class="tool"><span class="dot run"></span> Running <code>go test -count=20 ./checkout</code></div></div>
+</div></div>
+<div class="dock"><div class="composer"><textarea placeholder="Reply in this thread. It also posts to Slack." rows="1"></textarea><div class="composer-foot"><span class="chip ghost">@ Attach</span><span class="spacer"></span><button class="send">↑</button></div></div></div></div>
+<aside class="ms">
+<div class="kv"><h4>ENVIRONMENT</h4>
+<button class="select" style="width:100%"><span style="display:flex;align-items:center;gap:8px"><span class="eicon" style="width:20px;height:20px;font-size:10px">L</span>Local (this Mac)</span><span class="chev">▾</span></button>
+<div class="muted" style="font-size:12px">Uses your git, SSH, gh and Claude logins. <a href="#">Edit environment</a></div></div>
+<div class="kv"><h4>HARNESS</h4>
+<div class="seg" style="width:100%"><button class="on" style="flex:1">Claude</button><button style="flex:1">Codex</button><button style="flex:1">Pi</button></div>
+<div class="r"><span class="k">Model</span><button class="select" style="min-width:120px;height:26px;font-size:12px">opus <span class="chev">▾</span></button></div>
+<div class="r"><span class="k">Effort</span><button class="select" style="min-width:120px;height:26px;font-size:12px">high <span class="chev">▾</span></button></div></div>
+<div class="kv"><h4 style="display:flex">ROLE<span class="spacer"></span><a href="#" style="font-weight:500">Edit</a></h4>
+<div class="mem" style="font-size:12px">Careful reviewer. Reads first and asks before big changes. Small PRs, test commit first.</div></div>
+<div class="kv"><h4>SLACK</h4>
+<div class="r"><span class="slackm"><span class="dot ok"></span>Connected as @ada</span><button class="btn quiet" style="height:24px;font-size:12px">Manage</button></div>
+<div class="r"><span class="k">Answers in</span><span class="dim">#api, #web, DMs</span></div></div>
+<div class="kv"><h4>AUTOMATIONS</h4>
+<div class="r"><span>Weekly dependency check</span><span class="muted" style="font-size:12px">Mon 09:00</span></div>
+<a href="#" style="font-size:12px">+ Add automation</a></div>
+<div class="kv"><h4 style="display:flex">MEMORY<span class="spacer"></span><span class="muted" style="font-weight:400">3.2 KB</span></h4><a href="#" style="font-size:12px">View and edit memory</a></div>
+<div class="muted" style="font-size:11px">Changes apply when the next conversation starts.</div>
+</aside></div></div></div></div></div></div><div class="dv-opt" id="8b"><div class="dv-olabel"><a class="dv-oid" href="#8b">8b</a>New mate composer, environment menu open</div><div class="dv-card"><div class="win" data-screen-label="New mate" style="width:1200px;height:760px"><div class="titlebar"><span class="tl"></span><span class="tl"></span><span class="tl"></span></div><div class="app"><aside class="side nav"><div class="side-head"><span class="brand">crew</span><button class="icon-btn">⌕</button></div>
+<button class="btn newbtn">+ New mate</button>
+<div class="side-sec"><div class="row on"><span class="ico">◉</span><span class="nm">Mates</span><span class="meta">4</span></div><div class="row"><span class="ico">▤</span><span class="nm">Sessions</span><span class="meta">2</span></div><div class="row"><span class="ico">✓</span><span class="nm">Approvals</span><span class="pill bad">1</span></div><div class="row"><span class="ico">↻</span><span class="nm">Automations</span></div><div class="row"><span class="ico">⌂</span><span class="nm">Environments</span></div><div class="row"><span class="ico">▥</span><span class="nm">Disk</span></div></div>
+<div class="side-scroll"></div>
+<div class="side-foot"><div class="row"><span class="ico">⚙</span><span class="nm">Settings</span><span class="meta">⌘,</span></div></div></aside><div class="main" style="position:relative">
+<div class="create"><h1>New mate</h1><p class="lead">A mate is a long-lived agent with a name, a role and its own threads.</p>
+<div class="composer" style="width:100%;max-width:640px">
+<div class="namel"><span class="face f1">N</span><input value="nova" /><span class="pill ok">name is free</span></div>
+<textarea rows="3" style="font-size:var(--fs-md)">You are a careful reviewer for the api and web repos. Read first, run the tests, and ask before you change a migration.</textarea>
+<div class="composer-foot" style="flex-wrap:wrap">
+<span class="chip">Claude · opus <span class="chev">▾</span></span>
+<span class="chip" style="border-color:var(--ink);color:var(--ink)">Env: Local (this Mac) <span class="chev">▾</span></span>
+<span class="chip">Repos: api, web <span class="chev">▾</span></span>
+<span class="chip">Slack: later <span class="chev">▾</span></span>
+
+<span class="spacer"></span><button class="btn primary" style="height:30px;border-radius:999px">Create mate</button></div></div>
+<div class="suggest"><span class="chip">Careful reviewer</span><span class="chip">Fast bug fixer</span><span class="chip">Patient explainer</span><span class="chip">On-call triage</span></div>
+</div><div class="menu pop" style="left:288px;top:418px;width:280px"><input class="search" placeholder="Search environments" />
+<div class="menu-label">Environments</div>
+<div class="item hi"><span class="ck">✓</span><span class="eicon" style="width:18px;height:18px;font-size:9px">L</span>Local (this Mac)<span class="k">your logins</span></div>
+<div class="item"><span class="ck"></span><span class="eicon c" style="width:18px;height:18px;font-size:9px">W</span>work<span class="k">2 mates</span></div>
+<div class="item"><span class="ck"></span><span class="eicon c" style="width:18px;height:18px;font-size:9px">O</span>oncall<span class="k">1 mate</span></div>
+<div class="menu-sep"></div><div class="item">+ New environment…</div></div></div></div></div></div></div><div class="dv-opt" id="8c"><div class="dv-olabel"><a class="dv-oid" href="#8c">8c</a>Mate thread, phone (ⓘ opens the settings as a sheet)</div><div class="dv-card"><div class="phone" data-screen-label="Mate phone"><div class="status"></div><div class="ptop"><span class="muted" style="font-size:20px">‹</span><span class="face f1">A</span><div style="flex:1;min-width:0"><div style="font-weight:600">ada</div><div class="muted" style="font-size:11px">Local · Claude · working</div></div><button class="icon-btn">ⓘ</button></div>
+<div class="pbody" style="padding:0"><div style="display:flex;gap:6px;padding:8px 16px;overflow:hidden;border-bottom:1px solid var(--line)"><span class="chip" style="background:var(--bg-active);color:var(--ink)">#42 checkout flake</span><span class="chip">Rate limiter</span><span class="chip">Deps check</span></div>
+<div class="thread" style="padding:14px 16px">
+<div class="msg-user"><b>@kim</b> can you look at why checkout_test flakes on main? #42</div>
+<div class="msg-agent"><p>I will read the test and the last 10 CI runs first.</p><div class="tool"><span class="ok">✓</span> Read <code>checkout_test.go</code></div><div class="tool"><span class="dot run"></span> Running <code>go test -count=20</code></div></div></div></div>
+<div class="dock" style="padding:0 12px 10px"><div class="composer"><textarea placeholder="Reply" rows="1"></textarea><div class="composer-foot"><span class="spacer"></span><button class="send" style="width:44px;height:44px">↑</button></div></div></div>
+<div style="height:24px"></div></div></div></div><div class="dv-opt" id="8d"><div class="dv-olabel"><a class="dv-oid" href="#8d">8d</a>Mate settings sheet, phone</div><div class="dv-card"><div class="phone" data-screen-label="Mate settings sheet"><div class="status"></div><div style="flex:1;background:rgba(20,20,30,.18);display:flex;flex-direction:column;justify-content:flex-end">
+<div style="background:var(--bg);border-radius:14px 14px 0 0;max-height:92%;overflow:auto;padding:8px 16px 28px;display:flex;flex-direction:column;gap:14px" class="ms">
+<div style="width:36px;height:5px;border-radius:3px;background:var(--bg-active);align-self:center"></div>
+<div style="display:flex;align-items:center;gap:10px"><span class="face f1">A</span><div style="flex:1"><div style="font-weight:600">ada</div><div class="muted" style="font-size:12px">Careful reviewer</div></div><button class="btn" style="height:44px">Done</button></div>
+<div class="kv"><h4>ENVIRONMENT</h4><button class="select" style="width:100%;height:44px"><span style="display:flex;align-items:center;gap:8px"><span class="eicon" style="width:20px;height:20px;font-size:10px">L</span>Local (this Mac)</span><span class="chev">▾</span></button></div>
+<div class="kv"><h4>HARNESS</h4><div class="seg" style="width:100%"><button class="on" style="flex:1;height:40px">Claude</button><button style="flex:1;height:40px">Codex</button><button style="flex:1;height:40px">Pi</button></div>
+<div class="r" style="min-height:44px"><span class="k">Model</span><button class="select" style="min-width:140px;height:44px">opus <span class="chev">▾</span></button></div>
+<div class="r" style="min-height:44px"><span class="k">Effort</span><button class="select" style="min-width:140px;height:44px">high <span class="chev">▾</span></button></div></div>
+<div class="kv"><h4>ROLE</h4><div class="mem" style="font-size:12px">Careful reviewer. Reads first and asks before big changes.</div></div>
+<div class="kv"><h4>SLACK</h4><div class="r" style="min-height:44px"><span class="slackm"><span class="dot ok"></span>Connected as @ada</span><span class="muted">›</span></div></div>
+<div class="kv"><div class="r" style="min-height:44px"><span>Automations</span><span class="muted">1 ›</span></div><div class="r" style="min-height:44px"><span>Memory</span><span class="muted">3.2 KB ›</span></div></div>
+<div class="muted" style="font-size:11px">Changes apply when the next conversation starts.</div></div></div></div></div></div></div></section></body></html>

@@ -50,13 +50,19 @@ describe("FirstRun", () => {
 
   it("fills the first workspace from the folder dialog of this computer", async () => {
     const desktop = new FakeDesktop();
-    desktop.handlers.crew_pick_folder = () => "/home/me/web";
+    let picking: string | undefined;
+    desktop.handlers.crew_pick_folder = () => {
+      picking = document.documentElement.dataset.picking;
+      return "/home/me/web";
+    };
     start(false, desktop);
     await press("Continue");
     await within(screen.getByRole("list", { name: "Set up" })).findByText("crew daemon started");
     await press("Continue");
     await press("Browse…");
     expect(screen.getByRole("textbox", { name: "First workspace" })).toHaveValue("/home/me/web");
+    expect(picking).toBe("true");
+    expect(document.documentElement.dataset.picking).toBeUndefined();
   });
 
   it("keeps the typed workspace when the folder dialog is cancelled", async () => {
