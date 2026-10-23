@@ -10,6 +10,7 @@ import {
   createEnv,
   deleteEnv,
   type EnvInfo,
+  type EnvLocal,
   envSSHKey,
   getEnv,
   listEnvs,
@@ -295,10 +296,10 @@ function GitIdentity({
   env: EnvInfo;
   onSaved: (e: EnvInfo) => void;
 }) {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [name, setName] = useState(env.git_name ?? "");
+  const [email, setEmail] = useState(env.git_email ?? "");
   const [error, setError] = useState("");
-  const saved = useRef("");
+  const saved = useRef((env.git_name ?? "") + "\n" + (env.git_email ?? ""));
   const save = () => {
     const key = name.trim() + "\n" + email.trim();
     if (name.trim() === "" || email.trim() === "" || key === saved.current) {
@@ -363,6 +364,93 @@ function shortKey(key: string): string {
   );
 }
 
+function keyDate(at?: string): string {
+  if (!at) {
+    return "";
+  }
+  const d = new Date(at);
+  if (Number.isNaN(d.getTime())) {
+    return "";
+  }
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+function HowTo({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return open ? (
+    <span className="dim small howto">{children}</span>
+  ) : (
+    <Button className="sm" onClick={() => setOpen(true)}>
+      How to log in
+    </Button>
+  );
+}
+
+type Found = { label: string; ok: boolean; text: string; how?: ReactNode };
+
+function foundRows(l: EnvLocal | undefined): Found[] {
+  if (!l) {
+    return [];
+  }
+  const login = (ok: boolean) => (ok ? "logged in" : "not found");
+  return [
+    {
+      label: "Git identity",
+      ok: l.git_name !== "",
+      text: l.git_name ? l.git_name + " · from ~/.gitconfig" : "not set",
+    },
+    {
+      label: "SSH",
+      ok: l.ssh_agent,
+      text: l.ssh_agent
+        ? "ssh-agent · " + l.ssh_keys + (l.ssh_keys === 1 ? " key" : " keys")
+        : "no ssh-agent",
+    },
+    {
+      label: "GitHub CLI",
+      ok: l.github,
+      text: l.github
+        ? l.github_user
+          ? "logged in as @" + l.github_user
+          : "logged in"
+        : "not found",
+      how: <span className="mono">gh auth login</span>,
+    },
+    {
+      label: "Claude",
+      ok: l.claude,
+      text: login(l.claude),
+      how: (
+        <>
+          Run <span className="mono">claude</span>, then type{" "}
+          <span className="mono">/login</span>
+        </>
+      ),
+    },
+    {
+      label: "Codex",
+      ok: l.codex,
+      text: login(l.codex),
+      how: <span className="mono">codex login</span>,
+    },
+    {
+      label: "Pi",
+      ok: l.pi,
+      text: login(l.pi),
+      how: (
+        <>
+          Run <span className="mono">omp</span>, then type{" "}
+          <span className="mono">/login</span>
+        </>
+      ),
+    },
+  ];
+}
+
 function copy(text: string) {
   void navigator.clipboard?.writeText(text).catch(() => undefined);
 }
@@ -376,22 +464,15 @@ function SSHKey({
   env: EnvInfo;
   onSaved: (e: EnvInfo, changed: boolean) => void;
 }) {
-  const [next, setNext] = useState("");
   const [error, setError] = useState("");
-  const run = (action: "make" | "rotate" | "confirm") => {
+  const next = env.new_public_key ?? "";
+  const run = (action: "make" | "rotate" | "confirm" | "cancel") => {
     setError("");
     envSSHKey(api, env.name, action)
-      .then((out) => {
-        if (action === "rotate" && out.new_public_key) {
-          setNext(out.new_public_key);
-          onSaved(out, false);
-          return;
-        }
-        setNext("");
-        onSaved(out, true);
-      })
+      .then((out) => onSaved(out, action === "make" || action === "confirm"))
       .catch((err) => setError(message(err)));
   };
+  const made = keyDate(env.key_created);
   const alert = error ? (
     <p className="error" role="alert">
       {error}
@@ -436,7 +517,7 @@ function SSHKey({
                   <Button
                     variant="quiet"
                     className="sm"
-                    onClick={() => setNext("")}
+                    onClick={() => run("cancel")}
                   >
                     Cancel new key
                   </Button>
@@ -464,6 +545,9 @@ function SSHKey({
             <span className="t">
               {env.public_key ? "ed25519 key made by crew" : "No SSH key yet"}
             </span>
+            {env.public_key && made ? (
+              <span className="muted small">· {made}</span>
+            ) : null}
             <span className="spacer" />
             {env.public_key ? (
               <>
@@ -770,7 +854,9 @@ function Editor({
         <span className="pill blue">Custom</span>
       )}
       {local ? null : (
-        <span className="muted small kind-note">isolated · kind is set at creation</span>
+        <span className="muted small kind-note">
+          isolated · kind is set at creation
+        </span>
       )}
       <span className="spacer" />
       <UsedBy env={env} />
@@ -788,14 +874,22 @@ function Editor({
         {notice}
         <div className="gtitle">FOUND ON THIS MAC</div>
         <div className="group">
-          {["Git identity", "SSH", "GitHub CLI", "Claude", "Codex", "Pi"].map(
-            (t) => (
-              <div className="opt" key={t}>
-                <div className="l t">{t}</div>
-                <span className="dim">your login on this machine</span>
-              </div>
-            ),
-          )}
+          {foundRows(env.local).map((r) => (
+            <Opt key={r.label} label={r.label} title={r.label}>
+              <span
+                className={
+                  r.label === "Git identity" || r.label === "SSH"
+                    ? "dim"
+                    : r.ok
+                      ? "set-y"
+                      : "set-n"
+                }
+              >
+                {r.text}
+              </span>
+              {!r.ok && r.how ? <HowTo>{r.how}</HowTo> : null}
+            </Opt>
+          ))}
         </div>
         {variables}
         {note ? (
@@ -815,7 +909,18 @@ function Editor({
       {head}
       {notice}
       {env.parts.includes("git") ? (
-        <GitIdentity api={api} env={env} onSaved={saved} />
+        <GitIdentity
+          key={
+            env.name +
+            "\n" +
+            (env.git_name ?? "") +
+            "\n" +
+            (env.git_email ?? "")
+          }
+          api={api}
+          env={env}
+          onSaved={saved}
+        />
       ) : null}
       {env.parts.includes("ssh") ? (
         <SSHKey api={api} env={env} onSaved={saved} />
@@ -897,6 +1002,11 @@ function Editor({
                       })
                     }
                   />
+                  {a.set ? null : (
+                    <HowTo>
+                      <span className="mono">{`crew env login ${env.name}`}</span>
+                    </HowTo>
+                  )}
                 </Opt>
               ) : (
                 <Opt key={a.part} label={a.title} title={a.title} sub={a.sub}>
@@ -917,6 +1027,11 @@ function Editor({
                     }
                     onRemove={() => a.setKeys.forEach(unset)}
                   />
+                  {a.set ? null : (
+                    <HowTo>
+                      <span className="mono">{`crew env set ${env.name} ${a.keys[0] ?? ""}`}</span>
+                    </HowTo>
+                  )}
                 </Opt>
               ),
             )}
