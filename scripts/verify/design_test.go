@@ -63,3 +63,9 @@ func TestDesignCheckCleanDiffIsOK(t *testing.T) {
 		t.Error("a web/src change is a UI change")
 	}
 }
+
+func TestDesignCheckHasNoRulesForGoFilesNowThatTheTuiIsGone(t *testing.T) {
+	if got := checkLine("internal/view/view.go", `var a = lipgloss.Color("#ff0000")`); len(got) != 0 {
+		t.Fatalf("rules %v", got)
+	}
+}
