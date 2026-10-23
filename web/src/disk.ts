@@ -73,6 +73,31 @@ export function diskTiles(v: DiskView): DiskTiles {
   };
 }
 
+export type DiskCard = { title: string; value: string; sub: string; usage: number | null };
+
+function storeName(path: string): string {
+  const parts = path.split("/").filter(Boolean);
+  const last = parts[parts.length - 1] ?? "";
+  return last === "store" && parts.length > 1 ? parts[parts.length - 2] : last;
+}
+
+export function diskCards(v: DiskView, timeZone?: string): DiskCard[] {
+  const t = diskTiles(v);
+  const usage = v.total > 0 ? Math.round(((v.total - v.free) / v.total) * 100) : 0;
+  const reclaim = v.rows.filter((r) => r.Action !== "keep").length;
+  const cards: DiskCard[] = [
+    { title: "Volume", value: t.free, sub: usage + "%", usage },
+    { title: "Worktrees", value: String(v.rows.length), sub: t.worktrees, usage: null },
+    { title: "Reclaimable", value: t.reclaimable, sub: reclaim + (reclaim === 1 ? " worktree" : " worktrees"), usage: null },
+  ];
+  if (v.deps_store) {
+    cards.push({ title: "Shared deps store", value: sizeLabel(v.deps_store.size), sub: storeName(v.deps_store.path), usage: null });
+  }
+  const next = clock(v.next_cleanup, timeZone);
+  cards.push(t.schedule === "off" ? { title: "Auto-cleanup", value: "Off", sub: "", usage: null } : { title: "Auto-cleanup", value: "On · " + t.schedule, sub: next ? "next at " + next : "", usage: null });
+  return cards;
+}
+
 export type Tone = "green" | "peach" | "grey" | "blue";
 
 export type DiskTableRow = {
@@ -217,7 +242,7 @@ export function diskPorts(ports: DiskPort[], sessions: Pick<Session, "ID" | "nam
 }
 
 export function killAction(p: DiskPortRow): DiskAction {
-  return { kind: "kill", title: "Kill…", confirm: "Stop the dev server on :" + p.port + " in " + p.worktree + "?", verb: "Kill", cleanup: null, pgids: [p.pgid] };
+  return { kind: "kill", title: "Stop…", confirm: "Stop the dev server on :" + p.port + " in " + p.worktree + "?", verb: "Stop", cleanup: null, pgids: [p.pgid] };
 }
 
 function elapsed(seconds: number): string {

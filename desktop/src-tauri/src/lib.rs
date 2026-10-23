@@ -292,6 +292,33 @@ async fn crew_browser_open(
 }
 
 #[tauri::command]
+async fn crew_pick_folder(app: AppHandle, webview: Webview) -> Result<Option<String>, String> {
+    let page = webview.url().map_err(|e| e.to_string())?;
+    let local = app
+        .try_state::<Shared>()
+        .and_then(|s| s.lock().unwrap().local.as_ref().map(|(u, _)| u.origin()));
+    if local != Some(page.origin()) {
+        return Err("only the page of this computer can pick a folder".into());
+    }
+    #[cfg(desktop)]
+    {
+        use tauri_plugin_dialog::DialogExt;
+        return blocking(move || {
+            Ok(app
+                .dialog()
+                .file()
+                .set_title("Choose a workspace folder")
+                .blocking_pick_folder()
+                .and_then(|p| p.into_path().ok())
+                .map(|p| p.to_string_lossy().into_owned()))
+        })
+        .await;
+    }
+    #[cfg(mobile)]
+    Err("this device has no folder dialog".into())
+}
+
+#[tauri::command]
 async fn fix_daemon(app: AppHandle, webview: Webview) -> Result<(), String> {
     let page = webview.url().map_err(|e| e.to_string())?;
     let target = app
@@ -643,7 +670,8 @@ pub fn run() {
             crew_server_remove,
             crew_server_fix,
             crew_server_workspace,
-            crew_browser_open
+            crew_browser_open,
+            crew_pick_folder
         ])
         .manage(Mutex::new(None::<LocalServe>))
         .setup(|app| {

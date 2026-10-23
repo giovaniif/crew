@@ -17,7 +17,7 @@ go run ./scripts/verify iso up --session
 go run ./scripts/verify web drive / --viewport desktop --out-dir /tmp/crew-verify-map/live-session --steps '[{"click":{"text":"TEST live session","exact":false}},{"fill":{"role":"textbox","name":"Message"},"value":"TEST enter sends"},{"press":"Enter"},{"expect":{"text":"TEST echo: TEST enter sends"},"timeout":8000},{"shot":"chat-enter.png"}]'
 ```
 
-Expect: the message and the echo of the agent show in the chat. Fails today: see #709.
+Expect: the message and the echo of the agent show in the chat.
 
 ### the Send button sends a message and it shows in the transcript
 
@@ -31,31 +31,31 @@ go run ./scripts/verify web drive / --viewport desktop --out-dir /tmp/crew-verif
 go run ./scripts/verify web drive / --viewport desktop --out-dir /tmp/crew-verify-map/live-session --steps '[{"click":{"text":"TEST live session","exact":false}},{"fill":{"role":"textbox","name":"Message"},"value":"TEST one"},{"press":"Shift+Enter"},{"wait":1500},{"eval":"const v = document.querySelector(\"textarea[aria-label=Message]\").value; if (!v.includes(\"\\n\")) throw new Error(\"no new line: \" + JSON.stringify(v))"},{"expect":{"text":"TEST echo: TEST one"},"absent":true},{"shot":"shift-enter.png"}]'
 ```
 
-### the Terminal tab shows the agent pane
+### the agent screen shows the agent pane
 
 ```sh
-go run ./scripts/verify web drive / --viewport desktop --out-dir /tmp/crew-verify-map/live-session --steps '[{"click":{"text":"TEST live session","exact":false}},{"click":{"role":"tab","name":"Terminal"}},{"wait":3000},{"eval":"const t = document.getElementById(\"pane-terminal\").innerText; if (!t.includes(\"TEST fake claude\")) throw new Error(\"terminal pane: \" + t.slice(0, 200))"},{"shot":"terminal.png"}]'
+go run ./scripts/verify web drive / --viewport desktop --out-dir /tmp/crew-verify-map/live-session --steps '[{"click":{"text":"TEST live session","exact":false}},{"eval":"location.hash = location.hash + \"/agent\""},{"wait":3000},{"eval":"const t = document.querySelector(\"[aria-label=\\\"Agent screen\\\"] .xterm-rows\").textContent; if (!t.includes(\"TEST fake claude\")) throw new Error(\"agent screen: \" + t.slice(-200))"},{"shot":"terminal.png"}]'
 ```
 
-Expect: the text of the fake agent pane. Fails today: see #719 and #710.
+Expect: the text of the fake agent pane.
 
-### the Shell tab opens a shell in the worktree
+### the Shell drawer opens a shell in the worktree
 
 ```sh
-go run ./scripts/verify web drive / --viewport desktop --out-dir /tmp/crew-verify-map/live-session --steps '[{"click":{"text":"TEST live session","exact":false}},{"click":{"role":"tab","name":"Shell"}},{"wait":3000},{"press":"p"},{"press":"w"},{"press":"d"},{"press":"Enter"},{"wait":1500},{"eval":"const t = document.getElementById(\"pane-shell\").innerText; if (!t.includes(\"/TEST-live\")) throw new Error(\"shell pane: \" + t.slice(0, 200))"},{"shot":"shell.png"}]'
+go run ./scripts/verify web drive / --viewport desktop --out-dir /tmp/crew-verify-map/live-session --steps '[{"click":{"text":"TEST live session","exact":false}},{"click":{"role":"button","name":"Shell"}},{"wait":3000},{"press":"p"},{"press":"w"},{"press":"d"},{"press":"Enter"},{"wait":1500},{"eval":"const t = document.querySelector(\"[role=region][aria-label=Shell] .xterm-rows\").textContent; if (!t.includes(\"/TEST-live\")) throw new Error(\"shell: \" + t.slice(-200))"},{"shot":"shell.png"}]'
 ```
 
-Expect: `pwd` prints the path of the `TEST-live` worktree. Fails today: see #719.
+Expect: `pwd` prints the path of the `TEST-live` worktree.
 
-### the nvim tab opens nvim in the worktree
+### the editor opens nvim in the worktree
 
 Needs: VERIFY_NVIM
 
 ```sh
-go run ./scripts/verify web drive / --viewport desktop --out-dir /tmp/crew-verify-map/live-session --steps '[{"click":{"text":"TEST live session","exact":false}},{"click":{"role":"tab","name":"nvim"}},{"wait":4000},{"press":"Escape"},{"press":":"},{"press":"p"},{"press":"w"},{"press":"d"},{"press":"Enter"},{"wait":1500},{"eval":"const t = document.getElementById(\"pane-nvim\").innerText; if (!t.includes(\"/TEST-live\")) throw new Error(\"nvim pane: \" + t.slice(0, 200))"},{"shot":"nvim.png"}]'
+go run ./scripts/verify web drive / --viewport desktop --out-dir /tmp/crew-verify-map/live-session --steps '[{"click":{"text":"TEST live session","exact":false}},{"eval":"location.hash = location.hash + \"/editor\""},{"wait":4000},{"press":"Escape"},{"press":":"},{"press":"p"},{"press":"w"},{"press":"d"},{"press":"Enter"},{"wait":1500},{"eval":"const t = document.querySelector(\"[aria-label=Editor] .xterm-rows\").textContent; if (!t.includes(\"/TEST-live\")) throw new Error(\"editor: \" + t.slice(-200))"},{"shot":"nvim.png"}]'
 ```
 
-Expect: nvim opens on its start screen, and `:pwd` prints the path of the `TEST-live` worktree. Set `VERIFY_NVIM=1` when `nvim` is on `PATH`. Fails today: see #719 and #710.
+Expect: nvim opens on its start screen, and `:pwd` prints the path of the `TEST-live` worktree. Set `VERIFY_NVIM=1` when `nvim` is on `PATH`.
 
 ### app: Enter sends a message and it shows in the transcript
 
@@ -63,7 +63,7 @@ Expect: nvim opens on its start screen, and `:pwd` prints the path of the `TEST-
 go run ./scripts/verify app drive / --out-dir /tmp/crew-verify-map/live-session --steps '[{"click":{"text":"TEST live session","exact":false},"timeout":15000},{"fill":{"role":"textbox","name":"Message"},"value":"TEST app enter"},{"press":"Enter"},{"expect":{"text":"TEST echo: TEST app enter"},"timeout":8000},{"shot":"chat-enter.png"}]'
 ```
 
-Expect: the same as in the PWA, in the real desktop app. Fails today: see #709.
+Expect: the same as in the PWA, in the real desktop app.
 
 ### app: the Send button sends a message and it shows in the transcript
 
@@ -77,31 +77,29 @@ go run ./scripts/verify app drive / --out-dir /tmp/crew-verify-map/live-session 
 go run ./scripts/verify app drive / --out-dir /tmp/crew-verify-map/live-session --steps '[{"click":{"text":"TEST live session","exact":false},"timeout":15000},{"fill":{"role":"textbox","name":"Message"},"value":"TEST app one"},{"press":"Shift+Enter"},{"wait":1500},{"eval":"const v = document.querySelector(\"textarea[aria-label=Message]\").value; if (!v.includes(\"\\n\")) throw new Error(\"no new line: \" + JSON.stringify(v))"},{"expect":{"text":"TEST echo: TEST app one"},"absent":true}]'
 ```
 
-### app: the Terminal tab shows the agent pane
+### app: the agent screen shows the agent pane
 
 ```sh
-go run ./scripts/verify app drive / --out-dir /tmp/crew-verify-map/live-session --steps '[{"click":{"text":"TEST live session","exact":false},"timeout":15000},{"click":{"role":"tab","name":"Terminal"}},{"wait":3000},{"shot":"terminal.png"},{"eval":"const t = document.getElementById(\"pane-terminal\").innerText; if (!t.includes(\"TEST fake claude\")) throw new Error(\"terminal pane: \" + t.slice(0, 200))"}]'
+go run ./scripts/verify app drive / --out-dir /tmp/crew-verify-map/live-session --steps '[{"click":{"text":"TEST live session","exact":false},"timeout":15000},{"eval":"location.hash = location.hash + \"/agent\""},{"wait":3000},{"shot":"terminal.png"},{"eval":"const t = document.querySelector(\"[aria-label=\\\"Agent screen\\\"] .xterm-rows\").textContent; if (!t.includes(\"TEST fake claude\")) throw new Error(\"agent screen: \" + t.slice(-200))"}]'
 ```
 
-Expect: the text of the fake agent pane. The app starts its own `crew serve` with `PATH=/usr/bin:/bin`, as on macOS. Fails today: see #719 and #710.
+Expect: the text of the fake agent pane. The app starts its own `crew serve` with `PATH=/usr/bin:/bin`, as on macOS.
 
-### app: the Shell tab opens a shell in the worktree
+### app: the Shell drawer opens a shell in the worktree
 
 ```sh
-go run ./scripts/verify app drive / --out-dir /tmp/crew-verify-map/live-session --steps '[{"click":{"text":"TEST live session","exact":false},"timeout":15000},{"click":{"role":"tab","name":"Shell"}},{"wait":3000},{"press":"p"},{"press":"w"},{"press":"d"},{"press":"Enter"},{"wait":1500},{"shot":"shell.png"},{"eval":"const t = document.getElementById(\"pane-shell\").innerText; if (!t.includes(\"/TEST-live\")) throw new Error(\"shell pane: \" + t.slice(0, 200))"}]'
+go run ./scripts/verify app drive / --out-dir /tmp/crew-verify-map/live-session --steps '[{"click":{"text":"TEST live session","exact":false},"timeout":15000},{"click":{"role":"button","name":"Shell"}},{"wait":3000},{"press":"p"},{"press":"w"},{"press":"d"},{"press":"Enter"},{"wait":1500},{"shot":"shell.png"},{"eval":"const t = document.querySelector(\"[role=region][aria-label=Shell] .xterm-rows\").textContent; if (!t.includes(\"/TEST-live\")) throw new Error(\"shell: \" + t.slice(-200))"}]'
 ```
 
-Fails today: see #719.
-
-### app: the nvim tab opens nvim in the worktree
+### app: the editor opens nvim in the worktree
 
 Needs: VERIFY_NVIM
 
 ```sh
-go run ./scripts/verify app drive / --out-dir /tmp/crew-verify-map/live-session --steps '[{"click":{"text":"TEST live session","exact":false},"timeout":15000},{"click":{"role":"tab","name":"nvim"}},{"wait":4000},{"shot":"nvim.png"},{"eval":"const t = document.getElementById(\"pane-nvim\").innerText; if (!t.includes(\"README.md\")) throw new Error(\"nvim pane: \" + t.slice(0, 200))"}]'
+go run ./scripts/verify app drive / --out-dir /tmp/crew-verify-map/live-session --steps '[{"click":{"text":"TEST live session","exact":false},"timeout":15000},{"eval":"location.hash = location.hash + \"/editor\""},{"wait":4000},{"press":"Escape"},{"press":":"},{"press":"p"},{"press":"w"},{"press":"d"},{"press":"Enter"},{"wait":1500},{"shot":"nvim.png"},{"eval":"const t = document.querySelector(\"[aria-label=Editor] .xterm-rows\").textContent; if (!t.includes(\"/TEST-live\")) throw new Error(\"editor: \" + t.slice(-200))"}]'
 ```
 
-Expect: nvim runs, also with the GUI `PATH` of the app. Fails today: see #719 and #710.
+Expect: nvim runs, also with the GUI `PATH` of the app, and `:pwd` prints the path of the `TEST-live` worktree.
 
 ## Cleanup
 
@@ -111,8 +109,6 @@ go run ./scripts/verify iso down
 
 ## Gotchas
 
-- The text of a terminal tab is in the DOM rows of xterm.js. Check it with `eval` on `#pane-<tab>`, not with `expect` on text: the sidebar also shows `TEST-live`.
-- #709: Enter in the composer adds a new line and does not send. Only the Send button sends.
-- #719: a session that `crew new` starts with no attached crew client has no window in the native tmux session. `crew serve` closes the terminal with 4404, and the tab shows "The pane is gone." The agent pane is live (`tmux capture-pane` shows it).
+- The text of a terminal is in the DOM rows of xterm.js. Check it with `eval` on the `.xterm-rows` of its region (`Agent screen`, `Shell` or `Editor`), not with `expect` on text: the sidebar also shows `TEST-live`.
+- The desktop layout has no Terminal or nvim tab. The agent screen is the route `#/sessions/<id>/agent` and the editor is `#/sessions/<id>/editor`. The Shell button in the session bar opens the Shell drawer.
 - The `app:` recipes need the desktop tools and build the app the first time (see `verify app` in the skill).
-- #710: on macOS, the app starts `crew serve` with the GUI `PATH`, so the daemon can also lose tmux and nvim.

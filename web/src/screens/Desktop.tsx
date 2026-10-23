@@ -32,7 +32,7 @@ export type PaneProps = {
 };
 
 export const panes: Record<MainTab, (props: PaneProps) => ReactNode> = {
-  chat: (p) => <SessionScreen key={p.session.ID} id={p.session.ID} snapshot={p.snapshot} now={p.now} onRetry={p.onRetry} client={p.client} api={p.api} onBrowser={p.onBrowser} />,
+  chat: (p) => <SessionScreen key={p.session.ID} id={p.session.ID} snapshot={p.snapshot} now={p.now} onRetry={p.onRetry} client={p.client} api={p.api} onBrowser={p.onBrowser} inBar />,
   review: (p) => <ReviewPane key={p.session.ID} session={p.session.ID} sessionState={p.session.State} api={p.api} />,
 };
 
@@ -250,7 +250,7 @@ function Empty({ snapshot, live, keys }: { snapshot: StreamSnapshot; live: numbe
   );
 }
 
-function Sheet({ children, onClose, label = "New session" }: { children: ReactNode; onClose: () => void; label?: string }) {
+function Sheet({ children, onClose, label }: { children: ReactNode; onClose: () => void; label: string }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -353,7 +353,13 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
   }, [rows.live, selectedId, go, keys.mac]);
 
   let main: ReactNode;
-  if (other) {
+  if (route.screen === "new") {
+    main = (
+      <div className="main-home">
+        <NewSession env={env} token={token} home />
+      </div>
+    );
+  } else if (other) {
     main = <div className="main-other">{other}</div>;
   } else if (session) {
     const back = () => go(sessionHref(session.ID));
@@ -374,7 +380,7 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
     } else if (view === "agent") {
       body = (
         <ViewOverlay label="Agent screen" onClose={back}>
-          <TerminalPane store={terminals} session={session} kind="agent" />
+          <TerminalPane store={terminals} session={session} kind="agent" onBack={back} />
         </ViewOverlay>
       );
     } else {
@@ -435,11 +441,6 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
       />
       {menu && menuSession ? <SessionCommands key={"menu-" + menu.id} api={api} session={menuSession} storage={env.storage} openAt={menu} /> : null}
       <main className="main-column">{main}</main>
-      {route.screen === "new" ? (
-        <Sheet onClose={() => go("#/")}>
-          <NewSession env={env} token={token} />
-        </Sheet>
-      ) : null}
       {servers && (firstRun || hash === "#/servers/add") ? (
         <Sheet
           label="Add a server"

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { diskActions, diskPorts, diskRecent, diskRows, diskTiles, pollDelay, sizeLabel, type DiskView } from "./disk";
+import { diskActions, diskCards, diskPorts, diskRecent, diskRows, diskTiles, pollDelay, sizeLabel, type DiskView } from "./disk";
 import type { PullRequest, Session, Worktree } from "./stream";
 
 const golden = (): DiskView => JSON.parse(readFileSync(new URL("../../internal/serve/testdata/" + "disk.json", import.meta.url), "utf8"));
@@ -36,6 +36,24 @@ describe("diskTiles", () => {
     expect(t.depsStore).toBeNull();
     expect(t.worktrees).toBe("412 MB");
     expect(t.reclaimable).toBe("36 MB");
+  });
+});
+
+describe("diskCards", () => {
+  it("gives the five stat cards with the volume usage, the counts and the next cleanup", () => {
+    expect(diskCards(golden(), "UTC")).toEqual([
+      { title: "Volume", value: "61 GB free", sub: "88%", usage: 88 },
+      { title: "Worktrees", value: "2", sub: "412 MB+", usage: null },
+      { title: "Reclaimable", value: "…", sub: "1 worktree", usage: null },
+      { title: "Shared deps store", value: "3.1 GB", sub: "pnpm", usage: null },
+      { title: "Auto-cleanup", value: "On · every 10m", sub: "next at 14:30", usage: null },
+    ]);
+  });
+
+  it("says Off with no auto-cleanup and leaves out a missing deps store", () => {
+    const cards = diskCards({ ...golden(), auto_clean_every: 0, deps_store: undefined, next_cleanup: undefined }, "UTC");
+    expect(cards.map((c) => c.title)).toEqual(["Volume", "Worktrees", "Reclaimable", "Auto-cleanup"]);
+    expect(cards[3]).toEqual({ title: "Auto-cleanup", value: "Off", sub: "", usage: null });
   });
 });
 

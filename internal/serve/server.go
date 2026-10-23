@@ -131,6 +131,7 @@ func (s *Server) routes() []route {
 		{"GET /api/v1/mates/{name}/memory", mateMemory},
 		{"GET /api/v1/disk", diskView},
 		{"POST /api/v1/cleanup/worktree", ownerOnly(cleanupWorktree)},
+		{"POST /api/v1/cleanup/run", ownerOnly(cleanupRun)},
 		{"POST /api/v1/ports/kill", ownerOnly(killPorts)},
 		{"GET /api/v1/sessions/{id}/browser", headlessView},
 		{"POST /api/v1/browser/cookies", ownerOnly(importCookies)},

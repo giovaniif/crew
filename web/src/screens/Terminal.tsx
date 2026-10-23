@@ -25,7 +25,7 @@ function notice(status: TermStatus): { text: string; action: string | null } | n
   }
 }
 
-export function TerminalPane({ store, session, kind }: { store: TerminalStore | null; session: Session; kind: PaneKind }) {
+export function TerminalPane({ store, session, kind, onBack }: { store: TerminalStore | null; session: Session; kind: PaneKind; onBack?: () => void }) {
   if (!store) {
     return (
       <div className="pane-placeholder">
@@ -34,10 +34,10 @@ export function TerminalPane({ store, session, kind }: { store: TerminalStore | 
       </div>
     );
   }
-  return <Attached key={session.ID + kind} store={store} session={session} kind={kind} />;
+  return <Attached key={session.ID + kind} store={store} session={session} kind={kind} onBack={onBack} />;
 }
 
-function Attached({ store, session, kind }: { store: TerminalStore; session: Session; kind: PaneKind }) {
+function Attached({ store, session, kind, onBack }: { store: TerminalStore; session: Session; kind: PaneKind; onBack?: () => void }) {
   const entry = store.entry(session, kind);
   const status = useSyncExternalStore(entry.subscribe, entry.snapshot);
   const box = useRef<HTMLDivElement>(null);
@@ -65,6 +65,25 @@ function Attached({ store, session, kind }: { store: TerminalStore; session: Ses
   }, [entry]);
 
   const shown = notice(status);
+  if (status.kind === "paneClosed" && onBack) {
+    return (
+      <div className="term-pane">
+        <div className="term-box" ref={box} />
+        <div className="term-state" role="status">
+          <p className="t">{"This session's pane closed"}</p>
+          <p className="s">The agent is not running in tmux anymore. Its chat and changes are still here.</p>
+          <div className="term-state-actions">
+            <button type="button" className="ui btn" onClick={onBack}>
+              Back to chat
+            </button>
+            <button type="button" className="ui btn primary" onClick={() => entry.retry()}>
+              Open again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="term-pane">
       <div className="term-box" ref={box} />

@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { defaultSettings, loadSettings } from "../settings";
 import { desktop } from "../test/desktop";
 import type { FakeServer } from "../test/fake-server";
+import { FakeDesktop } from "../test/fake-desktop";
 import { pick } from "../test/pick";
 
 const defaults = defaultSettings();
@@ -137,6 +138,26 @@ describe("the server settings", () => {
     await userEvent.click(within(list).getByRole("option", { name: "/home/me/web" }));
     await userEvent.click(screen.getByRole("button", { name: "Add workspace" }));
     await waitFor(() => expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/workspaces")?.body).toEqual({ path: "/home/me/web" }));
+  });
+
+  it("has no Browse… for the path field outside the desktop app", async () => {
+    await open("Workspaces");
+    await userEvent.click(screen.getByRole("button", { name: "Add a folder…" }));
+    expect(screen.getByRole("combobox", { name: "Workspace path" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Browse…" })).toBeNull();
+  });
+
+  it("fills the path field from the folder dialog of the desktop app", async () => {
+    const app = new FakeDesktop();
+    app.handlers.crew_pick_folder = () => "/home/me/web";
+    const view = desktop("#/settings", true, undefined, { desktop: app });
+    withServer(view.server);
+    view.live();
+    await userEvent.click(within(screen.getByRole("navigation", { name: "Settings" })).getByRole("button", { name: "Workspaces" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add a folder…" }));
+    await userEvent.click(screen.getByRole("button", { name: "Browse…" }));
+    expect(app.of("crew_pick_folder")).toHaveLength(1);
+    expect(screen.getByRole("combobox", { name: "Workspace path" })).toHaveValue("/home/me/web");
   });
 
   it("shows the hooks of each agent and installs them", async () => {
