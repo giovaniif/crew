@@ -80,7 +80,7 @@ func TestBuildEnvManagedVarsOnlyForSetParts(t *testing.T) {
 	}{
 		{nil, map[string]string{}},
 		{[]EnvPart{EnvGit}, map[string]string{"GIT_CONFIG_GLOBAL": "/c/envs/test-bot/gitconfig"}},
-		{[]EnvPart{EnvSSH}, map[string]string{"GIT_SSH_COMMAND": "ssh -i '/c/secrets/env/test-bot/id_ed25519' -o IdentitiesOnly=yes"}},
+		{[]EnvPart{EnvSSH}, map[string]string{"GIT_SSH_COMMAND": "ssh -i '/c/secrets/env/test-bot/ssh/id_ed25519' -o IdentitiesOnly=yes"}},
 		{[]EnvPart{EnvGitHub}, map[string]string{"GH_TOKEN": "TEST-gh", "GH_CONFIG_DIR": "/c/envs/test-bot/gh"}},
 		{[]EnvPart{EnvClaude}, map[string]string{"CLAUDE_CONFIG_DIR": "/c/envs/test-bot/claude", "CLAUDE_CODE_OAUTH_TOKEN": "TEST-oat", "ANTHROPIC_API_KEY": "TEST-ant"}},
 		{[]EnvPart{EnvCodex}, map[string]string{"CODEX_HOME": "/c/envs/test-bot/codex", "OPENAI_API_KEY": "TEST-oai"}},
