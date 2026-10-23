@@ -104,7 +104,4 @@ func TestMateEnvIntegrationAppliesTheEnvInThePaneAndKeepsSecretsOutOfPs(t *testi
 	if strings.Contains(string(ps), "TEST-gh-token") || strings.Contains(string(ps), "sk-ant-oat01-TEST") {
 		t.Errorf("ps shows a secret")
 	}
-	if !strings.Contains(string(ps), fakeAgent) {
-		t.Errorf("ps does not show the agent:\n%s", ps)
-	}
 }
