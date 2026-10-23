@@ -39,6 +39,7 @@ func AutomationTOML(a Automation) string {
 		}
 	}
 	field("name", a.Name)
+	field("mate", a.Mate)
 	field("agent", a.Agent)
 	field("model", a.Model)
 	field("effort", a.Effort)

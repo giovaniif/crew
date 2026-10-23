@@ -12,7 +12,7 @@ import (
 	"github.com/giovaniif/crew/internal/rpc"
 )
 
-const automationUsage = "usage: crew automation list | show <name> | run [--work-item w] <name> [context...|-] | runs [name] | rerun <run id> | trust <name>"
+const automationUsage = "usage: crew automation list [--mate m] | show <name> | link <name> --mate <m> | run [--work-item w] <name> [context...|-] | runs [name] | rerun <run id> | trust <name>"
 
 func runAutomation(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 || !automationArgsOK(args) {
@@ -32,7 +32,9 @@ func automationArgsOK(args []string) bool {
 	}
 	switch args[0] {
 	case "list":
-		return len(args) == 1
+		return len(args) == 1 || (len(args) == 3 && args[1] == "--mate")
+	case "link":
+		return len(args) == 4 && args[1] != "--mate" && args[2] == "--mate"
 	case "show", "rerun", "trust":
 		return len(args) == 2
 	case "runs":
@@ -111,6 +113,19 @@ func automationCommand(args []string, stdin io.Reader, stdout io.Writer) error {
 		printAutomationRuns(stdout, got.Runs)
 		return nil
 	}
+	if args[0] == "link" {
+		var a rpc.Automation
+		if err := c.Call(ctx, rpc.MethodAutomationShow, rpc.AutomationShowParams{Name: args[1]}, &a); err != nil {
+			return err
+		}
+		a.Mate = args[3]
+		var saved rpc.Automation
+		if err := c.Call(ctx, rpc.MethodAutomationSave, rpc.AutomationSaveParams{Automation: a}, &saved); err != nil {
+			return err
+		}
+		printAutomation(stdout, saved)
+		return nil
+	}
 	if args[0] == "show" {
 		var a rpc.Automation
 		if err := c.Call(ctx, rpc.MethodAutomationShow, rpc.AutomationShowParams{Name: args[1]}, &a); err != nil {
@@ -123,8 +138,22 @@ func automationCommand(args []string, stdin io.Reader, stdout io.Writer) error {
 	if err := c.Call(ctx, rpc.MethodAutomationList, rpc.AutomationListParams{}, &list); err != nil {
 		return err
 	}
+	if len(args) == 3 {
+		list = mateAutomations(list, args[2])
+	}
 	printAutomations(stdout, list)
 	return nil
+}
+
+func mateAutomations(list rpc.AutomationList, mate string) rpc.AutomationList {
+	var keep []domain.Automation
+	for _, a := range list.Automations {
+		if a.Mate == mate {
+			keep = append(keep, a)
+		}
+	}
+	list.Automations = keep
+	return list
 }
 
 func automationTrigger(a domain.Automation) string {
@@ -178,6 +207,7 @@ func printAutomation(w io.Writer, a domain.Automation) {
 		}
 	}
 	row("name", a.Name)
+	row("mate", a.Mate)
 	row("agent", a.Agent)
 	row("model", a.Model)
 	row("effort", a.Effort)

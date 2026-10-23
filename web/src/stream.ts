@@ -140,6 +140,8 @@ export type MateRow = {
 
 export type Mates = { stopped: boolean; mates: MateRow[] };
 
+export type Alert = { id: string; kind: "pr_checks_failed" | "automation_failed" | (string & {}); title: string; body: string; session?: string; at: string };
+
 export type StreamState = {
   seq: number;
   workspaces: Workspace[];
@@ -149,6 +151,7 @@ export type StreamState = {
   limits: Quota[];
   sends: QueuedSend[];
   mates?: Mates;
+  alerts?: Alert[];
 };
 
 export type StreamDiff = {
@@ -163,6 +166,7 @@ export type StreamDiff = {
   limits?: Quota[];
   sends?: QueuedSend[];
   mates?: Mates;
+  alerts?: Alert[];
 };
 
 export type Message = {
@@ -263,6 +267,7 @@ export function applyDiff(state: StreamState, diff: StreamDiff): StreamState {
     limits: diff.limits ?? state.limits,
     sends: diff.sends ?? state.sends,
     mates: diff.mates ?? state.mates,
+    alerts: diff.alerts ?? state.alerts,
   };
 }
 

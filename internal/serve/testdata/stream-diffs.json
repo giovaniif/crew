@@ -206,5 +206,20 @@
         "order": 0
       }
     }
+  },
+  {
+    "diff": {
+      "seq": 49,
+      "alerts": [
+        {
+          "id": "pr_checks_failed:x",
+          "kind": "pr_checks_failed",
+          "title": "PR #42 checks failed",
+          "body": "",
+          "session": "s1",
+          "at": "2026-10-03T12:00:00Z"
+        }
+      ]
+    }
   }
 ]
