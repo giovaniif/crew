@@ -12,12 +12,6 @@ go run ./scripts/verify iso seed --sessions 3
 
 ## Recipes
 
-### m mutes the selected session
-
-```sh
-go run ./scripts/verify tui drive --restart --out-dir /tmp/crew-verify-map/notify --steps '[{"expect":"seeded change 2","timeout":8000},{"keys":"m"},{"wait":800},{"shot":"muted.png"}]'
-```
-
 ### the PWA marks a muted session (#616)
 
 ```sh
@@ -35,5 +29,5 @@ go run ./scripts/verify iso down
 
 ## Gotchas
 
-- The TUI recipe mutes `seed-session-2`. The PWA recipe uses `seed-session-3`, so it starts from an unmuted session.
+- The PWA recipe uses `seed-session-3`.
 - `crew notify stream` runs until it is stopped. Do not run it in a recipe without a timeout.

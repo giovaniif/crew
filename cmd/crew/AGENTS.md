@@ -1,10 +1,10 @@
 # cmd/crew
 
-`main`: one binary that is the daemon, the TUI, the CLI and the hook handler. The standard library dispatches the subcommands. See [ADR 0002](../../docs/adr/0002-cli-and-ci-tooling.md).
+`main`: one binary that is the daemon, the CLI, the API server of the app and the hook handler. The standard library dispatches the subcommands. See [ADR 0002](../../docs/adr/0002-cli-and-ci-tooling.md).
 
 ## Startup cost
 
-Keep startup light. Each `crew hook` pays for package init, and `modernc.org/sqlite` init already takes about 4.5 of the 5 ms locally. `scripts/bench-hook.sh` guards the 20 ms p95 hook budget. For the same reason, do not use chroma's `lexers`/`styles` packages (see [internal/tui/](../../internal/tui/AGENTS.md)).
+Keep startup light. Each `crew hook` pays for package init, and `modernc.org/sqlite` init already takes about 4.5 of the 5 ms locally. `scripts/bench-hook.sh` guards the 20 ms p95 hook budget. For the same reason, do not use chroma's `lexers`/`styles` packages (see [internal/syntax/](../../internal/syntax/AGENTS.md)).
 
 ## The hook
 
@@ -22,10 +22,10 @@ Hooks call `crew hook`. It writes one message to the socket and exits. It never 
 
 ## Subcommands
 
-- `crew` attaches to the client layout. If necessary, it creates the layout and the daemon: `client.open`, then `exec` of the tmux attach argv that it returns. `crew tui` runs in its left pane. `crew tui --new-session` is only the new-session dialog. `n` runs it in a centred tmux popup (ADR 0037).
+- `crew` with no arguments tells you to open the crew app, prints the usage and exits 2. There is no TUI ([ADR 0061](../../docs/adr/0061-remove-the-tui.md)). Test: `go test ./cmd/crew/ -run CrewWithNoArguments`.
 - `crew daemon [start|status|stop]`: `crew daemon` runs in the foreground. The other forms are in [internal/daemon/](../../internal/daemon/AGENTS.md).
-- `crew workspace add <path>|list|remove <path>` registers workspaces through the daemon (it starts automatically). This step is optional: `session.new` registers a folder that it does not know. The new-session dialog uses the folder where `crew` started as its default. `list` shows `-` for the git facts of a repo until the first background refresh is done.
-- `crew new [--workspace p] [--harness claude|codex|omp] [--model m] [--effort e] [task]` starts a session, like the `n` dialog of the TUI. Without `--workspace`, it uses the last workspace. New single-repo worktrees go under `$CREW_HOME/worktrees`.
+- `crew workspace add <path>|list|remove <path>` registers workspaces through the daemon (it starts automatically). This step is optional: `session.new` registers a folder that it does not know. `list` shows `-` for the git facts of a repo until the first background refresh is done.
+- `crew new [--workspace p] [--harness claude|codex|omp] [--model m] [--effort e] [task]` starts a session. Without `--workspace`, it uses the last workspace. New single-repo worktrees go under `$CREW_HOME/worktrees`.
 - `crew focus <id>` focuses a session through the daemon. A `terminal-notifier` banner runs it on click.
 - `crew automation list` prints each automation, its trigger and its source file, then the problems. `crew automation show <name>` prints one automation from the same list. `crew automation run [--work-item w] <name> [context...]` starts a run. With `-` as the context, it reads the context from stdin. `crew automation runs [name]` and `crew automation rerun <run id>` show and repeat runs. `crew automation trust <name>` approves a repo automation of the current folder. Tests: `go test ./cmd/crew/ -run Automation`.
 - `crew mate list` prints each mate and then the problems. `crew mate show <name>` prints one mate and its prompt. `crew mate remove <name>` deletes it. `crew mate set <name> [--agent a] [--prompt p] [--model m] [--effort e] [--repo r]... [--no-repos] [--owner id] [--avatar id] [--color #rrggbb] [--enable|--disable]` makes a mate or changes the fields that you name and keeps the others. A new mate starts enabled. `--repo` can repeat, and it replaces the list. The daemon does the validation.
@@ -66,7 +66,7 @@ Hooks call `crew hook`. It writes one message to the socket and exits. It never 
   - `testdata/qr.colour.golden` and `testdata/qr.plain.golden` pin the QR output (make them again with `go test ./cmd/crew -run RemoteQR -update`). The tests decode the modules back from both outputs.
   - It is not possible to test a camera here. To verify, run `crew remote pair` in a real terminal and scan it.
   - Tests: `go test ./cmd/crew/ -run Remote`. See [internal/daemon/](../../internal/daemon/AGENTS.md) and ADR 0046.
-- `crew serve [--addr 127.0.0.1:7420] [--cert f --key f | --self-signed] [--url u]` runs the API of the phone app (see [internal/serve/](../../internal/serve/AGENTS.md)). It refuses plain HTTP off loopback before it starts anything. The public URL for the `Origin` check of the stream comes from `--url` or `[serve] url`. It starts the daemon like the TUI does. Tests: `go test ./cmd/crew/ -run Serve`.
+- `crew serve [--addr 127.0.0.1:7420] [--cert f --key f | --self-signed] [--url u]` runs the API of the phone app (see [internal/serve/](../../internal/serve/AGENTS.md)). It refuses plain HTTP off loopback before it starts anything. The public URL for the `Origin` check of the stream comes from `--url` or `[serve] url`. It starts the daemon if necessary. Tests: `go test ./cmd/crew/ -run Serve`.
 - `crew rpc` is the one transport of the Mac app, local or through `ssh -T host crew rpc`.
   - It connects to `$CREW_HOME/crew.sock` and copies protocol lines in both directions between the socket and stdin/stdout. The line limit is `rpc.MaxMessage` (16 MiB).
   - It never starts a daemon. If nothing listens, it writes one `{"v":1,"id":0,"error":{"code":"unavailable",...}}` line and exits 1.
@@ -90,10 +90,10 @@ Hooks call `crew hook`. It writes one message to the socket and exits. It never 
 - `crew cleanup [--dry-run]` runs (or only prints) the cleanup plan through the daemon (see [internal/daemon/](../../internal/daemon/AGENTS.md)).
 - `crew pr <session id or name> [--json]` prints the PR board of a session from daemon state. `testdata/pr.json.golden` pins the JSON shape. To make it again, run `go test ./cmd/crew -run PRBoardJSON -update` and review the diff. [ADR 0024](../../docs/adr/0024-pr-board.md) documents the shape. Run the board tests with `go test ./... -run PRBoard`. The tests of the github adapter and the integration tests use a fake `gh` script, so nothing goes to GitHub.
 - `crew review comment [--session id] (--file abs | --worktree id --path rel) --start n [--end n] [--code text] --body text` adds a draft comment. `crew review scope [--session id] [--scope s]` prints the path, base commit and files of each worktree as JSON. `crew review send [--session id]` sends the draft, or queues it until the agent is between tools. The default of `--session` is `$CREW_SESSION`, which the shell and nvim panes have.
-- `crew setup claude|codex|omp [--remove]`: see [internal/adapters/](../../internal/adapters/AGENTS.md). `crew setup` with no arguments and `crew setup nvim [--remove]`: see [internal/adapters/onboard/](../../internal/adapters/onboard/AGENTS.md).
+- `crew setup claude|codex|omp [--remove]`: see [internal/adapters/](../../internal/adapters/AGENTS.md). `crew setup nvim [--remove]`: see [internal/adapters/onboard/](../../internal/adapters/onboard/AGENTS.md).
 - `crew setup-worktree <path>`: see [internal/adapters/setup/](../../internal/adapters/setup/AGENTS.md).
 - `crew statusline` runs the status line of the user, then reports model, effort, context left and rate limits.
-- `crew debug seed N [--codex]` adds N fake Claude sessions, to try the TUI.
+- `crew debug seed N [--codex]` adds N fake Claude sessions, to try the app.
   - There are two sessions for each task, with one to three worktrees each, event logs and fresh limits. The Claude 5h window is 88% used, so the red state shows.
   - `--codex` makes every third session Codex, with Codex limits.
   - The first seeded session also gets three subagents: one is nested, two are running. Its PR is open with failing checks, so `crew pr seed-session-1` shows a PR board.
@@ -102,7 +102,7 @@ Hooks call `crew hook`. It writes one message to the socket and exits. It never 
 
 ## Migration from the alphas
 
-`crew`, `crew tui`, `crew daemon`, `crew serve` and `crew setup` run `migrateState` (`migrate.go`) before they start. It does not run when `CREW_HOME` is set. It writes one `crew:` line on stderr for each step that it does. A second run changes nothing and writes nothing. The names of the alphas are only in `migrate.go`, in the `legacy*` files of the packages, and in their tests. The rules are in `internal/domain/migrate.go`.
+`crew daemon`, `crew serve` and `crew setup` run `migrateState` (`migrate.go`) before they start. It does not run when `CREW_HOME` is set. It writes one `crew:` line on stderr for each step that it does. A second run changes nothing and writes nothing. The names of the alphas are only in `migrate.go`, in the `legacy*` files of the packages, and in their tests. The rules are in `internal/domain/migrate.go`.
 
 1. **Services** (only `crew setup`): for each systemd or launchd file of the alphas in the systemd user dir or `~/Library/LaunchAgents`, it keeps a `.bak` copy, writes the `crew` file (`domain.RewriteServiceFile`), stops and removes the old service, and starts the new service after the other steps.
 2. **Home:** it moves the old home dir to `~/.crew` and makes the old path a symlink to it. If a daemon answers on the old socket, it does not move the dir and tells you to run `crew daemon stop`. Until the move, `rpc.Home` uses the old dir. If both dirs exist, it uses `~/.crew` and does not change the old dir. It then removes the stale socket, pid and lock files of the old daemon, unless that daemon is live.

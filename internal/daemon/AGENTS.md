@@ -64,7 +64,7 @@ A worktree that a project holds is a container of tabs: the agent that made it, 
   - `tab.close` (`{"session","tab"}`; with no `tab`, it closes the shown tab) kills only that pane and shows an adjacent tab (`domain.TabAfterClose`).
   - To close an agent tab ends that session. To close the last tab is `session.end`. Thus the worktree stays with its owner and the project, and `u` resumes it.
 - **Active tab.** The shown tab is the tab whose pane is in the slot. The daemon also keeps the last active tab for each worktree (`State.ActiveTabs`, `Diff.ActiveTab`). `tab.*` and `session.focus` set it.
-- **Strip.** The 250 ms title worker puts `domain.TabStrip` in front of the own title of each tab pane (`domain.TabbedTitle`), and marks the tab of that pane. Thus the strip above the slot always shows the tab in the slot. tmux 3.4 reports no mouse column on a pane border, so you cannot click the strip. You can click the tab line of the sidebar (see [internal/tui/](../tui/AGENTS.md)).
+- **Strip.** The 250 ms title worker puts `domain.TabStrip` in front of the own title of each tab pane (`domain.TabbedTitle`), and marks the tab of that pane. Thus the strip above the slot always shows the tab in the slot. tmux 3.4 reports no mouse column on a pane border, so you cannot click the strip.
 - **Attention and review.** An agent tab is a session. Thus its state, unread mark, banners, pushes and `space` work as for all sessions.
   - Its banner title names the worktree that it is a tab of (`Session.WorksIn`).
   - Its name never has the PR of the worktree.
@@ -75,7 +75,7 @@ A worktree that a project holds is a container of tabs: the agent that made it, 
 
 See [ADR 0015](../../docs/adr/0015-session-lifecycle.md).
 
-- **Start.** `n` in the TUI or `crew new` calls `session.new`.
+- **Start.** The app or `crew new` calls `session.new`.
   - The work item is a GitHub PR URL or text. A URL of a different shape stays text (`domain.ParseWorkItem`). It can be empty. Then the session gets its own text task, and its first `UserPromptSubmit` prompt becomes the text of that task (`domain.NameFromPrompt`).
   - A single repo gets one worktree at `$CREW_HOME/worktrees/<repo>/<slug>`, branched from `origin/<default>`, and its setup recipe runs.
   - An orchestration root starts at the root with no worktree (`domain.PlanSessionStart`).
@@ -101,12 +101,12 @@ See [ADR 0015](../../docs/adr/0015-session-lifecycle.md).
 - **Title strips.** Each pane has a top border. The border of an agent pane shows `domain.AgentTitle`: state, harness, model, effort, cwd, then a tab for each worktree with its PR.
   - A 250 ms worker sets it through `TerminalHost.SetTitle`.
   - The worker copies state on the loop only when it changed. It formats and runs tmux off the loop, only for changed titles. See [ADR 0038](../../docs/adr/0038-pane-title-strips.md).
-- **Survival.** The daemon and the tmux server own sessions. Thus, when you quit the TUI or detach, nothing changes. On daemon start, `app.ReconcilePanes` ends restored sessions whose pane is gone, off the loop.
-- **Model and effort.** `M`/`E` in the TUI send `session.switch`.
+- **Survival.** The daemon and the tmux server own sessions. Thus, when you close the app or detach, nothing changes. On daemon start, `app.ReconcilePanes` ends restored sessions whose pane is gone, off the loop.
+- **Model and effort.** The app sends `session.switch`.
   - For Claude, the daemon types `/model <x>` or `/effort <y>` into the pane when the agent is between tools.
   - For Codex, it types `/model` and moves through the picker with arrow keys ([ADR 0034](../../docs/adr/0034-codex-model-picker-switching.md), integration test in [test/integration/](../../test/integration/AGENTS.md)).
   - For omp, it types `/switch <id>` or `/switch <model>:<level>`.
-  - Tests use a fake terminal host. To test by hand, run the TUI against a fake `claude` on `PATH`. See [ADR 0018](../../docs/adr/0018-model-effort-switching.md).
+  - Tests use a fake terminal host. To test by hand, run the app against a fake `claude` on `PATH`. See [ADR 0018](../../docs/adr/0018-model-effort-switching.md).
 - **Send and interrupt.** `go test ./internal/domain/ ./internal/daemon/ -run 'SessionSend|SessionInterrupt'`, and `-tags integration -run SessionSend` for a real tmux pane. See [ADR 0046](../../docs/adr/0046-remote-app.md).
   - `session.send` (`{"session","text"}` → `{"id","queued"}`) adds to its own text queue: `State.Sends` / `Diff.Sends`. This is the full list of `domain.QueuedSend` `{"id","session","text","queued_at"}`, oldest first, in memory only.
   - `domain.NextSend` selects the oldest send of the session when the session is idle, done or waiting, and nothing is in flight. The send goes out as one bracketed paste and Enter. It stays in flight until the next hook of the session. Thus each free turn takes one send.
@@ -119,11 +119,11 @@ See [ADR 0015](../../docs/adr/0015-session-lifecycle.md).
 
 ## Naming
 
-`go test ./... -run Naming` runs all naming tests: domain rules, resolvers, the `gh` adapter (against a fake `gh`), the daemon and the TUI.
+`go test ./... -run Naming` runs all naming tests: domain rules, resolvers, the `gh` adapter (against a fake `gh`) and the daemon.
 
 - The name comes from the work item. It is resolved off the loop: after `session.new`, a worker asks `app.TitleResolvers` and merges the title into the task. The resolver is `gh pr view`.
 - Tests never read the token.
-- In the TUI, `R` calls `session.rename` (`{"id","name"}`) to rename and pin. `A` calls `session.unpin` (`{"id"}`). See [ADR 0026](../../docs/adr/0026-session-naming.md).
+- `session.rename` (`{"id","name"}`) to rename and pin. `A` calls `session.unpin` (`{"id"}`). See [ADR 0026](../../docs/adr/0026-session-naming.md).
 
 ## Config
 
@@ -135,7 +135,7 @@ See [ADR 0015](../../docs/adr/0015-session-lifecycle.md).
   - Before it writes, it parses the result again. The result must hold exactly the new value.
   - It refuses a key that is set in a different way (an inline table, dotted keys), with a message to edit it by hand. It never touches a file that does not parse.
 - **Backup.** A changed file is first copied to `config.toml.crew-<UTC time>.bak` (mode 600). Then it is replaced atomically with its old mode. If you set the value that it already has, nothing is written and there is no backup. A missing file is created without a backup.
-- **Live.** After a write, the daemon reloads `[defaults.<harness>]` and `[push] away_after`. `[push] away_after` reloads only when presence runs. To turn it on from `"0"`, restart. The TUI reads `[fallback]` and `[theme]` when it starts.
+- **Live.** After a write, the daemon reloads `[defaults.<harness>]` and `[push] away_after`. `[push] away_after` reloads only when presence runs. To turn it on from `"0"`, restart.
 
 ## Automations
 
@@ -194,7 +194,7 @@ See [ADR 0015](../../docs/adr/0015-session-lifecycle.md).
 - A worker reads a bounded queue and calls `app.Notifier`. For a focused session, it first asks `app.Foreground` if a terminal app is in front. If so, it drops the banner.
 - The title is the session name (`NameFor`, else the harness). The body is `needs permission`, `waiting` or `done`. There is a maximum of one banner for each session every 10 s.
 - `$CREW_HOME/notify.json` sets an optional macOS sound for each event: `{"sounds":{"permission":"Glass"}}`.
-- `session.mute` sets `Session.Muted` (the `m` of the TUI). Muted sessions get no banner, but they still become unread.
+- `session.mute` sets `Session.Muted`. Muted sessions get no banner, but they still become unread.
 - Claude and Codex share one path, and a fixture-driven daemon test covers both. See [ADR 0016](../../docs/adr/0016-notifications-and-attention.md).
 - To test by hand, put stub `osascript` and `terminal-notifier` scripts first on the `PATH` of the daemon. They log their argv, as the e2e ones in `test/e2e/testdata/bin` do. Or fire a maximum of a few real ones.
 
@@ -215,7 +215,7 @@ See [ADR 0012](../../docs/adr/0012-worktree-detection.md). The rules are in [int
 
 ## Ports
 
-`go test ./... -run Ports -tags integration -bench Ports` runs the adapter, daemon, TUI and end-to-end ports tests and `BenchmarkPortsRefresh`. Tests start their own throwaway servers and signal only process groups that they started. See [ADR 0022](../../docs/adr/0022-ports-view.md). Each worktree has `Ports`: the dev servers whose cwd is in it.
+`go test ./... -run Ports -tags integration -bench Ports` runs the adapter, daemon and end-to-end ports tests and `BenchmarkPortsRefresh`. Tests start their own throwaway servers and signal only process groups that they started. See [ADR 0022](../../docs/adr/0022-ports-view.md). Each worktree has `Ports`: the dev servers whose cwd is in it.
 
 - **Read.** One goroutine refreshes through `app.ProcessTable` (`adapters/procs`) every 5 s, and only while a worktree exists.
 - **Map.** The loop maps listeners to the deepest worktree that contains the cwd (`domain.PortsByWorktree`). It sends a `worktree` diff where the ports changed. Ports are never stored.
@@ -244,7 +244,7 @@ Tests have names `*Cleanup*`: `go test ./internal/domain/... -run Cleanup` and `
 
 ## Disk view
 
-`go test ./internal/daemon ./internal/app ./internal/domain -run 'Disk|Reclaimable|TotalSize|RemoveWorktree|CleanupWorktree|ShellToggle'`. See [ADR 0030](../../docs/adr/0030-worktrees-disk-view.md) and [internal/tui/](../tui/AGENTS.md).
+`go test ./internal/daemon ./internal/app ./internal/domain -run 'Disk|Reclaimable|TotalSize|RemoveWorktree|CleanupWorktree|ShellToggle'`. See [ADR 0030](../../docs/adr/0030-worktrees-disk-view.md).
 
 - `disk.view` returns `Cleanup.Plan` with a size for each worktree (one status check for each worktree, 4 at a time). It also returns:
   - `reclaimable`/`reclaimable_pending` and `worktrees_size`/`worktrees_pending` (`domain.Reclaimable` and `domain.TotalSize`, so clients never add sizes again)

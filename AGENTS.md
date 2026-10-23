@@ -1,6 +1,6 @@
 # agent-workspace
 
-`crew` is a terminal workspace that runs Claude Code and Codex sessions in parallel. Each session works in git worktrees. The tool gives each session a local, PR-style review pane. `crew` is one Go binary. It is the daemon, the TUI, the CLI and the hook handler.
+`crew` is a terminal workspace that runs Claude Code and Codex sessions in parallel. Each session works in git worktrees. The tool gives each session a local, PR-style review pane. `crew` is one Go binary. It is the daemon, the CLI, the API server of the app and the hook handler. The app (`web/` and `desktop/`) is the only UI ([ADR 0061](docs/adr/0061-remove-the-tui.md)).
 
 - What it does: [FEATURES.md](FEATURES.md)
 - How it is built, the layers and the performance budgets: [ARCHITECTURE.md](ARCHITECTURE.md)
@@ -21,8 +21,7 @@ Claude Code and Codex load an `AGENTS.md` from each directory they work in. Here
 | [internal/rpc/](internal/rpc/AGENTS.md) | the socket protocol, methods, errors, build handshake, client |
 | [internal/serve/](internal/serve/AGENTS.md) | `crew serve`: the HTTP and WebSocket API for the phone app, its routes, auth, stream frames, TLS |
 | [internal/view/](internal/view/AGENTS.md) | the derived view shared by `serve` and `view.subscribe`: names, banners, order, PR board, goldens |
-| [internal/syntax/](internal/syntax/AGENTS.md) | the curated chroma lexers the TUI and `crew rpc` share, review spans |
-| [internal/tui/](internal/tui/AGENTS.md) | sidebar, limits bar, theme and defaults, review viewer, disk view, goldens |
+| [internal/syntax/](internal/syntax/AGENTS.md) | the curated chroma lexers that `crew rpc` and `crew serve` use, review spans |
 | [internal/adapters/](internal/adapters/AGENTS.md) | Claude and Codex adapters and their `setup`, notify, procs, fs, github, sqlite |
 | [internal/adapters/git/](internal/adapters/git/AGENTS.md) | git CLI use, repo facts, worktree listing, review diffs, turn snapshots, hunks |
 | [internal/adapters/tmux/](internal/adapters/tmux/AGENTS.md) | the `crew` tmux server, layout, shell panes, keys |
@@ -59,17 +58,17 @@ Write all prose docs and new ADRs in ASD-STE100 Simplified Technical English. Us
   - When a port changes, update the `-tags integration` fakes too (`*_fake_test.go`).
 - Tests that start a daemon use a short `CREW_HOME` under `/tmp`, because macOS limits Unix socket paths to 104 bytes.
 - For runs by hand, use a temporary `CREW_HOME` and `CREW_TMUX_SOCKET`. `CREW_TMUX_SOCKET` points the daemon at another tmux server. Thus the real `~/.crew` and the `crew` tmux server do not change.
-- `domain`, `app`, `tui`, `rpc` and `daemon` must not import `os/exec` (depguard). Only `internal/adapters/tmux` runs tmux, and only `internal/daemon` can import it.
+- `domain`, `app`, `rpc` and `daemon` must not import `os/exec` (depguard). Only `internal/adapters/tmux` runs tmux, and only `internal/daemon` can import it.
 
 ## Rules
 
-- **Layers:** `domain` has no IO and no imports from other `internal/*` packages. `app` depends only on `domain` and defines the ports. Adapters implement those ports. `tui` talks only to `rpc`. Lint enforces this. If lint fails, fix the design, not the lint config.
-- **Rules live in `domain`:** put state transitions, naming and cleanup decisions in `domain` as pure, table-tested functions. Do not put them in adapters or the TUI.
-- **Nothing slow on hot paths:** do not use exec, disk or network calls in `crew hook`, in TUI rendering or in the daemon event loop. Send heavy work to workers. Keep the budgets in ARCHITECTURE.md. If a change can break a budget, add or update a benchmark.
+- **Layers:** `domain` has no IO and no imports from other `internal/*` packages. `app` depends only on `domain` and defines the ports. Adapters implement those ports. Lint enforces this. If lint fails, fix the design, not the lint config.
+- **Rules live in `domain`:** put state transitions, naming and cleanup decisions in `domain` as pure, table-tested functions. Do not put them in adapters or the UI.
+- **Nothing slow on hot paths:** do not use exec, disk or network calls in `crew hook` or in the daemon event loop. Send heavy work to workers. Keep the budgets in ARCHITECTURE.md. If a change can break a budget, add or update a benchmark.
 - **Shell out, do not reimplement:** use the `git`, `gh` and `tmux` CLIs. Do not use a Go git library.
 - **Never destroy user work:** cleanup code backs up uncommitted changes before it removes anything. It never deletes branches. It never touches a worktree that a process uses. Each change to cleanup needs tests for these cases.
 - **Do not change the user's setup:** the tmux adapter uses only the `crew` tmux server. Setup commands merge into the `~/.claude` and `~/.codex` config idempotently. They back up the file first, and you can undo them. Tests never touch the real `~/.claude`, `~/.codex` or `~/.config/nvim`.
-- **Mac is the first target platform:** the app is one Tauri 2 app with the React UI of `web/` ([ADR 0057](docs/adr/0057-tauri-apps.md)). Design a UI change for the app on macOS first. Then Linux, Windows, iOS and Android. Use a white, light theme. Do not copy the native macOS look. The TUI also stays.
+- **Mac is the first target platform:** the app is one Tauri 2 app with the React UI of `web/` ([ADR 0057](docs/adr/0057-tauri-apps.md)). Design a UI change for the app on macOS first. Then Linux, Windows, iOS and Android. Use a white, light theme. Do not copy the native macOS look.
 
 ## Tests: TDD, enforced by CI
 
@@ -100,7 +99,7 @@ Write all prose docs and new ADRs in ASD-STE100 Simplified Technical English. Us
 4. Meet each acceptance criterion. Run the commands in the issue's **Validate** section and paste their output into the PR body.
    For a change that a user can see, prove it on an isolated crew with the [verify skill](.claude/skills/verify/SKILL.md) (`go run ./scripts/verify`).
 5. Open one PR per issue with `Closes #<n>` in it. Start its title with a conventional prefix (`feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`). Use `test:` only for a test-only change (no production code). It skips the "must fail on base" rule.
-   If a PR changes what the TUI draws, show screenshots of the new behavior in its body. Make them with `scripts/screenshot` from a neutral demo folder, never a real home or project. Push them to the `pr-assets` branch under `<issue-number>/`. Embed them by their `raw.githubusercontent.com` URL (see [scripts/](scripts/AGENTS.md)).
+   If a PR changes what the app shows, show screenshots of the new behavior in its body. Make them with `verify web shot` or `verify app shot` on an isolated crew, never a real home or project. Push them to the `pr-assets` branch under `<issue-number>/`. Embed them by their `raw.githubusercontent.com` URL (see [scripts/](scripts/AGENTS.md)).
 6. If a criterion is wrong or impossible, do not quietly drop it. Say so in the PR and on the issue.
 7. main is protected. It needs build, tdd and mutate green and the branch up to date with main. A merge queue on the dev box merges the PRs (ADR [0058](docs/adr/0058-label-merge-queue.md)). Do not merge a PR yourself, and do not update its branch.
 8. The PR review is our own validation: CI (build, tdd, mutate), the evidence of `scripts/verify` and the land gate. CodeRabbit is not part of the process.

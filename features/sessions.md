@@ -1,6 +1,6 @@
 # Sessions
 
-The sidebar and the PWA list every session, grouped by task, with its state, harness, model and limits. A session that needs the user (permission or waiting) is first in the PWA and counted as "need you" in the TUI. The TUI and the PWA must agree on the sessions and their states.
+The app lists every session with its state, harness, model and limits. A session that needs the user (permission or waiting) is first on the phone.
 
 ## Setup
 
@@ -11,26 +11,6 @@ go run ./scripts/verify iso seed --sessions 3
 ```
 
 ## Recipes
-
-### sidebar lists the seeded sessions
-
-```sh
-go run ./scripts/verify tui drive --restart --out-dir /tmp/crew-verify-map/sessions --steps '[{"expect":"seeded change 1","timeout":8000},{"expect":"seeded change 3"},{"expect":"1 need you"},{"shot":"sidebar.png"}]'
-```
-
-Expect: two tasks (`seeded task 1`, `seeded task 2`), three sessions, the Claude 5h limit at 88%.
-
-### j and k move the selection
-
-```sh
-go run ./scripts/verify tui drive --out-dir /tmp/crew-verify-map/sessions --steps '[{"expect":"seeded change 2","timeout":8000},{"keys":"j"},{"keys":"j"},{"expect":"opus-5.5"},{"shot":"moved.png"}]'
-```
-
-### help toggles with ?
-
-```sh
-go run ./scripts/verify tui drive --out-dir /tmp/crew-verify-map/sessions --steps '[{"keys":"?"},{"expect":"keys","timeout":3000},{"keys":"?"},{"shot":"help.png"}]'
-```
 
 ### PWA groups sessions by attention on mobile
 
@@ -111,15 +91,7 @@ go run ./scripts/verify iso crew --expect "removed /tmp/crew-verify-map/TEST-ws"
 rm -rf /tmp/crew-verify-map/TEST-ws
 ```
 
-### P opens the projects view
-
-```sh
-go run ./scripts/verify tui drive --restart --out-dir /tmp/crew-verify-map/sessions --steps '[{"expect":"seeded change 1","timeout":8000},{"keys":"P"},{"expect":"PROJECTS"},{"expect":"a add"},{"shot":"projects.png"},{"keys":"Escape"}]'
-```
-
 ### crew new starts a session from the CLI (manual: it needs a workspace and a harness that runs turns)
-
-### crew focus moves the TUI to a session (manual: it needs an attached crew client)
 
 ### crew statusline prints the Claude Code status line (manual: Claude Code calls it with JSON on stdin)
 
@@ -133,6 +105,5 @@ go run ./scripts/verify iso down
 
 ## Gotchas
 
-- `crew tui --new-session` opens the new session dialog over the sidebar. `verify tui` runs `crew tui` with no flag.
 - The seeded sessions have no pane. Chat send, Terminal, Shell and nvim on a live pane are in [live-session.md](live-session.md).
 - The seeded worktrees are in `/tmp/seed`. They are not git repos, so `git status` fails on them.

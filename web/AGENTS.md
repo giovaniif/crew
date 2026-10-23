@@ -139,7 +139,7 @@ The phone app: a PWA that `crew serve` embeds and serves at `/` (ADR [0046](../d
   - The colors are the `--term-*` tokens (Mocha in both schemes).
   - On a phone, a session has the same tabs as the desktop: Chat, Terminal, Review, Shell and nvim (`screens/PhoneSession.tsx`).
   - `npm run fake` gives each session a demo pane. Tests: `npm test -- Terminal`.
-- **Review tab** (issue #518). `screens/Review.tsx` is the same review as the Mac app and the TUI. It uses the `review` routes of `crew serve` (see [internal/serve/](../internal/serve/AGENTS.md)).
+- **Review tab** (issue #518). `screens/Review.tsx` is the same review as the Mac app. It uses the `review` routes of `crew serve` (see [internal/serve/](../internal/serve/AGENTS.md)).
   - `src/review.ts` holds the pure rules: `decodeReview` (Go nulls become empty lists), `reviewTree` (files by worktree, viewed when the blob did not change), `worktreeMenu`, `splitRows`, `segments` (the spans use byte offsets), `commentAnchor`, `commentedLines`, `draftRows` (`repo · path:lines`), `canSend` and `hunkOnly`.
   - Click `+` next to a line number to comment. Shift-click a second line to select a range.
   - Stage and revert send only the hunk. When git refuses the patch, the hunk shows the message of git and the review does not open again.

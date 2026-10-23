@@ -6,8 +6,8 @@ One terminal tool that runs Claude Code, Codex and Oh My Pi (`omp`) sessions in 
 
 ## Decisions
 
-- **Client:** a TUI first. A native macOS client can come later on the same daemon.
-- **Terminals:** tmux runs in the background on its own server socket. Our TUI draws the sidebar and the review pane, and swaps agent panes into the main area. We do not use the tmux status line. We do not copy a sidebar pane into each window.
+- **Client:** the crew app (`web/` and the Tauri app in `desktop/`). The TUI was removed ([ADR 0061](docs/adr/0061-remove-the-tui.md)).
+- **Terminals:** tmux runs in the background on its own server socket. The app shows the panes through `crew serve`.
 - **Harnesses:** Claude Code, Codex, and Oh My Pi (`omp`). Claude and Codex report usage limits. omp reports model and effort only.
 - **Worktree cleanup:** the tool removes a worktree automatically when these conditions are true:
   - Its PR is merged.
@@ -38,12 +38,12 @@ One terminal tool that runs Claude Code, Codex and Oh My Pi (`omp`) sessions in 
 - **Daemon:** owns sessions, worktrees, harness adapters, PR polling, usage data and notifications. It keeps state on disk.
 - **Harness adapters:** Claude Code, Codex and omp. Their hook events map to one state model: `running`, `waiting`, `permission`, `done`, `idle`. Claude and Codex also report the context that is left and usage limits. omp reports model and effort from its hook.
 - **Terminal host:** a separate tmux server (`tmux -L crew`) with one pane for each agent and one for each shell. Only the adapter talks to tmux, so it is possible to replace tmux later.
-- **TUI:** connects to the daemon through a local socket. When you close it, the sessions continue to run. `q` and ctrl+c always close it, also when the daemon is stopped. When the daemon restarts, the sidebar connects again automatically. It never starts a daemon. After an upgrade, it tells you, and `r` restarts the daemon on the new binary.
+- **App:** connects to the daemon through `crew serve`. When you close it, the sessions continue to run.
 
 ## P0 (v1)
 
 **Sessions**
-- The sidebar has vertical rows grouped by task. Each row shows the state glyph, harness, model, effort and context left of a session. A session row expands to show its worktrees. Each worktree shows its repo, subtask, PR and check status (for example `api:shares #42 ✓`).
+- The session list has vertical rows grouped by task. Each row shows the state glyph, harness, model, effort and context left of a session. A session row expands to show its worktrees. Each worktree shows its repo, subtask, PR and check status (for example `api:shares #42 ✓`).
 - The session header shows every PR the session owns, each with its check status.
 - The tool names sessions automatically from the PR, then the task. The name of a text task is a 2-4 word summary of its text. A session with no work item gets its own task, and the text of that task is its first prompt. `R` renames and pins a name, `A` unpins it. The name is the work item, never the current activity of the agent.
 - Keyboard-first navigation: go to a session by number, to the next waiting session, or to the last session.
@@ -51,7 +51,7 @@ One terminal tool that runs Claude Code, Codex and Oh My Pi (`omp`) sessions in 
   - You never select repos or create worktrees yourself. The agent creates them. The tool finds each one and attaches it to the session.
   - Single-repo workspace: the session starts in one fresh worktree branched from `origin/main`, with the repo's setup recipe already run.
   - Orchestration root: the session starts at the root, and the agent creates worktrees in the service repos it needs.
-- Sessions survive TUI restarts, terminal crashes and SSH detach.
+- Sessions survive app restarts, terminal crashes and SSH detach.
 - You can resume an ended session that still has a worktree (`u`). The harness continues its conversation in the same dir, with the same model and effort.
 
 **Attention**
@@ -100,7 +100,7 @@ One terminal tool that runs Claude Code, Codex and Oh My Pi (`omp`) sessions in 
   - unresolved threads and merge readiness.
 
   `crew pr <session> [--json]` shows it. babysit-pr reads it, and does not poll `gh` (see ADR 0024).
-- A subagent tree for each session under its sidebar row, from the subagent hooks of the harness. Only Claude has it today. There are no stop and steer controls, because no harness gives them for each subagent (see ADR 0019).
+- A subagent tree for each session under its row in the session list, from the subagent hooks of the harness. Only Claude has it today. There are no stop and steer controls, because no harness gives them for each subagent (see ADR 0019).
 - When the Claude quota is low, offer to start the new session in Codex.
 - Mouse:
   - Click a session to select it and go to its pane.
