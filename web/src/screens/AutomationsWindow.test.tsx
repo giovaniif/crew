@@ -2,7 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { Automation, AutomationRun } from "../api";
-import { automationOf, automationRows, draftOf, type AutomationQuery } from "../automations";
+import { automationOf, automationRows, draftOf, newDraft, type AutomationQuery } from "../automations";
 import { desktop } from "../test/desktop";
 
 afterEach(() => {
@@ -44,6 +44,13 @@ describe("the automation rows", () => {
 
   it("turns a draft back into the automation it came from", () => {
     expect(automationOf(draftOf(list[0]))).toEqual({ name: "fix-ci", agent: "claude", target: "new-worktree", prompt: "Fix the CI of {{work_item}}.", on: ["pr.ci_failed"], enabled: true, session: "fresh" });
+  });
+
+  it("keeps the mate of an automation and starts a new one for a mate", () => {
+    const a: Automation = { name: "test-weekly", agent: "claude", mate: "test-ada", prompt: "TEST", enabled: true, source: "/h/config.toml" };
+    expect(automationOf(draftOf(a))).toMatchObject({ mate: "test-ada" });
+    expect(automationOf({ ...newDraft("test-ada"), name: "test-new", prompt: "TEST" })).toMatchObject({ mate: "test-ada" });
+    expect(automationOf({ ...newDraft(), name: "test-new", prompt: "TEST" })).not.toHaveProperty("mate");
   });
 
   it("keeps the fields that the form does not show", () => {
@@ -118,6 +125,22 @@ describe("the Automations window", () => {
         automation: { name: "triage", agent: "claude", target: "new-worktree", prompt: "Triage the new issues.", schedule: "daily 08:00", enabled: true, session: "fresh" },
       }),
     );
+  });
+
+  it("opens New automation for a mate from its route and saves the mate", async () => {
+    const view = desktop("#/automations/new?mate=helper", true, undefined, {}, (server) =>
+      server
+        .on("GET", "/api/v1/automations", { status: 200, body: { automations: list } })
+        .on("GET", "/api/v1/automations/runs?limit=100", { status: 200, body: { runs } })
+        .on("POST", "/api/v1/automations", (call) => ({ status: 200, body: { ...(call.body as { automation: Automation }).automation, source: "/h/config.toml" } })),
+    );
+    view.live();
+    const form = within(await screen.findByRole("complementary", { name: "New automation" })).getByRole("form", { name: "New automation" });
+    expect(within(form).getByText("Runs as the mate helper.")).toBeInTheDocument();
+    await userEvent.type(within(form).getByRole("textbox", { name: "Name" }), "test-weekly");
+    await userEvent.type(within(form).getByRole("textbox", { name: "Prompt" }), "TEST check");
+    await userEvent.click(within(form).getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(view.server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/automations")?.body).toMatchObject({ automation: { name: "test-weekly", mate: "helper" } }));
   });
 
   it("shows the .crew.toml of a repo automation, with no Edit and a switch that cannot change", async () => {

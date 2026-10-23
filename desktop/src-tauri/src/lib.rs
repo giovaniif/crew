@@ -294,6 +294,29 @@ async fn crew_browser_open(
     }
 }
 
+#[derive(serde::Serialize)]
+struct UpdateCheck {
+    current: String,
+    latest: Option<String>,
+}
+
+#[tauri::command]
+async fn crew_check_update(app: AppHandle) -> Result<UpdateCheck, String> {
+    let current = app.package_info().version.to_string();
+    #[cfg(desktop)]
+    {
+        let latest = update::check(&app, find_local_crew().as_deref(), &stop_serve).await?;
+        Ok(UpdateCheck { current, latest })
+    }
+    #[cfg(mobile)]
+    {
+        Ok(UpdateCheck {
+            current,
+            latest: None,
+        })
+    }
+}
+
 #[tauri::command]
 async fn crew_pick_folder(
     app: AppHandle,
@@ -711,7 +734,8 @@ pub fn run() {
             crew_server_fix,
             crew_server_workspace,
             crew_browser_open,
-            crew_pick_folder
+            crew_pick_folder,
+            crew_check_update
         ])
         .manage(Mutex::new(None::<LocalServe>))
         .setup(|app| {

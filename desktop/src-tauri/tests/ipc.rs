@@ -20,7 +20,8 @@ fn the_serve_origin_gets_the_commands_and_nothing_more() {
             "allow-crew-attention",
             "allow-fix-daemon",
             "allow-crew-browser-open",
-            "allow-crew-pick-folder"
+            "allow-crew-pick-folder",
+            "allow-crew-check-update"
         ])
     );
 }
