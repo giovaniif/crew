@@ -1,8 +1,8 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react";
 import { addWorkspace, expandPath, listWorkspaces, removeWorkspace, resolveWorkItem, sessionOptions, startSession, type HarnessOptions, type WorkItemResolved, type WorkspaceList } from "../api";
 import type { AppEnv } from "../App";
-import { defaultLabel, effortChoices, harnesses, loadChoices, modelChoices, rememberedRoot, saveChoices } from "../newsession";
-import { Segmented, Select, Suggest } from "../ui";
+import { agentChoices, agentValue, defaultLabel, effortChoices, loadChoices, rememberedRoot, saveChoices, splitAgent, taskFields } from "../newsession";
+import { Select } from "../ui";
 
 type Resolution = { state: "idle" } | { state: "checking" } | { state: "ok"; item: WorkItemResolved } | { state: "bad"; message: string };
 
@@ -19,12 +19,11 @@ function message(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
-export function NewSession({ env, token }: { env: AppEnv; token: string }) {
+export function NewSession({ env, token, home: atHome }: { env: AppEnv; token: string; home?: boolean }) {
   const [remembered] = useState(() => loadChoices(env.storage));
   const [workspaces, setWorkspaces] = useState<Workspaces>({ state: "loading" });
   const [workspace, setWorkspace] = useState(remembered.workspace);
-  const [item, setItem] = useState("");
-  const [prompt, setPrompt] = useState("");
+  const [text, setText] = useState("");
   const [harness, setHarness] = useState(remembered.harness);
   const [model, setModel] = useState(remembered.model);
   const [effort, setEffort] = useState(remembered.effort);
@@ -107,15 +106,18 @@ export function NewSession({ env, token }: { env: AppEnv; token: string }) {
     };
   }, [env.fetch, token, attempt]);
 
+  const fields = taskFields(text);
+  const item = fields.work_item;
+
   useEffect(() => {
-    if (!item.trim() || !workspace) {
+    if (!item || !workspace) {
       setResolution({ state: "idle" });
       return;
     }
     let live = true;
     setResolution({ state: "checking" });
     const timer = setTimeout(() => {
-      resolveWorkItem(env.fetch, token, workspace, item.trim()).then(
+      resolveWorkItem(env.fetch, token, workspace, item).then(
         (resolved) => live && setResolution({ state: "ok", item: resolved }),
         (err) => live && setResolution({ state: "bad", message: message(err) }),
       );
@@ -126,25 +128,27 @@ export function NewSession({ env, token }: { env: AppEnv; token: string }) {
     };
   }, [env.fetch, token, workspace, item]);
 
-  function chooseHarness(next: string) {
-    setHarness(next);
-    if (model && !(modelChoices[next] ?? []).includes(model)) {
-      setModel("");
-    }
+  function chooseAgent(value: string) {
+    const next = splitAgent(value);
+    setHarness(next.harness);
+    setModel(next.model);
   }
 
-  async function submit(event: FormEvent) {
+  async function submit(event: FormEvent | KeyboardEvent) {
     event.preventDefault();
+    if (!canStart) {
+      return;
+    }
     setBusy(true);
     setFailure("");
     try {
       const body = {
         workspace,
-        work_item: item.trim(),
+        work_item: item,
         harness,
         ...(model.trim() ? { model: model.trim() } : {}),
         ...(effort ? { effort } : {}),
-        ...(prompt.trim() ? { prompt: prompt.trim() } : {}),
+        ...(fields.prompt ? { prompt: fields.prompt } : {}),
       };
       const session = await startSession(env.fetch, token, body);
       saveChoices(env.storage, { workspace, harness, model: model.trim(), effort });
@@ -156,16 +160,27 @@ export function NewSession({ env, token }: { env: AppEnv; token: string }) {
   }
 
   const harnessDefault = defaults.find((h) => h.harness === harness);
+  const defaultModels = Object.fromEntries(defaults.map((h) => [h.harness, h.default_model ?? ""]));
   const roots = workspaces.state === "ready" ? workspaces.list.workspaces : [];
   const canStart = !busy && !!workspace && resolution.state !== "bad";
 
+  const Root = atHome ? "div" : "main";
+  const onKey = (ev: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (ev.key !== "Enter" || ev.shiftKey || ev.nativeEvent.isComposing || ev.keyCode === 229) {
+      return;
+    }
+    void submit(ev);
+  };
+
   return (
-    <main className="screen">
-      <a className="back" href="#/">
-        <span aria-hidden="true">{"‹ "}</span>
-        Sessions
-      </a>
-      <h1>New session</h1>
+    <Root className={"screen new-home" + (atHome ? " at-home" : "")}>
+      {atHome ? null : (
+        <a className="back" href="#/">
+          <span aria-hidden="true">{"‹ "}</span>
+          Sessions
+        </a>
+      )}
+      <h1>What should the agent do?</h1>
       {workspaces.state === "failed" ? (
         <div className="error" role="alert">
           <p>{"Could not load workspaces: " + workspaces.message}</p>
@@ -178,11 +193,47 @@ export function NewSession({ env, token }: { env: AppEnv; token: string }) {
         </div>
       ) : null}
       {workspaces.state === "ready" && roots.length === 0 ? <p className="muted">No workspaces on this server yet. Add a folder of the server.</p> : null}
+      <form className="composer-box new-composer" onSubmit={(e) => void submit(e)}>
+        <textarea aria-label="Task" rows={2} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={onKey} placeholder="Describe the task, or paste a PR or issue URL" autoCapitalize="none" autoCorrect="off" spellCheck={false} aria-describedby="resolution" />
+        <div id="resolution" className="resolution">
+          {resolution.state === "checking" ? <p className="resolution-line muted">Checking…</p> : null}
+          {resolution.state === "ok" ? (
+            <p className="resolution-line" data-testid="resolution-line">
+              <span className="dot ok" aria-hidden="true" />
+              <span>{(resolution.item.title || item) + " → new worktree "}</span>
+              <code>{resolution.item.worktree}</code>
+            </p>
+          ) : null}
+          {resolution.state === "bad" ? (
+            <div className="error" role="alert">
+              {resolution.message}
+            </div>
+          ) : null}
+        </div>
+        <div className="composer-foot">
+          <Select className="chip-select" label="Project" value={workspace} onChange={setWorkspace} disabled={roots.length === 0} search={roots.length > 8 ? "Find a project…" : undefined} options={roots.map((w) => ({ value: w.Root, label: baseName(w.Root), hint: w.Root }))} />
+          <Select className="chip-select" label="Agent" value={agentValue(harness, model)} onChange={chooseAgent} options={agentChoices(defaultModels, model ? { harness, model } : null)} />
+          <Select className="chip-select" label="Effort" value={effort} onChange={setEffort} options={[{ value: "", label: "effort " + defaultLabel(harnessDefault?.default_effort) }, ...effortChoices.map((e) => ({ value: e, label: "effort " + e }))]} />
+          <span className="spacer" />
+          <button type="submit" className="send" aria-label="Start session" disabled={!canStart}>
+            ↑
+          </button>
+        </div>
+      </form>
+      <p className="hint" data-testid="new-hint">
+        <kbd>Enter</kbd> start · project, agent and effort are remembered from your last session
+      </p>
+      {failure ? (
+        <div className="error" role="alert">
+          <pre>{failure}</pre>
+        </div>
+      ) : null}
+      {busy ? <p className="muted" role="status">Starting…</p> : null}
       <div className="workspace-tools">
-        <button type="button" onClick={() => setAdding((v) => !v)}>
+        <button type="button" className="ui btn quiet" onClick={() => setAdding((v) => !v)}>
           Add workspace…
         </button>
-        <button type="button" onClick={() => setRemoving(true)} disabled={!workspace}>
+        <button type="button" className="ui btn quiet" onClick={() => setRemoving(true)} disabled={!workspace}>
           Remove workspace
         </button>
       </div>
@@ -227,78 +278,6 @@ export function NewSession({ env, token }: { env: AppEnv; token: string }) {
           </button>
         </div>
       ) : null}
-      <form onSubmit={submit}>
-        <div className="ui-field">
-          Workspace
-          <Select label="Workspace" value={workspace} onChange={setWorkspace} disabled={roots.length === 0} search={roots.length > 8 ? "Find a workspace…" : undefined} options={roots.map((w) => ({ value: w.Root, label: baseName(w.Root) + " · " + w.Root }))} />
-        </div>
-        <label>
-          Task (optional)
-          <input
-            value={item}
-            onChange={(e) => setItem(e.target.value)}
-            placeholder="PR URL, or what to do"
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-            aria-describedby="resolution"
-          />
-        </label>
-        <p className="muted">Groups sessions and names them. Empty: the first prompt names the session.</p>
-        <div id="resolution" className="resolution">
-          {resolution.state === "checking" ? <p className="muted">Checking…</p> : null}
-          {resolution.state === "ok" ? (
-            <dl className="resolved">
-              {resolution.item.title ? (
-                <>
-                  <dt>Title</dt>
-                  <dd>{resolution.item.title}</dd>
-                </>
-              ) : null}
-              <dt>Worktree</dt>
-              <dd className="mono">{resolution.item.worktree}</dd>
-            </dl>
-          ) : null}
-          {resolution.state === "bad" ? (
-            <div className="error" role="alert">
-              {resolution.message}
-            </div>
-          ) : null}
-        </div>
-        <label>
-          First prompt
-          <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3} placeholder="Optional" />
-        </label>
-        <fieldset className="harness">
-          <legend>Agent</legend>
-          <Segmented label="Agent" value={harness} onChange={chooseHarness} options={harnesses.map((h) => ({ value: h.id, label: h.label }))} />
-        </fieldset>
-        <div className="ui-field">
-          Model
-          <Suggest
-            label="Model"
-            value={model}
-            onChange={setModel}
-            suggestions={modelChoices[harness] ?? []}
-            placeholder={defaultLabel(harnessDefault?.default_model)}
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-          />
-        </div>
-        <div className="ui-field">
-          Effort
-          <Segmented label="Effort" value={effort} onChange={setEffort} options={[{ value: "", label: defaultLabel(harnessDefault?.default_effort) }, ...effortChoices.map((e) => ({ value: e, label: e }))]} />
-        </div>
-        {failure ? (
-          <div className="error" role="alert">
-            <pre>{failure}</pre>
-          </div>
-        ) : null}
-        <button type="submit" disabled={!canStart}>
-          {busy ? "Starting…" : "Start session"}
-        </button>
-      </form>
-    </main>
+    </Root>
   );
 }
