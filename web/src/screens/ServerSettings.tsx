@@ -27,7 +27,10 @@ import { Button, Dialog, Menu, Select, Stepper } from "../ui";
 import { Group, Opt, ServerTag } from "./SettingsRows";
 import { BrowseButton, type PickFolder } from "./BrowseButton";
 
-type Loaded<T> = { state: "loading" } | { state: "ready"; value: T } | { state: "failed"; note: string };
+type Loaded<T> =
+  | { state: "loading" }
+  | { state: "ready"; value: T }
+  | { state: "failed"; note: string };
 
 function useLoad<T>(load: () => Promise<T>): [Loaded<T>, () => void] {
   const [loaded, setLoaded] = useState<Loaded<T>>({ state: "loading" });
@@ -80,7 +83,15 @@ function Note({ text }: { text: string }) {
   return <p className="settings-note">{text}</p>;
 }
 
-function Heading({ title, server, children }: { title: string; server?: boolean; children?: ReactNode }) {
+function Heading({
+  title,
+  server,
+  children,
+}: {
+  title: string;
+  server?: boolean;
+  children?: ReactNode;
+}) {
   return (
     <h2 className="set-title">
       {title}
@@ -104,13 +115,21 @@ function useFolders(api: Authed, text: string, home: string): string[] {
       return;
     }
     const resolved = expandPath(text, home);
-    const parent = resolved.endsWith("/") ? resolved.replace(/\/+$/, "") || "/" : dirname(resolved);
-    const prefix = resolved.endsWith("/") ? "" : resolved.slice(resolved.lastIndexOf("/") + 1);
+    const parent = resolved.endsWith("/")
+      ? resolved.replace(/\/+$/, "") || "/"
+      : dirname(resolved);
+    const prefix = resolved.endsWith("/")
+      ? ""
+      : resolved.slice(resolved.lastIndexOf("/") + 1);
     let live = true;
     workspaceDirs(api, parent).then(
       (out) => {
         if (live) {
-          setFolders((out.dirs ?? []).filter((d) => d.Name.startsWith(prefix) && d.Path !== resolved).map((d) => d.Path));
+          setFolders(
+            (out.dirs ?? [])
+              .filter((d) => d.Name.startsWith(prefix) && d.Path !== resolved)
+              .map((d) => d.Path),
+          );
         }
       },
       () => live && setFolders([]),
@@ -122,11 +141,25 @@ function useFolders(api: Authed, text: string, home: string): string[] {
   return folders;
 }
 
-function RowMenu({ label, items, onPick }: { label: string; items: { value: string; label: string }[]; onPick: (v: string) => void }) {
+function RowMenu({
+  label,
+  items,
+  onPick,
+}: {
+  label: string;
+  items: { value: string; label: string }[];
+  onPick: (v: string) => void;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <span className="ui-anchor">
-      <Button variant="icon" aria-label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
+      <Button
+        variant="icon"
+        aria-label={label}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+      >
         ⋯
       </Button>
       {open ? (
@@ -145,7 +178,17 @@ function RowMenu({ label, items, onPick }: { label: string; items: { value: stri
   );
 }
 
-function Confirm({ title, action, onConfirm, onClose }: { title: string; action: string; onConfirm: () => void; onClose: () => void }) {
+function Confirm({
+  title,
+  action,
+  onConfirm,
+  onClose,
+}: {
+  title: string;
+  action: string;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
   return (
     <Dialog title={title} onClose={onClose}>
       <div className="dialog-actions">
@@ -158,9 +201,18 @@ function Confirm({ title, action, onConfirm, onClose }: { title: string; action:
   );
 }
 
-export function WorkspacesGroup({ api, pickFolder }: { api: Authed; pickFolder?: PickFolder }) {
+export function WorkspacesGroup({
+  api,
+  pickFolder,
+}: {
+  api: Authed;
+  pickFolder?: PickFolder;
+}) {
   const load = useCallback(async () => {
-    const [list, options] = await Promise.all([listWorkspaces(api.fetch, api.token), sessionOptions(api.fetch, api.token).catch(() => ({ home: "" }))]);
+    const [list, options] = await Promise.all([
+      listWorkspaces(api.fetch, api.token),
+      sessionOptions(api.fetch, api.token).catch(() => ({ home: "" })),
+    ]);
     return { list, home: options.home ?? "" };
   }, [api]);
   const [loaded, reload] = useLoad(load);
@@ -172,11 +224,18 @@ export function WorkspacesGroup({ api, pickFolder }: { api: Authed; pickFolder?:
   const folders = useFolders(api, text, home);
   const known = loaded.state === "ready" ? loaded.value.list.workspaces : [];
   const shown = folders.filter((f) => !known.some((w) => w.Root === f));
-  const near = (loaded.state === "ready" ? loaded.value.list.last_used : "") || known[known.length - 1]?.Root;
+  const near =
+    (loaded.state === "ready" ? loaded.value.list.last_used : "") ||
+    known[known.length - 1]?.Root;
 
   const add = async () => {
     const path = expandPath(text, home);
-    if (await run(async () => "Added " + (await addWorkspace(api.fetch, api.token, path)).Root)) {
+    if (
+      await run(
+        async () =>
+          "Added " + (await addWorkspace(api.fetch, api.token, path)).Root,
+      )
+    ) {
       setText("");
       setAdding(false);
       reload();
@@ -184,7 +243,14 @@ export function WorkspacesGroup({ api, pickFolder }: { api: Authed; pickFolder?:
   };
   const remove = async (root: string) => {
     setRemoving("");
-    if (await run(async () => (await removeWorkspace(api.fetch, api.token, root), "Removed " + root))) {
+    if (
+      await run(
+        async () => (
+          await removeWorkspace(api.fetch, api.token, root),
+          "Removed " + root
+        ),
+      )
+    ) {
       reload();
     }
   };
@@ -192,7 +258,11 @@ export function WorkspacesGroup({ api, pickFolder }: { api: Authed; pickFolder?:
   return (
     <>
       <Heading title="Workspaces" server>
-        <Button variant="primary" className="sm" onClick={() => setAdding(!adding)}>
+        <Button
+          variant="primary"
+          className="sm"
+          onClick={() => setAdding(!adding)}
+        >
           Add a folder…
         </Button>
       </Heading>
@@ -216,14 +286,29 @@ export function WorkspacesGroup({ api, pickFolder }: { api: Authed; pickFolder?:
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && text.trim() && add()}
           />
-          {pickFolder ? <BrowseButton pick={pickFolder} near={near} onPick={setText} /> : null}
+          {pickFolder ? (
+            <BrowseButton pick={pickFolder} near={near} onPick={setText} />
+          ) : null}
           <Button variant="primary" disabled={!text.trim()} onClick={add}>
             Add workspace
           </Button>
           {shown.length > 0 ? (
-            <ul id="workspace-folders" role="listbox" aria-label="Folders" className="ui menu folders">
+            <ul
+              id="workspace-folders"
+              role="listbox"
+              aria-label="Folders"
+              className="ui menu folders"
+            >
               {shown.map((f) => (
-                <li key={f} className="item" role="option" aria-selected={false} tabIndex={-1} onClick={() => setText(f)} onKeyDown={(e) => e.key === "Enter" && setText(f)}>
+                <li
+                  key={f}
+                  className="item"
+                  role="option"
+                  aria-selected={false}
+                  tabIndex={-1}
+                  onClick={() => setText(f)}
+                  onKeyDown={(e) => e.key === "Enter" && setText(f)}
+                >
                   {f}
                 </li>
               ))}
@@ -231,25 +316,47 @@ export function WorkspacesGroup({ api, pickFolder }: { api: Authed; pickFolder?:
           ) : null}
         </div>
       ) : null}
-      {loaded.state === "ready" && known.length === 0 ? <p className="set-lead">No workspaces yet. Add a folder to start sessions in it.</p> : null}
+      {loaded.state === "ready" && known.length === 0 ? (
+        <p className="set-lead">
+          No workspaces yet. Add a folder to start sessions in it.
+        </p>
+      ) : null}
       {loaded.state === "ready" && known.length > 0 ? (
         <ul className="group" aria-label="Workspaces">
           {known.map((w: WorkspaceInfo) => (
             <li key={w.Root} className="opt" aria-label={w.Root}>
               <span className="mono grow">{w.Root}</span>
-              <span className="muted">{w.Kind === "orchestration" ? "orchestration root" : "git repo"}</span>
-              <RowMenu label={"More for " + w.Root} items={[{ value: "remove", label: "Remove" }]} onPick={() => setRemoving(w.Root)} />
+              <span className="muted">
+                {w.Kind === "orchestration" ? "orchestration root" : "git repo"}
+              </span>
+              <RowMenu
+                label={"More for " + w.Root}
+                items={[{ value: "remove", label: "Remove" }]}
+                onPick={() => setRemoving(w.Root)}
+              />
             </li>
           ))}
         </ul>
       ) : null}
       {view}
-      {removing ? <Confirm title={"Remove " + removing + "?"} action="Remove" onClose={() => setRemoving("")} onConfirm={() => remove(removing)} /> : null}
+      {removing ? (
+        <Confirm
+          title={"Remove " + removing + "?"}
+          action="Remove"
+          onClose={() => setRemoving("")}
+          onConfirm={() => remove(removing)}
+        />
+      ) : null}
     </>
   );
 }
 
-type AgentsData = { harnesses: HarnessChoices[]; onboarding: Onboarding; config: ConfigValues | null; configNote: string };
+type AgentsData = {
+  harnesses: HarnessChoices[];
+  onboarding: Onboarding;
+  config: ConfigValues | null;
+  configNote: string;
+};
 
 function harnessName(h: HarnessChoices): string {
   return h.name || h.harness;
@@ -257,7 +364,10 @@ function harnessName(h: HarnessChoices): string {
 
 export function AgentsGroup({ api }: { api: Authed }) {
   const load = useCallback(async (): Promise<AgentsData> => {
-    const [options, onboarding] = await Promise.all([sessionOptions(api.fetch, api.token), getOnboarding(api)]);
+    const [options, onboarding] = await Promise.all([
+      sessionOptions(api.fetch, api.token),
+      getOnboarding(api),
+    ]);
     let config: ConfigValues | null = null;
     let configNote = "";
     try {
@@ -265,7 +375,12 @@ export function AgentsGroup({ api }: { api: Authed }) {
     } catch (err) {
       configNote = groupNote(err);
     }
-    return { harnesses: options.harnesses as HarnessChoices[], onboarding, config, configNote };
+    return {
+      harnesses: options.harnesses as HarnessChoices[],
+      onboarding,
+      config,
+      configNote,
+    };
   }, [api]);
   const [loaded, reload] = useLoad(load);
   const [config, setConfigState] = useState<ConfigValues | null>(null);
@@ -292,7 +407,11 @@ export function AgentsGroup({ api }: { api: Authed }) {
         if (setup.err) {
           throw new Error(setup.err);
         }
-        return install ? "Hooks installed in " + setup.file : setup.backup ? "Hooks removed. Backup: " + setup.backup : "Hooks removed";
+        return install
+          ? "Hooks installed in " + setup.file
+          : setup.backup
+            ? "Hooks removed. Backup: " + setup.backup
+            : "Hooks removed";
       })
     ) {
       reload();
@@ -321,16 +440,38 @@ export function AgentsGroup({ api }: { api: Authed }) {
       {harnesses.map((h) => {
         const setup = onboarding.harnesses[h.harness];
         return (
-          <section key={h.harness} className="set-section" role="group" aria-label={harnessName(h)}>
+          <section
+            key={h.harness}
+            className="set-section"
+            role="group"
+            aria-label={harnessName(h)}
+          >
             <div className="gtitle">{harnessName(h).toUpperCase()}</div>
             <div className="group">
-              <Opt lead={<span className={"dot" + (setup?.installed ? " ok" : "")} />} title="Hooks" sub={setup?.installed ? "Hooks installed in " + setup.file : "Hooks not installed"}>
+              <Opt
+                lead={
+                  <span className={"dot" + (setup?.installed ? " ok" : "")} />
+                }
+                title="Hooks"
+                sub={
+                  setup?.installed
+                    ? "Hooks installed in " + setup.file
+                    : "Hooks not installed"
+                }
+              >
                 {setup?.installed ? (
-                  <Button className="sm" onClick={() => hooks(h.harness, false)}>
+                  <Button
+                    className="sm"
+                    onClick={() => hooks(h.harness, false)}
+                  >
                     Remove hooks
                   </Button>
                 ) : (
-                  <Button variant="primary" className="sm" onClick={() => hooks(h.harness, true)}>
+                  <Button
+                    variant="primary"
+                    className="sm"
+                    onClick={() => hooks(h.harness, true)}
+                  >
                     Install hooks
                   </Button>
                 )}
@@ -341,16 +482,46 @@ export function AgentsGroup({ api }: { api: Authed }) {
                     <Select
                       label="Default model"
                       value={value("defaults." + h.harness + ".model")}
-                      onChange={(v) => save("defaults." + h.harness + ".model", v)}
-                      options={[{ value: "", label: "default" + (h.default_model ? " (" + h.default_model + ")" : "") }, ...(h.models ?? []).map((m) => ({ value: m, label: m }))]}
+                      onChange={(v) =>
+                        save("defaults." + h.harness + ".model", v)
+                      }
+                      options={[
+                        {
+                          value: "",
+                          label:
+                            "default" +
+                            (h.default_model
+                              ? " (" + h.default_model + ")"
+                              : ""),
+                        },
+                        ...(h.models ?? []).map((m) => ({
+                          value: m,
+                          label: m,
+                        })),
+                      ]}
                     />
                   </Opt>
                   <Opt title="Default effort">
                     <Select
                       label="Default effort"
                       value={value("defaults." + h.harness + ".effort")}
-                      onChange={(v) => save("defaults." + h.harness + ".effort", v)}
-                      options={[{ value: "", label: "default" + (h.default_effort ? " (" + h.default_effort + ")" : "") }, ...(h.efforts ?? []).map((m) => ({ value: m, label: m }))]}
+                      onChange={(v) =>
+                        save("defaults." + h.harness + ".effort", v)
+                      }
+                      options={[
+                        {
+                          value: "",
+                          label:
+                            "default" +
+                            (h.default_effort
+                              ? " (" + h.default_effort + ")"
+                              : ""),
+                        },
+                        ...(h.efforts ?? []).map((m) => ({
+                          value: m,
+                          label: m,
+                        })),
+                      ]}
                     />
                   </Opt>
                 </>
@@ -361,15 +532,31 @@ export function AgentsGroup({ api }: { api: Authed }) {
       })}
       <Group label="Options" title="OPTIONS">
         {config ? (
-          <Opt title="Fallback threshold (%)" sub="Switch to the fallback agent at this limit use">
-            <Stepper label="Fallback threshold (%)" min={0} max={100} value={threshold} onChange={setThreshold} />
-            <Button className="sm" onClick={() => save("fallback.threshold", threshold)}>
+          <Opt
+            title="Fallback threshold (%)"
+            sub="Switch to the fallback agent at this limit use"
+          >
+            <Stepper
+              label="Fallback threshold (%)"
+              min={0}
+              max={100}
+              value={threshold}
+              onChange={setThreshold}
+            />
+            <Button
+              className="sm"
+              onClick={() => save("fallback.threshold", threshold)}
+            >
               Save threshold
             </Button>
           </Opt>
         ) : null}
         <Opt
-          lead={<span className={"dot" + (onboarding.nvim.configured ? " ok" : "")} />}
+          lead={
+            <span
+              className={"dot" + (onboarding.nvim.configured ? " ok" : "")}
+            />
+          }
           title="nvim"
           sub={
             onboarding.nvim.configured
@@ -422,7 +609,11 @@ export function PushDelayRow({ api }: { api: Authed }) {
   }
   return (
     <>
-      <Opt title="Push to my phone after I'm away for" server sub={config.state === "failed" ? config.note : undefined}>
+      <Opt
+        title="Push to my phone after I'm away for"
+        server
+        sub={config.state === "failed" ? config.note : undefined}
+      >
         {config.state === "ready" ? (
           <Select
             label="Push to my phone after I'm away for"
@@ -431,7 +622,11 @@ export function PushDelayRow({ api }: { api: Authed }) {
             options={options}
             onChange={(v) => {
               setAway(v);
-              run(async () => "Saved push.away_after in " + (await setConfig(api, "push.away_after", v)).path);
+              run(
+                async () =>
+                  "Saved push.away_after in " +
+                  (await setConfig(api, "push.away_after", v)).path,
+              );
             }}
           />
         ) : null}
@@ -450,7 +645,11 @@ export function DevicesGroup({ api, self }: { api: Authed; self: string }) {
 
   const revoke = async (d: Device) => {
     setRevoking(null);
-    if (await run(async () => (await revokeDevice(api, d.id), "Revoked " + d.name))) {
+    if (
+      await run(
+        async () => (await revokeDevice(api, d.id), "Revoked " + d.name),
+      )
+    ) {
       reloadDevices();
     }
   };
@@ -459,7 +658,13 @@ export function DevicesGroup({ api, self }: { api: Authed; self: string }) {
     <>
       <Heading title="Devices" server>
         {devices.state === "failed" ? null : (
-          <Button variant="primary" className="sm" onClick={() => run(async () => (setCode(await newPairCode(api)), ""))}>
+          <Button
+            variant="primary"
+            className="sm"
+            onClick={() =>
+              run(async () => (setCode(await newPairCode(api)), ""))
+            }
+          >
             Pair a device
           </Button>
         )}
@@ -467,7 +672,8 @@ export function DevicesGroup({ api, self }: { api: Authed; self: string }) {
       {devices.state === "failed" ? <Note text={devices.note} /> : null}
       {code ? (
         <p className="pair-code">
-          Enter <code>{code.code}</code> in the app on the new device. The code expires at {when(code.expires_at)}.
+          Enter <code>{code.code}</code> in the app on the new device. The code
+          expires at {when(code.expires_at)}.
         </p>
       ) : null}
       {devices.state === "ready" ? (
@@ -476,7 +682,11 @@ export function DevicesGroup({ api, self }: { api: Authed; self: string }) {
             <li key={d.id} className="opt" aria-label={d.name}>
               <div className="l">
                 <div className="t">{d.name}</div>
-                <div className="s">{d.id === self ? "This device" : "Last seen " + when(d.last_seen)}</div>
+                <div className="s">
+                  {d.id === self
+                    ? "This device"
+                    : "Last seen " + when(d.last_seen)}
+                </div>
               </div>
               {d.id === self ? null : (
                 <Button className="sm" onClick={() => setRevoking(d)}>
@@ -488,45 +698,14 @@ export function DevicesGroup({ api, self }: { api: Authed; self: string }) {
         </ul>
       ) : null}
       {view}
-      {revoking ? <Confirm title={"Revoke " + revoking.name + "?"} action="Revoke" onClose={() => setRevoking(null)} onConfirm={() => revoke(revoking)} /> : null}
-    </>
-  );
-}
-
-export const themeKeys = ["text", "subtext", "overlay", "surface", "mantle", "base", "blue", "peach", "green", "red", "teal", "mauve", "selected", "added_bg", "deleted_bg"];
-
-export function ServerAppearanceGroup({ api }: { api: Authed }) {
-  const loadConfig = useCallback(() => getConfig(api), [api]);
-  const [config] = useLoad(loadConfig);
-  const [colors, setColors] = useState<Record<string, string>>({});
-  const { run, view } = useFeedback();
-
-  useEffect(() => {
-    if (config.state === "ready") {
-      setColors(Object.fromEntries(themeKeys.map((k) => [k, config.value.values["theme." + k] ?? ""])));
-    }
-  }, [config]);
-
-  return (
-    <section className="set-section" aria-label="TUI colors">
-      <div className="gtitle">
-        TUI COLORS <ServerTag />
-      </div>
-      {config.state === "failed" ? <Note text={config.note} /> : null}
-      {config.state === "ready" ? (
-        <div className="group">
-          <Opt sub="The [theme] colours of the TUI on the server. Leave a field empty to use the default." />
-          {themeKeys.map((k) => (
-            <Opt key={k} lead={<span className="swatch" style={{ background: colors[k] || "transparent" }} aria-hidden="true" />} title={k}>
-              <input className="ui input color-input" aria-label={k} type="text" value={colors[k] ?? ""} placeholder="#rrggbb" onChange={(e) => setColors({ ...colors, [k]: e.target.value })} />
-              <Button className="sm" aria-label={"Save " + k} onClick={() => run(async () => "Saved theme." + k + " in " + (await setConfig(api, "theme." + k, colors[k] ?? "")).path)}>
-                Save
-              </Button>
-            </Opt>
-          ))}
-        </div>
+      {revoking ? (
+        <Confirm
+          title={"Revoke " + revoking.name + "?"}
+          action="Revoke"
+          onClose={() => setRevoking(null)}
+          onConfirm={() => revoke(revoking)}
+        />
       ) : null}
-      {view}
-    </section>
+    </>
   );
 }
