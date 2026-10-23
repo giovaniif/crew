@@ -60,6 +60,21 @@ func cleanupWorktree(r *http.Request, d Daemon) (any, error) {
 	return out, nil
 }
 
+type cleanupRunResult struct {
+	Items []rpc.CleanupItem `json:"items"`
+}
+
+func cleanupRun(r *http.Request, d Daemon) (any, error) {
+	var items []rpc.CleanupItem
+	if err := d.Call(r.Context(), rpc.MethodCleanupRun, nil, &items); err != nil {
+		return nil, err
+	}
+	if items == nil {
+		items = []rpc.CleanupItem{}
+	}
+	return cleanupRunResult{Items: items}, nil
+}
+
 func killPorts(r *http.Request, d Daemon) (any, error) {
 	var p rpc.PortsKillParams
 	if err := decodeOne(r, &p, "pgids"); err != nil {

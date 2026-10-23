@@ -115,6 +115,7 @@ The phone app: a PWA that `crew serve` embeds and serves at `/` (ADR [0046](../d
   - `src/disk.ts` holds the pure rules, the same as `Disk.swift`: `diskTiles`, `diskRows` (the state Open, Merged · clean, Merged · dirty, Detached or No PR, and what cleanup does), `diskActions`, `diskPorts`, `diskRecent` and `pollDelay`.
   - It loads `GET /api/v1/disk` every 2 s while a size is pending, else every 10 s.
   - Each destructive action (Remove…, Back up and remove…, Kill…) asks first. A `keep` row offers no removal. A `backup_then_ask` row offers only Back up and remove. The daemon applies the cleanup rules again.
+  - The redesign (frame 4b, issue #727): a head with Clean up now (asks first, then posts `/api/v1/cleanup/run`), five stat cards (`diskCards`: Volume with a usage bar, Worktrees, Reclaimable, Shared deps store, Auto-cleanup), the sub-tabs Worktrees N, Dev servers N and Recently cleaned, and tables with state pills. Each confirm is a kit `Dialog`. A dev server row has Stop….
   - Go to session opens `#/sessions/<id>`. Open shell posts `…/shell` with the worktree, then opens `#/sessions/<id>/shell`, which selects the Shell tab.
   - Tests: `npm test -- Disk`.
 - **Desktop layout** (issue #514, ADR [0057](../docs/adr/0057-tauri-apps.md)). `AppEnv.wide` (`matchMedia("(min-width: 900px)")` in `main.tsx`, `FakeWidth` in tests) selects it. A narrow window keeps the phone layout.
