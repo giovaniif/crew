@@ -67,9 +67,6 @@ export function EnvRail({
           : "Isolated: its own git identity, keys and accounts."}{" "}
         <a href={"#/envs/" + encodeURIComponent(name)}>Edit environment</a>
       </div>
-      <div className="muted env-note">
-        Changes apply when the next conversation starts.
-      </div>
     </div>
   );
 }
