@@ -251,10 +251,6 @@ func (c *Client) ApplyHunk(ctx context.Context, p HunkParams) error {
 	return c.Call(ctx, MethodReviewHunk, p, nil)
 }
 
-func (c *Client) ReviewLayout(ctx context.Context, open bool) error {
-	return c.Call(ctx, MethodClientReview, ClientReviewParams{Open: open}, nil)
-}
-
 func (c *Client) DebugSeed(ctx context.Context, p DebugSeedParams) error {
 	return c.Call(ctx, MethodDebugSeed, p, nil)
 }

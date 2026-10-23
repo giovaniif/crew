@@ -650,7 +650,7 @@ func (d *Daemon) dispatch(c *conn, line []byte) (*rpc.Response, bool) {
 		return d.dispatchTerminal(req)
 	case rpc.MethodReviewComment:
 		return d.addComment(req)
-	case rpc.MethodOpenClient, rpc.MethodFocusMain, rpc.MethodClientReview, rpc.MethodClientPopup, rpc.MethodClientDetach:
+	case rpc.MethodOpenClient, rpc.MethodFocusMain, rpc.MethodClientDetach:
 		return d.dispatchClient(req), true
 	case rpc.MethodClientNative:
 		return d.nativeClient(req)

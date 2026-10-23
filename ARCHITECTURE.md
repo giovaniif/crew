@@ -5,7 +5,7 @@ This document gives the top-level design of `crew`. [FEATURES.md](FEATURES.md) t
 ## Stack
 
 - **Language:** Go (current stable). It builds one static binary. The binary is the daemon, the CLI, the API server of the app (`crew serve`) and the hook handler. The reasons are in [docs/adr/0001-go.md](docs/adr/0001-go.md).
-- **UI:** the React app in `web/`, in a browser or in the Tauri app in `desktop/`. There is no TUI ([ADR 0061](docs/adr/0061-remove-the-tui.md)).
+- **UI:** the React app in `web/`, in a browser or in the Tauri app in `desktop/`. There is no TUI ([ADR 0062](docs/adr/0062-remove-the-tui.md)).
 - **Syntax highlighting:** chroma's lexer engine with a curated set of its lexers in `internal/syntax/lexers/`. Do not use its `lexers`/`styles` packages: their init makes each hook slower.
 - **Git:** the `git` CLI through exec. Do not use a Go git library.
 - **GitHub:** the `gh` CLI (`gh api graphql`). It uses the user's `gh` auth. Each poll is one GraphQL request, with backoff.
