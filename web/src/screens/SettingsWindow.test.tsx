@@ -241,7 +241,7 @@ describe("the server settings", () => {
     withServer(view.server).on("GET", "/api/v1/workspaces/dirs?path=%2Fhome%2Fme", { status: 403, body: { error: { code: "forbidden", message: "only the owner device" } } });
     view.server.on("GET", "/api/v1/config", { status: 403, body: { error: { code: "forbidden", message: "only the owner device" } } });
     view.live();
-    await userEvent.click(within(screen.getByRole("navigation", { name: "Settings" })).getByRole("button", { name: "Appearance" }));
+    await userEvent.click(within(screen.getByRole("navigation", { name: "Settings" })).getByRole("button", { name: "Agents" }));
     expect(await screen.findByText("Only the owner device, the app on the computer that runs crew, can change this.")).toBeInTheDocument();
   });
 });
