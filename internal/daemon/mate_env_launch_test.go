@@ -61,7 +61,11 @@ func startAndResumeMate(t *testing.T, r mateRig, name, harness string) (start, r
 		t.Fatal(err)
 	}
 	start = lastSpec(r)
-	hook := rpc.Hook{Harness: harness, Event: "SessionStart", Pane: s.Pane, At: time.Now(), Payload: []byte(`{"session_id":"r-1"}`)}
+	event := "SessionStart"
+	if harness == "omp" {
+		event = "session_start"
+	}
+	hook := rpc.Hook{Harness: harness, Event: event, Pane: s.Pane, At: time.Now(), Payload: []byte(`{"session_id":"r-1"}`)}
 	if err := r.c.Call(ctx, rpc.MethodHook, hook, nil); err != nil {
 		t.Fatal(err)
 	}
