@@ -41,6 +41,12 @@ func runEnv(args []string, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "crew env exec: %v\n", err)
 		return 1
 	}
+	if self, err := os.Executable(); err == nil {
+		cwd, _ := os.Getwd()
+		if err := seedEnv(envstore.Store{Home: home}, name, environ, cwd, self); err != nil {
+			fmt.Fprintf(stderr, "crew env exec: environment %s: set up the harness dir: %v\n", envLabel(name), err)
+		}
+	}
 	program, err := exec.LookPath(argv[0])
 	if err != nil {
 		fmt.Fprintf(stderr, "crew env exec: environment %s: %s is not on PATH\n", envLabel(name), argv[0])
