@@ -249,6 +249,9 @@ func printEnv(w io.Writer, e rpc.EnvInfo) {
 	if e.PublicKey != "" {
 		fmt.Fprintf(w, "ssh key: %s\n", e.PublicKey)
 	}
+	if e.NewPublicKey != "" {
+		fmt.Fprintf(w, "new ssh key, not in use yet. Add it on GitHub, then run crew env ssh-key %s --confirm:\n%s\n", e.Name, e.NewPublicKey)
+	}
 	fmt.Fprintln(w, "secrets:")
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 	for _, s := range e.Secrets {
