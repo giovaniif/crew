@@ -1,11 +1,46 @@
 package main
 
 import (
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
+	"syscall"
 	"testing"
 )
+
+func TestFakeClaudeChatSendsTheSameSessionIDOnEachStartInAWorktree(t *testing.T) {
+	dir := t.TempDir()
+	bin := filepath.Join(dir, "crew")
+	log := filepath.Join(dir, "hooks.log")
+	if err := os.WriteFile(bin, []byte("#!/bin/sh\ncat >>"+log+"\necho >>"+log+"\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	script := filepath.Join(dir, "chat.sh")
+	if err := os.WriteFile(script, []byte(fmt.Sprintf(chatScript, bin)), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for range 2 {
+		c := exec.Command("sh", script)
+		c.Dir = dir
+		c.Env = append(os.Environ(), "CREW_E2E="+dir)
+		c.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+		_ = c.Run()
+	}
+	data, err := os.ReadFile(log)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ids := regexp.MustCompile(`"session_id":"([^"]+)"`).FindAllStringSubmatch(string(data), -1)
+	if len(ids) != 2 || ids[0][1] == "" || ids[0][1] != ids[1][1] {
+		t.Errorf("session ids %v in %q", ids, data)
+	}
+	if strings.Count(chatScript, `\"session_id\":\"$sid\"`) != 3 {
+		t.Error("not every hook sends the session id")
+	}
+}
 
 func isoReady(fs *fakeSys) {
 	fs.paths["go"] = true
