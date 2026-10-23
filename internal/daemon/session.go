@@ -88,6 +88,7 @@ type sessionExtras struct {
 	system string
 	seat   *domain.MateSeat
 	dir    string
+	env    string
 }
 
 func (d *Daemon) startSessionWith(p rpc.NewSessionParams, prompt string, extra sessionExtras) (domain.Session, *rpc.Error, bool) {
@@ -95,6 +96,7 @@ func (d *Daemon) startSessionWith(p rpc.NewSessionParams, prompt string, extra s
 	if !ok || d.hs.host == nil || d.sess.worktrees == nil {
 		return domain.Session{}, &rpc.Error{Code: rpc.CodeBadRequest, Message: "no harness " + p.Harness}, true
 	}
+	adapter = d.envAdapter(adapter, extra.env)
 	if p.Workspace != "" {
 		if !filepath.IsAbs(p.Workspace) {
 			return domain.Session{}, &rpc.Error{Code: rpc.CodeBadRequest, Message: "workspace must be an absolute path: " + p.Workspace}, true

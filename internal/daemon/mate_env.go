@@ -3,8 +3,36 @@ package daemon
 import (
 	"github.com/BurntSushi/toml"
 
+	"github.com/giovaniif/crew/internal/app"
 	"github.com/giovaniif/crew/internal/domain"
 )
+
+func WithEnvLauncher(crew string) Option {
+	return func(d *Daemon) { d.envLauncher = crew }
+}
+
+type envHarness struct {
+	app.HarnessAdapter
+	crew string
+	env  string
+}
+
+func (h envHarness) Launch(req app.LaunchRequest) app.PaneSpec {
+	spec := h.HarnessAdapter.Launch(req)
+	spec.Command = domain.EnvLaunchCommand(h.crew, h.env, h.Harness(), spec.Command)
+	return spec
+}
+
+func (d *Daemon) envAdapter(adapter app.HarnessAdapter, env string) app.HarnessAdapter {
+	if env == "" {
+		return adapter
+	}
+	crew := d.envLauncher
+	if crew == "" {
+		crew = "crew"
+	}
+	return envHarness{HarnessAdapter: adapter, crew: crew, env: env}
+}
 
 func parseEnvNames(text string) []domain.Environment {
 	var doc struct {

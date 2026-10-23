@@ -153,7 +153,7 @@ func (d *Daemon) startMateConversation(id uint64, p rpc.MateNewParams, at mateSt
 	seat := &domain.MateSeat{Name: m.Name, Owner: m.Owner, Local: true, FreshFrom: at.freshFrom}
 	session, rerr, ok := d.startSessionWith(rpc.NewSessionParams{
 		Workspace: root, WorkItem: mateWorkItem(m.Name, p.Prompt), Harness: m.Agent, Model: m.Model, Effort: m.Effort, Prompt: p.Prompt,
-	}, "", sessionExtras{system: system, seat: seat, dir: at.dir})
+	}, "", sessionExtras{system: system, seat: seat, dir: at.dir, env: m.Env})
 	switch {
 	case !ok:
 		return nil, false
@@ -174,11 +174,15 @@ func (h systemPromptHarness) Launch(req app.LaunchRequest) app.PaneSpec {
 }
 
 func (d *Daemon) mateResumeAdapter(session domain.Session, adapter app.HarnessAdapter) (app.HarnessAdapter, *rpc.Error) {
-	if session.Mate == nil || !session.Mate.Local {
+	if session.Mate == nil {
 		return adapter, nil
 	}
 	m, _, ok := d.findMate(session.Mate.Name)
 	if !ok {
+		return adapter, nil
+	}
+	adapter = d.envAdapter(adapter, m.Env)
+	if !session.Mate.Local {
 		return adapter, nil
 	}
 	memory, err := d.readMateMemory(m.Name)

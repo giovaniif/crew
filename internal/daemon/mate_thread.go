@@ -221,9 +221,9 @@ func (d *Daemon) mateStart(ctx context.Context, m domain.Mate, client app.SlackM
 	}
 	asker := d.userName(ctx, client, e.User)
 	prompt := domain.MateFirstPrompt(m, asker, d.threadLines(ctx, client, e, asker))
-	session, rerr, ok := d.startSession(rpc.NewSessionParams{
+	session, rerr, ok := d.startSessionWith(rpc.NewSessionParams{
 		Workspace: ws.Root, WorkItem: mateWorkItem(name, e.Text), Harness: m.Agent, Model: m.Model, Effort: m.Effort, Prompt: prompt,
-	}, "")
+	}, "", sessionExtras{env: m.Env})
 	switch {
 	case !ok:
 		return false

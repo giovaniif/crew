@@ -174,6 +174,7 @@ type Daemon struct {
 	tx          *transcripts
 	push        app.PushProvider
 	mateSecrets app.MateSecrets
+	envLauncher string
 	slack       slackWorkers
 	presence    presenceCfg
 	auto        automationCfg
