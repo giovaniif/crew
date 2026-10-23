@@ -224,3 +224,48 @@
 .fm-phone .fm-select .ui.select {
   justify-content: space-between;
 }
+
+.fm-suggest .chip {
+  min-height: 0;
+}
+
+.fm-suggest .chip::before {
+  display: none;
+}
+
+.fm-foot .fm-chip .ui.select {
+  width: auto;
+  min-width: 0;
+  padding: 0 10px;
+}
+
+.fm-composer textarea {
+  min-height: 0;
+  height: auto;
+}
+
+.fm-name .face,
+.fm-name .fm-q {
+  flex: none;
+}
+
+.fm-name input {
+  padding: 0;
+  min-height: 0;
+}
+
+.fm-phone {
+  min-height: calc(100dvh - 90px);
+}
+
+.ui.radios.fm-pick {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.ui.radios.fm-pick .preset {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
