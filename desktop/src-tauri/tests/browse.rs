@@ -1,7 +1,7 @@
 use crew_desktop::browse::{
-    address, allow_navigation, attach_args, cookies_result, is_browse_label, label, page_result,
-    parse_call, plan, read_result, read_script, reply_line, run_script, CookieRow, Step,
-    INIT_SCRIPT,
+    address, allow_navigation, attach_args, cookies_result, folder_start, is_browse_label, label,
+    page_result, parse_call, plan, read_result, read_script, reply_line, run_script, CookieRow,
+    Step, INIT_SCRIPT,
 };
 use serde_json::{json, Value};
 use url::Url;
@@ -298,4 +298,24 @@ mod bridge {
             json!({"call": 7, "result": {"text": "- button \"Go\" [@e1]"}})
         );
     }
+}
+
+#[test]
+fn the_folder_dialog_opens_in_the_parent_of_the_last_workspace_else_in_home() {
+    let root = std::env::temp_dir().join(format!("crew-folder-start-{}", std::process::id()));
+    let work = root.join("code").join("api");
+    std::fs::create_dir_all(&work).unwrap();
+    let home = root.join("home");
+    let near = work.to_string_lossy().into_owned();
+    assert_eq!(
+        folder_start(Some(&home), Some(&near)),
+        Some(root.join("code"))
+    );
+    assert_eq!(
+        folder_start(Some(&home), Some("/no/such/crew/dir")),
+        Some(home.clone())
+    );
+    assert_eq!(folder_start(Some(&home), None), Some(home.clone()));
+    assert_eq!(folder_start(None, None), None);
+    std::fs::remove_dir_all(&root).unwrap();
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button } from "../ui";
+import { Button, Menu } from "../ui";
 import type { ServerListing, ServerRow, Servers } from "../servers";
 
 type RowState = { state: "idle" } | { state: "busy"; what: string } | { state: "fixed" } | { state: "failed"; message: string };
@@ -106,6 +106,19 @@ export function ServersScreen({ servers }: { servers: Servers }) {
 export function ServerChip({ servers, listing, go }: { servers: Servers; listing: ServerListing | null; go: (hash: string) => void }) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const away = (e: MouseEvent) => {
+      if (!box.current?.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", away);
+    return () => document.removeEventListener("mousedown", away);
+  }, [open]);
   if (!listing) {
     return null;
   }
@@ -124,24 +137,25 @@ export function ServerChip({ servers, listing, go }: { servers: Servers; listing
     go(hash);
   };
   return (
-    <div className="server-chip">
-      <button type="button" className="chip-button" aria-haspopup="menu" aria-expanded={open} aria-label={"Server: " + (current?.name ?? "")} onClick={() => setOpen(!open)}>
-        {current?.name}
+    <div className="server-chip" ref={box}>
+      <button type="button" className="ui select" aria-haspopup="menu" aria-expanded={open} aria-label={"Server: " + (current?.name ?? "")} onClick={() => setOpen(!open)}>
+        <span className="value">{current?.name}</span>
+        <span className="chev" aria-hidden="true">
+          ▾
+        </span>
       </button>
       {open ? (
-        <div className="chip-menu" role="menu" aria-label="Servers">
-          {listing.servers.map((s) => (
-            <button key={s.id} type="button" role="menuitemradio" aria-checked={s.id === listing.selected} onClick={() => pick(s.id)}>
-              {s.name}
-            </button>
-          ))}
-          <button type="button" role="menuitem" onClick={() => to("#/servers/add")}>
-            Add a server…
-          </button>
-          <button type="button" role="menuitem" onClick={() => to("#/servers")}>
-            Manage servers…
-          </button>
-        </div>
+        <Menu
+          label="Servers"
+          items={[
+            ...listing.servers.map((s) => ({ value: "server:" + s.id, label: s.name, checked: s.id === listing.selected })),
+            { kind: "sep" as const },
+            { value: "add", label: "Add a server…" },
+            { value: "manage", label: "Manage servers…" },
+          ]}
+          onPick={(v) => (v === "add" ? to("#/servers/add") : v === "manage" ? to("#/servers") : pick(v.slice("server:".length)))}
+          onClose={() => setOpen(false)}
+        />
       ) : null}
       {error ? (
         <p className="error" role="alert">

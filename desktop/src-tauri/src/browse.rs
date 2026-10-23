@@ -1,5 +1,5 @@
 use std::io::{self, BufRead, BufReader, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{ChildStdin, Command, Stdio};
 use std::sync::{Arc, Mutex};
 
@@ -185,6 +185,14 @@ pub struct CookieRow {
     pub name: String,
     pub domain: String,
     pub path: String,
+}
+
+pub fn folder_start(home: Option<&Path>, near: Option<&str>) -> Option<PathBuf> {
+    near.map(Path::new)
+        .filter(|p| p.is_absolute() && p.is_dir())
+        .and_then(Path::parent)
+        .map(Path::to_path_buf)
+        .or_else(|| home.map(Path::to_path_buf))
 }
 
 pub fn label(n: usize) -> String {
