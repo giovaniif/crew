@@ -20,6 +20,7 @@ import {
   accountRows,
   customParts,
   envLetter,
+  envOrder,
   envSub,
   envTitle,
   extraSecrets,
@@ -50,7 +51,7 @@ function useEnvs(api: Authed): {
     listEnvs(api)
       .then((out) => {
         if (on) {
-          setEnvs(out.envs);
+          setEnvs(envOrder(out.envs));
           setError("");
         }
       })
@@ -895,7 +896,6 @@ function Editor({
                           claudePick === "ANTHROPIC_API_KEY" ? "key" : "token",
                       })
                     }
-                    onRemove={() => unset(claudePick)}
                   />
                 </Opt>
               ) : (

@@ -409,3 +409,12 @@
   height: 44px;
   min-height: 44px;
 }
+
+.eedit .opt > label.l {
+  text-align: left;
+}
+
+.eedit .page-head a {
+  color: var(--accent);
+  text-decoration: none;
+}

@@ -110,7 +110,7 @@ function Sidebar({ env, snapshot, now, onRetry, hash, keys, chip, approvals }: S
   const count = (n: number) => (n > 0 ? <span className="meta">{n}</span> : null);
   const items: NavItem[] = [
     { href: "#/mates", icon: "◉", label: "Mates", on: route.screen === "home" || under("#/mates"), meta: count(mates) },
-    { href: "#/sessions", icon: "▤", label: "Sessions", on: route.screen === "list" || route.screen === "session", meta: count(live) },
+    { href: "#/sessions", icon: "▤", label: "Sessions", on: (route.screen === "list" && !under("#/envs")) || route.screen === "session", meta: count(live) },
     { href: "#/approvals", icon: "✓", label: "Approvals", on: under("#/approvals"), meta: approvals > 0 ? <span className="pill bad">{approvals}</span> : null },
     { href: "#/automations", icon: "↻", label: "Automations", on: under("#/automations") },
     { href: "#/envs", icon: "⌂", label: "Environments", on: under("#/envs") },

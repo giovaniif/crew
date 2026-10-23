@@ -43,6 +43,10 @@ export function isLocal(e: EnvInfo): boolean {
   return e.kind === "local" && e.name === "local";
 }
 
+export function envOrder(envs: EnvInfo[]): EnvInfo[] {
+  return [...envs.filter(isLocal), ...envs.filter((e) => !isLocal(e))];
+}
+
 export function envTitle(e: EnvInfo): string {
   return isLocal(e) ? "Local (this Mac)" : e.name;
 }
