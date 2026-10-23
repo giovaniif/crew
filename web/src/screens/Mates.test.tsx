@@ -6,6 +6,7 @@ import { App, type AppEnv, type PageVisibility } from "../App";
 import type { Frame, Mates, StreamState } from "../stream";
 import { FakeServer, MemoryStorage } from "../test/fake-server";
 import { FakeSockets } from "../test/fake-socket";
+import { FakeWidth } from "../test/fake-width";
 
 const golden = (name: string) => JSON.parse(readFileSync(new URL("../../../internal/serve/testdata/" + name, import.meta.url), "utf8"));
 const goldenState = (): StreamState => (golden("stream-state.json") as Frame).state as StreamState;
@@ -57,7 +58,7 @@ const chat = [
   { id: "a1", cursor: 2, turn: "p1", role: "assistant", text: "I fixed the docs.", at: "2026-10-03T11:01:00Z" },
 ];
 
-function setup(hash = "#/mates/helper", mates: Mates = board, approvals: unknown[] = [], visibility?: PageVisibility) {
+function setup(hash = "#/mates/helper", mates: Mates = board, approvals: unknown[] = [], visibility?: PageVisibility, wide = false) {
   window.location.hash = "";
   const sockets = new FakeSockets();
   const server = new FakeServer()
@@ -100,6 +101,7 @@ function setup(hash = "#/mates/helper", mates: Mates = board, approvals: unknown
     now: () => Date.parse("2026-10-03T12:00:00Z"),
     onHashChange: () => () => undefined,
     visibility,
+    wide: new FakeWidth(wide),
   };
   render(<App env={env} />);
   sockets.last.open();
@@ -111,241 +113,204 @@ function setup(hash = "#/mates/helper", mates: Mates = board, approvals: unknown
 
 const calls = (server: FakeServer) => server.calls.map((c) => c.method + " " + c.path);
 
-describe("Mates", () => {
-  it("is a tab", () => {
-    setup("");
-    expect(screen.getByRole("heading", { name: "Mates", level: 1 })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Mates" })).toHaveAttribute("href", "#/mates");
-  });
-
-  it("lists each mate as a row with its face, its name and persona · agent, linked to its profile", async () => {
-    setup();
-    const helper = await screen.findByRole("link", { name: "helper, Working on add login" });
-    expect(helper).toHaveAttribute("href", "#/mates/helper");
-    expect(await within(helper).findByRole("img", { name: "Owl working" })).toBeInTheDocument();
-    expect(within(helper).getByText("Help. With care. · Claude")).toBeInTheDocument();
-    expect(helper).not.toHaveTextContent("More help.");
-    const webby = screen.getByRole("link", { name: "webby, Paused" });
-    expect(within(webby).getByText("paused")).toBeInTheDocument();
-    expect(within(webby).getByText("Web. · Codex")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "fresh, Idle" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "New mate" })).toHaveAttribute("href", "#/mates/new");
-  });
-
-  it("shows the profile next to the list, and marks its row", async () => {
-    setup();
-    expect(await screen.findByRole("heading", { name: "helper" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /^helper,/ })).toHaveAttribute("aria-current", "page");
-  });
-
-  it("filters the mates by agent with All, Claude and Codex", async () => {
-    setup();
-    const sources = await screen.findByRole("radiogroup", { name: "Mate sources" });
-    await screen.findByText("Help. With care. · Claude");
-    expect(within(sources).getByRole("radio", { name: "All" })).toHaveAttribute("aria-checked", "true");
-    await userEvent.setup().click(within(sources).getByRole("radio", { name: "Codex" }));
-    const all = screen.getByRole("list", { name: "All mates" });
-    expect(within(all).getByRole("link", { name: /^webby/ })).toBeInTheDocument();
-    expect(within(all).queryByRole("link", { name: /^helper/ })).toBeNull();
-    expect(within(all).queryByRole("link", { name: /^fresh/ })).toBeNull();
-  });
-
-  it("searches the mates by name and by the first paragraph of the prompt", async () => {
-    setup();
-    const user = userEvent.setup();
-    await screen.findByText("Help. With care. · Claude");
-    const all = () => screen.getByRole("list", { name: "All mates" });
-    await user.type(screen.getByRole("searchbox", { name: "Search mates" }), "web");
-    expect(within(all()).getByRole("link", { name: /^webby/ })).toBeInTheDocument();
-    expect(within(all()).queryByRole("link", { name: /^helper/ })).toBeNull();
-    await user.clear(screen.getByRole("searchbox", { name: "Search mates" }));
-    await user.type(screen.getByRole("searchbox", { name: "Search mates" }), "zzz");
-    expect(screen.getByText("No mate matches.")).toBeInTheDocument();
-  });
-
-  it("puts a mate with a pending approval in the Needs you group", async () => {
-    const ask = {
-      ID: "a1",
-      SessionID: "s1",
-      Mate: "helper",
-      Requester: "Gus",
-      Action: { Kind: "merge", Tool: "Bash", Input: "gh pr merge 1" },
-      At: "2026-10-03T11:00:00Z",
-      State: "pending",
-    };
-    setup("#/mates/helper", board, [ask]);
-    const needs = await screen.findByRole("list", { name: "Needs you" });
-    const helper = await within(needs).findByRole("link", { name: "helper, Needs you" });
-    expect(within(helper).getByRole("img", { name: "Owl needs" })).toBeInTheDocument();
-    expect(within(screen.getByRole("list", { name: "All mates" })).queryByRole("link", { name: /^helper/ })).toBeNull();
-  });
-
-  it("stops all mates only after a confirm", async () => {
-    const { server } = setup();
-    const user = userEvent.setup();
-    await user.click(await screen.findByRole("button", { name: "Stop all" }));
-    const ask = screen.getByRole("dialog", { name: "Stop all mates?" });
-    expect(ask).toHaveTextContent("They start no new turns until you start them again.");
-    expect(server.calls.some((c) => c.path === "/api/v1/mates/stop")).toBe(false);
-    await user.click(within(ask).getByRole("button", { name: "Stop all" }));
-    await waitFor(() => expect(server.calls.find((c) => c.path === "/api/v1/mates/stop")?.body).toEqual({ stop: true }));
-  });
-
-  it("shows the stop from the stream on the Mates page and on the session list, and starts the mates again", async () => {
-    const { server, sockets } = setup();
-    sockets.last.push({ diff: { seq: 99, mates: { ...board, stopped: true } } });
-    const user = userEvent.setup();
-    expect(await screen.findByText("All mates are stopped.")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Start all mates" }));
-    await waitFor(() => expect(server.calls.find((c) => c.path === "/api/v1/mates/stop")?.body).toEqual({ stop: false }));
-  });
-
-  it("shows a stopped banner over the session list", async () => {
+describe("Mate page", () => {
+  it("shows the stopped banner over the session list", async () => {
     setup("#/sessions", { ...board, stopped: true });
     expect(await screen.findByRole("status")).toHaveTextContent("All mates are stopped");
   });
-});
 
-describe("Mate profile", () => {
-  it("shows the face, the fact cards, the threads and the memory", async () => {
-    setup("#/mates/helper");
+  it("has three columns on the desktop: threads, the conversation and the settings rail", async () => {
+    setup("#/mates/helper", board, [], undefined, true);
     expect(await screen.findByRole("heading", { name: "helper" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /^helper,/ })).toHaveAttribute("aria-current", "page");
-    expect((await screen.findAllByRole("img", { name: "Owl working" })).length).toBe(2);
-    expect(screen.getByRole("group", { name: "Agent" })).toHaveTextContent("Claude · opus");
-    expect(screen.getByRole("group", { name: "Agent" })).toHaveTextContent("effort high");
-    expect(screen.getByRole("group", { name: "Repos" })).toHaveTextContent("api");
-    expect(screen.getByRole("group", { name: "Slack" })).toHaveTextContent("Connected");
-    await waitFor(() => expect(screen.getByRole("group", { name: "Memory" })).toHaveTextContent("19 bytes of 8 KB"));
-    const list = screen.getByRole("list", { name: "Conversations of helper" });
-    expect(within(list).getByRole("link", { name: /add login/ })).toHaveAttribute("href", "#/sessions/s1");
-    expect(within(list).getByRole("link", { name: "Slack" })).toHaveAttribute("href", "https://app.slack.com/client/T1/C1/thread/C1-1700.0001");
-    expect(await screen.findByText("- Tests come first.")).toBeInTheDocument();
+    const threads = screen.getByRole("navigation", { name: "Threads of helper" });
+    const row = within(threads).getByRole("link", { name: /add login/ });
+    expect(row).toHaveAttribute("href", "#/mates/helper/s1");
+    expect(row).toHaveAttribute("aria-current", "page");
+    expect(row).toHaveTextContent("Slack channel");
+    expect(screen.getByRole("region", { name: "Conversation" })).toBeInTheDocument();
+    expect(await screen.findByText("I fixed the docs.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open in Slack" })).toHaveAttribute("href", "https://app.slack.com/client/T1/C1/thread/C1-1700.0001");
+    expect(screen.getByRole("textbox", { name: "Message" })).toHaveAttribute("placeholder", "Reply in this thread. It also posts to Slack.");
+    const rail = screen.getByRole("complementary", { name: "Settings of helper" });
+    expect(within(rail).getByText("Changes apply when the next conversation starts.")).toBeInTheDocument();
+    expect(within(rail).getByRole("radio", { name: "Claude" })).toHaveAttribute("aria-checked", "true");
+    expect(await within(rail).findByText(/Help\.\s+With care\./)).toBeInTheDocument();
+    expect(within(rail).getByText(/Connected as @helper/)).toBeInTheDocument();
+    expect(within(rail).getByRole("link", { name: "+ Add automation" })).toHaveAttribute("href", "#/automations");
   });
 
-  it("lists the local conversations and resumes a paused mate", async () => {
-    const { server } = setup("#/mates/webby");
-    const list = await screen.findByRole("list", { name: "Conversations of webby" });
-    expect(within(list).getByRole("link", { name: /fix the docs/ })).toHaveAttribute("href", "#/sessions/s2");
-    await userEvent.setup().click(screen.getByRole("button", { name: "Resume" }));
-    await waitFor(() => expect(calls(server)).toContain("POST /api/v1/mates/webby/resume"));
+  it("gives a mate without Slack its app threads, with the normal composer", async () => {
+    setup("#/mates/webby", board, [], undefined, true);
+    const threads = await screen.findByRole("navigation", { name: "Threads of webby" });
+    expect(within(threads).getByRole("link", { name: /fix the docs/ })).toHaveTextContent("App");
+    expect(await screen.findByRole("textbox", { name: "Message" })).toHaveAttribute("placeholder", "Message Webby…");
+    expect(screen.queryByRole("link", { name: "Open in Slack" })).toBeNull();
+  });
+
+  it("starts an app thread with New and opens it on the mate page", async () => {
+    const { server } = setup("#/mates/helper", board, [], undefined, true);
+    await userEvent.setup().click(await screen.findByRole("button", { name: "New thread" }));
+    await waitFor(() => expect(window.location.hash).toBe("#/mates/helper/s9"));
+    expect(calls(server)).toContain("POST /api/v1/mates/helper/new");
+  });
+
+  it("shows a failed New next to the threads", async () => {
+    const { server } = setup("#/mates/helper", board, [], undefined, true);
+    server.on("POST", "/api/v1/mates/helper/new", { status: 400, body: { error: { code: "bad_request", message: "no workspace to start in" } } });
+    await userEvent.setup().click(await screen.findByRole("button", { name: "New thread" }));
+    expect(await within(screen.getByRole("navigation", { name: "Threads of helper" })).findByRole("alert")).toHaveTextContent("no workspace to start in");
+  });
+
+  it("searches the threads", async () => {
+    setup("#/mates/helper", { ...board, mates: [{ ...board.mates[0], conversations: board.mates[1].conversations }] }, [], undefined, true);
+    const threads = await screen.findByRole("navigation", { name: "Threads of helper" });
+    await userEvent.setup().type(within(threads).getByRole("searchbox", { name: "Search threads" }), "docs");
+    expect(within(threads).getByRole("link", { name: /fix the docs/ })).toBeInTheDocument();
+    expect(within(threads).queryByRole("link", { name: /add login/ })).toBeNull();
   });
 
   it("pauses a mate", async () => {
-    const { server } = setup("#/mates/helper");
+    const { server } = setup("#/mates/helper", board, [], undefined, true);
     await userEvent.setup().click(await screen.findByRole("button", { name: "Pause" }));
     await waitFor(() => expect(calls(server)).toContain("POST /api/v1/mates/helper/pause"));
   });
 
-  it("starts a new conversation and opens it", async () => {
-    const { server } = setup("#/mates/helper");
-    await userEvent.setup().click(await screen.findByRole("button", { name: "+ New conversation" }));
-    await waitFor(() => expect(window.location.hash).toBe("#/sessions/s9"));
-    expect(calls(server)).toContain("POST /api/v1/mates/helper/new");
-  });
-
-  it("says there is no such mate next to the list", async () => {
-    setup("#/mates/ghost");
+  it("says there is no such mate", async () => {
+    setup("#/mates/ghost", board, [], undefined, true);
     expect(await screen.findByText("There is no mate ghost.")).toBeInTheDocument();
-    expect(screen.getByRole("list", { name: "All mates" })).toBeInTheDocument();
   });
 
-  it("shows a failed new conversation next to its button, not under the page", async () => {
-    const { server } = setup("#/mates/helper");
-    server.on("POST", "/api/v1/mates/helper/new", { status: 400, body: { error: { code: "bad_request", message: "no workspace to start in" } } });
-    await userEvent.setup().click(await screen.findByRole("button", { name: "+ New conversation" }));
-    const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent("no workspace to start in");
-    expect(screen.getByRole("button", { name: "+ New conversation" }).nextElementSibling).toBe(alert);
-  });
-
-  it("edits the memory", async () => {
-    const { server } = setup("#/mates/helper");
+  it("saves the environment and the harness from the rail at once", async () => {
+    const { server } = setup("#/mates/helper", board, [], undefined, true);
     const user = userEvent.setup();
-    await screen.findByText("- Tests come first.");
+    const rail = await screen.findByRole("complementary", { name: "Settings of helper" });
+    const picker = await within(rail).findByRole("combobox", { name: "Environment" });
+    await waitFor(() => expect(picker).toHaveTextContent("Local (this Mac)"));
+    expect(within(rail).getByRole("link", { name: "Edit environment" })).toHaveAttribute("href", "#/envs/local");
+    await user.click(picker);
+    await user.click(await screen.findByRole("option", { name: "test-work" }));
+    const saved = () => server.calls.filter((c) => c.method === "POST" && c.path === "/api/v1/mates").map((c) => c.body);
+    await waitFor(() => expect(saved().at(-1)).toMatchObject({ mate: { name: "helper", env: "test-work", agent: "claude", model: "opus" } }));
+    await user.click(within(rail).getByRole("radio", { name: "Pi" }));
+    await waitFor(() => expect(saved().at(-1)).toMatchObject({ mate: { name: "helper", agent: "omp" } }));
+  });
+
+  it("edits the role in the rail", async () => {
+    const { server } = setup("#/mates/helper", board, [], undefined, true);
+    const user = userEvent.setup();
+    const rail = await screen.findByRole("complementary", { name: "Settings of helper" });
+    await user.click(await within(rail).findByRole("button", { name: "Edit role" }));
+    const box = within(rail).getByRole("textbox", { name: "Role" });
+    await user.clear(box);
+    await user.type(box, "Review only.");
+    await user.click(within(rail).getByRole("button", { name: "Save role" }));
+    await waitFor(() => expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/mates")?.body).toMatchObject({ mate: { name: "helper", prompt: "Review only." } }));
+  });
+
+  it("shows the memory size and edits the memory", async () => {
+    const { server } = setup("#/mates/helper", board, [], undefined, true);
+    const user = userEvent.setup();
+    const rail = await screen.findByRole("complementary", { name: "Settings of helper" });
+    expect(await within(rail).findByText("19 bytes")).toBeInTheDocument();
+    await user.click(within(rail).getByRole("button", { name: "View and edit memory" }));
+    expect(await screen.findByText("- Tests come first.")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Edit" }));
-    const box = screen.getByLabelText("Memory of helper");
+    const box = screen.getByRole("textbox", { name: "Memory of helper" });
     await user.clear(box);
     await user.type(box, "- Small PRs.");
     await user.click(screen.getByRole("button", { name: "Save memory" }));
-    expect(await screen.findByText("- Small PRs.")).toBeInTheDocument();
-    expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/mates/helper/memory")?.body).toEqual({ text: "- Small PRs." });
+    await waitFor(() => expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/mates/helper/memory")?.body).toEqual({ text: "- Small PRs." }));
   });
 
-  it("shows the memory meter, the size against the limit", async () => {
+  it("offers Connect… for a mate without Slack", async () => {
+    setup("#/mates/fresh", board, [], undefined, true);
+    const rail = await screen.findByRole("complementary", { name: "Settings of fresh" });
+    expect(within(rail).getByText("Not connected")).toBeInTheDocument();
+    await userEvent.setup().click(within(rail).getByRole("button", { name: "Connect…" }));
+    expect(await screen.findByRole("link", { name: "Make the Slack app from the manifest" })).toHaveAttribute("href", "https://api.slack.com/apps?new_app=1");
+  });
+
+  it("stops all mates from the ⋯ menu only after a confirm", async () => {
+    const { server } = setup("#/mates/helper", board, [], undefined, true);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "More for helper" }));
+    await user.click(screen.getByRole("menuitem", { name: "Stop all mates…" }));
+    const ask = screen.getByRole("dialog", { name: "Stop all mates?" });
+    expect(calls(server)).not.toContain("POST /api/v1/mates/stop");
+    await user.click(within(ask).getByRole("button", { name: "Stop all" }));
+    await waitFor(() => expect(server.calls.find((c) => c.path === "/api/v1/mates/stop")?.body).toEqual({ stop: true }));
+  });
+});
+
+describe("Mate page on the phone", () => {
+  it("shows the header line, the thread chips and the chat", async () => {
     setup("#/mates/helper");
-    const meter = await screen.findByRole("meter", { name: "Memory size" });
-    await waitFor(() => expect(meter).toHaveAttribute("aria-valuenow", "19"));
-    expect(meter).toHaveAttribute("aria-valuemax", "8192");
-    expect(screen.getByText("19 bytes of 8 KB")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "helper" })).toBeInTheDocument();
+    expect(screen.getByText("Local · Claude · working")).toBeInTheDocument();
+    const chips = screen.getByRole("navigation", { name: "Threads of helper" });
+    expect(within(chips).getByRole("link", { name: /add login/ })).toHaveAttribute("aria-current", "page");
+    expect(await screen.findByText("I fixed the docs.")).toBeInTheDocument();
+    expect(screen.queryByRole("complementary", { name: "Settings of helper" })).toBeNull();
   });
 
-  it("clears the memory only after a confirm", async () => {
-    const { server } = setup("#/mates/helper");
-    const user = userEvent.setup();
-    await screen.findByText("- Tests come first.");
-    await user.click(screen.getByRole("button", { name: "Clear…" }));
-    const ask = screen.getByRole("dialog", { name: "Clear the memory of helper?" });
-    expect(server.calls.some((c) => c.method === "POST" && c.path === "/api/v1/mates/helper/memory")).toBe(false);
-    await user.click(within(ask).getByRole("button", { name: "Clear" }));
-    await waitFor(() => expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/mates/helper/memory")?.body).toEqual({ text: "" }));
-    expect(screen.queryByRole("dialog")).toBeNull();
-  });
-
-  it("keeps the memory when the owner cancels Clear memory", async () => {
-    const { server } = setup("#/mates/helper");
-    const user = userEvent.setup();
-    await screen.findByText("- Tests come first.");
-    await user.click(screen.getByRole("button", { name: "Clear…" }));
-    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Cancel" }));
-    expect(screen.queryByRole("dialog")).toBeNull();
-    expect(server.calls.some((c) => c.method === "POST" && c.path === "/api/v1/mates/helper/memory")).toBe(false);
-  });
-
-  it("offers Connect… in the Slack card for a mate without Slack", async () => {
-    setup("#/mates/fresh");
-    const user = userEvent.setup();
-    const card = await screen.findByRole("group", { name: "Slack" });
-    expect(card).toHaveTextContent("Not connected");
-    expect(within(card).getByRole("img", { name: "Slack" })).toBeInTheDocument();
-    await user.click(within(card).getByRole("button", { name: "Connect…" }));
-    expect(await screen.findByRole("link", { name: "Make the Slack app from the manifest" })).toHaveAttribute(
-      "href",
-      "https://api.slack.com/apps?new_app=1",
-    );
-  });
-
-  it("does not offer Slack to a connected mate", async () => {
+  it("opens the settings as a sheet with ⓘ and closes it with Done", async () => {
     setup("#/mates/helper");
-    await screen.findByRole("heading", { name: "helper" });
-    expect(screen.queryByRole("button", { name: "Connect…" })).toBeNull();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Settings of helper" }));
+    const sheet = screen.getByRole("dialog", { name: "Settings of helper" });
+    expect(within(sheet).getByRole("combobox", { name: "Environment" })).toBeInTheDocument();
+    expect(within(sheet).getByText("Changes apply when the next conversation starts.")).toBeInTheDocument();
+    await user.click(within(sheet).getByRole("button", { name: "Done" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });
 
 describe("New mate", () => {
-  it("picks the environment in the settings and saves it with the mate", async () => {
-    const { server } = setup();
-    const user = userEvent.setup();
-    await user.click(await screen.findByRole("button", { name: "Settings" }));
-    const picker = await screen.findByRole("combobox", { name: "Environment" });
-    await waitFor(() => expect(picker).toHaveTextContent("Local (this Mac)"));
-    expect(screen.getByText(/apply when the next conversation starts/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Edit environment" })).toHaveAttribute("href", "#/envs/local");
-    await user.click(picker);
-    await user.click(await screen.findByRole("option", { name: "test-work" }));
-    expect(screen.getByRole("link", { name: "Edit environment" })).toHaveAttribute("href", "#/envs/test-work");
-    await user.click(screen.getByRole("button", { name: "Save" }));
-    await waitFor(() => expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/mates")?.body).toMatchObject({ mate: { name: "helper", env: "test-work" } }));
-  });
-
-  it("picks the environment of a new mate from a chip with search and New environment", async () => {
+  it("is one composer: name on top, role text, chips and Create mate", async () => {
     const { server } = setup("#/mates/new");
     const user = userEvent.setup();
-    await user.clear(await screen.findByLabelText("Name"));
-    await user.type(screen.getByLabelText("Name"), "scout");
-    await user.click(screen.getByRole("button", { name: "Next" }));
-    await user.type(screen.getByLabelText("Prompt"), "Scout the repo.");
-    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(await screen.findByRole("heading", { name: "New mate" })).toBeInTheDocument();
+    expect(screen.queryByRole("progressbar")).toBeNull();
+    const create = screen.getByRole("button", { name: "Create mate" });
+    expect(create).toBeDisabled();
+    await user.type(screen.getByRole("textbox", { name: "Name" }), "scout");
+    expect(screen.getByText("name is free")).toBeInTheDocument();
+    await user.type(screen.getByRole("textbox", { name: "Role" }), "Scout the repo.");
+    await user.click(screen.getByRole("button", { name: /^Harness/ }));
+    await user.click(screen.getByRole("menuitemcheckbox", { name: "Codex" }));
+    expect(screen.getByRole("button", { name: /^Harness/ })).toHaveTextContent("Codex");
+    await user.click(create);
+    await waitFor(() => expect(window.location.hash).toBe("#/mates/scout"));
+    expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/mates")?.body).toEqual({
+      mate: { name: "scout", prompt: "Scout the repo.", agent: "codex", avatar: expect.any(String), enabled: true },
+    });
+  });
+
+  it("refuses a taken name and a name that is not a handle", async () => {
+    setup("#/mates/new");
+    const user = userEvent.setup();
+    const name = await screen.findByRole("textbox", { name: "Name" });
+    await user.type(screen.getByRole("textbox", { name: "Role" }), "Help.");
+    await user.type(name, "helper");
+    expect(await screen.findByText("A mate named helper exists.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Create mate" })).toBeDisabled();
+    await user.clear(name);
+    await user.type(name, "Bad Name");
+    expect(screen.getByText("Use up to 32 letters, digits, - and _.")).toBeInTheDocument();
+  });
+
+  it("fills the role from a suggestion chip", async () => {
+    setup("#/mates/new");
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "On-call triage" }));
+    expect((screen.getByRole("textbox", { name: "Role" }) as HTMLTextAreaElement).value).toMatch(/triage/i);
+  });
+
+  it("picks the environment from a chip with search and New environment", async () => {
+    const { server } = setup("#/mates/new");
+    const user = userEvent.setup();
+    await user.type(await screen.findByRole("textbox", { name: "Name" }), "scout");
+    await user.type(screen.getByRole("textbox", { name: "Role" }), "Scout.");
     const chip = screen.getByRole("button", { name: /Environment/ });
     expect(chip).toHaveTextContent("Local (this Mac)");
     await user.click(chip);
@@ -353,144 +318,34 @@ describe("New mate", () => {
     expect(within(menu).getByLabelText("Search environments")).toBeInTheDocument();
     expect(within(menu).getByRole("menuitem", { name: "+ New environment…" })).toBeInTheDocument();
     await user.click(within(menu).getByRole("menuitemcheckbox", { name: "test-work" }));
-    expect(chip).toHaveTextContent("test-work");
-    await user.click(screen.getByRole("button", { name: "Next" }));
-    await user.click(screen.getByRole("button", { name: "Create" }));
+    await user.click(screen.getByRole("button", { name: "Create mate" }));
     await waitFor(() => expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/mates")?.body).toMatchObject({ mate: { name: "scout", env: "test-work" } }));
   });
 
   it("offers Pi with the agent omp", async () => {
-    setup("#/mates/new");
-    const user = userEvent.setup();
-    await user.clear(await screen.findByLabelText("Name"));
-    await user.type(screen.getByLabelText("Name"), "scout");
-    await user.click(screen.getByRole("button", { name: "Next" }));
-    await user.type(screen.getByLabelText("Prompt"), "Scout the repo.");
-    await user.click(screen.getByRole("button", { name: "Next" }));
-    await user.click(within(screen.getByRole("radiogroup", { name: "Agent" })).getByRole("radio", { name: "Pi" }));
-    expect(within(screen.getByRole("radiogroup", { name: "Agent" })).getByRole("radio", { name: "Pi" })).toHaveAttribute("aria-checked", "true");
-  });
-
-  it("makes a mate in four steps: face, personality with tone, brains, meet", async () => {
     const { server } = setup("#/mates/new");
     const user = userEvent.setup();
-    expect(await screen.findByLabelText("Step 1 of 4")).toBeInTheDocument();
-    await user.click(await screen.findByRole("button", { name: "Quill" }));
-    expect(screen.getByRole("button", { name: "Quill" })).toHaveAttribute("aria-pressed", "true");
-    await user.click(screen.getByRole("button", { name: "Color #209fb5" }));
-    await user.clear(screen.getByLabelText("Name"));
-    await user.type(screen.getByLabelText("Name"), "scout");
-    await user.click(screen.getByRole("button", { name: "Next" }));
-    await user.type(screen.getByLabelText("Prompt"), "Scout the repo.");
-    expect(screen.getByRole("region", { name: "Added to the prompt" })).toHaveTextContent("Middle step. Adds no text.");
-    const brief = screen.getByRole("slider", { name: "Brief to Wordy" });
-    expect(brief.tagName).not.toBe("INPUT");
-    brief.focus();
-    await user.keyboard("{ArrowLeft}");
-    expect(screen.getAllByText("Brief 2/5").length).toBeGreaterThan(0);
-    expect(screen.getByRole("region", { name: "Added to the prompt" })).toHaveTextContent("Write one line per answer.");
-    await user.click(screen.getByRole("button", { name: "Next" }));
-    await user.click(within(screen.getByRole("radiogroup", { name: "Agent" })).getByRole("radio", { name: "Codex" }));
-    await user.type(screen.getByLabelText("Model"), "gpt-5");
-    await user.type(screen.getByLabelText("Effort"), "high");
-    await user.type(screen.getByLabelText("Repos"), "api, web");
-    await user.click(screen.getByRole("button", { name: "Next" }));
-    expect(screen.getByLabelText("Step 4 of 4")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Meet scout" })).toBeInTheDocument();
-    const facts = screen.getByRole("region", { name: "About scout" });
-    expect(facts).toHaveTextContent("Codex · gpt-5 · high");
-    expect(facts).toHaveTextContent("api, web");
-    expect(server.calls.some((c) => c.method === "POST" && c.path === "/api/v1/mates")).toBe(false);
-    await user.click(screen.getByRole("button", { name: "Create" }));
-    await waitFor(() =>
-      expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/mates")?.body).toEqual({
-        mate: {
-          name: "scout",
-          prompt: "Scout the repo.",
-          tone: { terse: 2, cautious: 3, formal: 3 },
-          agent: "codex",
-          model: "gpt-5",
-          effort: "high",
-          repos: ["api", "web"],
-          avatar: "quill",
-          color: "#209fb5",
-          enabled: true,
-        },
-      }),
-    );
-    await waitFor(() => expect(window.location.hash).toBe("#/mates/scout"));
+    await user.type(await screen.findByRole("textbox", { name: "Name" }), "scout");
+    await user.type(screen.getByRole("textbox", { name: "Role" }), "Scout.");
+    await user.click(screen.getByRole("button", { name: /^Harness/ }));
+    await user.click(screen.getByRole("menuitemcheckbox", { name: "Pi" }));
+    await user.click(screen.getByRole("button", { name: "Create mate" }));
+    await waitFor(() => expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/mates")?.body).toMatchObject({ mate: { agent: "omp" } }));
   });
 
-  it("takes the name of the chosen face until the user types a name, as the Mac app does", async () => {
+  it("opens Slack Connect on the mate page when Slack is set to connect now", async () => {
     setup("#/mates/new");
     const user = userEvent.setup();
-    await user.click(await screen.findByRole("button", { name: "Quill" }));
-    expect(screen.getByLabelText("Name")).toHaveValue("quill");
-    expect(screen.getByRole("button", { name: "Next" })).toBeEnabled();
-    await user.click(screen.getByRole("button", { name: "Owl" }));
-    expect(screen.getByLabelText("Name")).toHaveValue("owl");
-    await user.clear(screen.getByLabelText("Name"));
-    await user.type(screen.getByLabelText("Name"), "scout");
-    await user.click(screen.getByRole("button", { name: "Bolt" }));
-    expect(screen.getByLabelText("Name")).toHaveValue("scout");
-  });
-
-  it("has Cancel back to the mates, a 4-step progress bar and preset cards that fill the prompt", async () => {
-    setup("#/mates/new");
-    const user = userEvent.setup();
-    expect(await screen.findByRole("link", { name: "Cancel" })).toHaveAttribute("href", "#/mates");
-    expect(screen.getByRole("progressbar", { name: "Step 1 of 4" })).toHaveAttribute("aria-valuenow", "1");
-    await user.type(screen.getByLabelText("Name"), "scout");
-    await user.click(screen.getByRole("button", { name: "Next" }));
-    expect(screen.getByRole("heading", { name: "How should scout work?" })).toBeInTheDocument();
-    const presets = screen.getByRole("radiogroup", { name: "Presets" });
-    await user.click(within(presets).getByRole("radio", { name: /^Fast bug fixer/ }));
-    expect(within(presets).getByRole("radio", { name: /^Fast bug fixer/ })).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByLabelText("Prompt")).toHaveValue("You fix bugs fast. Make the smallest diff that makes the test pass.");
-  });
-
-  it("goes back a step and keeps the choices", async () => {
-    setup("#/mates/new");
-    const user = userEvent.setup();
-    await user.type(await screen.findByLabelText("Name"), "scout");
-    await user.click(screen.getByRole("button", { name: "Next" }));
-    await user.click(screen.getByRole("button", { name: "Back" }));
-    expect(screen.getByLabelText("Name")).toHaveValue("scout");
-  });
-
-  it("refuses the name of a mate that exists, so Create cannot replace it", async () => {
-    setup("#/mates/new");
-    const user = userEvent.setup();
-    await screen.findByRole("button", { name: "Quill" });
-    await user.type(screen.getByLabelText("Name"), "helper");
-    expect(await screen.findByText("A mate named helper exists.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
-  });
-
-  it("refuses a name that is not a mate handle", async () => {
-    setup("#/mates/new");
-    const user = userEvent.setup();
-    await user.type(await screen.findByLabelText("Name"), "scout.dev");
-    expect(screen.getByText("Use up to 32 letters, digits, - and _.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
-  });
-
-  it("needs a prompt before brains, even with a tone set", async () => {
-    setup("#/mates/new");
-    const user = userEvent.setup();
-    await user.type(await screen.findByLabelText("Name"), "scout");
-    await user.click(screen.getByRole("button", { name: "Next" }));
-    const slider = (await screen.findAllByRole("slider"))[0];
-    slider.focus();
-    await user.keyboard("{Home}");
-    expect(screen.getByText("Write a personality prompt or pick a preset.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
-    await user.type(screen.getByLabelText("Prompt"), "Pair programmer.");
-    expect(screen.queryByText("Write a personality prompt or pick a preset.")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Next" })).toBeEnabled();
+    await user.type(await screen.findByRole("textbox", { name: "Name" }), "scout");
+    await user.type(screen.getByRole("textbox", { name: "Role" }), "Scout.");
+    const slack = screen.getByRole("button", { name: /^Slack/ });
+    expect(slack).toHaveTextContent("Slack: later");
+    await user.click(slack);
+    await user.click(screen.getByRole("menuitemcheckbox", { name: "Connect now" }));
+    await user.click(screen.getByRole("button", { name: "Create mate" }));
+    await waitFor(() => expect(window.location.hash).toBe("#/mates/scout/~slack"));
   });
 });
-
 describe("Mate conversation", () => {
   it("shows the face of the mate in the toolbar, linked to the profile", async () => {
     setup("#/sessions/s2");
