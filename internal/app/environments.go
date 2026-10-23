@@ -25,6 +25,7 @@ type EnvironmentStore interface {
 	CancelSSHKey(env string) error
 	KeyCreated(env string) (time.Time, error)
 	GitIdentity(env string) (name, email string)
+	CodexLogin(env string) bool
 }
 
 type LocalFacts struct {

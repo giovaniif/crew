@@ -297,6 +297,14 @@ func (s Store) KeyCreated(name string) (time.Time, error) {
 	return info.ModTime(), nil
 }
 
+func (s Store) CodexLogin(name string) bool {
+	if !domain.ValidEnvName(name) {
+		return false
+	}
+	_, err := os.Stat(filepath.Join(s.envHome(name), partDirs[domain.EnvCodex], "auth.json"))
+	return err == nil
+}
+
 func (s Store) GitIdentity(name string) (string, string) {
 	if !domain.ValidEnvName(name) {
 		return "", ""

@@ -134,7 +134,7 @@ func TestEnvLoginRunsTheHarnessLoginInsideTheEnvironment(t *testing.T) {
 		if !envArgsOK(c.args) {
 			t.Errorf("%v refused", c.args)
 		}
-		if got := envLoginArgv(c.args[1:]); !reflect.DeepEqual(got, c.want) {
+		if got := envLoginArgvFor(c.args[1], envLoginHarness(c.args)); !reflect.DeepEqual(got, c.want) {
 			t.Errorf("%v: argv %v", c.args, got)
 		}
 	}
