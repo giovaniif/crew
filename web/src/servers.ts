@@ -95,8 +95,8 @@ export class Servers {
     await call(this.desktop, "crew_server_fix", { id });
   }
 
-  async pickFolder(): Promise<string | null> {
-    return (await call<string | null>(this.desktop, "crew_pick_folder")) ?? null;
+  async pickFolder(near?: string): Promise<string | null> {
+    return (await call<string | null>(this.desktop, "crew_pick_folder", { near: near ?? null })) ?? null;
   }
 
   async workspace(id: string, path: string): Promise<void> {

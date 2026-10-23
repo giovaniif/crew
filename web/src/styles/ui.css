@@ -200,8 +200,9 @@
 
 .ui.menu .ck {
   width: 14px;
+  display: grid;
+  place-items: center;
   color: var(--accent);
-  font-size: var(--fs-sm);
   flex: none;
 }
 
@@ -285,6 +286,11 @@
   font-size: 10px;
   color: var(--bg);
   flex: none;
+}
+
+.ui .check .check-icon {
+  width: 10px;
+  height: 10px;
 }
 
 .ui .check.on {
