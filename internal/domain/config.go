@@ -10,20 +10,14 @@ import (
 	"time"
 )
 
-var ThemeKeys = []string{"text", "subtext", "overlay", "surface", "mantle", "base", "blue", "peach", "green", "red", "teal", "mauve", "selected", "added_bg", "deleted_bg"}
-
 var (
-	configWord  = regexp.MustCompile(`^[A-Za-z0-9._:/\[\]-]+$`)
-	configColor = regexp.MustCompile(`^#[0-9A-Fa-f]{6}$`)
+	configWord = regexp.MustCompile(`^[A-Za-z0-9._:/\[\]-]+$`)
 )
 
 func ConfigKeys() []string {
 	keys := []string{"fallback.threshold", "push.away_after"}
 	for _, h := range Harnesses() {
 		keys = append(keys, "defaults."+string(h)+".model", "defaults."+string(h)+".effort")
-	}
-	for _, t := range ThemeKeys {
-		keys = append(keys, "theme."+t)
 	}
 	return keys
 }
@@ -42,10 +36,6 @@ func ConfigLiteral(key, value string) (string, error) {
 		d, err := time.ParseDuration(value)
 		if err != nil || d < 0 {
 			return "", fmt.Errorf("%s: %q is not a duration such as \"2m\" or \"0\"", key, value)
-		}
-	case strings.HasPrefix(key, "theme."):
-		if !configColor.MatchString(value) {
-			return "", fmt.Errorf("%s: %q is not a colour such as \"#1e66f5\"", key, value)
 		}
 	case strings.HasSuffix(key, ".effort"):
 		h := Harness(strings.TrimSuffix(strings.TrimPrefix(key, "defaults."), ".effort"))

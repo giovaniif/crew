@@ -35,7 +35,7 @@ A mate is a named personality of crew. Each mate has its own prompt, tone, agent
 - **Tone controls:** set terse or chatty, cautious or bold, formal or playful. Each step adds one sentence to the prompt.
 - **Memory:** the mate writes decisions and facts to its own `memory.md`. You can edit or clear it. "Start fresh" writes a handoff, then starts a new conversation.
 - **Safe-action gate:** in Slack, a dangerous action from a person who is not the owner stops in the hook, not in the prompt. The owner approves or denies it in Slack, on the phone or in the app. A kill switch stops all mates.
-- **Everywhere:** the Mates page in the desktop and phone apps, `C` in the TUI, and `crew mate add`, `crew mate new` and `crew mate slack` in the CLI.
+- **Everywhere:** the Mates page in the desktop and phone apps, and `crew mate add`, `crew mate new` and `crew mate slack` in the CLI.
 
 [Docs →](docs/adr/0056-local-mates.md) · [Slack and the gate →](docs/adr/0053-mates.md)
 
@@ -118,13 +118,11 @@ See the size of each worktree and the dev servers on its ports. crew removes a w
 <tr>
 <td width="50%" valign="top">
 
-### Terminal and nvim
+### nvim
 
-All of crew also works in the TUI. The sidebar puts the session that needs you at the top. The nvim plugin sends review comments from nvim.
+The nvim plugin sends review comments from nvim to the session.
 
-[TUI →](internal/tui/AGENTS.md) · [nvim →](nvim/AGENTS.md)
-
-<img src="docs/images/readme/tui-sidebar.png" alt="The crew TUI sidebar with six sessions" width="100%">
+[nvim →](nvim/AGENTS.md)
 
 </td>
 <td width="50%" valign="top">
@@ -134,8 +132,6 @@ All of crew also works in the TUI. The sidebar puts the session that needs you a
 Agents control a browser for each session with `crew browser`. With no desktop app, the daemon uses a headless Chromium. The `crew` CLI does all of the other steps from a script.
 
 [Docs →](docs/adr/0059-tauri-browser-tab.md) · [CLI →](cmd/crew/AGENTS.md)
-
-<img src="docs/images/readme/tui-new-session.png" alt="The crew TUI new-session form" width="100%">
 
 </td>
 </tr>
@@ -195,21 +191,20 @@ The desktop app updates itself and its `crew` binary. At launch and each 6 h, it
 ```sh
 curl -fsSL https://raw.githubusercontent.com/giovaniif/crew/main/scripts/install.sh | sh
 crew daemon stop
-crew
 ```
 
 ## Quick start
 
-1. Run `crew`. The first time, a setup screen opens.
-2. Select Claude Code, Codex or both. The screen shows the file that it changes (`~/.claude/settings.json` or `~/.codex/hooks.json`), where the backup goes, and how to undo it (`crew setup claude --remove`). Codex then needs a one-time trust step: start `codex` and accept the review prompt for the new hooks.
-3. Optional: set up Neovim. It writes `~/.config/nvim/plugin/crew.lua` and does not edit your own files.
-4. Press `n` to start your first session.
+1. Install crew with the command above.
+2. Run `crew setup claude`, `crew setup codex` or both. Each command shows the file that it changes and where the backup goes. Undo it with `crew setup claude --remove`. Codex then needs a one-time trust step: start `codex` and accept the review prompt for the new hooks.
+3. Run `crew setup daemon` and `crew setup serve`. They keep the daemon and the API of the app running.
+4. Open the crew app and start your first session.
 
-To open the setup screen again, press `S` in the sidebar or run `crew setup`. More: [docs/getting-started.md](docs/getting-started.md).
+More: [docs/getting-started.md](docs/getting-started.md).
 
 ## How it works
 
-`crew` is one Go binary. It is the daemon, the TUI, the CLI and the hook handler. The Claude Code and Codex hooks (`crew hook`) send each state change to the daemon. The agents run in the `crew` tmux server. crew uses the `git`, `gh` and `tmux` CLIs. `crew serve` gives an HTTP and WebSocket API to the desktop and phone apps. More: [ARCHITECTURE.md](ARCHITECTURE.md).
+`crew` is one Go binary. It is the daemon, the CLI, the API server of the app and the hook handler. The Claude Code and Codex hooks (`crew hook`) send each state change to the daemon. The agents run in the `crew` tmux server. crew uses the `git`, `gh` and `tmux` CLIs. `crew serve` gives an HTTP and WebSocket API to the desktop and phone apps. More: [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Develop
 

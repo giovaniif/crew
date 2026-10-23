@@ -1,6 +1,6 @@
 # ADR 0057: One Tauri 2 app for desktop and mobile
 
-Status: accepted, 2026-10-20. Issue #511. This ADR replaces the UI part of [ADR 0049](0049-macos-app.md). It changes the "Mac app is the primary UI" rule of #439. The work items have the label `tauri` (#512 to #531).
+Status: accepted, 2026-10-20. Issue #511. This ADR replaces the UI part of [ADR 0049](0049-macos-app.md). It changes the "Mac app is the primary UI" rule of #439. The work items have the label `tauri` (#512 to #531). [ADR 0061](0061-remove-the-tui.md) removes the TUI.
 
 ## Context
 

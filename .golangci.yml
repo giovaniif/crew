@@ -27,18 +27,6 @@ linters:
               desc: app depends only on domain
             - pkg: github.com/giovaniif/crew/internal/rpc
               desc: app depends only on domain
-            - pkg: github.com/giovaniif/crew/internal/tui
-              desc: app depends only on domain
-        tui:
-          files:
-            - "**/internal/tui/**"
-          deny:
-            - pkg: github.com/giovaniif/crew/internal/adapters
-              desc: tui talks only to rpc
-            - pkg: github.com/giovaniif/crew/internal/app
-              desc: tui talks only to rpc
-            - pkg: github.com/giovaniif/crew/internal/daemon
-              desc: tui talks only to rpc
         serve:
           files:
             - "**/internal/serve/**"
@@ -84,7 +72,6 @@ linters:
           files:
             - "**/internal/domain/**"
             - "**/internal/app/**"
-            - "**/internal/tui/**"
             - "**/internal/rpc/**"
             - "**/internal/daemon/**"
           deny:

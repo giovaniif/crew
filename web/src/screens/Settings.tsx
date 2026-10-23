@@ -2,19 +2,61 @@ import { useEffect, useState, type ReactNode } from "react";
 import type { Authed, Fetch } from "../api";
 import type { Auth, KeyValue } from "../auth";
 import { confirmEnd, setConfirmEnd } from "../commands";
-import { loadAlertPrefs, saveAlertPrefs, type AlertPrefs } from "../desktopAttention";
+import {
+  loadAlertPrefs,
+  saveAlertPrefs,
+  type AlertPrefs,
+} from "../desktopAttention";
 import { disablePush, enablePush, type PushEnv } from "../push";
 import type { Servers } from "../servers";
-import { applyTheme, clamp, fontSizes, lineHeights, loadSettings, saveSettings, type AppSettings, type Appearance, type General } from "../settings";
-import { assignShortcut, comboFor, comboFromEvent, comboLabel, defaultShortcuts, restoreShortcut, shortcutActions, type Shortcuts } from "../shortcuts";
+import {
+  applyTheme,
+  clamp,
+  fontSizes,
+  lineHeights,
+  loadSettings,
+  saveSettings,
+  type AppSettings,
+  type Appearance,
+  type General,
+} from "../settings";
+import {
+  assignShortcut,
+  comboFor,
+  comboFromEvent,
+  comboLabel,
+  defaultShortcuts,
+  restoreShortcut,
+  shortcutActions,
+  type Shortcuts,
+} from "../shortcuts";
 import { Button, Checkbox, Segmented, Stepper, Switch } from "../ui";
-import { AgentsGroup, DevicesGroup, PushDelayRow, ServerAppearanceGroup, WorkspacesGroup } from "./ServerSettings";
+import {
+  AgentsGroup,
+  DevicesGroup,
+  PushDelayRow,
+  WorkspacesGroup,
+} from "./ServerSettings";
 import { ServersScreen } from "./Servers";
 import { Group, Opt } from "./SettingsRows";
 
-type Notify = { state: "idle" } | { state: "checking" } | { state: "busy" } | { state: "on"; error?: string } | { state: "denied" } | { state: "failed"; message: string };
+type Notify =
+  | { state: "idle" }
+  | { state: "checking" }
+  | { state: "busy" }
+  | { state: "on"; error?: string }
+  | { state: "denied" }
+  | { state: "failed"; message: string };
 
-export type GroupId = "general" | "notifications" | "appearance" | "shortcuts" | "workspaces" | "agents" | "devices" | "servers";
+export type GroupId =
+  | "general"
+  | "notifications"
+  | "appearance"
+  | "shortcuts"
+  | "workspaces"
+  | "agents"
+  | "devices"
+  | "servers";
 
 const allGroups: { id: GroupId; title: string }[] = [
   { id: "general", title: "General" },
@@ -43,7 +85,13 @@ export type SettingsProps = {
   initial?: GroupId;
 };
 
-function PushCard({ auth, installed, fetch, push, desktop }: Pick<SettingsProps, "auth" | "installed" | "fetch" | "push" | "desktop">) {
+function PushCard({
+  auth,
+  installed,
+  fetch,
+  push,
+  desktop,
+}: Pick<SettingsProps, "auth" | "installed" | "fetch" | "push" | "desktop">) {
   const [notify, setNotify] = useState<Notify>(() => {
     if (!push.supported) {
       return { state: "idle" };
@@ -78,7 +126,10 @@ function PushCard({ auth, installed, fetch, push, desktop }: Pick<SettingsProps,
     try {
       setNotify({ state: await enablePush(push, fetch, auth.token) });
     } catch (err) {
-      setNotify({ state: "failed", message: err instanceof Error ? err.message : String(err) });
+      setNotify({
+        state: "failed",
+        message: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 
@@ -96,15 +147,31 @@ function PushCard({ auth, installed, fetch, push, desktop }: Pick<SettingsProps,
           <Opt sub="On iPhone and iPad, notifications work only in the app opened from the Home Screen. Add crew to your Home Screen, then open it from there." />
         )}
         {!push.supported ? (
-          !desktop && <Opt sub="This browser cannot show notifications from crew." />
+          !desktop && (
+            <Opt sub="This browser cannot show notifications from crew." />
+          )
         ) : (
           <Opt
-            lead={<span className={"dot" + (notify.state === "on" ? " ok" : "")} />}
-            title={notify.state === "on" ? "Notifications are on for this device." : "Get a notification when a session needs you, waits for an answer or finishes."}
+            lead={
+              <span className={"dot" + (notify.state === "on" ? " ok" : "")} />
+            }
+            title={
+              notify.state === "on"
+                ? "Notifications are on for this device."
+                : "Get a notification when a session needs you, waits for an answer or finishes."
+            }
             sub={
               <>
-                Held while you're typing at the terminal, and sent once if you step away with a session still waiting. Not sent while this app is open on screen.
-                {notify.state === "denied" && <span className="error"> Notifications are blocked. Allow them for crew in your device's settings, then try again.</span>}
+                Held while you're typing at the terminal, and sent once if you
+                step away with a session still waiting. Not sent while this app
+                is open on screen.
+                {notify.state === "denied" && (
+                  <span className="error">
+                    {" "}
+                    Notifications are blocked. Allow them for crew in your
+                    device's settings, then try again.
+                  </span>
+                )}
                 {notify.state === "on" && notify.error && (
                   <span className="error" role="alert">
                     {" " + notify.error}
@@ -123,7 +190,14 @@ function PushCard({ auth, installed, fetch, push, desktop }: Pick<SettingsProps,
                 Turn off
               </Button>
             ) : (
-              <Button variant="primary" className="sm" onClick={enable} disabled={notify.state === "busy" || notify.state === "checking"}>
+              <Button
+                variant="primary"
+                className="sm"
+                onClick={enable}
+                disabled={
+                  notify.state === "busy" || notify.state === "checking"
+                }
+              >
                 Enable notifications
               </Button>
             )}
@@ -134,7 +208,17 @@ function PushCard({ auth, installed, fetch, push, desktop }: Pick<SettingsProps,
   );
 }
 
-function Count({ label, value, step, onCommit }: { label: string; value: number; step?: number; onCommit: (v: number) => void }) {
+function Count({
+  label,
+  value,
+  step,
+  onCommit,
+}: {
+  label: string;
+  value: number;
+  step?: number;
+  onCommit: (v: number) => void;
+}) {
   const [text, setText] = useState(String(value));
   useEffect(() => setText(String(value)), [value]);
   return (
@@ -153,24 +237,65 @@ function Count({ label, value, step, onCommit }: { label: string; value: number;
   );
 }
 
-function SwitchRow({ title, sub, checked, onChange }: { title: string; sub?: string; checked: boolean; onChange: (v: boolean) => void }) {
+function SwitchRow({
+  title,
+  sub,
+  checked,
+  onChange,
+}: {
+  title: string;
+  sub?: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
   return (
     <Opt title={title} sub={sub}>
-      <Switch label={null} ariaLabel={title} checked={checked} onChange={onChange} />
+      <Switch
+        label={null}
+        ariaLabel={title}
+        checked={checked}
+        onChange={onChange}
+      />
     </Opt>
   );
 }
 
-function GeneralPane({ general, storage, onChange }: { general: General; storage: KeyValue; onChange: (g: General) => void }) {
+function GeneralPane({
+  general,
+  storage,
+  onChange,
+}: {
+  general: General;
+  storage: KeyValue;
+  onChange: (g: General) => void;
+}) {
   const [askEnd, setAskEnd] = useState(() => confirmEnd(storage));
   return (
     <>
       <Group label="Sidebar" title="SIDEBAR">
-        <Opt title="Ended sessions shown" sub="The most recent ones, under Ended">
-          <Count label="Ended sessions shown" value={general.endedShown} onCommit={(n) => onChange({ ...general, endedShown: Math.max(0, Math.round(n)) })} />
+        <Opt
+          title="Ended sessions shown"
+          sub="The most recent ones, under Ended"
+        >
+          <Count
+            label="Ended sessions shown"
+            value={general.endedShown}
+            onCommit={(n) =>
+              onChange({ ...general, endedShown: Math.max(0, Math.round(n)) })
+            }
+          />
         </Opt>
-        <SwitchRow title="Show worktrees" checked={general.showWorktrees} onChange={(v) => onChange({ ...general, showWorktrees: v })} />
-        <SwitchRow title="Show subagents" sub="Nested under the session that started them" checked={general.showSubagents} onChange={(v) => onChange({ ...general, showSubagents: v })} />
+        <SwitchRow
+          title="Show worktrees"
+          checked={general.showWorktrees}
+          onChange={(v) => onChange({ ...general, showWorktrees: v })}
+        />
+        <SwitchRow
+          title="Show subagents"
+          sub="Nested under the session that started them"
+          checked={general.showSubagents}
+          onChange={(v) => onChange({ ...general, showSubagents: v })}
+        />
       </Group>
       <Group label="Sessions" title="SESSIONS">
         <SwitchRow
@@ -186,14 +311,23 @@ function GeneralPane({ general, storage, onChange }: { general: General; storage
   );
 }
 
-const events: { key: "permission" | "waiting" | "done" | "limitOrError"; title: string }[] = [
+const events: {
+  key: "permission" | "waiting" | "done" | "limitOrError";
+  title: string;
+}[] = [
   { key: "permission", title: "Needs permission" },
   { key: "waiting", title: "Waits for an answer" },
   { key: "done", title: "Finishes" },
   { key: "limitOrError", title: "Hits a limit or an error" },
 ];
 
-function NotificationsPane({ storage, api }: { storage: KeyValue; api: Authed }) {
+function NotificationsPane({
+  storage,
+  api,
+}: {
+  storage: KeyValue;
+  api: Authed;
+}) {
   const [value, setValue] = useState<AlertPrefs>(() => loadAlertPrefs(storage));
   const onChange = (next: AlertPrefs) => {
     saveAlertPrefs(storage, next);
@@ -209,29 +343,53 @@ function NotificationsPane({ storage, api }: { storage: KeyValue; api: Authed })
               label="Sound"
               ariaLabel={"Sound when a session " + e.title.toLowerCase()}
               checked={value[e.key].sound}
-              onChange={(v) => onChange({ ...value, [e.key]: { ...value[e.key], sound: v } })}
+              onChange={(v) =>
+                onChange({ ...value, [e.key]: { ...value[e.key], sound: v } })
+              }
             />
-            <Switch label={null} ariaLabel={e.title} checked={value[e.key].banner} onChange={(v) => onChange({ ...value, [e.key]: { ...value[e.key], banner: v } })} />
+            <Switch
+              label={null}
+              ariaLabel={e.title}
+              checked={value[e.key].banner}
+              onChange={(v) =>
+                onChange({ ...value, [e.key]: { ...value[e.key], banner: v } })
+              }
+            />
           </Opt>
         ))}
       </Group>
       <Group label="Options" title="OPTIONS">
-        <SwitchRow title="Skip the session that is on screen" checked={value.skipSessionInView} onChange={(v) => onChange({ ...value, skipSessionInView: v })} />
-        <SwitchRow title="Also notify for muted sessions" checked={value.notifyMuted} onChange={(v) => onChange({ ...value, notifyMuted: v })} />
+        <SwitchRow
+          title="Skip the session that is on screen"
+          checked={value.skipSessionInView}
+          onChange={(v) => onChange({ ...value, skipSessionInView: v })}
+        />
+        <SwitchRow
+          title="Also notify for muted sessions"
+          checked={value.notifyMuted}
+          onChange={(v) => onChange({ ...value, notifyMuted: v })}
+        />
         <PushDelayRow api={api} />
       </Group>
     </>
   );
 }
 
-const accents: { value: Appearance["accent"]; label: string; color: string }[] = [
-  { value: "blue", label: "Blue", color: "oklch(0.55 0.15 255)" },
-  { value: "green", label: "Green", color: "oklch(0.55 0.15 150)" },
-  { value: "peach", label: "Peach", color: "oklch(0.65 0.15 55)" },
-  { value: "red", label: "Red", color: "oklch(0.55 0.15 25)" },
-];
+const accents: { value: Appearance["accent"]; label: string; color: string }[] =
+  [
+    { value: "blue", label: "Blue", color: "oklch(0.55 0.15 255)" },
+    { value: "green", label: "Green", color: "oklch(0.55 0.15 150)" },
+    { value: "peach", label: "Peach", color: "oklch(0.65 0.15 55)" },
+    { value: "red", label: "Red", color: "oklch(0.55 0.15 25)" },
+  ];
 
-function AppearancePane({ value, onChange }: { value: Appearance; onChange: (a: Appearance) => void }) {
+function AppearancePane({
+  value,
+  onChange,
+}: {
+  value: Appearance;
+  onChange: (a: Appearance) => void;
+}) {
   return (
     <Group label="Appearance">
       <Opt title="Theme">
@@ -285,13 +443,32 @@ function AppearancePane({ value, onChange }: { value: Appearance; onChange: (a: 
         />
       </Opt>
       <Opt title="Terminal font">
-        <input className="ui input" aria-label="Terminal font" type="text" value={value.terminalFont} onChange={(e) => onChange({ ...value, terminalFont: e.target.value })} />
+        <input
+          className="ui input"
+          aria-label="Terminal font"
+          type="text"
+          value={value.terminalFont}
+          onChange={(e) => onChange({ ...value, terminalFont: e.target.value })}
+        />
       </Opt>
       <Opt title="Terminal font size">
-        <Count label="Terminal font size" value={value.fontSize} onCommit={(n) => onChange({ ...value, fontSize: clamp(n, fontSizes) })} />
+        <Count
+          label="Terminal font size"
+          value={value.fontSize}
+          onCommit={(n) =>
+            onChange({ ...value, fontSize: clamp(n, fontSizes) })
+          }
+        />
       </Opt>
       <Opt title="Line height">
-        <Count label="Line height" step={0.1} value={value.lineHeight} onCommit={(n) => onChange({ ...value, lineHeight: clamp(n, lineHeights) })} />
+        <Count
+          label="Line height"
+          step={0.1}
+          value={value.lineHeight}
+          onCommit={(n) =>
+            onChange({ ...value, lineHeight: clamp(n, lineHeights) })
+          }
+        />
       </Opt>
       <Opt title="Cursor">
         <Segmented
@@ -304,13 +481,26 @@ function AppearancePane({ value, onChange }: { value: Appearance; onChange: (a: 
           ]}
           onChange={(cursor) => onChange({ ...value, cursor })}
         />
-        <Switch label={null} ariaLabel="Blinking cursor" checked={value.cursorBlinks} onChange={(v) => onChange({ ...value, cursorBlinks: v })} />
+        <Switch
+          label={null}
+          ariaLabel="Blinking cursor"
+          checked={value.cursorBlinks}
+          onChange={(v) => onChange({ ...value, cursorBlinks: v })}
+        />
       </Opt>
     </Group>
   );
 }
 
-function ShortcutsPane({ value, mac, onChange }: { value: Shortcuts; mac: boolean; onChange: (s: Shortcuts) => void }) {
+function ShortcutsPane({
+  value,
+  mac,
+  onChange,
+}: {
+  value: Shortcuts;
+  mac: boolean;
+  onChange: (s: Shortcuts) => void;
+}) {
   const [recording, setRecording] = useState<string | null>(null);
   const [error, setError] = useState("");
 
@@ -346,14 +536,21 @@ function ShortcutsPane({ value, mac, onChange }: { value: Shortcuts; mac: boolea
 
   return (
     <>
-      <p className="set-lead">Each shortcut needs {mac ? "⌘ or ⌃" : "Ctrl or Meta"}, so the terminal keeps plain keys.</p>
+      <p className="set-lead">
+        Each shortcut needs {mac ? "⌘ or ⌃" : "Ctrl or Meta"}, so the terminal
+        keeps plain keys.
+      </p>
       {error ? (
         <p className="error" role="alert">
           {error}
         </p>
       ) : null}
       <Group label="Keys">
-        <SwitchRow title="Send other keys to the terminal" checked={value.passThrough} onChange={(v) => onChange({ ...value, passThrough: v })} />
+        <SwitchRow
+          title="Send other keys to the terminal"
+          checked={value.passThrough}
+          onChange={(v) => onChange({ ...value, passThrough: v })}
+        />
       </Group>
       <section className="set-section" aria-label="Shortcuts">
         <div className="gtitle">SHORTCUTS</div>
@@ -365,8 +562,18 @@ function ShortcutsPane({ value, mac, onChange }: { value: Shortcuts; mac: boolea
                 <div className="l">
                   <div className="t">{a.title}</div>
                 </div>
-                {recording === a.id ? <span className="muted">Press keys…</span> : combo ? <kbd>{comboLabel(combo, mac)}</kbd> : <span className="muted">None</span>}
-                <Button variant="quiet" className="sm" onClick={() => setRecording(a.id)}>
+                {recording === a.id ? (
+                  <span className="muted">Press keys…</span>
+                ) : combo ? (
+                  <kbd>{comboLabel(combo, mac)}</kbd>
+                ) : (
+                  <span className="muted">None</span>
+                )}
+                <Button
+                  variant="quiet"
+                  className="sm"
+                  onClick={() => setRecording(a.id)}
+                >
                   Change
                 </Button>
                 <Button
@@ -381,7 +588,11 @@ function ShortcutsPane({ value, mac, onChange }: { value: Shortcuts; mac: boolea
                 >
                   Clear
                 </Button>
-                <Button variant="quiet" className="sm" onClick={() => onChange(restoreShortcut(value, a.id))}>
+                <Button
+                  variant="quiet"
+                  className="sm"
+                  onClick={() => onChange(restoreShortcut(value, a.id))}
+                >
                   Default
                 </Button>
               </li>
@@ -389,23 +600,52 @@ function ShortcutsPane({ value, mac, onChange }: { value: Shortcuts; mac: boolea
           })}
         </ul>
       </section>
-      <Button onClick={() => onChange({ ...defaultShortcuts(), passThrough: value.passThrough })}>Restore all defaults</Button>
+      <Button
+        onClick={() =>
+          onChange({ ...defaultShortcuts(), passThrough: value.passThrough })
+        }
+      >
+        Restore all defaults
+      </Button>
     </>
   );
 }
 
-export function Settings({ auth, host, installed, fetch, push, onSignOut, storage, userAgent, connectUrl, desktop, local, servers, initial }: SettingsProps) {
+export function Settings({
+  auth,
+  host,
+  installed,
+  fetch,
+  push,
+  onSignOut,
+  storage,
+  userAgent,
+  connectUrl,
+  desktop,
+  local,
+  servers,
+  initial,
+}: SettingsProps) {
   const [group, setGroup] = useState<GroupId>(initial ?? "general");
-  const [settings, setSettings] = useState<AppSettings>(() => loadSettings(storage));
+  const [settings, setSettings] = useState<AppSettings>(() =>
+    loadSettings(storage),
+  );
   const api: Authed = { fetch, token: auth.token };
   const mac = /Macintosh/.test(userAgent);
   const groups = allGroups.filter((g) => g.id !== "servers" || servers);
 
-  useEffect(() => applyTheme(settings.appearance.theme), [settings.appearance.theme]);
+  useEffect(
+    () => applyTheme(settings.appearance.theme),
+    [settings.appearance.theme],
+  );
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !e.defaultPrevented && !document.querySelector('[role="dialog"], .ui.menu')) {
+      if (
+        e.key === "Escape" &&
+        !e.defaultPrevented &&
+        !document.querySelector('[role="dialog"], .ui.menu')
+      ) {
         window.location.hash = "#/";
       }
     };
@@ -424,7 +664,11 @@ export function Settings({ auth, host, installed, fetch, push, onSignOut, storag
     case "general":
       pane = (
         <>
-          <GeneralPane general={settings.general} storage={storage} onChange={(general) => update({ ...settings, general })} />
+          <GeneralPane
+            general={settings.general}
+            storage={storage}
+            onChange={(general) => update({ ...settings, general })}
+          />
           <section className="set-section" aria-label="This device">
             <div className="gtitle">THIS DEVICE</div>
             <div className="group">
@@ -446,7 +690,15 @@ export function Settings({ auth, host, installed, fetch, push, onSignOut, storag
               </Opt>
             </div>
           </section>
-          {!(desktop && !push.supported) && <PushCard auth={auth} installed={installed} fetch={fetch} push={push} desktop={desktop} />}
+          {!(desktop && !push.supported) && (
+            <PushCard
+              auth={auth}
+              installed={installed}
+              fetch={fetch}
+              push={push}
+              desktop={desktop}
+            />
+          )}
           {local ? null : (
             <Button variant="danger" onClick={onSignOut}>
               Sign out
@@ -460,17 +712,28 @@ export function Settings({ auth, host, installed, fetch, push, onSignOut, storag
       break;
     case "appearance":
       pane = (
-        <>
-          <AppearancePane value={settings.appearance} onChange={(appearance) => update({ ...settings, appearance })} />
-          <ServerAppearanceGroup api={api} />
-        </>
+        <AppearancePane
+          value={settings.appearance}
+          onChange={(appearance) => update({ ...settings, appearance })}
+        />
       );
       break;
     case "shortcuts":
-      pane = <ShortcutsPane value={settings.shortcuts} mac={mac} onChange={(shortcuts) => update({ ...settings, shortcuts })} />;
+      pane = (
+        <ShortcutsPane
+          value={settings.shortcuts}
+          mac={mac}
+          onChange={(shortcuts) => update({ ...settings, shortcuts })}
+        />
+      );
       break;
     case "workspaces":
-      pane = <WorkspacesGroup api={api} pickFolder={servers ? (near) => servers.pickFolder(near) : undefined} />;
+      pane = (
+        <WorkspacesGroup
+          api={api}
+          pickFolder={servers ? (near) => servers.pickFolder(near) : undefined}
+        />
+      );
       break;
     case "agents":
       pane = <AgentsGroup api={api} />;
@@ -482,7 +745,11 @@ export function Settings({ auth, host, installed, fetch, push, onSignOut, storag
       pane = servers ? <ServersScreen servers={servers} /> : null;
       break;
   }
-  const own = group === "workspaces" || group === "agents" || group === "devices" || group === "servers";
+  const own =
+    group === "workspaces" ||
+    group === "agents" ||
+    group === "devices" ||
+    group === "servers";
 
   return (
     <main className="screen settings-screen">
@@ -494,7 +761,13 @@ export function Settings({ auth, host, installed, fetch, push, onSignOut, storag
             <span className="meta">Esc</span>
           </a>
           {groups.map((g) => (
-            <button key={g.id} type="button" className={"row" + (g.id === group ? " on" : "")} aria-current={g.id === group ? "page" : undefined} onClick={() => setGroup(g.id)}>
+            <button
+              key={g.id}
+              type="button"
+              className={"row" + (g.id === group ? " on" : "")}
+              aria-current={g.id === group ? "page" : undefined}
+              onClick={() => setGroup(g.id)}
+            >
               {g.title}
             </button>
           ))}

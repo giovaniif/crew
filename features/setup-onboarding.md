@@ -1,6 +1,6 @@
 # Setup and onboarding
 
-`S` opens "Set up crew": pick the agents, set up each one, then Neovim. The setup commands merge into the agent config idempotently, with a backup. In the isolated crew, `HOME`, `CLAUDE_CONFIG_DIR` and `CODEX_HOME` are temporary, so the real config never changes. `iso up` marks the home onboarded, so the first-run walkthrough does not show.
+`crew setup claude`, `crew setup codex`, `crew setup omp` and `crew setup nvim` set up each agent and Neovim. The setup commands merge into the agent config idempotently, with a backup. In the isolated crew, `HOME`, `CLAUDE_CONFIG_DIR` and `CODEX_HOME` are temporary, so the real config never changes. `iso up` marks the home onboarded, so the first-run walkthrough does not show.
 
 ## Setup
 
@@ -10,32 +10,6 @@ go run ./scripts/verify iso up
 ```
 
 ## Recipes
-
-### S opens the setup with the three agents
-
-```sh
-go run ./scripts/verify tui drive --restart --out-dir /tmp/crew-verify-map/setup --steps '[{"expect":"crew","timeout":8000},{"keys":"S"},{"expect":"Set up crew","timeout":5000},{"expect":"Claude Code"},{"expect":"Codex"},{"expect":"Oh My Pi"},{"shot":"setup.png"},{"keys":"Escape"}]'
-```
-
-### install on a fresh file says crew made the file (#482)
-
-```sh
-go run ./scripts/verify tui drive --restart --out-dir /tmp/crew-verify-map/setup-backup --steps '[{"expect":"crew","timeout":8000},{"keys":"S"},{"expect":"Set up crew","timeout":5000},{"keys":"Enter"},{"expect":"does not exist yet","timeout":5000},{"keys":"Enter"},{"expect":"crew made the file","timeout":5000},{"absent":"does not exist yet"},{"keys":"Escape"}]'
-```
-
-### the Neovim step shows the whole missing plugin path (#672)
-
-```sh
-go run ./scripts/verify tui drive --restart --out-dir /tmp/crew-verify-map/setup-nvim-path --steps '[{"expect":"crew","timeout":8000},{"keys":"S"},{"expect":"Set up crew","timeout":5000},{"keys":"Enter"},{"wait":800},{"keys":"Enter"},{"expect":"plugin files are not at","timeout":5000},{"absent":"…"},{"keys":"Escape"}]'
-```
-
-### a narrow agent step wraps the Changes and Backup paths (#674)
-
-```sh
-go run ./scripts/verify tui drive --size 50x30 --restart --out-dir /tmp/crew-verify-map/setup-narrow --steps '[{"expect":"crew","timeout":8000},{"keys":"S"},{"expect":"Set up crew","timeout":5000},{"keys":"Enter"},{"expect":"settings.j","timeout":5000},{"absent":"…"},{"keys":"Escape"}]'
-```
-
-### first-run walkthrough (manual: iso up marks the home onboarded; remove $CREW_HOME/onboarded in the isolated home and restart the TUI to see it)
 
 ### version --build prints the build version
 
@@ -49,7 +23,7 @@ go run ./scripts/verify iso crew --expect dev -- version --build
 go run ./scripts/verify iso crew --expect "crew dev (commit" -- version
 ```
 
-### crew setup <agent> merges the agent config (manual: the S view drives the same setup; a recipe must not run it twice in one home)
+### crew setup <agent> merges the agent config (manual: a recipe must not run it twice in one home)
 
 ### crew hook handles an agent hook event (manual: the agent calls it with a JSON event on stdin; iso crew does not pass stdin)
 
