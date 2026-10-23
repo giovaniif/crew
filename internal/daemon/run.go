@@ -101,6 +101,7 @@ func Run(ctx context.Context, home string) (err error) {
 		WithStartDefaults(startDefaults),
 		WithHarnessConfig(readHarnessConfig),
 		WithConfig(filepath.Join(home, "config.toml")),
+		WithEnvLauncher(self),
 		WithNotifier(banners, notify.New(), sounds),
 		WithWorktrees(gitadapter.Worktrees{}, &github.Finder{}),
 		WithTitles(app.TitleResolvers{github.Titles{}}),
