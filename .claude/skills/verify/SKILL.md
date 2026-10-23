@@ -109,7 +109,19 @@ go run ./scripts/verify map run <area>
 
 `evidence add` refuses a proof when the checkout is not at its ref. Do not edit artifacts after you record them.
 
-## 5. PR images
+## 5. Compare with the design
+
+For the redesign, compare a shot of the real PWA or app with the approved frame in `docs/design/redesign/` (the README maps each frame to the code):
+
+```sh
+go run ./scripts/verify web shot / --viewport desktop
+go run ./scripts/verify design compare <desktop shot> 1 --crop x0,y0,x1,y1 --out cmp.png
+```
+
+- The reference is a frame number (`1` to `6`) or a PNG path. Use `--crop` to select one frame of the canvas.
+- Read `diff_ratio` and open `out`: shot, design and diff side by side, with the differences in red. Add `--max-diff 0.2` to fail above 20%.
+
+## 6. PR images
 
 ```sh
 go run ./scripts/verify annotate --before base.png --after head.png --crop 0,0,780,600 --box 20,200,760,320 --caption-before "Before" --caption-after "After" --out pair.png
@@ -119,7 +131,7 @@ go run ./scripts/verify assets check
 
 Embed the `urls` from `assets push`. They are pinned to a commit of the orphan `pr-assets` branch. Never commit images on the PR branch.
 
-## 6. Clean up
+## 7. Clean up
 
 ```sh
 go run ./scripts/verify iso down
