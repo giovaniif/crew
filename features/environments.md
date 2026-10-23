@@ -36,10 +36,10 @@ go run ./scripts/verify iso api GET /api/v1/envs/test-bot --expect '{"name":"GH_
 go run ./scripts/verify iso dump --clear
 go run ./scripts/verify iso crew -- mate set test-mate --agent claude --prompt "TEST claude prompt" --env test-bot
 go run ./scripts/verify iso crew --expect "started a new conversation" -- mate new test-mate "TEST hi"
-go run ./scripts/verify iso dump claude --has CLAUDE_CONFIG_DIR={home}/envs/test-bot/claude --has CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-TEST-claude-token --has GH_TOKEN=TEST-gh-token --has GH_CONFIG_DIR={home}/envs/test-bot/gh --has GIT_CONFIG_GLOBAL={home}/envs/test-bot/gitconfig --has "GIT_SSH_COMMAND=ssh -i '{home}/secrets/env/test-bot/ssh/id_ed25519' -o IdentitiesOnly=yes" --has HOME={home}/home --has CODEX_HOME={home}/envs/test-bot/codex --unset SSH_AUTH_SOCK --unset CREW_E2E --unset CREW_TMUX_SOCKET --unset XDG_CONFIG_HOME
+go run ./scripts/verify iso dump claude --has CLAUDE_CONFIG_DIR={home}/envs/test-bot/claude --has CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-TEST-claude-token --has GH_TOKEN=TEST-gh-token --has GH_CONFIG_DIR={home}/envs/test-bot/gh --has GIT_CONFIG_GLOBAL={home}/envs/test-bot/gitconfig --has "GIT_SSH_COMMAND=ssh -i '{home}/secrets/env/test-bot/ssh/id_ed25519' -o IdentitiesOnly=yes" --has HOME={home}/home --unset CODEX_HOME --unset OPENAI_API_KEY --unset PI_CODING_AGENT_DIR --unset GEMINI_API_KEY --unset SSH_AUTH_SOCK --unset CREW_E2E --unset CREW_TMUX_SOCKET --unset XDG_CONFIG_HOME
 go run ./scripts/verify iso file {home}/envs/test-bot/claude/settings.json --expect "crew hook"
 go run ./scripts/verify iso file {home}/envs/test-bot/gitconfig --expect "TEST bot" --expect test-bot@invalid
-go run ./scripts/verify iso panes --expect "env exec test-bot -- claude"
+go run ./scripts/verify iso panes --expect "env exec test-bot --harness claude -- claude"
 ```
 
 ### a custom environment is applied to a fake codex and a fake omp
@@ -47,14 +47,14 @@ go run ./scripts/verify iso panes --expect "env exec test-bot -- claude"
 ```sh
 go run ./scripts/verify iso crew -- mate set test-codex --agent codex --prompt "TEST codex prompt" --env test-bot
 go run ./scripts/verify iso crew --expect "started a new conversation" -- mate new test-codex "TEST hi"
-go run ./scripts/verify iso dump codex --has CODEX_HOME={home}/envs/test-bot/codex --has OPENAI_API_KEY=sk-TEST-openai-key --has GH_TOKEN=TEST-gh-token --has CLAUDE_CONFIG_DIR={home}/envs/test-bot/claude --unset SSH_AUTH_SOCK --unset CREW_E2E
+go run ./scripts/verify iso dump codex --has CODEX_HOME={home}/envs/test-bot/codex --has OPENAI_API_KEY=sk-TEST-openai-key --has GH_TOKEN=TEST-gh-token --unset CLAUDE_CONFIG_DIR --unset CLAUDE_CODE_OAUTH_TOKEN --unset PI_CODING_AGENT_DIR --unset GEMINI_API_KEY --unset SSH_AUTH_SOCK --unset CREW_E2E
 go run ./scripts/verify iso file {home}/envs/test-bot/codex/hooks.json --expect "crew hook"
-go run ./scripts/verify iso panes --expect "env exec test-bot -- codex"
+go run ./scripts/verify iso panes --expect "env exec test-bot --harness codex -- codex"
 go run ./scripts/verify iso crew -- mate set test-omp --agent omp --prompt "TEST omp prompt" --env test-bot
 go run ./scripts/verify iso crew --expect "started a new conversation" -- mate new test-omp "TEST hi"
-go run ./scripts/verify iso dump omp --has PI_CODING_AGENT_DIR={home}/envs/test-bot/omp --has GEMINI_API_KEY=TEST-gemini-key --has CODEX_HOME={home}/envs/test-bot/codex --unset SSH_AUTH_SOCK --unset CREW_E2E
+go run ./scripts/verify iso dump omp --has PI_CODING_AGENT_DIR={home}/envs/test-bot/omp --has GEMINI_API_KEY=TEST-gemini-key --has GH_TOKEN=TEST-gh-token --unset CODEX_HOME --unset CLAUDE_CONFIG_DIR --unset CLAUDE_CODE_OAUTH_TOKEN --unset SSH_AUTH_SOCK --unset CREW_E2E
 go run ./scripts/verify iso file {home}/envs/test-bot/omp/hooks/post/crew.ts --expect "crew"
-go run ./scripts/verify iso panes --expect "env exec test-bot -- omp"
+go run ./scripts/verify iso panes --expect "env exec test-bot --harness omp -- omp"
 ```
 
 ### a resume of a custom mate applies the environment again
@@ -63,7 +63,7 @@ go run ./scripts/verify iso panes --expect "env exec test-bot -- omp"
 go run ./scripts/verify iso dump --clear
 sid=$(go run ./scripts/verify iso crew -- mate new test-mate "TEST resume" | grep -o 'session [0-9a-f]*' | head -n 1 | cut -d' ' -f2) && go run ./scripts/verify iso dump claude && go run ./scripts/verify iso api POST "/api/v1/sessions/$sid/end" && go run ./scripts/verify iso dump --clear && go run ./scripts/verify iso api POST "/api/v1/sessions/$sid/resume"
 go run ./scripts/verify iso dump claude --has CLAUDE_CONFIG_DIR={home}/envs/test-bot/claude --has CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-TEST-claude-token --unset SSH_AUTH_SOCK
-go run ./scripts/verify iso panes --expect "env exec test-bot -- claude --resume TEST-"
+go run ./scripts/verify iso panes --expect "env exec test-bot --harness claude -- claude --resume TEST-"
 ```
 
 ### personal HOME files stay byte-identical
@@ -145,7 +145,7 @@ go run ./scripts/verify iso down
 
 ## Gotchas
 
-- A custom environment applies all its parts to each harness. Thus a `claude` mate on `test-bot` also gets `CODEX_HOME` and `OPENAI_API_KEY`.
+- A mate in a custom environment gets only the account part of its harness: `claude` gets the `claude` part, `codex` gets the `codex` part, `omp` gets the `pi` part. The shared parts (`git`, `ssh`, `github`) and the extra variables go to each mate. Thus a `claude` mate on `test-bot` does not get `CODEX_HOME` or `OPENAI_API_KEY`. `crew env exec` with no `--harness` applies all parts.
 - The Environments page shows a set or not-set state for each part (GitHub token, Claude, Codex, Pi), not the variable names. `crew env show` and `GET /api/v1/envs/{name}` show the variable names.
 - `DELETE /api/v1/envs/{name}` answers 500 with the code `failed` while a mate uses the environment, as each `failed` RPC error does.
 - Use only TEST values. Never put a real token in the isolated crew.
