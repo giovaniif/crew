@@ -54,13 +54,21 @@ func Seed(dir string, projects []string) (bool, error) {
 		fmt.Fprintf(&tail, "\n[projects.%s]\ntrust_level = \"trusted\"\n", tomlString(p))
 	}
 	head := ""
-	if doc.ModelProvider == "" {
-		head = "model_provider = \"" + EnvProvider + "\"\n"
+	envLine := "model_provider = \"" + EnvProvider + "\"\n"
+	if _, err := os.Stat(filepath.Join(dir, "auth.json")); err == nil {
+		if doc.ModelProvider == EnvProvider && strings.HasPrefix(text, envLine) {
+			return write(dir, path, original, exists, strings.TrimPrefix(text, envLine)+tail.String())
+		}
+	} else if doc.ModelProvider == "" {
+		head = envLine
 	}
 	if head == "" && tail.Len() == 0 {
 		return false, nil
 	}
-	next := head + text + tail.String()
+	return write(dir, path, original, exists, head+text+tail.String())
+}
+
+func write(dir, path string, original []byte, exists bool, next string) (bool, error) {
 	if _, err := toml.Decode(next, &seedDoc{}); err != nil {
 		return false, fmt.Errorf("%s: the merge does not parse: %w", path, err)
 	}
