@@ -351,6 +351,7 @@ const (
 	CodeUnauthorized       = "unauthorized"
 	CodeRateLimited        = "rate_limited"
 	CodeStale              = "stale"
+	CodeInUse              = "in_use"
 )
 
 func AnyBuild(method string) bool {

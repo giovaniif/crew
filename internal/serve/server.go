@@ -440,7 +440,7 @@ func statusOf(code string) int {
 		return http.StatusForbidden
 	case rpc.CodeNotFound:
 		return http.StatusNotFound
-	case rpc.CodeStale:
+	case rpc.CodeStale, rpc.CodeInUse:
 		return http.StatusConflict
 	case rpc.CodeRateLimited:
 		return http.StatusTooManyRequests

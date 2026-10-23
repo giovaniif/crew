@@ -36,7 +36,7 @@ The log never contains a token. It writes a maximum of `LogBurst` (20) lines for
 
 Each response is JSON with `Cache-Control: no-store`. An error is `{"error":{"code","message"}}` with the `rpc` code of the daemon and an HTTP status:
 
-- `bad_request` 400, `unauthorized` 401, `forbidden` 403, `not_found` 404, `stale` 409, `rate_limited` 429.
+- `bad_request` 400, `unauthorized` 401, `forbidden` 403, `not_found` 404, `stale` 409, `in_use` 409, `rate_limited` 429.
 - `failed`/`launch_failed` 500, `unknown_method` 501, `version_mismatch` 502.
 - `unavailable` 503. This status also applies when the daemon is not reachable.
 
@@ -91,7 +91,7 @@ Unknown paths under `/api/` answer `not_found`.
 | `POST /api/v1/envs` | yes | `env.create` | `{"name","kind","parts","git_name","git_email"}` → the `EnvInfo`; the kind is fixed at creation |
 | `GET /api/v1/envs/{name}` | yes | `env.show` | → the `EnvInfo` |
 | `POST /api/v1/envs/{name}` | yes | `env.set` | `{"parts","git_name","git_email","secret","value"}` → the `EnvInfo`; the name comes from the path. Secrets are write-only: `value` goes in and never comes out |
-| `DELETE /api/v1/envs/{name}` | yes | `env.delete` | → the `EnvInfo`; `failed` while a mate uses it |
+| `DELETE /api/v1/envs/{name}` | yes | `env.delete` | → the `EnvInfo`; `in_use` (409) while a mate uses it |
 | `POST /api/v1/envs/{name}/unset` | yes | `env.unset` | `{"secret"}` → the `EnvInfo` |
 | `GET /api/v1/envs/{name}/ssh-key` | yes | `env.ssh_key` | → the `EnvInfo` with the public key |
 | `POST /api/v1/envs/{name}/ssh-key` | yes | `env.ssh_key` | `{"action","private_key"}` (`make`, `rotate`, `confirm` or `import`) → the `EnvInfo`; after `rotate`, `new_public_key` has the new key until `confirm` |

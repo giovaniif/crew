@@ -415,6 +415,7 @@ func TestServePassesDaemonErrorsThrough(t *testing.T) {
 	}{
 		{rpc.CodeNotFound, http.StatusNotFound},
 		{rpc.CodeStale, http.StatusConflict},
+		{rpc.CodeInUse, http.StatusConflict},
 		{rpc.CodeFailed, http.StatusInternalServerError},
 		{rpc.CodeLaunchFailed, http.StatusInternalServerError},
 		{rpc.CodeUnavailable, http.StatusServiceUnavailable},

@@ -21,7 +21,7 @@ type fakeEnvCaller struct {
 func (f *fakeEnvCaller) Call(_ context.Context, method string, params, out any) error {
 	f.calls = append(f.calls, recordedCall{method, params})
 	info := rpc.EnvInfo{Name: "bot", Kind: domain.EnvCustom, Parts: []domain.EnvPart{domain.EnvGitHub},
-		Secrets: []rpc.EnvSecret{{Name: "GH_TOKEN", Set: true}, {Name: "LINEAR_API_KEY"}}, PublicKey: "ssh-ed25519 AAAATEST crew-bot", UsedBy: []string{"reviewer"}}
+		Secrets: []rpc.EnvSecret{{Name: "GH_TOKEN", Set: true}, {Name: "LINEAR_API_KEY"}}, PublicKey: "ssh-ed25519 AAAATEST crew-bot", NewPublicKey: "ssh-ed25519 AAAATESTNEW crew-bot", UsedBy: []string{"reviewer"}}
 	var v any = info
 	if method == rpc.MethodEnvList {
 		v = rpc.EnvList{Envs: []rpc.EnvInfo{{Name: "local", Kind: domain.EnvLocal}, info}}
@@ -81,7 +81,7 @@ func TestEnvShowPrintsSetOrNotSetAndNoValue(t *testing.T) {
 		t.Fatal(err)
 	}
 	text := out.String()
-	for _, want := range []string{"GH_TOKEN", "set", "LINEAR_API_KEY", "not set", "reviewer", "custom"} {
+	for _, want := range []string{"GH_TOKEN", "set", "LINEAR_API_KEY", "not set", "reviewer", "custom", "ssh-ed25519 AAAATESTNEW crew-bot", "--confirm"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("show lacks %q:\n%s", want, text)
 		}

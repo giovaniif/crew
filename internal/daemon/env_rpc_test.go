@@ -252,7 +252,7 @@ func TestEnvDeleteRefusesWhileAMateUsesIt(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err := envCall(c, rpc.MethodEnvDelete, rpc.EnvNameParams{Name: "bot"})
-	if callCode(err) != rpc.CodeFailed || !strings.Contains(err.Error(), "reviewer") {
+	if callCode(err) != rpc.CodeInUse || !strings.Contains(err.Error(), "reviewer") {
 		t.Errorf("err = %v", err)
 	}
 	body, _ := os.ReadFile(path)
