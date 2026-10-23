@@ -70,7 +70,7 @@ Repo tooling. The repo-wide rules are in the [root AGENTS.md](../AGENTS.md).
     - It has a `CREW_HOME` under `/tmp`, its own tmux socket, its own TCP ports and a temporary `HOME`.
     - The e2e fakes (`claude`, `codex`, `gh`, `terminal-notifier`, `osascript`) are first on `PATH`. Slack, ntfy and GitHub tokens are blank.
     - `up` starts `crew serve` and the Vite dev server (`CREW_API`). It pairs the device `TEST-verify` with `crew remote pair` and `POST /api/v1/pair`. It never prints the token.
-    - `--session` makes the repo `TEST-live` and runs `crew new` in it. The fake `claude` runs `$CREW_HOME/chat.sh` through its `run` step. The script echoes each typed line as `TEST echo: <line>`, writes a Claude transcript and fires `UserPromptSubmit` and `Stop`. The result has `session`, `pane` and `worktree`.
+    - `--session` makes the repo `TEST-live` and runs `crew new` in it. The fake `claude` runs `$CREW_HOME/chat.sh` through its `run` step. The script echoes each typed line as `TEST echo: <line>`, writes a Claude transcript and fires `UserPromptSubmit` and `Stop`. Each hook sends the same `session_id` on each start in the worktree, thus the session can resume. The result has `session`, `pane` and `worktree`.
   - `tui shot [--out f] [--size COLSxROWS]` and `tui drive --steps '<json>' [--restart]`: `crew tui` on the tmux server `<iso socket>-tui`.
     - Steps: `keys`, `type`, `wait` (ms), `expect` and `absent` (with `timeout` in ms), `shot`. It renders with `freeze`.
     - On a failure, it writes the pane to `failure.txt`.
@@ -89,6 +89,9 @@ Repo tooling. The repo-wide rules are in the [root AGENTS.md](../AGENTS.md).
   - `design-check [--base ref] [--diff file]`: added lines only.
     - In `internal/`, no `lipgloss.Color("...")` outside `internal/tui/theme.go`.
     - In `web/src`, no raw colours outside `--token:` lines, and no `px` in `.ts` or `.tsx`.
+  - `design compare <shot.png> <frame|ref.png> [--crop x0,y0,x1,y1] [--max-diff 0..1] [--out f]`: puts a shot next to an approved design frame and a pixel diff.
+    - A frame number `1` to `6` is `docs/design/redesign/<n>.png`. `--crop` selects one frame of that canvas, in reference pixels. The tool scales the crop to the size of the shot.
+    - The result has `diff_ratio` (the part of the pixels that differ) and `out` (default `design-compare.png` next to the shot). The diff panel shows the differences in red. Above `--max-diff`, the command fails, but it keeps the image.
   - `annotate --before b.png --after a.png [--crop x0,y0,x1,y1] [--box ...] [--caption-before t] [--caption-after t] --out f`: a before/after pair.
   - `assets push --dir <n> files...` writes to the orphan `pr-assets` branch with plumbing commands. It prints commit-pinned raw URLs. `assets check` fails when the branch adds an image.
   - `selftest`: `go test ./scripts/verify/`. Its tests use a fake `sys` (no tmux, node or network) and real temporary repos.
