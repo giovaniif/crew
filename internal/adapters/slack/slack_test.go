@@ -96,6 +96,8 @@ func (f *fakeSlack) serve(w http.ResponseWriter, r *http.Request) {
 			{"user": "U0ANA0001", "text": "hello", "ts": "1700.0001"},
 			{"user": "UBOT00001", "bot_id": "BBOT0001", "text": "on it", "ts": "1700.0002"},
 		}})
+	case "users.conversations":
+		f.reply(w, map[string]any{"ok": true, "channels": []map[string]any{{"id": "C0CHAN001", "name": "web"}, {"id": "C0CHAN002", "name": "api"}}})
 	case "users.info":
 		f.reply(w, map[string]any{"ok": true, "user": map[string]any{"name": "ana", "real_name": "Ana Lima", "profile": map[string]any{"display_name": "ana.l"}}})
 	default:
@@ -465,5 +467,36 @@ func TestPostApprovalPutsApproveAndDenyButtonsInTheThread(t *testing.T) {
 	}
 	if deny.Type != "button" || deny.ActionID != domain.ApprovalDenyAction || deny.Value != "a7" || deny.Text.Text != "Deny" || deny.Style != "danger" {
 		t.Errorf("deny %+v", deny)
+	}
+}
+
+func TestRunGivesTheChannelsOfTheBotWhenItConnects(t *testing.T) {
+	f := newFakeSlack(t, []string{hello})
+	rec := &recorder{}
+	connected := func() bool {
+		rec.mu.Lock()
+		defer rec.mu.Unlock()
+		for _, s := range rec.states {
+			if s.State == domain.MateConnected {
+				return true
+			}
+		}
+		return false
+	}
+	if err := runUntil(t, f.client(), rec, connected); err != nil && !errors.Is(err, context.Canceled) {
+		t.Fatalf("Run: %v", err)
+	}
+	rec.mu.Lock()
+	defer rec.mu.Unlock()
+	for _, s := range rec.states {
+		if s.State == domain.MateConnected && strings.Join(s.Channels, ",") != "api,web" {
+			t.Errorf("channels %v", s.Channels)
+		}
+	}
+	_, _, calls := f.snapshot()
+	for _, c := range calls {
+		if c.method == "users.conversations" && c.form["types"] != "public_channel,private_channel" {
+			t.Errorf("types %q", c.form["types"])
+		}
 	}
 }

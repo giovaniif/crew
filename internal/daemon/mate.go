@@ -253,6 +253,9 @@ func (d *Daemon) mateRemove(req rpc.Request) *rpc.Response {
 	if gone == nil || next == src {
 		return errorResponse(req.ID, rpc.CodeNotFound, fmt.Sprintf("no mate %q", p.Name))
 	}
+	if users := domain.AutomationsUsingMate(d.loadAutomationList("").Automations, p.Name); len(users) > 0 {
+		return errorResponse(req.ID, rpc.CodeFailed, fmt.Sprintf("mate %s is used by automation %s", p.Name, strings.Join(users, ", ")))
+	}
 	if err := d.replaceConfig(src, next); err != nil {
 		return errorResponse(req.ID, rpc.CodeFailed, err.Error())
 	}

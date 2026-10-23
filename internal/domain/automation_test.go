@@ -39,6 +39,10 @@ func TestValidateAutomation(t *testing.T) {
 		{"empty prompt", func(a *Automation) { a.Prompt = " " }, "prompt"},
 		{"unknown variable", func(a *Automation) { a.Prompt = "Fix {{ticket}}" }, "{{ticket}}"},
 		{"unknown event", func(a *Automation) { a.On = []string{"pr.closed"} }, "pr.closed"},
+		{"mate with no agent", func(a *Automation) { a.Mate, a.Agent = "test-ada", "" }, ""},
+		{"mate with an agent", func(a *Automation) { a.Mate = "test-ada" }, ""},
+		{"mate name with a space", func(a *Automation) { a.Mate = "test ada" }, "mate"},
+		{"mate name in upper case", func(a *Automation) { a.Mate = "Ada" }, "mate"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -113,5 +117,23 @@ func TestExpandPrompt(t *testing.T) {
 				t.Errorf("got %q, want %q", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestAutomationsUsingMate(t *testing.T) {
+	list := []Automation{{Name: "weekly", Mate: "test-ada"}, {Name: "deps", Mate: "test-ada"}, {Name: "solo"}, {Name: "other", Mate: "test-milo"}}
+	cases := []struct {
+		mate string
+		want []string
+	}{
+		{"test-ada", []string{"deps", "weekly"}},
+		{"test-milo", []string{"other"}},
+		{"test-june", nil},
+		{"", nil},
+	}
+	for _, tc := range cases {
+		if got := AutomationsUsingMate(list, tc.mate); !reflect.DeepEqual(got, tc.want) {
+			t.Errorf("%q: got %v, want %v", tc.mate, got, tc.want)
+		}
 	}
 }

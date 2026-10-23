@@ -19,6 +19,7 @@ type fakeSlackHub struct {
 	replies []app.SlackMessage
 	names   map[string]string
 	users   map[string]string
+	chans   map[string][]string
 	seq     int
 }
 
@@ -61,8 +62,9 @@ func (m *fakeSlackMate) Run(ctx context.Context, handle func(app.SlackEvent), st
 	m.hub.mu.Lock()
 	m.handle = handle
 	user := m.hub.users[m.bot]
+	chans := m.hub.chans[m.bot]
 	m.hub.mu.Unlock()
-	status(app.SlackStatus{State: domain.MateConnected, User: user})
+	status(app.SlackStatus{State: domain.MateConnected, User: user, Channels: chans})
 	<-ctx.Done()
 	m.hub.mu.Lock()
 	m.stopped = true

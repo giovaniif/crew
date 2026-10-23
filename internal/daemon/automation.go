@@ -21,6 +21,7 @@ import (
 type automationDoc struct {
 	Name     string   `toml:"name"`
 	Agent    string   `toml:"agent"`
+	Mate     string   `toml:"mate"`
 	Model    string   `toml:"model"`
 	Effort   string   `toml:"effort"`
 	Target   string   `toml:"target"`
@@ -68,7 +69,7 @@ func loadAutomationsText(text, path string) ([]domain.Automation, []string) {
 	seen := map[string]bool{}
 	for _, d := range doc.Automation {
 		a := domain.Automation{
-			Name: d.Name, Agent: d.Agent, Model: d.Model, Effort: d.Effort, Target: d.Target,
+			Name: d.Name, Agent: d.Agent, Mate: d.Mate, Model: d.Model, Effort: d.Effort, Target: d.Target,
 			Prompt: d.Prompt, Schedule: d.Schedule, Timezone: d.Timezone, On: d.On,
 			Precheck: d.Precheck, Session: d.Session, Browser: d.Browser, Filter: domain.AutomationFilter(d.Filter), Enabled: d.Enabled == nil || *d.Enabled, Source: path,
 		}
