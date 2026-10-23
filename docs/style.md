@@ -32,7 +32,7 @@ Use these terms with these meanings only.
 | **worktree** | One repo at one branch, made with `git worktree add`. It has its own PR, checks, ports and cleanup. |
 | **subtask** | One part of a task that has its own worktree in a repo. |
 | **daemon** | The long-lived `crew daemon` process. It owns all state for one `CREW_HOME`. |
-| **TUI** | The old terminal interface (`crew tui`). It was removed ([ADR 0061](adr/0061-remove-the-tui.md)). Use the term only for history. |
+| **TUI** | The old terminal interface (`crew tui`). It was removed ([ADR 0062](adr/0062-remove-the-tui.md)). Use the term only for history. |
 | **sidebar** | The left part of the app. It lists the sessions. |
 | **pane** | A tmux pane on the `crew` tmux server. An agent, a shell or nvim runs in it. |
 | **slot** | The main area of the client layout. The pane in view is swapped into it. |

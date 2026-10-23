@@ -49,8 +49,6 @@ const (
 	MethodReviewViewed     = "review.viewed"
 	MethodReviewSend       = "review.send"
 	MethodReviewHunk       = "review.hunk"
-	MethodClientReview     = "client.review"
-	MethodClientPopup      = "client.popup"
 	MethodClientDetach     = "client.detach"
 	MethodClientNative     = "client.native"
 	MethodCleanupPlan      = "cleanup.plan"
@@ -228,15 +226,6 @@ type HunkParams struct {
 type ViewedParams struct {
 	Mark   domain.ViewedMark `json:"mark"`
 	Viewed bool              `json:"viewed"`
-}
-
-type ClientReviewParams struct {
-	Open bool `json:"open"`
-}
-
-type ClientPopupParams struct {
-	Command []string          `json:"command"`
-	Env     map[string]string `json:"env,omitempty"`
 }
 
 type PortsKillParams struct {
@@ -417,7 +406,6 @@ type ProjectList struct {
 type OpenClientParams struct {
 	Command  []string          `json:"command"`
 	Env      map[string]string `json:"env,omitempty"`
-	Dir      string            `json:"dir,omitempty"`
 	Terminal string            `json:"terminal,omitempty"`
 }
 

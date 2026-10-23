@@ -47,16 +47,6 @@ func (h *Host) sizeByTerminalOnly(ctx context.Context, slot app.Slot) error {
 	return nil
 }
 
-const ReviewWidth = "75%"
-
-func (h *Host) WidenSidebar(ctx context.Context, slot app.Slot, wide bool) error {
-	width := strconv.Itoa(SidebarWidth)
-	if wide {
-		width = ReviewWidth
-	}
-	return h.pinSidebar(ctx, slot, width)
-}
-
 func (h *Host) pinSidebar(ctx context.Context, slot app.Slot, width string) error {
 	target := string(slot) + ".0"
 	if _, err := h.run(ctx, "", "resize-pane", "-t", target, "-x", width); err != nil {

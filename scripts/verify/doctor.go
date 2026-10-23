@@ -13,7 +13,6 @@ var tools = []struct{ name, hint string }{
 	{"git", "install git"},
 	{"tmux", "install tmux (apt install tmux or brew install tmux)"},
 	{"node", "install Node 22.18 or newer"},
-	{"freeze", "go install github.com/charmbracelet/freeze@latest"},
 }
 
 const chromiumProbe = `const { chromium } = require("playwright"); const fs = require("fs"); const p = chromium.executablePath(); if (!fs.existsSync(p)) { process.exit(1); } console.log(p);`
@@ -40,14 +39,6 @@ func doctor(e *env, args []string, r *result) {
 		if _, ok := e.sys.look(t.name); ok {
 			found[t.name] = true
 			continue
-		}
-		if t.name == "freeze" {
-			if gp, _, code := e.sys.exec(cmd{name: "go", args: []string{"env", "GOPATH"}}); code == 0 {
-				if _, err := os.Stat(filepath.Join(strings.TrimSpace(gp), "bin", "freeze")); err == nil {
-					found[t.name] = true
-					continue
-				}
-			}
 		}
 		r.fail(t.name+" is not on PATH", t.hint)
 	}

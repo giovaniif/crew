@@ -1,16 +1,13 @@
 package tmux
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
-	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/giovaniif/crew/internal/app"
 )
@@ -91,62 +88,6 @@ func (h *Host) Popup(ctx context.Context, pane app.PaneID) error {
 	go func() { _ = cmd.Wait() }()
 	return nil
 }
-
-const (
-	popupMaxWidth  = 100
-	popupMaxHeight = 32
-)
-
-func (h *Host) PopupCommand(ctx context.Context, spec app.PaneSpec) error {
-	client, err := h.popupClient(ctx)
-	if err != nil {
-		return err
-	}
-	size, err := h.run(ctx, "", "display-message", "-c", client, "-p", "#{client_width} #{client_height}")
-	if err != nil {
-		return err
-	}
-	var cw, ch int
-	if _, err := fmt.Sscanf(size, "%d %d", &cw, &ch); err != nil {
-		return err
-	}
-	w, hgt := min(popupMaxWidth, cw-2), min(popupMaxHeight, ch-2)
-	args := []string{"-L", h.socket, "-f", h.configPath, "display-popup", "-c", client, "-E", "-w", strconv.Itoa(w), "-h", strconv.Itoa(hgt)}
-	if spec.Dir != "" {
-		args = append(args, "-d", spec.Dir)
-	}
-	keys := make([]string, 0, len(spec.Env))
-	for k := range spec.Env {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for _, k := range keys {
-		args = append(args, "-e", k+"="+spec.Env[k])
-	}
-	quoted := make([]string, len(spec.Command))
-	for i, a := range spec.Command {
-		quoted[i] = shellQuote(a)
-	}
-	cmd := exec.Command("tmux", append(args, strings.Join(quoted, " "))...)
-	cmd.Env = withoutTmuxEnv(os.Environ())
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Start(); err != nil {
-		return err
-	}
-	done := make(chan error, 1)
-	go func() { done <- cmd.Wait() }()
-	select {
-	case err := <-done:
-		if err != nil {
-			return &tmuxError{args: []string{"display-popup"}, stderr: strings.TrimSpace(stderr.String()), err: err}
-		}
-	case <-time.After(popupLaunchGrace):
-	}
-	return nil
-}
-
-const popupLaunchGrace = 300 * time.Millisecond
 
 func (h *Host) parkedWindow(ctx context.Context, pane app.PaneID) (string, error) {
 	out, err := h.run(ctx, "", "display-message", "-p", "-t", string(pane), "#{window_id} #{window_panes}")

@@ -1,6 +1,6 @@
 # ADR 0008: TUI shell and client layout
 
-Status: accepted, 2026-09-29. Superseded by [ADR 0061](0061-remove-the-tui.md): the TUI was removed.
+Status: accepted, 2026-09-29. Superseded by [ADR 0062](0062-remove-the-tui.md): the TUI was removed.
 
 ## Decision
 

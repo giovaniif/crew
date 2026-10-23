@@ -6,7 +6,7 @@ One terminal tool that runs Claude Code, Codex and Oh My Pi (`omp`) sessions in 
 
 ## Decisions
 
-- **Client:** the crew app (`web/` and the Tauri app in `desktop/`). The TUI was removed ([ADR 0061](docs/adr/0061-remove-the-tui.md)).
+- **Client:** the crew app (`web/` and the Tauri app in `desktop/`). The TUI was removed ([ADR 0062](docs/adr/0062-remove-the-tui.md)).
 - **Terminals:** tmux runs in the background on its own server socket. The app shows the panes through `crew serve`.
 - **Harnesses:** Claude Code, Codex, and Oh My Pi (`omp`). Claude and Codex report usage limits. omp reports model and effort only.
 - **Worktree cleanup:** the tool removes a worktree automatically when these conditions are true:

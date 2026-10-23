@@ -1,6 +1,6 @@
 # ADR 0037: The new-session dialog as a centred popup
 
-Status: accepted, 2026-09-30. Changes where [ADR 0015](0015-session-lifecycle.md)'s dialog is drawn and how it looks; `session.new` and the dialog's rules are unchanged. Superseded by [ADR 0061](0061-remove-the-tui.md): the TUI was removed.
+Status: accepted, 2026-09-30. Changes where [ADR 0015](0015-session-lifecycle.md)'s dialog is drawn and how it looks; `session.new` and the dialog's rules are unchanged. Superseded by [ADR 0062](0062-remove-the-tui.md): the TUI was removed.
 
 ## Decision
 

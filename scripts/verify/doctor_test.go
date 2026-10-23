@@ -9,7 +9,7 @@ import (
 
 func healthy(e *env, fs *fakeSys) {
 	_ = os.MkdirAll(filepath.Join(e.repo, "web", "node_modules"), 0o755)
-	for _, p := range []string{"go", "git", "tmux", "node", "freeze"} {
+	for _, p := range []string{"go", "git", "tmux", "node"} {
 		fs.paths[p] = true
 	}
 	fs.handlers["node --version"] = func(cmd) (string, string, int) { return "v22.18.0\n", "", 0 }
@@ -39,7 +39,6 @@ func TestDoctorReportsMissingToolsOldNodeAndLoad(t *testing.T) {
 	e, fs := testEnv(t)
 	healthy(e, fs)
 	delete(fs.paths, "tmux")
-	delete(fs.paths, "freeze")
 	fs.handlers["node --version"] = func(cmd) (string, string, int) { return "v22.17.9\n", "", 0 }
 	fs.loadAvg = 40
 	fs.cpus = 8
@@ -48,13 +47,13 @@ func TestDoctorReportsMissingToolsOldNodeAndLoad(t *testing.T) {
 		t.Fatalf("exit %d", code)
 	}
 	text := problemText(got)
-	for _, want := range []string{"tmux", "freeze", "node v22.17.9", "load"} {
+	for _, want := range []string{"tmux", "node v22.17.9", "load"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("problems %q do not name %q", text, want)
 		}
 	}
-	if !strings.Contains(text, "go install github.com/charmbracelet/freeze@latest") {
-		t.Errorf("no install hint for freeze: %q", text)
+	if strings.Contains(text, "freeze") {
+		t.Errorf("problems %q still name freeze", text)
 	}
 }
 

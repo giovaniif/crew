@@ -8,7 +8,7 @@ Run these commands one time. Each command merges into the agent config, makes a 
 2. Run `crew setup codex`. It adds the hooks to `~/.codex/hooks.json` (or `$CODEX_HOME`). Then start `codex` and accept the review prompt for the new hooks, or trust them in `/hooks`.
 3. Optional: run `crew setup nvim`. It writes `~/.config/nvim/plugin/crew.lua`, which loads the plugin from `${XDG_DATA_HOME:-~/.local/share}/crew/nvim`.
 
-Then open the crew app. The app is the only UI of crew ([ADR 0061](adr/0061-remove-the-tui.md)). `crew` with no arguments prints a hint and the usage.
+Then open the crew app. The app is the only UI of crew ([ADR 0062](adr/0062-remove-the-tui.md)). `crew` with no arguments prints a hint and the usage.
 
 ## Mates in Slack
 
