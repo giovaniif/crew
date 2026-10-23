@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { EnvInfo } from "./api";
-import { accountRows, envLetter, envSub, envTitle, extraSecrets, matesText, usedLabel } from "./envs";
+import { accountRows, envLetter, envOrder, envSub, envTitle, extraSecrets, matesText, usedLabel } from "./envs";
 
 const local: EnvInfo = { name: "local", kind: "local", parts: [], secrets: [{ name: "LINEAR_API_KEY", set: true }], used_by: ["ada", "june"] };
 const work: EnvInfo = {
@@ -17,6 +17,13 @@ const work: EnvInfo = {
   ],
   used_by: ["rex", "milo"],
 };
+
+describe("environment order", () => {
+  it("puts Local first and keeps the order of the others", () => {
+    const a = { ...work, name: "a" };
+    expect(envOrder([work, local, a]).map((e) => e.name)).toEqual(["local", "work", "a"]);
+  });
+});
 
 describe("environment rows", () => {
   it("names the local environment for this machine and others by name", () => {

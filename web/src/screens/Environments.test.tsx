@@ -57,6 +57,20 @@ describe("the environments page", () => {
     expect(within(nav).getByRole("link", { name: "Environments" })).toHaveAttribute("href", "#/envs");
   });
 
+  it("marks only Environments as the current nav item", async () => {
+    open("#/envs");
+    const nav = screen.getByRole("navigation", { name: "Sidebar" });
+    expect(within(nav).getByRole("link", { name: "Environments" })).toHaveAttribute("aria-current", "page");
+    expect(within(nav).getByRole("link", { name: /Sessions/ })).not.toHaveAttribute("aria-current");
+  });
+
+  it("shows the Claude account with Replace and no Remove", async () => {
+    open("#/envs/test-work");
+    const claude = await screen.findByRole("group", { name: "Claude" });
+    expect(within(claude).getByRole("button", { name: "Replace" })).toBeInTheDocument();
+    expect(within(claude).queryByRole("button", { name: "Remove" })).not.toBeInTheDocument();
+  });
+
   it("lists Local first, then each environment with its kind and mates", async () => {
     open("#/envs");
     const list = await screen.findByRole("list", { name: "Environments" });
