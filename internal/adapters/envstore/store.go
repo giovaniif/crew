@@ -264,6 +264,54 @@ func (s Store) PublicKey(name string) (string, error) {
 	return strings.TrimSpace(string(b)), nil
 }
 
+func (s Store) NewPublicKey(name string) (string, error) {
+	if !domain.ValidEnvName(name) {
+		return "", fmt.Errorf("no environment %q", name)
+	}
+	b, err := os.ReadFile(s.keyPath(name) + newKeySuffix + ".pub")
+	if err != nil {
+		return "", fmt.Errorf("environment %s has no new SSH key", name)
+	}
+	return strings.TrimSpace(string(b)), nil
+}
+
+func (s Store) CancelSSHKey(name string) error {
+	if _, err := s.NewPublicKey(name); err != nil {
+		return err
+	}
+	next := s.keyPath(name) + newKeySuffix
+	if err := os.Remove(next); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	return os.Remove(next + ".pub")
+}
+
+func (s Store) KeyCreated(name string) (time.Time, error) {
+	if !domain.ValidEnvName(name) {
+		return time.Time{}, fmt.Errorf("no environment %q", name)
+	}
+	info, err := os.Stat(s.keyPath(name) + ".pub")
+	if err != nil {
+		return time.Time{}, fmt.Errorf("environment %s has no SSH key", name)
+	}
+	return info.ModTime(), nil
+}
+
+func (s Store) GitIdentity(name string) (string, string) {
+	if !domain.ValidEnvName(name) {
+		return "", ""
+	}
+	file := filepath.Join(s.envHome(name), "gitconfig")
+	get := func(key string) string {
+		out, err := exec.Command("git", "config", "--file", file, key).Output()
+		if err != nil {
+			return ""
+		}
+		return strings.TrimSpace(string(out))
+	}
+	return get("user.name"), get("user.email")
+}
+
 func (s Store) MakeSSHKey(name string) (string, error) {
 	if pub, err := s.PublicKey(name); err == nil {
 		return pub, nil
