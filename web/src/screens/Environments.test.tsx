@@ -51,9 +51,9 @@ describe("the environments page", () => {
     const labels = within(nav)
       .getAllByRole("link")
       .map((a) => a.textContent ?? "");
-    const at = labels.findIndex((l) => l.startsWith("Environments"));
-    expect(labels[at - 1]).toMatch(/^Automations/);
-    expect(labels[at + 1]).toMatch(/^Disk/);
+    const at = labels.findIndex((l) => l.endsWith("Environments"));
+    expect(labels[at - 1]).toMatch(/Automations$/);
+    expect(labels[at + 1]).toMatch(/Disk$/);
     expect(within(nav).getByRole("link", { name: "Environments" })).toHaveAttribute("href", "#/envs");
   });
 
