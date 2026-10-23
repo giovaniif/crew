@@ -35,11 +35,12 @@ type MateThread struct {
 }
 
 type MateConversation struct {
-	Session   string            `json:"session"`
-	Name      string            `json:"name"`
-	State     domain.AgentState `json:"state"`
-	Ended     bool              `json:"ended"`
-	StartedAt time.Time         `json:"started_at"`
+	Session    string            `json:"session"`
+	Name       string            `json:"name"`
+	State      domain.AgentState `json:"state"`
+	Ended      bool              `json:"ended"`
+	StartedAt  time.Time         `json:"started_at"`
+	Automation string            `json:"automation,omitempty"`
 }
 
 type Mate struct {
@@ -552,7 +553,7 @@ func (v *View) mateConversations(name string) []MateConversation {
 		if s.Mate == nil || !s.Mate.Local || s.Mate.Name != name {
 			continue
 		}
-		out = append(out, MateConversation{Session: id, Name: v.shown[id].name, State: s.State, Ended: s.Ended, StartedAt: s.StartedAt})
+		out = append(out, MateConversation{Session: id, Name: v.shown[id].name, State: s.State, Ended: s.Ended, StartedAt: s.StartedAt, Automation: s.Mate.Automation})
 	}
 	sort.Slice(out, func(i, j int) bool {
 		if !out[i].StartedAt.Equal(out[j].StartedAt) {
