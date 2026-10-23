@@ -21,7 +21,7 @@ import { Pair } from "./screens/Pair";
 import { SessionScreen } from "./screens/Session";
 import { SessionList } from "./screens/SessionList";
 import { FirstRun } from "./screens/FirstRun";
-import { Settings } from "./screens/Settings";
+import { Settings, type UpdateCheck } from "./screens/Settings";
 import { PhoneSession } from "./screens/PhoneSession";
 import { ReviewPane } from "./screens/Review";
 import { Servers } from "./servers";
@@ -273,6 +273,7 @@ function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, g
             local={!!env.desktopAuth}
             servers={servers}
             initial={hash === "#/servers" ? "servers" : undefined}
+            checkUpdate={env.desktop ? () => env.desktop!.invoke("crew_check_update") as Promise<UpdateCheck> : undefined}
           />
         </>
       ),
