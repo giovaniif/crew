@@ -72,6 +72,18 @@ func iso(e *env, args []string, r *result) {
 		isoSeed(e, args[1:], r)
 	case "crew":
 		isoCrew(e, args[1:], r)
+	case "dump":
+		isoDump(e, args[1:], r)
+	case "homesum":
+		isoHomesum(e, args[1:], r)
+	case "leaks":
+		isoLeaks(e, args[1:], r)
+	case "panes":
+		isoPanes(e, args[1:], r)
+	case "file":
+		isoFile(e, args[1:], r)
+	case "api":
+		isoAPI(e, args[1:], r)
 	default:
 		r.bad("unknown iso command "+args[0], "use up, down or seed")
 	}
@@ -95,6 +107,7 @@ func isoEnv(e *env, home, socket string) []string {
 		"CLAUDE_CONFIG_DIR=" + filepath.Join(h, ".claude"),
 		"CODEX_HOME=" + filepath.Join(h, ".codex"),
 		"CREW_E2E=" + filepath.Join(home, "e2e"),
+		"SSH_AUTH_SOCK=" + filepath.Join(home, "TEST-ssh-agent.sock"),
 		"PATH=" + fakes + string(os.PathListSeparator) + e.sys.getenv("PATH"),
 		"TERM=xterm-256color",
 		"COLORTERM=truecolor",
@@ -108,7 +121,7 @@ func isoEnv(e *env, home, socket string) []string {
 var pairCode = regexp.MustCompile(`Code ([A-Z0-9]+),`)
 
 func isoUp(e *env, args []string, r *result) {
-	o, ok := parse(args, nil, []string{"session"}, r)
+	o, ok := parse(args, nil, []string{"session", "env-fakes"}, r)
 	if !ok {
 		return
 	}
@@ -124,6 +137,17 @@ func isoUp(e *env, args []string, r *result) {
 	}
 	st := isoState{Home: home, Socket: "crew-iso-" + filepath.Base(home)[len("crew-iso-"):], Bin: filepath.Join(home, "bin", "crew"), Started: e.now()}
 	st.Env = isoEnv(e, home, st.Socket)
+	if o.bools["env-fakes"] {
+		if err := writeEnvFakes(home); err != nil {
+			r.fail("cannot write the env fakes: "+err.Error(), "free space in /tmp")
+			return
+		}
+		st.Env = prependPath(st.Env, filepath.Join(home, "fakes"))
+	}
+	if err := seedPersonalHome(filepath.Join(home, "home")); err != nil {
+		r.fail("cannot seed the personal home: "+err.Error(), "free space in /tmp")
+		return
+	}
 	for _, d := range []string{"bin", "e2e", "home/.config", "home/.local/share", "home/.local/state", "home/.claude", "home/.codex"} {
 		_ = os.MkdirAll(filepath.Join(home, d), 0o755)
 	}
@@ -343,7 +367,7 @@ func isoCrew(e *env, args []string, r *result) {
 			break
 		}
 	}
-	o, ok := parse(args, []string{"expect", "absent"}, nil, r)
+	o, ok := parse(args, []string{"expect", "absent", "stdin"}, nil, r)
 	if !ok {
 		return
 	}
@@ -356,7 +380,7 @@ func isoCrew(e *env, args []string, r *result) {
 	if !ok {
 		return
 	}
-	out, errs, code := e.sys.exec(cmd{dir: st.Home, env: st.Env, name: st.Bin, args: rest})
+	out, errs, code := e.sys.exec(cmd{dir: st.Home, env: st.Env, name: st.Bin, args: rest, stdin: o.get("stdin", "")})
 	r.set("stdout", tail(out, 20000))
 	r.set("stderr", tail(errs, 4000))
 	r.set("exit", code)
