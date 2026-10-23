@@ -282,7 +282,7 @@ func isoLeaks(e *env, args []string, r *result) {
 	var checked []string
 	out, _, _ := e.sys.exec(cmd{name: "ps", args: []string{"-eo", "args"}})
 	checked = append(checked, "ps")
-	if strings.Contains(out, text) {
+	if psHas(out, text) {
 		r.fail("ps shows the text", "a secret is in the arguments of a process")
 	}
 	logs, _ := filepath.Glob(filepath.Join(st.Home, "*.log"))
@@ -326,4 +326,13 @@ func isoPanes(e *env, args []string, r *result) {
 			r.fail("no pane starts with "+strconv.Quote(want), "read panes in the result")
 		}
 	}
+}
+
+func psHas(out, text string) bool {
+	for _, line := range strings.Split(out, "\n") {
+		if strings.Contains(line, text) && !strings.Contains(line, "iso leaks ") {
+			return true
+		}
+	}
+	return false
 }
