@@ -13,6 +13,7 @@ import (
 	"github.com/giovaniif/crew/internal/adapters/chromium"
 	"github.com/giovaniif/crew/internal/adapters/claude"
 	"github.com/giovaniif/crew/internal/adapters/codex"
+	"github.com/giovaniif/crew/internal/adapters/envstore"
 	wsfs "github.com/giovaniif/crew/internal/adapters/fs"
 	gitadapter "github.com/giovaniif/crew/internal/adapters/git"
 	"github.com/giovaniif/crew/internal/adapters/github"
@@ -101,6 +102,7 @@ func Run(ctx context.Context, home string) (err error) {
 		WithStartDefaults(startDefaults),
 		WithHarnessConfig(readHarnessConfig),
 		WithConfig(filepath.Join(home, "config.toml")),
+		WithEnvLauncher(self),
 		WithNotifier(banners, notify.New(), sounds),
 		WithWorktrees(gitadapter.Worktrees{}, &github.Finder{}),
 		WithTitles(app.TitleResolvers{github.Titles{}}),
@@ -115,6 +117,7 @@ func Run(ctx context.Context, home string) (err error) {
 		WithTranscripts(Transcripts(wsfs.Transcripts{}), wsfs.Transcripts{}),
 		WithPush(webpush.New(filepath.Join(home, "vapid"), nil)),
 		WithMateSecrets(secrets.Files{Dir: filepath.Join(home, "secrets")}),
+		WithEnvironments(envstore.Store{Home: home}),
 		WithSlack(func(bot, appToken string) app.SlackMate { return slack.New(bot, appToken) }, mateSyncEvery),
 		WithHeadlessBrowser(chromium.FromEnv(), filepath.Join(home, "browser", "profiles", "default", "cookies.json"), DefaultHeadlessReap),
 	}

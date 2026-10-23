@@ -8,8 +8,14 @@ describe("parseRoute", () => {
 
   it("still opens sessions and the list", () => {
     expect(parseRoute("#/sessions/s1")).toEqual({ screen: "session", id: "s1" });
-    expect(parseRoute("")).toEqual({ screen: "list" });
+    expect(parseRoute("#/sessions")).toEqual({ screen: "list" });
     expect(parseRoute("#/new/extra")).toEqual({ screen: "list" });
+  });
+
+  it("opens the Mates home at the root and at #/mates", () => {
+    for (const hash of ["", "#", "#/", "#/mates"]) {
+      expect(parseRoute(hash)).toEqual({ screen: "home" });
+    }
   });
 
   it("opens a session with its shell, editor, agent screen or browser", () => {

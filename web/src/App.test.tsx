@@ -51,7 +51,7 @@ describe("in the desktop app", () => {
   it("uses the login of the app and skips the install and pair screens", async () => {
     const { storage, env } = setup({ installed: false, hash: "", desktopAuth: { token: "desk", device } });
     render(<App env={env} />);
-    expect(await screen.findByRole("heading", { name: "Sessions" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Mates" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Add crew to your Home Screen" })).not.toBeInTheDocument();
     expect(loadAuth(storage)).toBeNull();
   });
@@ -113,7 +113,7 @@ describe("in the installed app", () => {
     render(<App env={env} />);
     await userEvent.type(screen.getByRole("textbox", { name: "Pairing code" }), "ABCD2345");
     await userEvent.click(screen.getByRole("button", { name: "Pair" }));
-    await screen.findByRole("heading", { name: "Sessions" });
+    await screen.findByRole("heading", { name: "Mates" });
     act(() => listeners.forEach((l) => l("#/settings")));
     await userEvent.click(await screen.findByRole("button", { name: "Sign out" }));
     await userEvent.type(await screen.findByRole("textbox", { name: "Pairing code" }), "WXYZ2345");
@@ -131,7 +131,7 @@ describe("in the installed app", () => {
     await userEvent.clear(screen.getByRole("textbox", { name: "Device name" }));
     await userEvent.type(screen.getByRole("textbox", { name: "Device name" }), "work phone");
     await userEvent.click(pairButton);
-    await screen.findByRole("heading", { name: "Sessions" });
+    await screen.findByRole("heading", { name: "Mates" });
     expect(server.calls.find((c) => c.path === "/api/v1/pair")?.body).toEqual({ code: "WXYZ2345", name: "work phone" });
   });
 

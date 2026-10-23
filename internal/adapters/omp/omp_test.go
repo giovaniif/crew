@@ -27,6 +27,7 @@ func TestLaunchArgv(t *testing.T) {
 			[]string{"omp", "--resume", "s-1", "--model", "sonnet", "--thinking", "high", "--", "--fix the build"}},
 		{"nothing chosen", app.LaunchRequest{}, []string{"omp"}},
 		{"prompt only", app.LaunchRequest{Prompt: "hi"}, []string{"omp", "--", "hi"}},
+		{"system prompt", app.LaunchRequest{SystemPrompt: "You help.", Prompt: "hi"}, []string{"omp", "--append-system-prompt", "You help.", "--", "hi"}},
 		{"effort without a model", app.LaunchRequest{Effort: "xhigh"}, []string{"omp", "--thinking", "xhigh"}},
 		{"resume only", app.LaunchRequest{Resume: "s-2"}, []string{"omp", "--resume", "s-2"}},
 	}

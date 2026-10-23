@@ -28,6 +28,7 @@ func MateTOML(m Mate) string {
 	field("owner", m.Owner)
 	field("avatar", m.Avatar)
 	field("color", m.Color)
+	field("env", m.Env)
 	b.WriteString(mateToneTOML(m.Tone))
 	if m.NoMemory {
 		b.WriteString("no_memory = true\n")
@@ -48,9 +49,9 @@ func splitConfigLines(src string) []string {
 	return lines
 }
 
-func findMateBlock(lines []string, name string) (mateSpan, bool) {
+func findBlock(lines []string, header, name string) (mateSpan, bool) {
 	for start := 0; start < len(lines); start++ {
-		if strings.TrimSpace(lines[start]) != "[[mate]]" {
+		if strings.TrimSpace(lines[start]) != header {
 			continue
 		}
 		end := start + 1
@@ -68,22 +69,30 @@ func findMateBlock(lines []string, name string) (mateSpan, bool) {
 }
 
 func SetMateBlock(src string, m Mate) string {
-	if span, ok := findMateBlock(splitConfigLines(src), m.Name); ok {
+	return setBlock(src, "[[mate]]", m.Name, MateTOML(m))
+}
+
+func RemoveMateBlock(src, name string) string {
+	return removeBlock(src, "[[mate]]", name)
+}
+
+func setBlock(src, header, name, block string) string {
+	if span, ok := findBlock(splitConfigLines(src), header, name); ok {
 		lines := splitConfigLines(src)
-		return strings.Join(lines[:span.start], "") + MateTOML(m) + strings.Join(lines[span.end:], "")
+		return strings.Join(lines[:span.start], "") + block + strings.Join(lines[span.end:], "")
 	}
 	if src == "" {
-		return MateTOML(m)
+		return block
 	}
 	if !strings.HasSuffix(src, "\n") {
 		src += "\n"
 	}
-	return src + "\n" + MateTOML(m)
+	return src + "\n" + block
 }
 
-func RemoveMateBlock(src, name string) string {
+func removeBlock(src, header, name string) string {
 	lines := splitConfigLines(src)
-	span, ok := findMateBlock(lines, name)
+	span, ok := findBlock(lines, header, name)
 	if !ok {
 		return src
 	}

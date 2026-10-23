@@ -17,6 +17,7 @@ type Mate struct {
 	Owner    string   `json:"owner,omitempty"`
 	Avatar   string   `json:"avatar,omitempty"`
 	Color    string   `json:"color,omitempty"`
+	Env      string   `json:"env,omitempty"`
 	Tone     MateTone `json:"tone,omitzero"`
 	NoMemory bool     `json:"no_memory,omitempty"`
 	Enabled  bool     `json:"enabled"`
@@ -29,7 +30,7 @@ var (
 	slackUserID = regexp.MustCompile(`^[UW][A-Z0-9]{8,}$`)
 	mateAvatar  = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,31}$`)
 	mateColor   = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
-	mateAgents  = []Harness{HarnessClaude, HarnessCodex}
+	mateAgents  = []Harness{HarnessClaude, HarnessCodex, HarnessOmp}
 )
 
 func ValidateMate(m Mate, workspaces []Workspace) error {

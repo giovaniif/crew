@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/giovaniif/crew/internal/adapters/claude"
+	"github.com/giovaniif/crew/internal/adapters/codex"
+	"github.com/giovaniif/crew/internal/adapters/omp"
 	"github.com/giovaniif/crew/internal/adapters/secrets"
 	"github.com/giovaniif/crew/internal/app"
 	"github.com/giovaniif/crew/internal/daemon"
@@ -65,7 +67,7 @@ func startMateRigWith(t *testing.T, store *memStore, config string, extra ...dae
 		host.panes = append(host.panes, app.PaneInfo{ID: app.PaneID(s.Pane), Alive: true})
 	}
 	opts := []daemon.Option{
-		daemon.WithHarnesses(host, claude.Adapter{}),
+		daemon.WithHarnesses(host, claude.Adapter{}, codex.Adapter{}, omp.Adapter{}),
 		daemon.WithSessions(r.wts, nil, "/h/worktrees"),
 		daemon.WithFirstPromptGrace(time.Hour),
 		daemon.WithConfig(path),

@@ -69,6 +69,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return runAutomation(args[1:], stdout, stderr)
 	case cmd == "mate":
 		return runMate(args[1:], stdout, stderr)
+	case cmd == "env":
+		return runEnv(args[1:], stderr)
 	case cmd == "approval":
 		return runApproval(args[1:], stdout, stderr)
 	case cmd == "focus":
@@ -106,5 +108,5 @@ func buildCommit() string {
 }
 
 func usage(w io.Writer) {
-	fmt.Fprintln(w, "usage: crew [daemon|workspace|worktree|pr|setup|setup-worktree|debug|hook|statusline|new|automation|mate|approval|review|browser|focus|notify|remote|serve|rpc|cleanup|version [--build]]")
+	fmt.Fprintln(w, "usage: crew [daemon|workspace|worktree|pr|setup|setup-worktree|debug|hook|statusline|new|automation|mate|env|approval|review|browser|focus|notify|remote|serve|rpc|cleanup|version [--build]]")
 }
