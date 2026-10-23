@@ -53,7 +53,36 @@ describe("the Review tab", () => {
     const tree = within(pane).getByRole("navigation", { name: "Changed files" });
     expect(within(tree).getAllByRole("heading").map((h) => h.textContent)).toEqual(["api #42", "web@42-fix"]);
     expect(within(tree).getByRole("button", { name: /main\.go/ })).toHaveTextContent("+1");
-    expect(within(pane).getByText("2 files")).toBeInTheDocument();
+    expect(within(pane).getByText("1 of 2 viewed")).toBeInTheDocument();
+  });
+
+  it("shows only the counts that are not zero in the tree", async () => {
+    const { pane } = await openReview();
+    const tree = within(pane).getByRole("navigation", { name: "Changed files" });
+    expect(within(tree).getByRole("button", { name: /app\.ts/ }).textContent).not.toContain("−0");
+  });
+
+  it("opens the file in the editor from the file header", async () => {
+    const { pane } = await openReview();
+    const diff = within(pane).getByRole("region", { name: "main.go" });
+    await userEvent.click(within(diff).getByRole("button", { name: "Open in editor" }));
+    expect(window.location.hash).toBe("#/sessions/s1/editor");
+  });
+
+  it("marks the file viewed from the menu of the file header", async () => {
+    const { pane, server } = await openReview((s) => s.on("POST", reviewPath + "/viewed", { status: 200, body: {} }));
+    const diff = within(pane).getByRole("region", { name: "main.go" });
+    await userEvent.click(within(diff).getByRole("button", { name: "File actions" }));
+    await userEvent.click(within(diff).getByRole("menuitem", { name: /Mark as not viewed/ }));
+    expect(server.calls.find((c) => c.path === reviewPath + "/viewed")?.body).toEqual({ mark: { Worktree: "w1", Path: "main.go", Blob: "b2" }, viewed: false });
+    expect(within(pane).getByText("0 of 2 viewed")).toBeInTheDocument();
+  });
+
+  it("counts the draft comments in a pill", async () => {
+    const { pane } = await openReview();
+    const panel = within(pane).getByRole("region", { name: "Draft review" });
+    expect(within(panel).getByText("1")).toHaveClass("pill");
+    expect(within(panel).getByRole("textbox", { name: "Overall note" })).toHaveAttribute("placeholder", "Overall note (optional)");
   });
 
   it("opens the scope that the session had and changes scope", async () => {
@@ -112,7 +141,8 @@ describe("the Review tab", () => {
     await userEvent.click(within(diff).getByRole("button", { name: "Comment on line 1" }));
     fireEvent.click(within(diff).getByRole("button", { name: "Comment on line 2" }), { shiftKey: true });
     await userEvent.type(within(pane).getByRole("textbox", { name: "Comment" }), "shorter");
-    await userEvent.click(within(pane).getByRole("button", { name: "Comment" }));
+    expect(within(pane).getByText("· lines 1-2")).toBeInTheDocument();
+    await userEvent.click(within(pane).getByRole("button", { name: "Add comment" }));
     expect(server.calls.find((c) => c.path === reviewPath + "/comments")?.body).toEqual({
       worktree: "w1",
       path: "main.go",

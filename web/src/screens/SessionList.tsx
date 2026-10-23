@@ -60,7 +60,9 @@ function useFix(fix: (() => Promise<void>) | undefined, after: () => void) {
   return { state, run };
 }
 
-type BannerView = { title: string; detail: string; tone: "info" | "warn" | "bad"; action: { label: string; run: () => void } | null };
+type BannerView = { title: string; detail: string; tone: "info" | "warn" | "bad"; busy: boolean; actions: { label: string; run: () => void; primary?: boolean }[] };
+
+export const updateCommand = "curl -fsSL https://raw.githubusercontent.com/giovaniif/crew/main/scripts/install.sh | sh\ncrew daemon stop\ncrew";
 
 function retryingBanner(snapshot: StreamSnapshot, now: number): { title: string; detail: string } {
   if (snapshot.code === closeDaemonAway) {
@@ -75,28 +77,54 @@ function retryingBanner(snapshot: StreamSnapshot, now: number): { title: string;
 
 function fixView(base: { title: string; detail: string }, fix: FixState, run: () => void): BannerView {
   if (fix.state === "fixing") {
-    return { title: "Fixing the daemon", detail: "crew setup daemon writes the service again and restarts it.", tone: "info", action: null };
+    return { title: "Fixing the daemon", detail: "crew setup daemon writes the service again and restarts it.", tone: "info", busy: true, actions: [] };
   }
   if (fix.state === "failed") {
-    return { title: "Fix failed · retrying", detail: fix.message, tone: "bad", action: { label: "Fix", run } };
+    return { title: "Fix failed · retrying", detail: fix.message, tone: "bad", busy: true, actions: [{ label: "Fix", run }] };
   }
-  return { ...base, tone: "warn", action: { label: "Fix", run } };
+  return { ...base, tone: "warn", busy: true, actions: [{ label: "Fix", run }] };
 }
 
 function BannerBox({ view, children }: { view: BannerView; children?: ReactNode }) {
   return (
     <div className={"connection banner-" + view.tone} role="status">
+      {view.busy ? <span className="spin" aria-hidden="true" /> : <span className="dot-bad" aria-hidden="true" />}
       <span className="banner-text">
         <span className="banner-title">{view.title}</span>
         {view.detail ? <span className="banner-detail">{view.detail}</span> : null}
+        {children}
       </span>
-      {view.action ? (
-        <button type="button" className="retry" onClick={view.action.run}>
-          {view.action.label}
+      {view.actions.map((a) => (
+        <button key={a.label} type="button" className={"retry" + (a.primary ? " primary" : "")} onClick={a.run}>
+          {a.label}
         </button>
-      ) : null}
-      {children}
+      ))}
     </div>
+  );
+}
+
+function Mismatch({ reason, onRetry }: { reason: string; onRetry: () => void }) {
+  const [copied, setCopied] = useState("");
+  const copy = () =>
+    navigator.clipboard?.writeText(updateCommand).then(
+      () => setCopied("Copied"),
+      () => setCopied("Could not copy. Run: " + updateCommand),
+    );
+  return (
+    <BannerBox
+      view={{
+        title: "The server runs another crew version",
+        detail: reason ? reason + ". Update the server, then reconnect." : "Update the server, then reconnect.",
+        tone: "bad",
+        busy: false,
+        actions: [
+          { label: "Copy update command", run: () => void copy() },
+          { label: "Reconnect", run: onRetry, primary: true },
+        ],
+      }}
+    >
+      {copied ? <span className="banner-detail">{copied}</span> : null}
+    </BannerBox>
   );
 }
 
@@ -106,20 +134,16 @@ export function Connection({ snapshot, now, onRetry, fix }: { snapshot: StreamSn
     return null;
   }
   if (snapshot.status === "connecting") {
-    return (
-      <div className="connection" role="status">
-        <span>Connecting…</span>
-      </div>
-    );
+    return <BannerBox view={{ title: "Connecting…", detail: "", tone: "info", busy: true, actions: [] }} />;
   }
   if (snapshot.status === "mismatch") {
-    return <BannerBox view={{ title: "Build mismatch · stopped", detail: snapshot.reason, tone: "bad", action: { label: "Reconnect", run: onRetry } }} />;
+    return <Mismatch reason={snapshot.reason} onRetry={onRetry} />;
   }
   const base = retryingBanner(snapshot, now);
   if (fix) {
     return <BannerBox view={fixView(base, fixer.state, () => void fixer.run())} />;
   }
-  return <BannerBox view={{ ...base, tone: "warn", action: { label: "Retry now", run: onRetry } }} />;
+  return <BannerBox view={{ ...base, tone: "warn", busy: true, actions: [{ label: "Retry", run: onRetry }] }} />;
 }
 
 function Card({ session, now }: { session: Session; now: number }) {
@@ -167,9 +191,14 @@ export function SessionList({
       </header>
       <Connection snapshot={snapshot} now={now} onRetry={onRetry} />
       {snapshot.state && groups.length === 0 ? (
-        <section className="card empty">
-          <p>No sessions yet</p>
-          <p className="muted">Sessions you start in the terminal show up here.</p>
+        <section className="state-empty" aria-labelledby="empty-title">
+          <p id="empty-title" className="t">
+            No sessions yet
+          </p>
+          <p className="s">Start one here, or run claude or codex in a terminal.</p>
+          <a className="ui btn primary" href="#/new">
+            New session <kbd>{/Macintosh/.test(navigator.userAgent) ? "⌘N" : "Ctrl+Shift+N"}</kbd>
+          </a>
         </section>
       ) : null}
       {groups.map((group) => (

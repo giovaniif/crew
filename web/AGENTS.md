@@ -143,7 +143,9 @@ The phone app: a PWA that `crew serve` embeds and serves at `/` (ADR [0046](../d
   - Click `+` next to a line number to comment. Shift-click a second line to select a range.
   - Stage and revert send only the hunk. When git refuses the patch, the hunk shows the message of git and the review does not open again.
   - Tests: `npm test -- Review review`. They read the serve goldens `review-*.json`. One test decodes and renders a review of 50 files in less than 300 ms.
-- **Session commands** (issue #519). `screens/SessionCommands.tsx` has the commands of the sidebar menu of the Mac app: Rename…, Mute or Unmute, Model…, Effort…, Kill dev servers and End session…. An ended session has only Resume. `src/commands.ts` holds the pure rules (`commandItems`, `killedNote`) and the setting.
+- **Session commands** (issue #519, redesign frames 2b and 2c). `screens/SessionCommands.tsx` shows the kit `Menu`: Rename…, Mute or Unmute, Model…, Effort…, Show agent screen, Open in editor, Open browser, Kill dev servers, Interrupt and End session…. An ended session has only Resume.
+  - Show agent screen, Open in editor and Open browser go to `#/sessions/<id>/agent|editor|browser` (`/terminal` and `/nvim` stay as aliases) (`openSessionView` in `src/route.ts`). The shell selects that view from the route.
+  - The dialogs use the kit `Dialog`. Interrupt asks first. A rename shows a `Toast` with Undo. `src/commands.ts` holds the pure rules (`commandItems`, `killedNote`) and the setting.
   - Open the menu with a right-click on a sidebar row, with the `⋯` button of the toolbar (desktop), or with the `⋯` button of the chat header (phone).
   - Model… and Effort… show the choices of the harness from `GET /api/v1/session-options`, then post `…/switch`. Kill dev servers posts `…/kill-dev-servers`. serve finds the process groups, so the app never sends one.
   - End session asks first while Settings has "Ask before I end a session" on (the default). The value is `crew.confirmEnd` in `localStorage` (`off` turns it off).
