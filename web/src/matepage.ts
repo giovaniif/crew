@@ -1,7 +1,8 @@
-import type { Mate } from "./api";
+import type { Automation, Mate } from "./api";
+import type { ToneAxis } from "./faces";
 import type { AgentState, MateRow } from "./stream";
 
-export type ThreadSource = "slack" | "dm" | "app";
+export type ThreadSource = "slack" | "dm" | "app" | "automation";
 
 export type ThreadItem = {
   session: string;
@@ -14,7 +15,7 @@ export type ThreadItem = {
   at?: string;
 };
 
-const tags: Record<ThreadSource, string> = { slack: "Slack channel", dm: "Slack DM", app: "App" };
+const tags: Record<ThreadSource, string> = { slack: "Slack channel", dm: "Slack DM", app: "App", automation: "Automation" };
 
 export function mateThreads(row: MateRow): ThreadItem[] {
   const slack: ThreadItem[] = row.threads.map((t) => {
@@ -24,8 +25,8 @@ export function mateThreads(row: MateRow): ThreadItem[] {
   const app: ThreadItem[] = (row.conversations ?? []).map((c) => ({
     session: c.session,
     title: c.name || c.session,
-    tag: tags.app,
-    source: "app",
+    tag: c.automation ? tags.automation : tags.app,
+    source: c.automation ? ("automation" as const) : ("app" as const),
     state: c.state,
     ended: c.ended,
     at: c.started_at,
@@ -47,7 +48,7 @@ function capital(word: string): string {
 }
 
 export function replyHint(item: ThreadItem, mate: string): string {
-  return item.source === "app" ? "Message " + capital(mate) + "…" : "Reply in this thread. It also posts to Slack.";
+  return item.source === "app" || item.source === "automation" ? "Message " + capital(mate) + "…" : "Reply in this thread. It also posts to Slack.";
 }
 
 export function agentName(agent: string): string {
@@ -89,4 +90,32 @@ export function mateRoute(hash: string): { name: string; thread: string; connect
   const [name = "", rest = ""] = hash.slice("#/mates/".length).split("/");
   const connect = rest === "~slack";
   return { name: decode(name), thread: connect ? "" : decode(rest), connect };
+}
+
+export function answersIn(channels: string[] | undefined): string {
+  return [...(channels ?? []).map((c) => "#" + c), "DMs"].join(", ");
+}
+
+export type MateAutomation = { name: string; when: string };
+
+export function mateAutomations(list: Automation[], mate: string): MateAutomation[] {
+  return list
+    .filter((a) => a.mate === mate)
+    .map((a) => ({ name: a.name, when: a.schedule || (a.on?.length ? "on " + a.on.join(", ") : "manual") }))
+    .sort((x, y) => x.name.localeCompare(y.name));
+}
+
+export function toneSteps(tones: ToneAxis[], tone: Record<string, number> | undefined): number[] {
+  return tones.map((t) => {
+    const v = tone?.[t.key];
+    return v !== undefined && v >= 1 && v <= 5 ? v - 1 : 2;
+  });
+}
+
+export function automationRoute(hash: string): { creating: boolean; mate: string } {
+  const [path, query = ""] = hash.split("?");
+  if (path !== "#/automations/new") {
+    return { creating: false, mate: "" };
+  }
+  return { creating: true, mate: new URLSearchParams(query).get("mate") ?? "" };
 }
