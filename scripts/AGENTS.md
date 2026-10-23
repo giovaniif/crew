@@ -61,7 +61,7 @@ Repo tooling. The repo-wide rules are in the [root AGENTS.md](../AGENTS.md).
     - It has a `CREW_HOME` under `/tmp`, its own tmux socket, its own TCP ports and a temporary `HOME`.
     - The e2e fakes (`claude`, `codex`, `gh`, `terminal-notifier`, `osascript`) are first on `PATH`. Slack, ntfy and GitHub tokens are blank.
     - `up` starts `crew serve` and the Vite dev server (`CREW_API`). It pairs the device `TEST-verify` with `crew remote pair` and `POST /api/v1/pair`. It never prints the token.
-    - `--session` makes the repo `TEST-live` and runs `crew new` in it. The fake `claude` runs `$CREW_HOME/chat.sh` through its `run` step. The script echoes each typed line as `TEST echo: <line>`, writes a Claude transcript and fires `UserPromptSubmit` and `Stop`. The result has `session`, `pane` and `worktree`.
+    - `--session` makes the repo `TEST-live` and runs `crew new` in it. The fake `claude` runs `$CREW_HOME/chat.sh` through its `run` step. The script echoes each typed line as `TEST echo: <line>`, writes a Claude transcript and fires `UserPromptSubmit` and `Stop`. Each hook sends the same `session_id` on each start in the worktree, thus the session can resume. The result has `session`, `pane` and `worktree`.
   - `web shot <route> [--viewport mobile|desktop|both]` and `web drive <route> --steps '<json>'`: `web/scripts/verify-drive.ts` with the Playwright of `web/`.
     - Steps: `goto`, `click`, `fill` (with `value`), `press`, `wait`, `expect` (`absent`), `shot`, `aria`, `eval`.
     - A locator has one of `role`+`name`, `testId`, `label`, `placeholder` or `text`. It acts on the first visible match.

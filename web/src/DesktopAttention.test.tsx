@@ -128,8 +128,9 @@ describe("DesktopAttention", () => {
   it("shows the notification settings of the desktop app and applies a change", async () => {
     const { env, sockets, desktop, storage } = setup("#/settings");
     render(<App env={env} />);
-    const done = screen.getByRole("checkbox", { name: "Banner when a session is done" });
-    expect(done).toBeChecked();
+    await userEvent.click(screen.getByRole("button", { name: "Notifications" }));
+    const done = screen.getByRole("switch", { name: "Finishes" });
+    expect(done).toHaveAttribute("aria-checked", "true");
     await userEvent.click(done);
     expect(JSON.parse(storage.getItem("crew.alerts") ?? "{}").done.banner).toBe(false);
     sockets.last.open();

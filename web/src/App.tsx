@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type R
 import { sessionPane, tokenRefused, unpairDevice, type Fetch } from "./api";
 import { clearAuth, loadAuth, saveAuth, type Auth, type KeyValue } from "./auth";
 import { pairCodeFromHash } from "./display";
-import { DesktopAlerts, useDesktopAttention, type DesktopBridge } from "./desktopBridge";
+import { useDesktopAttention, type DesktopBridge } from "./desktopBridge";
 import { disablePush, noPush, type PushEnv } from "./push";
 import { modifierKeys } from "./desktop";
 import { parseRoute } from "./route";
@@ -268,7 +268,6 @@ function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, g
             servers={servers}
             initial={hash === "#/servers" ? "servers" : undefined}
           />
-          {env.desktop && <DesktopAlerts storage={env.storage} />}
         </>
       ),
       tab: "settings",

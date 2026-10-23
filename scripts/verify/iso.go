@@ -209,22 +209,23 @@ func isoReport(st isoState, r *result) {
 	}
 }
 
-const chatScript = `transcript="$CREW_E2E/chat-$$.jsonl"
-: >"$transcript"
+const chatScript = `sid="TEST-$(printf '%%s' "$PWD" | cksum | cut -d' ' -f1)"
+transcript="$CREW_E2E/chat-$sid.jsonl"
+touch "$transcript"
 hook() { printf '%%s' "$2" | %[1]s hook --harness claude --event "$1"; }
 esc() { printf '%%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
-hook SessionStart "{\"cwd\":\"$PWD\",\"transcript_path\":\"$transcript\"}"
+hook SessionStart "{\"session_id\":\"$sid\",\"cwd\":\"$PWD\",\"transcript_path\":\"$transcript\"}"
 echo "TEST fake claude: type a message and press Enter" >/dev/tty
-n=0
+n=$(($(wc -l <"$transcript") / 2))
 while IFS= read -r msg </dev/tty; do
 	n=$((n + 1))
 	text=$(esc "$msg")
 	at=$(date -u +%%Y-%%m-%%dT%%H:%%M:%%SZ)
 	printf '{"type":"user","uuid":"u%%s","promptId":"p%%s","timestamp":"%%s","message":{"content":"%%s"}}\n' "$n" "$n" "$at" "$text" >>"$transcript"
-	hook UserPromptSubmit "{\"prompt\":\"$text\",\"transcript_path\":\"$transcript\"}"
+	hook UserPromptSubmit "{\"session_id\":\"$sid\",\"prompt\":\"$text\",\"transcript_path\":\"$transcript\"}"
 	printf '{"type":"assistant","uuid":"a%%s","timestamp":"%%s","message":{"content":[{"type":"text","text":"TEST echo: %%s"}]}}\n' "$n" "$at" "$text" >>"$transcript"
 	echo "TEST echo: $msg" >/dev/tty
-	hook Stop "{\"last_assistant_message\":\"TEST echo: $text\",\"transcript_path\":\"$transcript\"}"
+	hook Stop "{\"session_id\":\"$sid\",\"last_assistant_message\":\"TEST echo: $text\",\"transcript_path\":\"$transcript\"}"
 done
 `
 

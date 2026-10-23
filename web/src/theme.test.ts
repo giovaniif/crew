@@ -143,7 +143,7 @@ describe("the settings styles", () => {
 });
 
 describe("touch targets", () => {
-  it.each([".session-card", ".back", ".retry", ".new-session", ".choice", ".interrupt", ".queued-action", ".permission-choice", ".load-older", ".tool summary", ".automations .chip", ".automations .subtabs button", ".automations .run-list .link", ".run-actions button", ".approval-actions button", ".kill-actions button", ".mate-actions button", ".mate-threads a", ".open-session", ".term-retry", ".phone-views button", ".opt", ".folders li", ".disk-actions button", ".disk-tabs button", ".disk-kill", ".where-choice", ".first-run-buttons button", ".first-run-body .fields button", ".chip-button", ".chip-menu button", ".change-server", ".swatches .swatch"])("%s is at least 44px tall", (selector) => {
+  it.each([".session-card", ".back", ".retry", ".new-session", ".choice", ".interrupt", ".queued-action", ".permission-choice", ".load-older", ".tool summary", ".automations .chip", ".automations .subtabs button", ".automations .run-list .link", ".run-actions button", ".approval-actions button", ".kill-actions button", ".mate-actions button", ".mate-threads a", ".open-session", ".term-retry", ".phone-views button", ".opt", ".folders li", ".disk-actions button", ".disk-tabs button", ".disk-kill", ".where-choice", ".first-run-buttons button", ".first-run-body .fields button", ".change-server", ".swatches .swatch"])("%s is at least 44px tall", (selector) => {
     expect(parseInt(rule(selector)["min-height"] ?? "0", 10)).toBeGreaterThanOrEqual(44);
   });
 });
@@ -240,5 +240,28 @@ describe("a mate color swatch", () => {
 
   it("keeps the theme color swatch a fixed circle in its settings row", () => {
     expect(rule(".opt > .swatch").flex).toBe("none");
+  });
+
+  it("hides the visually-hidden text from the screen", () => {
+    const hidden = rule(".visually-hidden");
+    expect(hidden.position).toBe("absolute");
+    expect(hidden.width).toBe("1px");
+    expect(hidden.overflow).toBe("hidden");
+  });
+
+  it("scrolls only the content pane of Settings, so the menu column fills the window", () => {
+    expect(rule(".set").height).toBe("100%");
+    expect(rule(".set")["min-height"]).toBe("0");
+    expect(rule(".sbody")["overflow-y"]).toBe("auto");
+    expect(rule(".main-other:has(.settings-screen)").overflow).toBe("hidden");
+  });
+
+  it("draws the server chip as a 28px kit control", () => {
+    expect(rule(".server-chip .ui.select").width).toBe("100%");
+    expect(rule(".server-chip .ui.menu").right).toBe("0");
+  });
+
+  it("removes the scrim while the native folder dialog is open", () => {
+    expect(rule("html[data-picking] .sheet-backdrop").background).toBe("transparent");
   });
 });

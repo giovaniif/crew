@@ -37,3 +37,8 @@ export function rememberServer(list, url) {
 export function forgetServer(list, url) {
   return list.filter((s) => s !== url);
 }
+
+export function failureText(err) {
+  const text = typeof err === "string" ? err : err && typeof err.message === "string" ? err.message : "";
+  return text.trim() === "" ? "Fix stopped and gave no reason. See serve.log in the app log folder." : text;
+}
