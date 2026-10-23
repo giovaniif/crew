@@ -100,16 +100,20 @@ describe("the app settings", () => {
     expect(storage.getItem("crew.confirmEnd")).toBe("off");
   });
 
-  it("keeps Notifications in the store that the banners read, with a Sound box for each event", async () => {
+  it("keeps Notifications in the store that the banners read, one row for each event with a banner Switch and a sound Select", async () => {
     const { storage } = await open("Notifications");
-    await userEvent.click(screen.getByRole("switch", { name: "Hits a limit or an error" }));
-    await userEvent.click(screen.getByRole("checkbox", { name: "Sound when a session finishes" }));
+    const group = screen.getByRole("region", { name: "Sessions" });
+    expect(within(group).getByText("Event")).toBeInTheDocument();
+    expect(within(group).getByText("Banner")).toBeInTheDocument();
+    await userEvent.click(within(group).getByRole("switch", { name: "Session hits a limit or an error" }));
+    await pick(userEvent.setup(), within(group).getByRole("combobox", { name: "Sound when session finished" }), "Default");
     await userEvent.click(screen.getByRole("switch", { name: "Also notify for muted sessions" }));
     const alerts = JSON.parse(storage.getItem("crew.alerts") ?? "{}");
     expect(alerts.limitOrError.banner).toBe(!defaults.notifications.limitOrError.banner);
-    expect(alerts.done.sound).toBe(!defaults.notifications.done.sound);
+    expect(alerts.done.sound).toBe(true);
     expect(alerts.notifyMuted).toBe(true);
-    expect(screen.queryByRole("switch", { name: "Play a sound" })).toBeNull();
+    expect(within(group).getByRole("combobox", { name: "Sound when session asks permission" })).toHaveTextContent("Default");
+    expect(screen.queryByRole("checkbox", { name: /Sound when/ })).toBeNull();
   });
 
   it("keeps Appearance in the app store and clamps the font size", async () => {
