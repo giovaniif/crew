@@ -58,3 +58,11 @@ func TestSetAutomationBlockLeavesAnotherNameAlone(t *testing.T) {
 		t.Errorf("got:\n%s", got)
 	}
 }
+
+func TestAutomationTOMLWritesTheMate(t *testing.T) {
+	a := Automation{Name: "weekly", Mate: "test-ada", Prompt: "TEST check", Enabled: true}
+	want := "[[automation]]\nname = \"weekly\"\nmate = \"test-ada\"\nprompt = \"TEST check\"\n"
+	if got := AutomationTOML(a); got != want {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
+	}
+}

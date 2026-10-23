@@ -11,6 +11,7 @@ import (
 type Automation struct {
 	Name     string           `json:"name"`
 	Agent    string           `json:"agent"`
+	Mate     string           `json:"mate,omitempty"`
 	Model    string           `json:"model,omitempty"`
 	Effort   string           `json:"effort,omitempty"`
 	Target   string           `json:"target,omitempty"`
@@ -60,8 +61,11 @@ func ValidateAutomation(a Automation) error {
 	if strings.TrimSpace(a.Name) == "" || strings.ContainsAny(a.Name, " \t\n") {
 		return fail("name must be one word with no spaces")
 	}
+	if a.Mate != "" && !ValidMateName(a.Mate) {
+		return fail("mate %q is not a mate name", a.Mate)
+	}
 	h := Harness(a.Agent)
-	if !slices.Contains(Harnesses(), h) {
+	if (a.Mate == "" || a.Agent != "") && !slices.Contains(Harnesses(), h) {
 		return fail("agent must be one of %v", Harnesses())
 	}
 	if a.Effort != "" && !slices.Contains(Spec(h).Efforts, a.Effort) {
@@ -144,5 +148,16 @@ func ExpandPrompt(tmpl string, v PromptVars) string {
 	if !hasContext && strings.TrimSpace(v.Context) != "" {
 		out = strings.TrimRight(out, " \t\n") + "\n\n" + strings.TrimSpace(v.Context)
 	}
+	return out
+}
+
+func AutomationsUsingMate(list []Automation, mate string) []string {
+	var out []string
+	for _, a := range list {
+		if mate != "" && a.Mate == mate {
+			out = append(out, a.Name)
+		}
+	}
+	slices.Sort(out)
 	return out
 }

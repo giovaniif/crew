@@ -28,6 +28,16 @@ func localMateFixture() rpc.State {
 	}
 }
 
+func TestViewMateConversationNamesTheAutomationThatStartedIt(t *testing.T) {
+	fixture := localMateFixture()
+	fixture.Sessions[1].Mate = &domain.MateSeat{Name: "iris", Local: true, Automation: "weekly"}
+	_, state := view.NewNative(fixture)
+	got := state.Mates.Mates[0].Conversations
+	if got[0].Automation != "weekly" || got[1].Automation != "" {
+		t.Fatalf("conversations %+v", got)
+	}
+}
+
 func TestViewMatesListTheLocalConversationsNewestFirst(t *testing.T) {
 	_, state := view.NewNative(localMateFixture())
 	iris := state.Mates.Mates[0]
