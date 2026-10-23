@@ -60,6 +60,28 @@ describe("Approvals", () => {
     expect(within(card).getByRole("link", { name: "Open session" })).toHaveAttribute("href", "#/sessions/s1");
   });
 
+  it("has a page head with the count and cards that say who asked and when, with the command in a mono block", async () => {
+    const { env } = setup();
+    render(<App env={env} />);
+    const card = await screen.findByRole("listitem", { name: "helper: create pr" });
+    expect(screen.getByLabelText("1 waiting")).toHaveTextContent("1");
+    expect(screen.getByText("A mate asks here before a dangerous action that someone other than you started.")).toBeInTheDocument();
+    expect(card).toHaveTextContent("helper wants to create pr, asked by U0GUEST01 with Bash · 1h ago");
+    expect(within(card).getByRole("img")).toBeInTheDocument();
+    expect(within(card).getByText('{"command":"gh pr create --fill"}').tagName).toBe("PRE");
+  });
+
+  it("mutes a resolved card and keeps Open session on it", async () => {
+    const { server, env } = setup();
+    server.on("POST", "/api/v1/approvals/a1/approve", { status: 200, body: { ...pending[0], State: "granted" } });
+    render(<App env={env} />);
+    const card = await screen.findByRole("listitem", { name: "helper: create pr" });
+    await userEvent.setup().click(within(card).getByRole("button", { name: "Approve" }));
+    expect(await within(card).findByRole("status")).toHaveTextContent("Approved. The session tries it again.");
+    expect(card).toHaveClass("resolved");
+    expect(within(card).getByRole("link", { name: "Open session" })).toHaveAttribute("href", "#/sessions/s1");
+  });
+
   it("approves an approval and shows the result", async () => {
     const { server, env } = setup();
     server.on("POST", "/api/v1/approvals/a1/approve", { status: 200, body: { ...pending[0], State: "granted" } });
