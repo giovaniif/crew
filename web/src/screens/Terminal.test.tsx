@@ -129,8 +129,8 @@ describe("the agent screen", () => {
   });
 
   it("offers Resume session on the agent screen of an ended session with no pane", async () => {
-    const d = open("#/sessions/s1/agent");
-    d.sockets.last.push({ state: { ...two(), sessions: [session("s1", "fix the login redirect", { Pane: "", Ended: true }), session("s2", "add retries", { Pane: "%9" })] } });
+    const d = desktop("#/sessions/s1/agent", true);
+    d.live({ ...two(), sessions: [session("s1", "fix the login redirect", { Pane: "", Ended: true }), session("s2", "add retries", { Pane: "%9" })] });
     expect(await within(agentScreen()).findByRole("button", { name: "Resume session" })).toBeInTheDocument();
     expect(within(agentScreen()).getByRole("status")).toHaveTextContent("This session's pane closed");
   });
