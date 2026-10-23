@@ -459,3 +459,36 @@ a.ui.btn {
   font-size: var(--fs-sm);
   color: var(--ink-2);
 }
+
+.nrow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 150px;
+  align-items: center;
+  gap: 14px;
+  min-height: 36px;
+  padding: 4px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.nrow:last-child {
+  border-bottom: 0;
+}
+
+.nrow.h {
+  min-height: 28px;
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+  font-weight: 500;
+}
+
+.nrow .t {
+  font-weight: 500;
+}
+
+.nrow .ui-anchor,
+.nrow .ui.select {
+  width: 150px;
+  min-width: 0;
+  height: 26px;
+  font-size: var(--fs-sm);
+}

@@ -423,3 +423,82 @@
 .more-row .chev {
   color: var(--ink-3);
 }
+
+.sess {
+  padding: 20px 28px;
+}
+
+.sess ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tl-row {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) 120px 120px 90px 60px;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  text-decoration: none;
+  font-size: var(--fs-md);
+}
+
+a.tl-row:hover {
+  background: var(--bg-hover);
+}
+
+.tl-row.h {
+  min-height: 28px;
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+  font-weight: 500;
+}
+
+.tl-row .tl-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.tl-row .nm {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tl-row .sub {
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+}
+
+.tl-row .dim {
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tl-row .tl-last {
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+}
+
+.tl-row.unread .nm {
+  font-weight: 600;
+}
+
+.sess .section-title {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+  margin: 18px 0 4px;
+}
+
+.tl-none {
+  padding: 12px 10px;
+}
