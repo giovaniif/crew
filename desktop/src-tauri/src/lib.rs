@@ -103,17 +103,18 @@ fn save_auth(file: &PathBuf, auth: &serde_json::Value) {
 fn start_local(app: &AppHandle, slot: &Mutex<Option<LocalServe>>) -> Result<Started, String> {
     let crew = find_local_crew().ok_or("crew is not in the app bundle or on PATH")?;
     let port = local::free_port().map_err(|e| e.to_string())?;
-    let mut serve = LocalServe::start(&crew, port).map_err(|e| e.to_string())?;
     let url = Url::parse(&local::base_url(port)).map_err(|e| e.to_string())?;
-    if !serve.wait_ready(Duration::from_secs(20)) {
-        serve.stop();
-        return Ok(Started {
-            url: None,
-            auth: None,
-            problem: Some("crew serve did not start. The crew daemon may be down.".to_string()),
-            remote: false,
-        });
-    }
+    let serve = match local::start_serve(&crew, port, &serve_log(app), Duration::from_secs(20)) {
+        Ok(serve) => serve,
+        Err(problem) => {
+            return Ok(Started {
+                url: None,
+                auth: None,
+                problem: Some(problem),
+                remote: false,
+            })
+        }
+    };
     let file = app
         .path()
         .app_data_dir()
@@ -209,6 +210,13 @@ fn open_window(app: &AppHandle, started: Started) -> tauri::Result<()> {
     Ok(())
 }
 
+fn serve_log(app: &AppHandle) -> PathBuf {
+    app.path()
+        .app_log_dir()
+        .unwrap_or_else(|_| std::env::temp_dir().join("crew-desktop"))
+        .join("serve.log")
+}
+
 fn fix_local(app: &AppHandle) -> Result<(), String> {
     let crew = find_local_crew().ok_or("crew is not in the app bundle or on PATH")?;
     local::fix_daemon(&crew)?;
@@ -224,14 +232,9 @@ fn fix_local(app: &AppHandle) -> Result<(), String> {
         }
         let port = serve.port;
         serve.stop();
-        let mut again = LocalServe::start(&crew, port).map_err(|e| e.to_string())?;
-        let ready = again.wait_ready(Duration::from_secs(20));
+        let again = local::start_serve(&crew, port, &serve_log(app), Duration::from_secs(20))?;
         *slot.lock().unwrap() = Some(again);
-        return if ready {
-            Ok(())
-        } else {
-            Err("crew serve did not start".to_string())
-        };
+        return Ok(());
     }
     let started = start_local(app, &slot)?;
     if let Some(problem) = started.problem {
@@ -369,7 +372,10 @@ fn connect(app: &AppHandle, id: &str) -> Result<(Url, Option<serde_json::Value>)
             .local
             .clone()
             .ok_or_else(|| "crew serve did not start on this computer".to_string()),
-        Kind::Url { url } => Ok((Url::parse(url).map_err(|e| e.to_string())?, server.auth.clone())),
+        Kind::Url { url } => Ok((
+            Url::parse(url).map_err(|e| e.to_string())?,
+            server.auth.clone(),
+        )),
         Kind::Ssh { host } => {
             if let Some(url) = state.lock().unwrap().tunnel_url(id) {
                 return Ok((url, server.auth.clone()));
@@ -385,12 +391,20 @@ fn connect(app: &AppHandle, id: &str) -> Result<(Url, Option<serde_json::Value>)
             hub.store.add(server.kind.clone(), Some(auth.clone()));
             hub.save()?;
             hub.tunnels.insert(id.to_string(), tunnel);
-            Ok((Url::parse(&local::base_url(port)).map_err(|e| e.to_string())?, Some(auth)))
+            Ok((
+                Url::parse(&local::base_url(port)).map_err(|e| e.to_string())?,
+                Some(auth),
+            ))
         }
     }
 }
 
-fn show(app: &AppHandle, url: Url, auth: Option<serde_json::Value>, remote: bool) -> Result<(), String> {
+fn show(
+    app: &AppHandle,
+    url: Url,
+    auth: Option<serde_json::Value>,
+    remote: bool,
+) -> Result<(), String> {
     open_window(
         app,
         Started {
@@ -449,7 +463,8 @@ async fn crew_server_add(
                 Ok(id)
             }
             "ssh" => {
-                let host = servers::ssh_target(&target).ok_or("Type a host name, not ssh options.")?;
+                let host =
+                    servers::ssh_target(&target).ok_or("Type a host name, not ssh options.")?;
                 hub::ssh_setup(&host)?;
                 let tunnel = hub::ssh_tunnel(&host)?;
                 let auth = hub::ssh_pair(&host, tunnel.port)?;
@@ -506,7 +521,12 @@ async fn crew_server_fix(app: AppHandle, webview: Webview, id: String) -> Result
 }
 
 #[tauri::command]
-async fn crew_server_workspace(app: AppHandle, webview: Webview, id: String, path: String) -> Result<(), String> {
+async fn crew_server_workspace(
+    app: AppHandle,
+    webview: Webview,
+    id: String,
+    path: String,
+) -> Result<(), String> {
     guard(&app, &webview)?;
     blocking(move || {
         let (url, auth) = connect(&app, &id)?;
@@ -532,7 +552,13 @@ fn reopen(app: &AppHandle) {
 #[cfg(desktop)]
 fn build_menu<R: Runtime>(app: &AppHandle<R>, model: &attention::Menu) -> tauri::Result<Menu<R>> {
     let menu = Menu::new(app)?;
-    menu.append(&MenuItem::with_id(app, OPEN_LOCAL, "Open This computer", true, None::<&str>)?)?;
+    menu.append(&MenuItem::with_id(
+        app,
+        OPEN_LOCAL,
+        "Open This computer",
+        true,
+        None::<&str>,
+    )?)?;
     menu.append(&PredefinedMenuItem::separator(app)?)?;
     for entry in attention::entries(model) {
         match entry {
@@ -676,9 +702,8 @@ pub fn run() {
         .manage(Mutex::new(None::<LocalServe>))
         .setup(|app| {
             if start_page(cfg!(mobile), None) == Ok(Start::Bundled) {
-                let connect = serde_json::Value::String(
-                    servers::connect_url(cfg!(target_os = "ios")).into(),
-                );
+                let connect =
+                    serde_json::Value::String(servers::connect_url(cfg!(target_os = "ios")).into());
                 WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
                     .initialization_script(format!("window.__CREW_CONNECT_URL__ = {connect};"))
                     .build()?;

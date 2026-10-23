@@ -21,6 +21,19 @@
       #servers .open { flex: 1; text-align: left; padding: 8px 0; color: var(--accent); background: none; border: 0; overflow-wrap: anywhere; }
       #servers .remove { padding: 8px 12px; color: var(--danger); background: none; border: 0; }
       #error { color: var(--danger); min-height: 1.4em; margin: 12px 0 0; }
+      .problem-page { --ink: #1c1c1f; --ink-2: #5c5c66; --ink-3: #8e8e98; --line-2: rgba(20,20,30,.14); --sunken: #f4f4f5; --hover: #efeff1; --bad: oklch(0.58 0.19 25); color-scheme: light; background: #ffffff; color: var(--ink); font: 13px/1.5 -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+      .problem-page main { max-width: 560px; min-height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; padding: 24px; }
+      .problem-page h1 { font-size: 22px; font-weight: 600; letter-spacing: -.02em; margin: 0 0 4px; }
+      #problem .lead { color: var(--ink-2); margin: 0 0 16px; font-size: 13px; }
+      #problem .lead strong { color: var(--bad); font-weight: 500; }
+      #problem .detail { position: relative; }
+      #problem pre { margin: 0; font: 12px/1.5 ui-monospace, "SF Mono", Menlo, monospace; background: var(--sunken); color: var(--ink); border-radius: 8px; padding: 10px 12px; padding-right: 72px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 50vh; overflow: auto; user-select: text; -webkit-user-select: text; cursor: text; }
+      #problem .btn { min-height: 0; height: 30px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line-2); background: #ffffff; color: var(--ink); font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; -webkit-appearance: none; appearance: none; }
+      #problem .btn:hover { background: var(--hover); }
+      #problem .btn.primary { width: auto; margin: 0; padding: 0 14px; background: var(--ink); border-color: var(--ink); color: #ffffff; }
+      #problem .btn:disabled { opacity: .5; cursor: default; }
+      #problem #copy { position: absolute; top: 6px; right: 6px; height: 24px; padding: 0 8px; font-size: 12px; }
+      #problem .actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 16px; }
     </style>
   </head>
   <body>
@@ -38,15 +51,19 @@
         <p id="error" role="alert"></p>
       </form>
       <section id="problem" hidden>
-        <p id="problem-title"><strong>crew is not running</strong></p>
-        <p id="problem-reason"></p>
-        <button id="fix" type="button">Fix</button>
+        <p class="lead"><strong id="problem-title">crew is not running</strong> · Fix sets up the crew daemon and starts crew again.</p>
+        <div class="detail">
+          <pre id="problem-reason"></pre>
+          <button id="copy" class="btn" type="button">Copy</button>
+        </div>
+        <div class="actions"><button id="fix" class="btn primary" type="button">Fix</button></div>
       </section>
     </main>
     <script type="module">
-      import { forgetServer, rememberServer, savedServers, serverUrl } from "./server.js";
+      import { failureText, forgetServer, rememberServer, savedServers, serverUrl } from "./server.js";
       const problem = window.__CREW_DESKTOP_PROBLEM__;
       if (typeof problem === "string") {
+        document.body.classList.add("problem-page");
         document.querySelector("h1").textContent = "crew did not start";
         document.getElementById("form").hidden = true;
         document.getElementById("add-title").hidden = true;
@@ -54,16 +71,33 @@
         document.getElementById("problem").hidden = false;
         document.getElementById("problem").setAttribute("role", "status");
         document.getElementById("problem-reason").textContent = problem;
+        const copy = document.getElementById("copy");
+        copy.addEventListener("click", async () => {
+          const text = document.getElementById("problem-reason").textContent;
+          try {
+            await navigator.clipboard.writeText(text);
+          } catch {
+            const range = document.createRange();
+            range.selectNodeContents(document.getElementById("problem-reason"));
+            getSelection().removeAllRanges();
+            getSelection().addRange(range);
+            document.execCommand("copy");
+          }
+          copy.textContent = "Copied";
+          setTimeout(() => { copy.textContent = "Copy"; }, 1500);
+        });
         const fix = document.getElementById("fix");
         fix.addEventListener("click", async () => {
           fix.disabled = true;
+          fix.textContent = "Fixing…";
           document.getElementById("problem-title").textContent = "Fixing the daemon";
           try {
             await window.__TAURI_INTERNALS__.invoke("fix_daemon");
           } catch (err) {
             document.getElementById("problem-title").textContent = "Fix failed";
-            document.getElementById("problem-reason").textContent = String(err);
+            document.getElementById("problem-reason").textContent = failureText(err);
             fix.disabled = false;
+            fix.textContent = "Fix";
           }
         });
       }
