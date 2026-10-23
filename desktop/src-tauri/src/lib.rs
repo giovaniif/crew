@@ -292,7 +292,11 @@ async fn crew_browser_open(
 }
 
 #[tauri::command]
-async fn crew_pick_folder(app: AppHandle, webview: Webview) -> Result<Option<String>, String> {
+async fn crew_pick_folder(
+    app: AppHandle,
+    webview: Webview,
+    near: Option<String>,
+) -> Result<Option<String>, String> {
     let page = webview.url().map_err(|e| e.to_string())?;
     let local = app
         .try_state::<Shared>()
@@ -303,11 +307,18 @@ async fn crew_pick_folder(app: AppHandle, webview: Webview) -> Result<Option<Str
     #[cfg(desktop)]
     {
         use tauri_plugin_dialog::DialogExt;
+        let start = browse::folder_start(app.path().home_dir().ok().as_deref(), near.as_deref());
+        let window = webview.window();
         return blocking(move || {
-            Ok(app
+            let mut dialog = app
                 .dialog()
                 .file()
                 .set_title("Choose a workspace folder")
+                .set_parent(&window);
+            if let Some(dir) = start {
+                dialog = dialog.set_directory(dir);
+            }
+            Ok(dialog
                 .blocking_pick_folder()
                 .and_then(|p| p.into_path().ok())
                 .map(|p| p.to_string_lossy().into_owned()))
@@ -315,7 +326,10 @@ async fn crew_pick_folder(app: AppHandle, webview: Webview) -> Result<Option<Str
         .await;
     }
     #[cfg(mobile)]
-    Err("this device has no folder dialog".into())
+    {
+        let _ = near;
+        Err("this device has no folder dialog".into())
+    }
 }
 
 #[tauri::command]

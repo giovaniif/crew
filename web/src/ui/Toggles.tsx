@@ -1,4 +1,5 @@
 import { useRef, type KeyboardEvent, type ReactNode } from "react";
+import { CheckIcon } from "./Menu.tsx";
 
 type ToggleProps = {
   label: ReactNode;
@@ -22,7 +23,7 @@ export function Checkbox({ label, checked, onChange, disabled, ariaLabel, classN
   return (
     <button type="button" role="checkbox" aria-checked={checked} aria-label={ariaLabel} disabled={disabled} className={"ui toggle" + (className ? " " + className : "")} onClick={() => onChange(!checked)}>
       <span className={"check" + (checked ? " on" : "")} aria-hidden="true">
-        {checked ? "✓" : ""}
+        {checked ? <CheckIcon /> : null}
       </span>
       {label}
     </button>
