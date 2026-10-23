@@ -500,7 +500,7 @@ export function ReviewPane({ session, sessionState, api, initial }: ReviewPanePr
                 busy={busy}
                 viewed={tree.some((g) => g.files.some((f) => f.worktree === selected.worktree.ID && f.path === selected.file.Path && f.viewed))}
                 onViewed={(v) => setViewed(selected.worktree.ID, selected.file.Path, selected.file.Blob, v)}
-                onEditor={() => openSessionView(session, "nvim")}
+                onEditor={() => openSessionView(session, "editor")}
               />
             ) : (
               <div className="pane-placeholder">

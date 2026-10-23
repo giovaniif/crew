@@ -3,28 +3,27 @@ import type { Authed, Fetch } from "../api";
 import type { Auth, KeyValue } from "../auth";
 import { confirmEnd, setConfirmEnd } from "../commands";
 import { disablePush, enablePush, type PushEnv } from "../push";
-import { applyTheme, clamp, fontSizes, lineHeights, loadSettings, saveSettings, type AppSettings, type Appearance, type EventAlert, type General, type NotificationSettings } from "../settings";
+import type { Servers } from "../servers";
+import { applyTheme, clamp, fontSizes, lineHeights, loadSettings, saveSettings, type AppSettings, type Appearance, type General, type NotificationSettings } from "../settings";
 import { assignShortcut, comboFor, comboFromEvent, comboLabel, defaultShortcuts, restoreShortcut, shortcutActions, type Shortcuts } from "../shortcuts";
-import { Checkbox, Select, Stepper } from "../ui";
-import { Brand } from "./Brand";
-import { AgentsGroup, ServerAppearanceGroup, ServerNotificationsGroup, WorkspacesGroup } from "./ServerSettings";
+import { Button, Segmented, Stepper, Switch } from "../ui";
+import { AgentsGroup, DevicesGroup, PushDelayRow, ServerAppearanceGroup, WorkspacesGroup } from "./ServerSettings";
+import { ServersScreen } from "./Servers";
+import { Group, Opt } from "./SettingsRows";
 
 type Notify = { state: "idle" } | { state: "checking" } | { state: "busy" } | { state: "on"; error?: string } | { state: "denied" } | { state: "failed"; message: string };
 
-type GroupId = "general" | "notifications" | "appearance" | "shortcuts" | "server-workspaces" | "server-agents" | "server-notifications" | "server-appearance";
+export type GroupId = "general" | "notifications" | "appearance" | "shortcuts" | "workspaces" | "agents" | "devices" | "servers";
 
-const appGroups: { id: GroupId; title: string }[] = [
+const allGroups: { id: GroupId; title: string }[] = [
   { id: "general", title: "General" },
   { id: "notifications", title: "Notifications" },
   { id: "appearance", title: "Appearance" },
   { id: "shortcuts", title: "Shortcuts" },
-];
-
-const serverGroups: { id: GroupId; title: string }[] = [
-  { id: "server-workspaces", title: "Workspaces" },
-  { id: "server-agents", title: "Agents" },
-  { id: "server-notifications", title: "Notifications" },
-  { id: "server-appearance", title: "Appearance" },
+  { id: "workspaces", title: "Workspaces" },
+  { id: "agents", title: "Agents" },
+  { id: "devices", title: "Devices" },
+  { id: "servers", title: "Servers" },
 ];
 
 export type SettingsProps = {
@@ -38,6 +37,9 @@ export type SettingsProps = {
   userAgent: string;
   connectUrl?: string;
   desktop?: boolean;
+  local?: boolean;
+  servers?: Servers;
+  initial?: GroupId;
 };
 
 function PushCard({ auth, installed, fetch, push, desktop }: Pick<SettingsProps, "auth" | "installed" | "fetch" | "push" | "desktop">) {
@@ -86,149 +88,216 @@ function PushCard({ auth, installed, fetch, push, desktop }: Pick<SettingsProps,
   }
 
   return (
-    <section className="card" aria-label="Notifications">
-      <h2>Notifications</h2>
-      {!installed && !desktop && (
-        <p className="muted">
-          On iPhone and iPad, notifications work only in the app opened from the Home Screen. Add crew to your Home Screen,
-          then open it from there.
-        </p>
-      )}
-      {!push.supported ? (
-        !desktop && <p className="muted">This browser cannot show notifications from crew.</p>
-      ) : (
-        <>
-          <p className="muted">Get a notification when a session needs you, waits for an answer or finishes.</p>
-          <p className="muted">
-            Held while you're typing at the terminal, and sent once if you step away with a session still waiting. Not sent
-            while this app is open on screen.
-          </p>
-          {notify.state === "on" && <p>Notifications are on for this device.</p>}
-          {notify.state === "denied" && <p className="error">Notifications are blocked. Allow them for crew in your device's settings, then try again.</p>}
-          {notify.state === "on" && notify.error && (
-            <p className="error" role="alert">
-              {notify.error}
-            </p>
-          )}
-          {notify.state === "failed" && (
-            <p className="error" role="alert">
-              {notify.message}
-            </p>
-          )}
-          {notify.state === "on" ? (
-            <button type="button" className="secondary" onClick={disable}>
-              Turn off
-            </button>
-          ) : (
-            <button type="button" onClick={enable} disabled={notify.state === "busy" || notify.state === "checking"}>
-              Enable notifications
-            </button>
-          )}
-        </>
-      )}
+    <section className="set-section" aria-label="Notifications">
+      <div className="gtitle">NOTIFICATIONS ON THIS DEVICE</div>
+      <div className="group">
+        {!installed && !desktop && (
+          <Opt sub="On iPhone and iPad, notifications work only in the app opened from the Home Screen. Add crew to your Home Screen, then open it from there." />
+        )}
+        {!push.supported ? (
+          !desktop && <Opt sub="This browser cannot show notifications from crew." />
+        ) : (
+          <Opt
+            lead={<span className={"dot" + (notify.state === "on" ? " ok" : "")} />}
+            title={notify.state === "on" ? "Notifications are on for this device." : "Get a notification when a session needs you, waits for an answer or finishes."}
+            sub={
+              <>
+                Held while you're typing at the terminal, and sent once if you step away with a session still waiting. Not sent while this app is open on screen.
+                {notify.state === "denied" && <span className="error"> Notifications are blocked. Allow them for crew in your device's settings, then try again.</span>}
+                {notify.state === "on" && notify.error && (
+                  <span className="error" role="alert">
+                    {" " + notify.error}
+                  </span>
+                )}
+                {notify.state === "failed" && (
+                  <span className="error" role="alert">
+                    {" " + notify.message}
+                  </span>
+                )}
+              </>
+            }
+          >
+            {notify.state === "on" ? (
+              <Button className="sm" onClick={disable}>
+                Turn off
+              </Button>
+            ) : (
+              <Button variant="primary" className="sm" onClick={enable} disabled={notify.state === "busy" || notify.state === "checking"}>
+                Enable notifications
+              </Button>
+            )}
+          </Opt>
+        )}
+      </div>
     </section>
   );
 }
 
-function Check({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <Checkbox label={label} checked={checked} onChange={onChange} />
-  );
-}
-
-function Pick<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: [T, string][]; onChange: (v: T) => void }) {
-  return (
-    <div className="ui-field">
-      {label}
-      <Select label={label} value={value} onChange={onChange} options={options.map(([v, title]) => ({ value: v, label: title }))} />
-    </div>
-  );
-}
-
-function NumberField({ label, value, step, onCommit }: { label: string; value: number; step?: number; onCommit: (v: number) => void }) {
+function Count({ label, value, step, onCommit }: { label: string; value: number; step?: number; onCommit: (v: number) => void }) {
   const [text, setText] = useState(String(value));
   useEffect(() => setText(String(value)), [value]);
   return (
-    <div className="ui-field">
-      {label}
-      <Stepper
-        label={label}
-        step={step}
-        value={text}
-        onChange={(next) => {
-          setText(next);
-          if (next !== "" && !Number.isNaN(Number(next))) {
-            onCommit(Number(next));
-          }
-        }}
-        onBlur={() => setText(String(value))}
-      />
-    </div>
+    <Stepper
+      label={label}
+      step={step}
+      value={text}
+      onChange={(next) => {
+        setText(next);
+        if (next !== "" && !Number.isNaN(Number(next))) {
+          onCommit(Number(next));
+        }
+      }}
+      onBlur={() => setText(String(value))}
+    />
+  );
+}
+
+function SwitchRow({ title, sub, checked, onChange }: { title: string; sub?: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <Opt title={title} sub={sub}>
+      <Switch label={null} ariaLabel={title} checked={checked} onChange={onChange} />
+    </Opt>
   );
 }
 
 function GeneralPane({ general, storage, onChange }: { general: General; storage: KeyValue; onChange: (g: General) => void }) {
   const [askEnd, setAskEnd] = useState(() => confirmEnd(storage));
   return (
-    <section className="card" aria-label="General">
-      <h2>General</h2>
-      <NumberField label="Ended sessions shown" value={general.endedShown} onCommit={(n) => onChange({ ...general, endedShown: Math.max(0, Math.round(n)) })} />
-      <Check
-        label="Ask before I end a session"
-        checked={askEnd}
-        onChange={(v) => {
-          setAskEnd(v);
-          setConfirmEnd(storage, v);
-        }}
-      />
-      <Check label="Show worktrees in the sidebar" checked={general.showWorktrees} onChange={(v) => onChange({ ...general, showWorktrees: v })} />
-      <Check label="Show subagents" checked={general.showSubagents} onChange={(v) => onChange({ ...general, showSubagents: v })} />
-    </section>
+    <>
+      <Group label="Sidebar" title="SIDEBAR">
+        <Opt title="Ended sessions shown" sub="The most recent ones, under Ended">
+          <Count label="Ended sessions shown" value={general.endedShown} onCommit={(n) => onChange({ ...general, endedShown: Math.max(0, Math.round(n)) })} />
+        </Opt>
+        <SwitchRow title="Show worktrees" checked={general.showWorktrees} onChange={(v) => onChange({ ...general, showWorktrees: v })} />
+        <SwitchRow title="Show subagents" sub="Nested under the session that started them" checked={general.showSubagents} onChange={(v) => onChange({ ...general, showSubagents: v })} />
+      </Group>
+      <Group label="Sessions" title="SESSIONS">
+        <SwitchRow
+          title="Ask before I end a session"
+          checked={askEnd}
+          onChange={(v) => {
+            setAskEnd(v);
+            setConfirmEnd(storage, v);
+          }}
+        />
+      </Group>
+    </>
   );
 }
 
 const events: { key: keyof Pick<NotificationSettings, "permission" | "waiting" | "done" | "limitOrError">; title: string }[] = [
-  { key: "permission", title: "Permission" },
-  { key: "waiting", title: "Waiting" },
-  { key: "done", title: "Done" },
-  { key: "limitOrError", title: "Limit or error" },
+  { key: "permission", title: "Needs permission" },
+  { key: "waiting", title: "Waits for an answer" },
+  { key: "done", title: "Finishes" },
+  { key: "limitOrError", title: "Hits a limit or an error" },
 ];
 
-function NotificationsPane({ value, onChange }: { value: NotificationSettings; onChange: (n: NotificationSettings) => void }) {
-  const set = (key: (typeof events)[number]["key"], alert: EventAlert) => onChange({ ...value, [key]: alert });
+function NotificationsPane({ value, api, onChange }: { value: NotificationSettings; api: Authed; onChange: (n: NotificationSettings) => void }) {
+  const sound = events.some((e) => value[e.key].sound);
   return (
-    <section className="card" aria-label="Alerts">
-      <h2>Alerts</h2>
-      {events.map((e) => (
-        <div key={e.key} className="alert-row">
-          <span>{e.title}</span>
-          <Check label={e.title + ": banner"} checked={value[e.key].banner} onChange={(v) => set(e.key, { ...value[e.key], banner: v })} />
-          <Check label={e.title + ": sound"} checked={value[e.key].sound} onChange={(v) => set(e.key, { ...value[e.key], sound: v })} />
-        </div>
-      ))}
-      <Check label="Skip the session that is on screen" checked={value.skipSessionInView} onChange={(v) => onChange({ ...value, skipSessionInView: v })} />
-      <Check label="Also notify for muted sessions" checked={value.notifyMuted} onChange={(v) => onChange({ ...value, notifyMuted: v })} />
-    </section>
+    <>
+      <Group label="Notify me when a session" title="NOTIFY ME WHEN A SESSION">
+        {events.map((e) => (
+          <SwitchRow key={e.key} title={e.title} checked={value[e.key].banner} onChange={(v) => onChange({ ...value, [e.key]: { ...value[e.key], banner: v } })} />
+        ))}
+      </Group>
+      <Group label="Options" title="OPTIONS">
+        <SwitchRow
+          title="Play a sound"
+          checked={sound}
+          onChange={(v) => onChange({ ...value, ...Object.fromEntries(events.map((e) => [e.key, { ...value[e.key], sound: v }])) })}
+        />
+        <SwitchRow title="Skip the session that is on screen" checked={value.skipSessionInView} onChange={(v) => onChange({ ...value, skipSessionInView: v })} />
+        <SwitchRow title="Also notify for muted sessions" checked={value.notifyMuted} onChange={(v) => onChange({ ...value, notifyMuted: v })} />
+        <PushDelayRow api={api} />
+      </Group>
+    </>
   );
 }
 
+const accents: { value: Appearance["accent"]; label: string; color: string }[] = [
+  { value: "blue", label: "Blue", color: "oklch(0.55 0.15 255)" },
+  { value: "green", label: "Green", color: "oklch(0.55 0.15 150)" },
+  { value: "peach", label: "Peach", color: "oklch(0.65 0.15 55)" },
+  { value: "red", label: "Red", color: "oklch(0.55 0.15 25)" },
+];
+
 function AppearancePane({ value, onChange }: { value: Appearance; onChange: (a: Appearance) => void }) {
   return (
-    <section className="card" aria-label="Appearance">
-      <h2>Appearance</h2>
-      <Pick label="Theme" value={value.theme} options={[["system", "Match system"], ["latte", "Latte"], ["mocha", "Mocha"]]} onChange={(theme) => onChange({ ...value, theme })} />
-      <Pick label="Accent" value={value.accent} options={[["blue", "Blue"], ["peach", "Peach"], ["green", "Green"], ["red", "Red"]]} onChange={(accent) => onChange({ ...value, accent })} />
-      <label>
-        Terminal font
-        <input type="text" value={value.terminalFont} onChange={(e) => onChange({ ...value, terminalFont: e.target.value })} />
-      </label>
-      <NumberField label="Terminal font size" value={value.fontSize} onCommit={(n) => onChange({ ...value, fontSize: clamp(n, fontSizes) })} />
-      <NumberField label="Line height" step={0.1} value={value.lineHeight} onCommit={(n) => onChange({ ...value, lineHeight: clamp(n, lineHeights) })} />
-      <Pick label="Cursor" value={value.cursor} options={[["block", "Block"], ["bar", "Bar"], ["underline", "Underline"]]} onChange={(cursor) => onChange({ ...value, cursor })} />
-      <Check label="Blinking cursor" checked={value.cursorBlinks} onChange={(v) => onChange({ ...value, cursorBlinks: v })} />
-      <Pick label="Density" value={value.density} options={[["regular", "Regular"], ["compact", "Compact"]]} onChange={(density) => onChange({ ...value, density })} />
-      <Pick label="Diff layout" value={value.diffLayout} options={[["unified", "Unified"], ["split", "Split"]]} onChange={(diffLayout) => onChange({ ...value, diffLayout })} />
-    </section>
+    <Group label="Appearance">
+      <Opt title="Theme">
+        <Segmented
+          label="Theme"
+          value={value.theme}
+          options={[
+            { value: "system", label: "System" },
+            { value: "latte", label: "Light" },
+            { value: "mocha", label: "Dark" },
+          ]}
+          onChange={(theme) => onChange({ ...value, theme })}
+        />
+      </Opt>
+      <Opt title="Accent">
+        <div role="radiogroup" aria-label="Accent" className="accents">
+          {accents.map((a) => (
+            <button
+              key={a.value}
+              type="button"
+              role="radio"
+              aria-checked={value.accent === a.value}
+              aria-label={a.label}
+              className={"swatch" + (value.accent === a.value ? " on" : "")}
+              style={{ background: a.color }}
+              onClick={() => onChange({ ...value, accent: a.value })}
+            />
+          ))}
+        </div>
+      </Opt>
+      <Opt title="Density">
+        <Segmented
+          label="Density"
+          value={value.density}
+          options={[
+            { value: "regular", label: "Comfortable" },
+            { value: "compact", label: "Compact" },
+          ]}
+          onChange={(density) => onChange({ ...value, density })}
+        />
+      </Opt>
+      <Opt title="Diff layout">
+        <Segmented
+          label="Diff layout"
+          value={value.diffLayout}
+          options={[
+            { value: "unified", label: "Unified" },
+            { value: "split", label: "Split" },
+          ]}
+          onChange={(diffLayout) => onChange({ ...value, diffLayout })}
+        />
+      </Opt>
+      <Opt title="Terminal font">
+        <input className="ui input" aria-label="Terminal font" type="text" value={value.terminalFont} onChange={(e) => onChange({ ...value, terminalFont: e.target.value })} />
+      </Opt>
+      <Opt title="Terminal font size">
+        <Count label="Terminal font size" value={value.fontSize} onCommit={(n) => onChange({ ...value, fontSize: clamp(n, fontSizes) })} />
+      </Opt>
+      <Opt title="Line height">
+        <Count label="Line height" step={0.1} value={value.lineHeight} onCommit={(n) => onChange({ ...value, lineHeight: clamp(n, lineHeights) })} />
+      </Opt>
+      <Opt title="Cursor">
+        <Segmented
+          label="Cursor"
+          value={value.cursor}
+          options={[
+            { value: "block", label: "Block" },
+            { value: "underline", label: "Underline" },
+            { value: "bar", label: "Bar" },
+          ]}
+          onChange={(cursor) => onChange({ ...value, cursor })}
+        />
+        <Switch label={null} ariaLabel="Blinking cursor" checked={value.cursorBlinks} onChange={(v) => onChange({ ...value, cursorBlinks: v })} />
+      </Opt>
+    </Group>
   );
 }
 
@@ -243,6 +312,7 @@ function ShortcutsPane({ value, mac, onChange }: { value: Shortcuts; mac: boolea
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
+        e.stopPropagation();
         setRecording(null);
         return;
       }
@@ -266,152 +336,164 @@ function ShortcutsPane({ value, mac, onChange }: { value: Shortcuts; mac: boolea
   }, [recording, value, onChange]);
 
   return (
-    <section className="card" aria-label="Shortcuts">
-      <h2>Shortcuts</h2>
-      <p className="muted">Each shortcut needs {mac ? "⌘ or ⌃" : "Ctrl or Meta"}, so the terminal keeps plain keys.</p>
+    <>
+      <p className="set-lead">Each shortcut needs {mac ? "⌘ or ⌃" : "Ctrl or Meta"}, so the terminal keeps plain keys.</p>
       {error ? (
         <p className="error" role="alert">
           {error}
         </p>
       ) : null}
-      <Check label="Send other keys to the terminal" checked={value.passThrough} onChange={(v) => onChange({ ...value, passThrough: v })} />
-      <table className="shortcuts">
-        <tbody>
+      <Group label="Keys">
+        <SwitchRow title="Send other keys to the terminal" checked={value.passThrough} onChange={(v) => onChange({ ...value, passThrough: v })} />
+      </Group>
+      <section className="set-section" aria-label="Shortcuts">
+        <div className="gtitle">SHORTCUTS</div>
+        <ul className="group">
           {shortcutActions.map((a) => {
             const combo = comboFor(value, a.id);
             return (
-              <tr key={a.id}>
-                <th scope="row">{a.title}</th>
-                <td>{recording === a.id ? "Press keys…" : combo ? <kbd>{comboLabel(combo, mac)}</kbd> : <span className="muted">None</span>}</td>
-                <td className="shortcut-actions">
-                  <button type="button" className="ghost" onClick={() => setRecording(a.id)}>
-                    Change
-                  </button>
-                  <button
-                    type="button"
-                    className="ghost"
-                    onClick={() => {
-                      const out = assignShortcut(value, a.id, null);
-                      if (out.ok) {
-                        onChange(out.shortcuts);
-                      }
-                    }}
-                  >
-                    Clear
-                  </button>
-                  <button type="button" className="ghost" onClick={() => onChange(restoreShortcut(value, a.id))}>
-                    Default
-                  </button>
-                </td>
-              </tr>
+              <li key={a.id} className="opt" aria-label={a.title}>
+                <div className="l">
+                  <div className="t">{a.title}</div>
+                </div>
+                {recording === a.id ? <span className="muted">Press keys…</span> : combo ? <kbd>{comboLabel(combo, mac)}</kbd> : <span className="muted">None</span>}
+                <Button variant="quiet" className="sm" onClick={() => setRecording(a.id)}>
+                  Change
+                </Button>
+                <Button
+                  variant="quiet"
+                  className="sm"
+                  onClick={() => {
+                    const out = assignShortcut(value, a.id, null);
+                    if (out.ok) {
+                      onChange(out.shortcuts);
+                    }
+                  }}
+                >
+                  Clear
+                </Button>
+                <Button variant="quiet" className="sm" onClick={() => onChange(restoreShortcut(value, a.id))}>
+                  Default
+                </Button>
+              </li>
             );
           })}
-        </tbody>
-      </table>
-      <button type="button" className="secondary" onClick={() => onChange({ ...defaultShortcuts(), passThrough: value.passThrough })}>
-        Restore all defaults
-      </button>
-    </section>
-  );
-}
-
-function GroupNav({ label, groups, current, onPick }: { label: string; groups: { id: GroupId; title: string }[]; current: GroupId; onPick: (g: GroupId) => void }) {
-  return (
-    <>
-      <h2 className="settings-nav-title">{label}</h2>
-      <ul aria-label={label} className="settings-nav">
-        {groups.map((g) => (
-          <li key={g.id}>
-            <button type="button" aria-current={g.id === current ? "page" : undefined} onClick={() => onPick(g.id)}>
-              {g.title}
-            </button>
-          </li>
-        ))}
-      </ul>
+        </ul>
+      </section>
+      <Button onClick={() => onChange({ ...defaultShortcuts(), passThrough: value.passThrough })}>Restore all defaults</Button>
     </>
   );
 }
 
-export function Settings({ auth, host, installed, fetch, push, onSignOut, storage, userAgent, connectUrl, desktop }: SettingsProps) {
-  const [group, setGroup] = useState<GroupId>("general");
+export function Settings({ auth, host, installed, fetch, push, onSignOut, storage, userAgent, connectUrl, desktop, local, servers, initial }: SettingsProps) {
+  const [group, setGroup] = useState<GroupId>(initial ?? "general");
   const [settings, setSettings] = useState<AppSettings>(() => loadSettings(storage));
   const api: Authed = { fetch, token: auth.token };
   const mac = /Macintosh/.test(userAgent);
+  const groups = allGroups.filter((g) => g.id !== "servers" || servers);
 
   useEffect(() => applyTheme(settings.appearance.theme), [settings.appearance.theme]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !e.defaultPrevented && !document.querySelector('[role="dialog"], .ui.menu')) {
+        window.location.hash = "#/";
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const update = (next: AppSettings) => {
     setSettings(next);
     saveSettings(storage, next);
   };
 
+  const title = groups.find((g) => g.id === group)?.title ?? "";
   let pane: ReactNode;
   switch (group) {
     case "general":
       pane = (
         <>
-          <section className="card" aria-label="Server">
-            <h2>Server</h2>
-            <dl className="server">
-              <dt>Address</dt>
-              <dd>{host}</dd>
-            </dl>
-            {connectUrl ? (
-              <a className="change-server" href={connectUrl}>
-                Change server
-              </a>
-            ) : null}
+          <GeneralPane general={settings.general} storage={storage} onChange={(general) => update({ ...settings, general })} />
+          <section className="set-section" aria-label="This device">
+            <div className="gtitle">THIS DEVICE</div>
+            <div className="group">
+              <Opt title="Name" sub={auth.device.id}>
+                <span>{auth.device.name}</span>
+              </Opt>
+            </div>
           </section>
-          <section className="card" aria-label="This device">
-            <h2>This device</h2>
-            <dl className="server">
-              <dt>Name</dt>
-              <dd>{auth.device.name}</dd>
-              <dt>ID</dt>
-              <dd>{auth.device.id}</dd>
-            </dl>
+          <section className="set-section" aria-label="Server">
+            <div className="gtitle">SERVER</div>
+            <div className="group">
+              <Opt title="Address">
+                <span className="mono">{host}</span>
+                {connectUrl ? (
+                  <a className="ui btn sm change-server" href={connectUrl}>
+                    Change server
+                  </a>
+                ) : null}
+              </Opt>
+            </div>
           </section>
           {!(desktop && !push.supported) && <PushCard auth={auth} installed={installed} fetch={fetch} push={push} desktop={desktop} />}
-          <GeneralPane general={settings.general} storage={storage} onChange={(general) => update({ ...settings, general })} />
-          <button type="button" className="secondary" onClick={onSignOut}>
-            Sign out
-          </button>
+          {local ? null : (
+            <Button variant="danger" onClick={onSignOut}>
+              Sign out
+            </Button>
+          )}
         </>
       );
       break;
     case "notifications":
-      pane = <NotificationsPane value={settings.notifications} onChange={(notifications) => update({ ...settings, notifications })} />;
+      pane = <NotificationsPane value={settings.notifications} api={api} onChange={(notifications) => update({ ...settings, notifications })} />;
       break;
     case "appearance":
-      pane = <AppearancePane value={settings.appearance} onChange={(appearance) => update({ ...settings, appearance })} />;
+      pane = (
+        <>
+          <AppearancePane value={settings.appearance} onChange={(appearance) => update({ ...settings, appearance })} />
+          <ServerAppearanceGroup api={api} />
+        </>
+      );
       break;
     case "shortcuts":
       pane = <ShortcutsPane value={settings.shortcuts} mac={mac} onChange={(shortcuts) => update({ ...settings, shortcuts })} />;
       break;
-    case "server-workspaces":
+    case "workspaces":
       pane = <WorkspacesGroup api={api} />;
       break;
-    case "server-agents":
+    case "agents":
       pane = <AgentsGroup api={api} />;
       break;
-    case "server-notifications":
-      pane = <ServerNotificationsGroup api={api} self={auth.device.id} />;
+    case "devices":
+      pane = <DevicesGroup api={api} self={auth.device.id} />;
       break;
-    case "server-appearance":
-      pane = <ServerAppearanceGroup api={api} />;
+    case "servers":
+      pane = servers ? <ServersScreen servers={servers} /> : null;
       break;
   }
+  const own = group === "workspaces" || group === "agents" || group === "devices" || group === "servers";
 
   return (
     <main className="screen settings-screen">
-      <Brand host={host} />
-      <h1>Settings</h1>
-      <div className="settings-layout">
-        <nav className="settings-groups" aria-label="Settings groups">
-          <GroupNav label="This app" groups={appGroups} current={group} onPick={setGroup} />
-          <GroupNav label="Server" groups={serverGroups} current={group} onPick={setGroup} />
+      <h1 className="visually-hidden">Settings</h1>
+      <div className="set">
+        <nav className="snav" aria-label="Settings">
+          <a className="row back" href="#/">
+            <span className="nm">‹ Back</span>
+            <span className="meta">Esc</span>
+          </a>
+          {groups.map((g) => (
+            <button key={g.id} type="button" className={"row" + (g.id === group ? " on" : "")} aria-current={g.id === group ? "page" : undefined} onClick={() => setGroup(g.id)}>
+              {g.title}
+            </button>
+          ))}
         </nav>
-        <div className="settings-pane">{pane}</div>
+        <div className="sbody">
+          {own ? null : <h2 className="set-title">{title}</h2>}
+          {pane}
+        </div>
       </div>
     </main>
   );

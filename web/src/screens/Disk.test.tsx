@@ -86,7 +86,7 @@ describe("the disk window", () => {
     await userEvent.click(within(await row(/api-feat/)).getByRole("button", { name: "Open shell" }));
     expect(server.calls.find((c) => c.path === "/api/v1/sessions/s1/shell")?.body).toEqual({ worktree: "/w/api-feat" });
     expect(window.location.hash).toBe("#/sessions/s1/shell");
-    expect(await screen.findByRole("tab", { name: "Shell" })).toHaveAttribute("aria-selected", "true");
+    expect(await screen.findByRole("region", { name: "Shell" })).toBeInTheDocument();
   });
 
   it("lists the ports and asks before it kills a dev server", async () => {

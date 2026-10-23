@@ -519,47 +519,6 @@ button.danger {
   z-index: 20;
 }
 
-.command-menu {
-  position: fixed;
-  min-width: 13rem;
-  max-width: calc(100vw - 32px);
-  display: flex;
-  flex-direction: column;
-  padding: 6px;
-  border: 1px solid var(--surface);
-  border-radius: 10px;
-  background: var(--paper);
-  box-shadow: 0 8px 24px var(--shadow-deep);
-}
-
-.command-menu .menu-title {
-  margin: 4px 10px 6px;
-  font-size: 12px;
-  color: var(--subtext);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.command-menu button {
-  min-height: 44px;
-  padding: 6px 10px;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text);
-  font-weight: 500;
-  text-align: left;
-}
-
-.command-menu button:hover,
-.command-menu button:focus-visible {
-  background: var(--selected);
-}
-
-.command-menu .menu-danger {
-  color: var(--red);
-}
-
 .choice-list {
   display: flex;
   flex-wrap: wrap;

@@ -1,70 +1,84 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { loadChoices } from "../newsession";
 import { Servers } from "../servers";
+import { MemoryStorage } from "../test/fake-server";
 import { FakeDesktop } from "../test/fake-desktop";
 import { FirstRun } from "./FirstRun";
 
-function start(welcome = true) {
-  const desktop = new FakeDesktop();
+function start(welcome = true, desktop = new FakeDesktop(), mac = false) {
   const onClose = vi.fn();
-  render(<FirstRun servers={new Servers(desktop)} welcome={welcome} onClose={onClose} />);
-  return { desktop, onClose };
+  const storage = new MemoryStorage();
+  render(<FirstRun servers={new Servers(desktop)} welcome={welcome} onClose={onClose} storage={storage} mac={mac} />);
+  return { desktop, onClose, storage };
 }
 
-const steps = () => within(screen.getByRole("list", { name: "Steps" })).getAllByRole("listitem").map((li) => li.textContent);
-const current = () => within(screen.getByRole("list", { name: "Steps" })).getByText((_, el) => el?.getAttribute("aria-current") === "step").textContent;
+const progress = () =>
+  within(screen.getByRole("list", { name: "Progress" }))
+    .getAllByRole("listitem")
+    .map((li) => li.getAttribute("data-state"));
 const press = (name: string) => userEvent.click(screen.getByRole("button", { name }));
 
 describe("FirstRun", () => {
-  it("sets up this computer without the Server step and opens it", async () => {
-    const { desktop, onClose } = start();
-    expect(current()).toBe("Welcome");
+  it("asks where agents run with three cards and a progress bar of three parts", async () => {
+    start(false, new FakeDesktop(), true);
+    expect(screen.getByRole("heading", { name: "Where do agents run?" })).toBeInTheDocument();
+    expect(screen.getAllByRole("radio").map((r) => r.querySelector(".where-title")?.textContent)).toEqual(["This Mac", "Another computer, over SSH", "A paired server"]);
+    expect(progress()).toEqual(["on", "off", "off"]);
+  });
+
+  it("sets up this computer with a live checklist, adds the first workspace and makes it the default project", async () => {
+    const { desktop, onClose, storage } = start();
     await press("Get started");
     await userEvent.click(screen.getByRole("radio", { name: /This computer/ }));
-    expect(steps()).toEqual(["Welcome", "Where agents run", "Set up", "Workspace", "Done"]);
     await press("Continue");
-    expect(current()).toBe("Set up");
-    expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
-    await press("Set up");
+    expect(screen.getByRole("heading", { name: "Setting up this computer" })).toBeInTheDocument();
+    expect(progress()).toEqual(["on", "on", "off"]);
+    const checklist = screen.getByRole("list", { name: "Set up" });
+    expect(await within(checklist).findByText("crew daemon started")).toBeInTheDocument();
     expect(desktop.of("crew_server_fix")).toEqual([{ id: "local" }]);
-    expect(await screen.findByText("This computer is set up.")).toBeInTheDocument();
     await press("Continue");
-    expect(current()).toBe("Workspace");
-    await userEvent.type(screen.getByRole("textbox", { name: "Workspace folder" }), "~/code/api");
-    await press("Add workspace");
-    expect(desktop.of("crew_server_workspace")).toEqual([{ id: "local", path: "~/code/api" }]);
-    await press("Continue");
-    expect(current()).toBe("Done");
+    expect(progress()).toEqual(["on", "on", "on"]);
+    await userEvent.type(screen.getByRole("textbox", { name: "First workspace" }), "~/code/api");
     await press("Open crew");
+    expect(desktop.of("crew_server_workspace")).toEqual([{ id: "local", path: "~/code/api" }]);
+    expect(desktop.of("crew_server_open")).toEqual([{ id: "local" }]);
+    expect(loadChoices(storage).workspace).toBe("~/code/api");
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("skips the first workspace and still opens crew", async () => {
+    const { desktop, onClose } = start(false);
+    await press("Continue");
+    await within(screen.getByRole("list", { name: "Set up" })).findByText("crew daemon started");
+    await press("Continue");
+    await press("Skip");
+    expect(desktop.of("crew_server_workspace")).toEqual([]);
     expect(desktop.of("crew_server_open")).toEqual([{ id: "local" }]);
     expect(onClose).toHaveBeenCalled();
   });
 
   it("pairs a remote crew serve with its address and code", async () => {
     const { desktop } = start(false);
-    expect(current()).toBe("Where agents run");
-    await userEvent.click(screen.getByRole("radio", { name: /crew serve/ }));
+    await userEvent.click(screen.getByRole("radio", { name: /A paired server/ }));
     await press("Continue");
-    expect(current()).toBe("Server");
     expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
     await userEvent.type(screen.getByRole("textbox", { name: "Address" }), "crew.example.ts.net");
     await userEvent.type(screen.getByRole("textbox", { name: "Pairing code" }), "ABCD2345");
     await press("Continue");
-    await press("Set up");
+    expect(await within(screen.getByRole("list", { name: "Set up" })).findByText("Paired with crew.example.ts.net")).toBeInTheDocument();
     expect(desktop.of("crew_server_add")).toEqual([{ kind: "url", target: "crew.example.ts.net", code: "ABCD2345" }]);
-    expect(await screen.findByText("crew.example.ts.net is set up.")).toBeInTheDocument();
     await press("Continue");
-    await press("Continue");
-    await press("Open crew");
+    await press("Skip");
     expect(desktop.of("crew_server_open")).toEqual([{ id: "url:crew.example.ts.net" }]);
   });
 
   it("offers the SSH hosts of the config and refuses a target with options", async () => {
     const desktop = new FakeDesktop();
     desktop.hosts = ["box", "gpu"];
-    render(<FirstRun servers={new Servers(desktop)} welcome={false} onClose={() => undefined} />);
-    await userEvent.click(screen.getByRole("radio", { name: /SSH/ }));
+    start(false, desktop);
+    await userEvent.click(screen.getByRole("radio", { name: /over SSH/ }));
     await press("Continue");
     const host = screen.getByRole("combobox", { name: "SSH host" });
     await userEvent.click(host);
@@ -75,25 +89,24 @@ describe("FirstRun", () => {
     await userEvent.clear(host);
     await userEvent.type(host, "gpu");
     await press("Continue");
-    await press("Set up");
+    expect(await within(screen.getByRole("list", { name: "Set up" })).findByText("crew set up on gpu")).toBeInTheDocument();
     expect(desktop.of("crew_server_add")).toEqual([{ kind: "ssh", target: "gpu", code: "" }]);
   });
 
   it("shows why the set up failed and lets you try again", async () => {
     const desktop = new FakeDesktop();
     desktop.failures.crew_server_add = "Could not log in to box without a password";
-    render(<FirstRun servers={new Servers(desktop)} welcome={false} onClose={() => undefined} />);
-    await userEvent.click(screen.getByRole("radio", { name: /SSH/ }));
+    start(false, desktop);
+    await userEvent.click(screen.getByRole("radio", { name: /over SSH/ }));
     await press("Continue");
     await userEvent.type(screen.getByRole("combobox", { name: "SSH host" }), "box");
     await press("Continue");
-    await press("Set up");
     expect(await screen.findByRole("alert")).toHaveTextContent("Could not log in to box without a password");
     expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
     delete desktop.failures.crew_server_add;
     await press("Try again");
-    expect(await screen.findByText("box is set up.")).toBeInTheDocument();
+    expect(await screen.findByText("crew set up on box")).toBeInTheDocument();
     await press("Back");
-    expect(current()).toBe("Server");
+    expect(screen.getByRole("combobox", { name: "SSH host" })).toBeInTheDocument();
   });
 });

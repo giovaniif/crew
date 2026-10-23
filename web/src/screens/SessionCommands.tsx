@@ -75,10 +75,10 @@ export function SessionCommands({ api, session, storage, button, openAt }: Sessi
         void run(() => killDevServers(api, id).then((r) => killedNote(r.killed ?? [])));
         return;
       case "agent":
-        openSessionView(id, "terminal");
+        openSessionView(id, "agent");
         return;
       case "editor":
-        openSessionView(id, "nvim");
+        openSessionView(id, "editor");
         return;
       case "browser":
         openSessionView(id, "browser");

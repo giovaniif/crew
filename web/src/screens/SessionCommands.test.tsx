@@ -138,15 +138,15 @@ describe("the session commands", () => {
   });
 
   it.each([
-    ["Show agent screen", "#/sessions/a/terminal", "Terminal"],
-    ["Open in editor", "#/sessions/a/nvim", "nvim"],
-    ["Open browser", "#/sessions/a/browser", "Browser"],
-  ])("%s opens that view of the session", async (item, hash, tab) => {
+    ["Show agent screen", "#/sessions/a/agent", "region", "Agent screen"],
+    ["Open in editor", "#/sessions/a/editor", "region", "Editor"],
+    ["Open browser", "#/sessions/a/browser", "complementary", "Browser"],
+  ])("%s opens that view of the session", async (item, hash, role, name) => {
     setup({}, "#/sessions/a");
     await userEvent.click(screen.getByRole("button", { name: "Session commands" }));
     await userEvent.click(opened(screen.getByRole("menu", { name: "Session commands" }), item));
     expect(window.location.hash).toBe(hash);
-    expect(await screen.findByRole("tab", { name: tab })).toHaveAttribute("aria-selected", "true");
+    expect(await screen.findByRole(role as "region", { name })).toBeInTheDocument();
   });
 
   it("resumes an ended session", async () => {
@@ -195,8 +195,8 @@ describe("the end confirmation setting", () => {
   it("is on by default and Settings turns it off", async () => {
     const d = desktop("#/settings", false);
     d.live();
-    const box = screen.getByRole("checkbox", { name: "Ask before I end a session" });
-    expect(box).toBeChecked();
+    const box = screen.getByRole("switch", { name: "Ask before I end a session" });
+    expect(box).toHaveAttribute("aria-checked", "true");
     await userEvent.click(box);
     expect(d.storage.getItem("crew.confirmEnd")).toBe("off");
   });
