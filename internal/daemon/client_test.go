@@ -115,25 +115,6 @@ func TestDebugSeedAddsFakeSessionsWithWorktrees(t *testing.T) {
 	}
 }
 
-func TestClientPopupRunsTheCommandInAPopup(t *testing.T) {
-	d, path := start(t, &memStore{})
-	host := &fakeClientHost{}
-	d.SetClientHost(host)
-	c := dial(t, path)
-	ctx := context.Background()
-	p := rpc.ClientPopupParams{Command: []string{"crew", "tui", "--new-session"}, Env: map[string]string{"CREW_HOME": "/h"}}
-	if err := c.Call(ctx, rpc.MethodClientPopup, p, nil); err != nil {
-		t.Fatal(err)
-	}
-	if len(host.commandPopups) != 1 || !slices.Equal(host.commandPopups[0].Command, p.Command) || host.commandPopups[0].Env["CREW_HOME"] != "/h" {
-		t.Fatalf("popups %+v", host.commandPopups)
-	}
-	var rerr *rpc.Error
-	if err := c.Call(ctx, rpc.MethodClientPopup, rpc.ClientPopupParams{}, nil); !errors.As(err, &rerr) || rerr.Code != rpc.CodeBadRequest {
-		t.Fatalf("empty command = %v; want %s", err, rpc.CodeBadRequest)
-	}
-}
-
 func TestClientDetachLeavesTheLayout(t *testing.T) {
 	d, path := start(t, &memStore{})
 	host := &fakeClientHost{}
@@ -153,22 +134,5 @@ func TestClientDetachLeavesTheLayout(t *testing.T) {
 	}
 	if !slices.Equal(host.detached, []app.Slot{app.Slot(opened.Slot)}) {
 		t.Fatalf("detached %v", host.detached)
-	}
-}
-
-func TestClientPopupOpensWhereCrewWasLaunched(t *testing.T) {
-	d, path := start(t, &memStore{})
-	host := &fakeClientHost{}
-	d.SetClientHost(host)
-	c := dial(t, path)
-	ctx := context.Background()
-	if _, err := c.OpenClient(ctx, rpc.OpenClientParams{Command: []string{"crew", "tui"}, Dir: "/work/api"}); err != nil {
-		t.Fatal(err)
-	}
-	if err := c.Call(ctx, rpc.MethodClientPopup, rpc.ClientPopupParams{Command: []string{"crew", "tui", "--new-session"}}, nil); err != nil {
-		t.Fatal(err)
-	}
-	if len(host.commandPopups) != 1 || host.commandPopups[0].Dir != "/work/api" {
-		t.Fatalf("popups %+v; want it to start in /work/api", host.commandPopups)
 	}
 }

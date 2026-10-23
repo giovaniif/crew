@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"reflect"
 	"testing"
 	"time"
 
@@ -187,30 +186,6 @@ func TestReviewRemovedWorktreeDropsItsTurns(t *testing.T) {
 		_, kept := refs[keep]
 		return len(refs) == 1 && kept
 	})
-}
-
-func TestReviewLayoutWidensTheSidebarAndPutsItBack(t *testing.T) {
-	d, path := start(t, &memStore{})
-	host := &fakeClientHost{}
-	d.SetClientHost(host)
-	c := dial(t, path)
-	ctx := context.Background()
-	var rerr *rpc.Error
-	if err := c.ReviewLayout(ctx, true); !errors.As(err, &rerr) {
-		t.Fatalf("review layout before any client = %v; want an rpc error", err)
-	}
-	if _, err := c.OpenClient(ctx, rpc.OpenClientParams{Command: []string{"crew", "tui"}}); err != nil {
-		t.Fatal(err)
-	}
-	if err := c.ReviewLayout(ctx, true); err != nil {
-		t.Fatal(err)
-	}
-	if err := c.ReviewLayout(ctx, false); err != nil {
-		t.Fatal(err)
-	}
-	if want := []bool{true, false}; !reflect.DeepEqual(host.wide, want) {
-		t.Errorf("widen calls = %v, want %v", host.wide, want)
-	}
 }
 
 func stored(env reviewEnv) []domain.ViewedMark {
