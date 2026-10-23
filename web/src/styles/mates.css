@@ -415,3 +415,11 @@
     color: var(--link);
   }
 }
+
+.mt-faces.mp-faces {
+  gap: 4px;
+}
+
+.mt-faces.mp-faces button {
+  height: 34px;
+}
