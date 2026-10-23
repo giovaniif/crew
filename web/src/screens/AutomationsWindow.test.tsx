@@ -127,6 +127,22 @@ describe("the Automations window", () => {
     );
   });
 
+  it("opens New automation for a mate from its route and saves the mate", async () => {
+    const view = desktop("#/automations/new?mate=helper", true, undefined, {}, (server) =>
+      server
+        .on("GET", "/api/v1/automations", { status: 200, body: { automations: list } })
+        .on("GET", "/api/v1/automations/runs?limit=100", { status: 200, body: { runs } })
+        .on("POST", "/api/v1/automations", (call) => ({ status: 200, body: { ...(call.body as { automation: Automation }).automation, source: "/h/config.toml" } })),
+    );
+    view.live();
+    const form = within(await screen.findByRole("complementary", { name: "New automation" })).getByRole("form", { name: "New automation" });
+    expect(within(form).getByText("Runs as the mate helper.")).toBeInTheDocument();
+    await userEvent.type(within(form).getByRole("textbox", { name: "Name" }), "test-weekly");
+    await userEvent.type(within(form).getByRole("textbox", { name: "Prompt" }), "TEST check");
+    await userEvent.click(within(form).getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(view.server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/automations")?.body).toMatchObject({ automation: { name: "test-weekly", mate: "helper" } }));
+  });
+
   it("shows the .crew.toml of a repo automation, with no Edit and a switch that cannot change", async () => {
     await open();
     const audit = await screen.findByRole("row", { name: "audit" });
