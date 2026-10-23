@@ -52,9 +52,20 @@ func TestConfigLiteralOfAnEmptyValueUnsetsAKnownKey(t *testing.T) {
 	}
 }
 
+func TestConfigHasNoTuiThemeKeys(t *testing.T) {
+	for _, k := range ConfigKeys() {
+		if len(k) > 6 && k[:6] == "theme." {
+			t.Errorf("ConfigKeys still has %q", k)
+		}
+	}
+	if _, err := ConfigLiteral("theme.blue", "#1e66f5"); err == nil {
+		t.Error("theme.blue was accepted")
+	}
+}
+
 func TestConfigKeysListEverySettableKey(t *testing.T) {
 	keys := ConfigKeys()
-	for _, want := range []string{"fallback.threshold", "push.away_after", "defaults.claude.model", "defaults.codex.effort", "theme.deleted_bg"} {
+	for _, want := range []string{"fallback.threshold", "push.away_after", "defaults.claude.model", "defaults.codex.effort"} {
 		found := false
 		for _, k := range keys {
 			found = found || k == want
