@@ -123,7 +123,7 @@ func TestRunEnvRejectsBadArgumentsAndHelp(t *testing.T) {
 }
 
 func TestEnvLoginRunsTheHarnessLoginInsideTheEnvironment(t *testing.T) {
-	if got := envLoginArgv("bot"); !reflect.DeepEqual(got, []string{"exec", "bot", "--", "claude", "setup-token"}) {
+	if got := envLoginArgv("bot"); !reflect.DeepEqual(got, []string{"exec", "bot", "--harness", "claude", "--", "claude", "setup-token"}) {
 		t.Errorf("argv %v", got)
 	}
 }

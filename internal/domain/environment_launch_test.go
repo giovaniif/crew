@@ -15,15 +15,15 @@ func TestEnvLaunchCommand(t *testing.T) {
 	}{
 		{"no env keeps the command", "", HarnessClaude, []string{"claude", "--model", "opus"}, []string{"claude", "--model", "opus"}},
 		{"claude start", "test-bot", HarnessClaude, []string{"claude", "--", "hi"},
-			[]string{"/bin/crew", "env", "exec", "test-bot", "--", "claude", "--", "hi"}},
+			[]string{"/bin/crew", "env", "exec", "test-bot", "--harness", "claude", "--", "claude", "--", "hi"}},
 		{"claude resume", "test-bot", HarnessClaude, []string{"claude", "--resume", "abc"},
-			[]string{"/bin/crew", "env", "exec", "test-bot", "--", "claude", "--resume", "abc"}},
+			[]string{"/bin/crew", "env", "exec", "test-bot", "--harness", "claude", "--", "claude", "--resume", "abc"}},
 		{"local with a name is wrapped", "local", HarnessOmp, []string{"omp", "--", "hi"},
-			[]string{"/bin/crew", "env", "exec", "local", "--", "omp", "--", "hi"}},
+			[]string{"/bin/crew", "env", "exec", "local", "--harness", "omp", "--", "omp", "--", "hi"}},
 		{"codex start", "test-bot", HarnessCodex, []string{"codex", "--model", "m", "--", "hi"},
-			[]string{"/bin/crew", "env", "exec", "test-bot", "--", "codex", "--dangerously-bypass-hook-trust", "--model", "m", "--", "hi"}},
+			[]string{"/bin/crew", "env", "exec", "test-bot", "--harness", "codex", "--", "codex", "--dangerously-bypass-hook-trust", "--model", "m", "--", "hi"}},
 		{"codex resume", "test-bot", HarnessCodex, []string{"codex", "resume", "--model", "m", "abc"},
-			[]string{"/bin/crew", "env", "exec", "test-bot", "--", "codex", "resume", "--dangerously-bypass-hook-trust", "--model", "m", "abc"}},
+			[]string{"/bin/crew", "env", "exec", "test-bot", "--harness", "codex", "--", "codex", "resume", "--dangerously-bypass-hook-trust", "--model", "m", "abc"}},
 		{"empty command", "test-bot", HarnessClaude, nil, nil},
 	}
 	for _, tc := range cases {

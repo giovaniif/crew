@@ -104,7 +104,7 @@ func TestEnvExecUnknownEnvFails(t *testing.T) {
 
 func TestEnvExecUsage(t *testing.T) {
 	var stderr bytes.Buffer
-	for _, args := range [][]string{{"env"}, {"env", "exec"}, {"env", "exec", "test-bot"}, {"env", "exec", "test-bot", "--"}, {"env", "bogus"}} {
+	for _, args := range [][]string{{"env"}, {"env", "exec"}, {"env", "exec", "test-bot"}, {"env", "exec", "test-bot", "--"}, {"env", "bogus"}, {"env", "exec", "test-bot", "--harness", "--", "sh"}, {"env", "exec", "test-bot", "--harness", "bogus", "--", "sh"}} {
 		stderr.Reset()
 		if code := run(args, &bytes.Buffer{}, &stderr); code != 2 {
 			t.Errorf("%v: exit %d", args, code)
@@ -129,5 +129,33 @@ func TestEnvExecMissingProgramNamesItAndNoValue(t *testing.T) {
 	code := run([]string{"env", "exec", "test-bot", "--", "crew-no-such-program"}, &bytes.Buffer{}, &stderr)
 	if code == 0 || !strings.Contains(stderr.String(), "crew-no-such-program") || strings.Contains(stderr.String(), "TEST-") {
 		t.Errorf("exit %d, stderr %q", code, stderr.String())
+	}
+}
+
+func TestEnvExecWithAHarnessGivesOnlyItsAccountAndSeedsOnlyItsDir(t *testing.T) {
+	home := t.TempDir()
+	s := envstore.Store{Home: home}
+	if err := s.Save(domain.Environment{Name: "test-bot", Kind: domain.EnvCustom, Parts: []domain.EnvPart{domain.EnvGitHub, domain.EnvClaude, domain.EnvCodex}}); err != nil {
+		t.Fatal(err)
+	}
+	for k, v := range map[string]string{"GH_TOKEN": "TEST-gh", "CLAUDE_CODE_OAUTH_TOKEN": "sk-ant-oat01-TEST", "OPENAI_API_KEY": "TEST-oai"} {
+		if err := s.SetSecret("test-bot", k, v); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got, stderr, err := runEnvExec(t, home, nil, "test-bot", "--harness", "codex")
+	if err != nil {
+		t.Fatalf("%v: %s", err, stderr)
+	}
+	if got["GH_TOKEN"] != "TEST-gh" || got["OPENAI_API_KEY"] != "TEST-oai" || got["CODEX_HOME"] != filepath.Join(home, "envs", "test-bot", "codex") {
+		t.Errorf("codex account missing: %v", got)
+	}
+	for _, k := range []string{"CLAUDE_CONFIG_DIR", "CLAUDE_CODE_OAUTH_TOKEN"} {
+		if _, ok := got[k]; ok {
+			t.Errorf("%s given to a codex mate", k)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(home, "envs", "test-bot", "claude", "settings.json")); err == nil {
+		t.Error("the claude dir was seeded for a codex mate")
 	}
 }

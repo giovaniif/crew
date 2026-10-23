@@ -127,7 +127,7 @@ func TestEnvSeedIntegrationFreshEnvReachesThePromptAndFiresACrewHook(t *testing.
 		}
 	}
 
-	claudeCmd := append(append([]string{}, envArgs...), crewBin, "env", "exec", "test-bot", "--", "claude")
+	claudeCmd := append(append([]string{}, envArgs...), crewBin, "env", "exec", "test-bot", "--harness", "claude", "--", "claude")
 	tm(append([]string{"new-session", "-d", "-s", "c", "-x", "200", "-y", "50", "-c", work}, claudeCmd...)...)
 	screen := wait("c", "claude", func(s string) bool {
 		for _, d := range dialogs {
@@ -145,7 +145,7 @@ func TestEnvSeedIntegrationFreshEnvReachesThePromptAndFiresACrewHook(t *testing.
 		t.Errorf("no crew hook from claude; screen:\n%s", screen)
 	}
 
-	codexCmd := append(append([]string{}, envArgs...), crewBin, "env", "exec", "test-bot", "--", "codex")
+	codexCmd := append(append([]string{}, envArgs...), crewBin, "env", "exec", "test-bot", "--harness", "codex", "--", "codex")
 	codexCmd = append(codexCmd, domain.CodexEnvHookTrustArgs()...)
 	tm(append([]string{"new-session", "-d", "-s", "x", "-x", "200", "-y", "50", "-c", work}, codexCmd...)...)
 	screen = wait("x", "codex", func(s string) bool {

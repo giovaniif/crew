@@ -47,7 +47,7 @@ func TestAutomationWithAMateRunsAsThatMate(t *testing.T) {
 		t.Errorf("harness %q, want the harness of the mate", got.Session.Harness)
 	}
 	cmd := lastSpec(r)
-	if len(cmd) <= len(envPrefix) || !slices.Equal(cmd[:len(envPrefix)], envPrefix) || cmd[len(envPrefix)] != "codex" {
+	if !envWrapped(cmd, "codex") {
 		t.Errorf("command %q", cmd)
 	}
 	if !strings.Contains(strings.Join(cmd, " "), "You help.") {
