@@ -52,6 +52,7 @@ describe("the session commands", () => {
     d.live({ ...goldenState(), sessions: [session("a", "alpha", { Muted: true }), session("b", "beta", { Ended: true, order: -1 })] });
     expect(items(menuOf("alpha"))).toContain("Unmute");
     fireEvent.keyDown(screen.getByRole("menu", { name: "Session commands" }), { key: "Escape" });
+    fireEvent.click(screen.getByRole("radio", { name: "Ended" }));
     expect(items(menuOf("beta"))).toEqual(["Resume"]);
   });
 
@@ -152,6 +153,7 @@ describe("the session commands", () => {
   it("resumes an ended session", async () => {
     const { server } = setup({ Ended: true, order: -1 });
     server.on("POST", "/api/v1/sessions/a/resume", { status: 200, body: {} });
+    fireEvent.click(screen.getByRole("radio", { name: "Ended" }));
     await userEvent.click(opened(menuOf("alpha"), "Resume"));
     expect(posts(server)).toEqual([["/api/v1/sessions/a/resume", undefined]]);
   });
