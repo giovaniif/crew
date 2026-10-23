@@ -48,6 +48,12 @@ Implementations of the `app` ports. All exec, disk and network calls are here. g
   - `chrome-headless-shell` uses much less memory than full Chromium (see ARCHITECTURE.md).
   - Tests drive a fake CDP server: `go test ./internal/adapters/chromium/`.
 - **secrets** (`app.MateSecrets`): `secrets.Files{Dir}` keeps the Slack tokens of a mate as `<name>.bot` and `<name>.app` with mode 600, in a directory with mode 700 (`$CREW_HOME/secrets`). A write goes to a temp file first and then renames it. A name that is not a valid mate name is refused, so a path never leaves the directory. It can set, clear and tell if a token exists. `MateTokens` (`app.MateTokenReader`) reads them only for the Slack worker of the daemon. Nothing reads a token back to a client. Test: `go test ./internal/adapters/secrets/`.
+- **envstore** (`app.EnvironmentStore`, ADR 0061): `envstore.Store{Home}` keeps each environment as `[[env]]` in `$CREW_HOME/config.toml` (name, kind, parts, extra names) with the backup and atomic rename of `config.set`. The values are files `$CREW_HOME/secrets/env/<env>/<NAME>` (600, directory 700). The harness dirs are `$CREW_HOME/envs/<env>/{gh,claude,codex,omp}` (700).
+  - The kind is fixed: `Save` refuses a kind change. `SetSecret` takes a secret of a set part or an extra name, and adds an extra name to the definition. An error never holds a value.
+  - `WriteGitConfig` writes `envs/<env>/gitconfig` with only `user.name` and `user.email`.
+  - SSH: `MakeSSHKey` runs `ssh-keygen -t ed25519` one time into `secrets/env/<env>/ssh/id_ed25519`. `ImportSSHKey` checks a key with `ssh-keygen -y`. `RotateSSHKey` makes `id_ed25519.new` and keeps the old key until `ConfirmSSHKey`.
+  - `Delete` removes the definition, the secrets and the dirs. It refuses while a `[[mate]]` has `env` set to it.
+  - Test: `go test ./internal/adapters/envstore/` (needs `ssh-keygen`).
 - **slack** (`app.SlackMate`): `slack.New(bot, app)` connects one mate to Slack in Socket Mode. `Run` calls `auth.test` (bot token) and `apps.connections.open` (app token), opens the WebSocket with `github.com/coder/websocket`, and acks each envelope before it handles it.
   - It hands on `app_mention`, a `message` in a thread, a `message` in a direct message (`channel_type` `im`), and each action of `block_actions`. It ignores the messages of the mate itself, edits and other subtypes, and channel messages that are not in a thread.
   - It drops a retried envelope: the key is the `event_id`, else the envelope ID. It keeps the last 512 keys.

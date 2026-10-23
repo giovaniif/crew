@@ -17,6 +17,7 @@ type Mate struct {
 	Owner    string   `json:"owner,omitempty"`
 	Avatar   string   `json:"avatar,omitempty"`
 	Color    string   `json:"color,omitempty"`
+	Env      string   `json:"env,omitempty"`
 	Tone     MateTone `json:"tone,omitzero"`
 	NoMemory bool     `json:"no_memory,omitempty"`
 	Enabled  bool     `json:"enabled"`
