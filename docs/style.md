@@ -48,3 +48,4 @@ Use these terms with these meanings only.
 | **port** | In `internal/app` and the layer rules: an interface that an adapter implements. In the ports view and `ports.*` methods: a TCP port that a dev server listens on. Use "port interface" or "TCP port" when the context does not make the meaning clear. |
 | **adapter** | Code in `internal/adapters` that implements a port with a real tool or library. |
 | **device** | A phone or other client that is paired with `crew serve`. |
+
