@@ -18,6 +18,8 @@ d="$CREW_HOME/dumps"
 mkdir -p "$d"
 f="$d/$(basename "$0").$$.env"
 { env; printf 'CREW_ARGV=%s\n' "$*"; } >"$f.tmp" && mv "$f.tmp" "$f"
+sid="TEST-$(printf '%s' "$PWD" | cksum | cut -d' ' -f1)"
+printf '{"session_id":"%s","cwd":"%s"}' "$sid" "$PWD" | "$CREW_HOME/bin/crew" hook --harness "$(basename "$0")" --event SessionStart >/dev/null 2>&1
 exec cat
 `
 
