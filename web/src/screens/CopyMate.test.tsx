@@ -18,7 +18,7 @@ describe("CopyMate (frame 12g)", () => {
     await user.click(await screen.findByRole("button", { name: "More for ada" }));
     await user.click(await screen.findByRole("menuitem", { name: "Copy to another machine…" }));
     const dialog = await screen.findByRole("dialog", { name: "Copy ada to another machine" });
-    expect(within(dialog).getByText(/crew makes a new mate on the target machine with the same role, memory and look\. ada stays on mac and keeps its threads\./)).toBeInTheDocument();
+    expect(within(dialog).getByText(/crew makes a new mate on the target machine with the same role, memory and look\. ada stays on This Mac and keeps its threads\./)).toBeInTheDocument();
     await waitFor(() => expect(within(dialog).getByRole("combobox", { name: "Target machine" })).toHaveTextContent("devbox"));
     expect(within(dialog).getByRole("combobox", { name: "Environment on devbox" })).toHaveTextContent("devbox · your accounts");
     const name = within(dialog).getByRole("textbox", { name: "Name" });
