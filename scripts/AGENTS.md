@@ -60,7 +60,7 @@ Repo tooling. The repo-wide rules are in the [root AGENTS.md](../AGENTS.md).
   - `doctor`: the tools (go, git, tmux, node 22.18+, `web/node_modules`, the Playwright Chromium), the branch, the machine load, TCP port 5199 and `/tmp`.
   - `iso up [--session] [--env-fakes]|down|seed [--sessions n] [--codex]|crew|dump|homesum|leaks|panes|file|api`: an isolated crew.
     - It has a `CREW_HOME` under `/tmp`, its own tmux socket, its own TCP ports and a temporary `HOME`.
-    - The e2e fakes (`claude`, `codex`, `gh`, `terminal-notifier`, `osascript`) are first on `PATH`. Slack, ntfy and GitHub tokens are blank.
+    - The e2e fakes (`claude`, `codex`, `omp`, `gh`, `terminal-notifier`, `osascript`) are first on `PATH`. `up` writes an empty `claude.steps`, `codex.steps` and `omp.steps` in `$CREW_HOME/e2e`, so each fake harness holds its pane. Slack, ntfy and GitHub tokens are blank.
     - `up` starts `crew serve` and the Vite dev server (`CREW_API`). It pairs the device `TEST-verify` with `crew remote pair` and `POST /api/v1/pair`. It never prints the token.
     - `up` writes TEST files into the temporary `HOME` (`.gitconfig`, `.claude.json`, `.claude`, `.codex`, `.omp`, `.config/gh`, `.ssh`) and sets `SSH_AUTH_SOCK` to a TEST path in the isolated home.
     - `--env-fakes` puts fake `claude`, `codex` and `omp` programs (in `$CREW_HOME/fakes`) first on `PATH`. Each fake writes its environment and `CREW_ARGV` to `$CREW_HOME/dumps/<harness>.<pid>.env`, sends `SessionStart` with a session id from its work dir, and then waits on its input. The environments recipes use them (see [features/environments.md](../features/environments.md)).

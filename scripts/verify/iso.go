@@ -151,7 +151,7 @@ func isoUp(e *env, args []string, r *result) {
 	for _, d := range []string{"bin", "e2e", "home/.config", "home/.local/share", "home/.local/state", "home/.claude", "home/.codex"} {
 		_ = os.MkdirAll(filepath.Join(home, d), 0o755)
 	}
-	for _, f := range []string{"onboarded", "e2e/claude.steps", "e2e/codex.steps"} {
+	for _, f := range []string{"onboarded", "e2e/claude.steps", "e2e/codex.steps", "e2e/omp.steps"} {
 		_ = os.WriteFile(filepath.Join(home, f), nil, 0o644)
 	}
 	ok = false

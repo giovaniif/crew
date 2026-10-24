@@ -49,9 +49,8 @@ go run ./scripts/verify iso crew -- mate remove test-taken
 ```sh
 go run ./scripts/verify iso down
 go run ./scripts/verify iso up --session
-H="$(jq -r .home "${VERIFY_HOME:-/tmp/crew-verify-$(id -u)}/iso.json")"
 go run ./scripts/verify iso crew -- mate set test-ada --agent claude --prompt "TEST role prompt" --repo TEST-live
-printf '\n[[automation]]\nname = "test-weekly"\nmate = "test-ada"\nprompt = "TEST weekly check"\n' >> "$H/config.toml"
+printf '\n[[automation]]\nname = "test-weekly"\nmate = "test-ada"\nprompt = "TEST weekly check"\n' >> "$(jq -r .home "$VERIFY_HOME/iso.json")/config.toml"
 go run ./scripts/verify iso crew --expect test-weekly -- automation list --mate test-ada
 go run ./scripts/verify iso crew --expect succeeded -- automation run test-weekly
 { go run ./scripts/verify iso crew -- mate remove test-ada || true; } | grep -q 'used by automation test-weekly'
@@ -59,6 +58,20 @@ go run ./scripts/verify web drive /#/mates/test-ada --viewport desktop --out-dir
 ```
 
 Expect: the thread list of `test-ada` has the run with the tag Automation, the rail lists `test-weekly`, and `mate remove` refuses the mate while the automation names it. The fake `claude` of `iso up --session` runs the session.
+
+### a run of an omp mate keeps its pane
+
+```sh
+go run ./scripts/verify iso down
+go run ./scripts/verify iso up --session
+go run ./scripts/verify iso crew -- mate set test-pi --agent omp --prompt "TEST role prompt" --repo TEST-live
+printf '\n[[automation]]\nname = "test-pi-check"\nmate = "test-pi"\nprompt = "TEST pi check"\n' >> "$(jq -r .home "$VERIFY_HOME/iso.json")/config.toml"
+go run ./scripts/verify iso crew --expect succeeded -- automation run test-pi-check
+sleep 2
+go run ./scripts/verify iso panes --expect omp
+```
+
+Expect: the pane of the omp mate is open 2 s after the run starts. The fake `omp` of `iso up` reads `$CREW_E2E/omp.steps` and holds its pane.
 
 ### a help flag in the place of the name prints the usage
 
