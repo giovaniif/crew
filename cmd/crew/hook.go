@@ -40,7 +40,7 @@ func hook1(args []string, stdin io.Reader, stdout io.Writer, home, pane string) 
 	if err != nil {
 		return err
 	}
-	h := rpc.Hook{Harness: *harness, Event: *event, Pane: pane, At: time.Now()}
+	h := rpc.Hook{Harness: *harness, Event: *event, Pane: pane, Tmux: os.Getenv("TMUX"), At: time.Now()}
 	if len(payload) > 0 {
 		if !json.Valid(payload) {
 			return fmt.Errorf("%s %s: stdin is not JSON", *harness, *event)

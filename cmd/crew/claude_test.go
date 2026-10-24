@@ -48,6 +48,7 @@ func TestSetupNeedsAKnownHarness(t *testing.T) {
 const statusJSON = `{"model":{"display_name":"Opus 5.5"},"effort":{"level":"high"},"context_window":{"remaining_percentage":70},"rate_limits":{"five_hour":{"used_percentage":20,"resets_at":1}}}`
 
 func TestStatusLineChainsTheUsersCommandAndReportsToTheDaemon(t *testing.T) {
+	t.Setenv("TMUX", "/tmp/tmux-1000/crew,5,0")
 	home := shortHome(t)
 	got := make(chan rpc.Request, 1)
 	fakeDaemon(t, home, func(req rpc.Request) *rpc.Response { got <- req; return nil })
@@ -68,7 +69,7 @@ func TestStatusLineChainsTheUsersCommandAndReportsToTheDaemon(t *testing.T) {
 	}
 	want := domain.StatusReport{Model: "Opus 5.5", Effort: "high", ContextLeft: 70, HasContext: true,
 		Limits: []domain.RateLimit{{Window: "five_hour", UsedPercent: 20, ResetsAt: 1}}}
-	if req.Method != rpc.MethodStatusLine || sl.Pane != "%3" || sl.Report.Model != want.Model || sl.Report.ContextLeft != 70 || len(sl.Report.Limits) != 1 {
+	if req.Method != rpc.MethodStatusLine || sl.Pane != "%3" || sl.Tmux != "/tmp/tmux-1000/crew,5,0" || sl.Report.Model != want.Model || sl.Report.ContextLeft != 70 || len(sl.Report.Limits) != 1 {
 		t.Fatalf("request %+v, status line %+v", req, sl)
 	}
 }

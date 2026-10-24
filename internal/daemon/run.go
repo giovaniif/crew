@@ -103,6 +103,7 @@ func Run(ctx context.Context, home string) (err error) {
 		WithHarnessConfig(readHarnessConfig),
 		WithConfig(filepath.Join(home, "config.toml")),
 		WithMachine(machineName()),
+		WithTmuxSocket(socket),
 		WithEnvLauncher(self),
 		WithNotifier(banners, notify.New(), sounds),
 		WithWorktrees(gitadapter.Worktrees{}, &github.Finder{}),
