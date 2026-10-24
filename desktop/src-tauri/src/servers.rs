@@ -70,7 +70,7 @@ pub struct Row {
     pub detail: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Store {
     pub servers: Vec<Server>,
     pub selected: String,
@@ -94,7 +94,9 @@ impl Store {
         let Ok(bytes) = std::fs::read(file) else {
             return (Store::default(), true);
         };
-        let mut store: Store = serde_json::from_slice(&bytes).unwrap_or_default();
+        let mut store: Store = serde_json::from_slice::<crate::machines::MachineFile>(&bytes)
+            .map(Store::from)
+            .unwrap_or_default();
         if !store.servers.iter().any(|s| s.kind == Kind::Local) {
             store.servers.insert(0, Store::default().servers.remove(0));
         }
@@ -108,7 +110,7 @@ impl Store {
         if let Some(dir) = file.parent() {
             std::fs::create_dir_all(dir)?;
         }
-        let text = serde_json::to_string_pretty(self).map_err(io::Error::other)?;
+        let text = serde_json::to_string_pretty(&crate::machines::MachineFile::from(self)).map_err(io::Error::other)?;
         let tmp = file.with_extension("json.tmp");
         write_private(&tmp, text.as_bytes())?;
         std::fs::rename(&tmp, file)
@@ -167,7 +169,7 @@ impl Store {
     }
 }
 
-fn write_private(file: &Path, bytes: &[u8]) -> io::Result<()> {
+pub fn write_private(file: &Path, bytes: &[u8]) -> io::Result<()> {
     let _ = std::fs::remove_file(file);
     let mut options = std::fs::OpenOptions::new();
     options.write(true).create_new(true);

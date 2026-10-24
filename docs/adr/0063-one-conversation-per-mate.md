@@ -29,7 +29,7 @@ The owner wants a mate to work as one person: one conversation that gets all the
 
 - A Slack input keeps its channel and `thread_ts`. The daemon links each Slack thread to the conversation (`domain.MateThread`). At `Stop`, the daemon posts the result in the reply thread of the turn, then forgets it. Thus the answer goes to the Slack thread or DM where the message came from.
 - An app or automation input has no reply thread. The app shows all of the conversation.
-- Each input has a source line at the top (`domain.MateSourcePrompt`): `Source: #<channel>`, `Source: DM` or `Source: Automation <name>`. App input has no source line. The app reads it and shows a tag on the message (App, #channel, DM, Automation).
+- Each input starts with a source tag on its first line (`domain.MateSourcePrompt`): `[Source: #<channel>]`, `[Source: DM]` or `[Source: Automation <name>]`. App input has no tag. The tag is on the same line as the text, so a harness that splits a paste by line keeps the tag with the text. The app reads it and shows a tag on the message (App, #channel, DM, Automation).
 
 ### Start fresh
 

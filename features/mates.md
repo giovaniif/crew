@@ -81,14 +81,14 @@ go run ./scripts/verify iso panes --expect omp
 
 Expect: the pane of the omp mate is open 2 s after the run starts. The fake `omp` of `iso up` reads `$CREW_E2E/omp.steps` and holds its pane.
 
-### a message in a new mate App thread shows in the chat
+### the first message to a mate starts its conversation and shows in the chat
 
 ```sh
 go run ./scripts/verify iso down
 go run ./scripts/verify iso up --session
 printf 'run sh %s/features/testdata/mate-chat.sh\n' "$PWD" >"$(jq -r .home "$VERIFY_HOME/iso.json")/e2e/claude.steps"
 go run ./scripts/verify iso crew -- mate set test-ux --agent claude --prompt "TEST role prompt" --repo TEST-live
-go run ./scripts/verify web drive /#/mates/test-ux --viewport desktop --out-dir /tmp/crew-verify-map/mates --steps '[{"click":{"role":"button","name":"New thread"}},{"expect":{"label":"Message"},"timeout":10000},{"wait":2000},{"fill":{"label":"Message"},"value":"TEST first check"},{"press":"Enter"},{"expect":{"text":"TEST first check","exact":true},"timeout":3000},{"shot":"mate-thread-sent.png"},{"expect":{"text":"TEST reply: TEST first check"},"timeout":20000},{"shot":"mate-thread-reply.png"}]'
+go run ./scripts/verify web drive /#/mates/test-ux --viewport desktop --out-dir /tmp/crew-verify-map/mates --steps '[{"expect":{"label":"Message"},"timeout":10000},{"wait":2000},{"fill":{"label":"Message"},"value":"TEST first check"},{"press":"Enter"},{"expect":{"text":"TEST first check","exact":true},"timeout":3000},{"shot":"mate-thread-sent.png"},{"expect":{"text":"TEST reply: TEST first check"},"timeout":20000},{"shot":"mate-thread-reply.png"}]'
 ```
 
 Expect: the sent text shows at once, and the reply comes in by the stream. The fake `claude` sends hooks with no `transcript_path`, as a Claude with no crew hooks in `settings.json` does not tell crew the path. The script is `features/testdata/mate-chat.sh`. It writes the transcript where Claude writes it: `$CLAUDE_CONFIG_DIR/projects/<dir>/<--session-id>.jsonl`.
