@@ -171,7 +171,9 @@ func (d *Daemon) userName(ctx context.Context, client app.SlackMate, user string
 
 func (d *Daemon) mateSlackTurn(ctx context.Context, m domain.Mate, client app.SlackMate, e app.SlackEvent, seat domain.MateSeat, link domain.MateThread, linked bool) bool {
 	asker := d.userName(ctx, client, e.User)
-	src := domain.MateSource{Channel: e.Channel}
+	d.slack.mu.Lock()
+	src := domain.MateSource{Channel: e.Channel, ChannelName: d.slack.chans[m.Name][e.Channel]}
+	d.slack.mu.Unlock()
 	text := domain.MateSourcePrompt(src, domain.MateReplyPrompt(asker, e.Text))
 	if !linked {
 		text = domain.MateSourcePrompt(src, domain.MateFirstPrompt(m, asker, d.threadLines(ctx, client, e, asker)))

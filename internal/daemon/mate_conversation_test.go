@@ -90,6 +90,31 @@ func TestMateConversationAnswersInTheThreadOfEachTurnInOrder(t *testing.T) {
 	})
 }
 
+func TestMateSourceTagNamesTheSlackChannel(t *testing.T) {
+	r := startMateRig(t, &memStore{})
+	r.hub.chanNames = map[string]string{"C0CHAN002": "search"}
+	m := r.connect(t, "helper")
+	r.hub.send(m, mentionIn("C0CHAN002", mateOwner, "<@U0BOT0001> look at search", "1700.0002"))
+	waitFor(t, func() bool { return len(queuedTexts(t, r.c)) == 1 })
+	if texts := queuedTexts(t, r.c); !strings.Contains(texts[0], "[Source: #search]") {
+		t.Fatalf("queued %q", texts)
+	}
+}
+
+func TestMateNewTellsIfItStartedOrAddedToTheConversation(t *testing.T) {
+	r, _ := localRig(t)
+	var first, second rpc.MateNewResult
+	if err := r.c.Call(context.Background(), rpc.MethodMateNew, rpc.MateNewParams{Name: "helper", Prompt: "fix the login bug"}, &first); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.c.Call(context.Background(), rpc.MethodMateNew, rpc.MateNewParams{Name: "helper", Prompt: "and the docs"}, &second); err != nil {
+		t.Fatal(err)
+	}
+	if first.Added || !second.Added || second.ID != first.ID {
+		t.Fatalf("first %+v, second %+v", first, second)
+	}
+}
+
 func TestMateNewTwiceSendsIntoTheOneConversation(t *testing.T) {
 	r, _ := localRig(t)
 	var first, second domain.Session

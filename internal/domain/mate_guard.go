@@ -68,13 +68,6 @@ func ChainAuthority(seat MateSeat, kind ActionKind) string {
 	return seat.Authority
 }
 
-func NextMateSeat(current, next MateSeat, busy bool) MateSeat {
-	if NextMateAuthority(current.Authority, next.Authority, next.Owner, busy) == next.Authority {
-		return next
-	}
-	return current
-}
-
 func MateMentions(text, user string) bool {
 	return user != "" && strings.Contains(text, "<@"+user+">")
 }
