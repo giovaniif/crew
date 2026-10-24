@@ -156,22 +156,25 @@ func (c *Client) PostApproval(ctx context.Context, channel, threadTS, text, id s
 	return out.TS, err
 }
 
-func (c *Client) channels(ctx context.Context) []string {
+func (c *Client) channels(ctx context.Context) ([]string, map[string]string) {
 	var out struct {
 		Channels []struct {
+			ID   string `json:"id"`
 			Name string `json:"name"`
 		} `json:"channels"`
 	}
 	form := url.Values{"types": {"public_channel,private_channel"}, "exclude_archived": {"true"}, "limit": {"200"}}
 	if err := c.call(ctx, "users.conversations", c.Bot, form, &out); err != nil {
-		return nil
+		return nil, nil
 	}
 	names := make([]string, 0, len(out.Channels))
+	ids := make(map[string]string, len(out.Channels))
 	for _, ch := range out.Channels {
 		names = append(names, ch.Name)
+		ids[ch.ID] = ch.Name
 	}
 	slices.Sort(names)
-	return names
+	return names, ids
 }
 
 func (c *Client) Replies(ctx context.Context, channel, threadTS string) ([]app.SlackMessage, error) {
@@ -287,7 +290,8 @@ func (c *Client) connect(ctx context.Context, handle func(app.SlackEvent), statu
 		switch env.Type {
 		case "hello":
 			connected = true
-			status(app.SlackStatus{State: domain.MateConnected, User: c.selfUser, Channels: c.channels(ctx)})
+			names, ids := c.channels(ctx)
+			status(app.SlackStatus{State: domain.MateConnected, User: c.selfUser, Channels: names, ChannelNames: ids})
 		case "disconnect":
 			_ = conn.Close(websocket.StatusNormalClosure, "")
 			return connected, nil

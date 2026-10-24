@@ -1,6 +1,6 @@
 # Mates
 
-A mate is an agent that answers in Slack and in the app. It has one conversation: all input goes into it, and each answer goes back to where the message came from (ADR [0063](../docs/adr/0063-one-conversation-per-mate.md)). `crew mate set` adds one, `crew mate tokens` stores its Slack tokens, `crew mate claim` links its owner. The isolated crew has blank Slack tokens, so a mate never connects.
+A mate is an agent that answers in Slack and in the app. It has one conversation: all input goes into it, and each answer goes back to where the message came from (ADR [0064](../docs/adr/0064-one-conversation-per-mate.md)). `crew mate set` adds one, `crew mate tokens` stores its Slack tokens, `crew mate claim` links its owner. The isolated crew has blank Slack tokens, so a mate never connects.
 
 ## Setup
 

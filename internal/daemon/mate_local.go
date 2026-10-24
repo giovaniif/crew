@@ -105,7 +105,7 @@ func (d *Daemon) mateNew(req rpc.Request) (*rpc.Response, bool) {
 	case rerr != nil:
 		return errorResponse(req.ID, rerr.Code, rerr.Message), true
 	}
-	return result(req.ID, session), true
+	return result(req.ID, rpc.MateNewResult{Session: session, Added: true}), true
 }
 
 func (d *Daemon) mateFresh(req rpc.Request) (*rpc.Response, bool) {

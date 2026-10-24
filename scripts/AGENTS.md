@@ -13,6 +13,7 @@ Repo tooling. The repo-wide rules are in the [root AGENTS.md](../AGENTS.md).
   - The root `AGENTS.md` is longer than 150 lines (`-max n`).
   - A scoped `AGENTS.md` has no `CLAUDE.md` symlink to it beside it.
   - A relative link in an `AGENTS.md` or `ARCHITECTURE.md` does not resolve.
+  - Two files in `docs/adr/` have the same number. The old pairs 0042 and 0050 are known and pass.
 
   It skips `testdata/`, `.claude/`, `.git/`, `node_modules/`, `vendor/`, `bin/` and `dist/`. Its fixtures are directory trees under its `testdata/`. See [ADR 0041](../docs/adr/0041-scoped-agents-md.md).
 - **`tdd-check <base> <head>`**: the check that CI's `tdd` job runs.

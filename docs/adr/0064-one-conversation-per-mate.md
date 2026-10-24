@@ -1,4 +1,4 @@
-# ADR 0063: One conversation for each mate
+# ADR 0064: One conversation for each mate
 
 Status: accepted, 2026-10-23. Tracking issue: #836. It amends [ADR 0053](0053-mates.md) and [ADR 0056](0056-local-mates.md).
 
