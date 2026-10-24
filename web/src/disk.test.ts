@@ -95,6 +95,26 @@ describe("diskRows", () => {
     expect(row).toMatchObject({ worktree: "api-feat", path: "/w/api-feat", session: "fix the login", sessionID: "s1", pr: "#42", size: "412 MB", ports: ":5173 :5174", pgids: [40] });
   });
 
+  it("gives a short plan label and keeps the full reason as detail", () => {
+    const long = "facts unavailable: git status in /home/me/.local/state/loops/work-patrol-20261022T090837Z/681: exit status 128";
+    const v = view(
+      [
+        { WorktreeID: "gone", Size: -2, Action: "prune", Reason: "folder is gone" },
+        { WorktreeID: "moved", Size: 1, Action: "keep", Reason: "repo moved or missing" },
+        { WorktreeID: "busy", Size: 1, Action: "keep", Reason: "in use by claude (pid 1337717)" },
+        { WorktreeID: "odd", Size: 1, Action: "keep", Reason: long },
+      ],
+      { next_cleanup: undefined },
+    );
+    const rows = diskRows(v, { worktrees: [wt("gone"), wt("moved"), wt("busy"), wt("odd")], sessions: [] }, "UTC");
+    expect(rows.map((r) => [r.status, r.plan, r.detail])).toEqual([
+      ["Folder gone", "prunes in the next cleanup", "folder is gone"],
+      ["No PR", "kept: repo moved or missing", "repo moved or missing"],
+      ["No PR", "kept: in use by claude (pid 1337717)", "in use by claude (pid 1337717)"],
+      ["No PR", "kept: git check failed", long],
+    ]);
+  });
+
   it("says the next cleanup when it has no time", () => {
     const [row] = diskRows(view([{ WorktreeID: "w1", Size: 1, Action: "remove", Reason: "merged" }], { next_cleanup: undefined }), { worktrees: [wt("w1")], sessions: [] }, "UTC");
     expect(row.plan).toBe("removes in the next cleanup");
@@ -102,7 +122,14 @@ describe("diskRows", () => {
 });
 
 describe("diskActions", () => {
-  const base = { id: "w", path: "/w/api-feat", worktree: "api-feat", sessionID: "s1", session: "fix", pr: "", status: "", tone: "", size: "", ports: "", pgids: [] as number[], plan: "" };
+  const base = { id: "w", path: "/w/api-feat", worktree: "api-feat", sessionID: "s1", session: "fix", pr: "", status: "", tone: "", size: "", ports: "", pgids: [] as number[], plan: "", detail: "" };
+
+  it("offers Prune for a row whose folder is gone, with a confirmation", () => {
+    const acts = diskActions({ ...base, sessionID: "", action: "prune" });
+    expect(acts.map((a) => a.title)).toEqual(["Prune…"]);
+    expect(acts[0].confirm).toBe("Prune api-feat? Its folder is gone. crew runs git worktree prune; the branch stays.");
+    expect(acts[0].cleanup).toEqual({ path: "/w/api-feat", backup: false });
+  });
 
   it("offers no removal for a keep row", () => {
     expect(diskActions({ ...base, action: "keep" }).map((a) => a.kind)).toEqual(["session", "shell"]);

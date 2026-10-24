@@ -422,7 +422,7 @@ fn connect(app: &AppHandle, id: &str) -> Result<(Url, Option<serde_json::Value>)
             let saved = server.auth.clone().filter(|a| local::token_works(port, a));
             let auth = match saved {
                 Some(auth) => auth,
-                None => hub::ssh_pair(host, port)?,
+                None => hub::ssh_pair(host, port, &app_version(app))?,
             };
             let mut hub = state.lock().unwrap();
             hub.store.add(server.kind.clone(), Some(auth.clone()));
@@ -504,7 +504,7 @@ async fn crew_server_add(
                     servers::ssh_target(&target).ok_or("Type a host name, not ssh options.")?;
                 hub::ssh_setup(&host)?;
                 let tunnel = hub::ssh_tunnel(&host)?;
-                let auth = hub::ssh_pair(&host, tunnel.port)?;
+                let auth = hub::ssh_pair(&host, tunnel.port, &app_version(&app))?;
                 let mut hub = state.lock().unwrap();
                 let id = hub.store.add(Kind::Ssh { host }, Some(auth));
                 hub.save()?;
@@ -534,6 +534,43 @@ fn crew_server_remove(app: AppHandle, webview: Webview, id: String) -> Result<()
         tunnel.stop();
     }
     Ok(())
+}
+
+fn app_version(app: &AppHandle) -> String {
+    app.package_info().version.to_string()
+}
+
+#[derive(serde::Serialize)]
+struct RemoteCrew {
+    action: &'static str,
+    server: Option<String>,
+    app: String,
+}
+
+#[tauri::command]
+async fn crew_server_crew(app: AppHandle, webview: Webview, target: String) -> Result<RemoteCrew, String> {
+    guard(&app, &webview)?;
+    blocking(move || {
+        let host = servers::ssh_target(&target).ok_or("Type a host name, not ssh options.")?;
+        let version = app_version(&app);
+        let (action, server) = match hub::ssh_crew(&host, &version)? {
+            servers::Plan::Install => ("install", None),
+            servers::Plan::Upgrade(v) => ("upgrade", Some(v)),
+            servers::Plan::Current | servers::Plan::Newer(_) => ("current", (version != "0.0.0").then(|| servers::tag(&version))),
+        };
+        Ok(RemoteCrew { action, server, app: servers::tag(&version) })
+    })
+    .await
+}
+
+#[tauri::command]
+async fn crew_server_install(app: AppHandle, webview: Webview, target: String) -> Result<(), String> {
+    guard(&app, &webview)?;
+    blocking(move || {
+        let host = servers::ssh_target(&target).ok_or("Type a host name, not ssh options.")?;
+        hub::ssh_install(&host, &app_version(&app))
+    })
+    .await
 }
 
 #[tauri::command]
@@ -569,6 +606,22 @@ async fn crew_server_workspace(
         let (url, auth) = connect(&app, &id)?;
         let token = hub::token_of(&auth).ok_or("this server is not paired")?;
         hub::add_workspace(&url, &token, path.trim())
+    })
+    .await
+}
+
+#[tauri::command]
+async fn crew_server_complete(
+    app: AppHandle,
+    webview: Webview,
+    id: String,
+    path: String,
+) -> Result<serde_json::Value, String> {
+    guard(&app, &webview)?;
+    blocking(move || {
+        let (url, auth) = connect(&app, &id)?;
+        let token = hub::token_of(&auth).ok_or("this server is not paired")?;
+        hub::complete_path(&url, &token, &path)
     })
     .await
 }
@@ -732,7 +785,10 @@ pub fn run() {
             crew_server_open,
             crew_server_remove,
             crew_server_fix,
+            crew_server_crew,
+            crew_server_install,
             crew_server_workspace,
+            crew_server_complete,
             crew_browser_open,
             crew_pick_folder,
             crew_check_update

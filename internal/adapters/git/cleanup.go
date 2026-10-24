@@ -20,6 +20,9 @@ import (
 var _ app.CleanupGit = Worktrees{}
 
 func (Worktrees) CleanupFacts(ctx context.Context, w domain.Worktree) (app.WorktreeGitFacts, error) {
+	if missing := gone(w); missing.PathMissing || missing.RepoMissing {
+		return missing, nil
+	}
 	status, err := output(ctx, w.Path, "status", "--porcelain=v2", "--branch", "-z")
 	if err != nil {
 		return app.WorktreeGitFacts{}, fmt.Errorf("git status in %s: %w", w.Path, err)
@@ -125,4 +128,29 @@ func (Worktrees) CreateBranch(ctx context.Context, w domain.Worktree, name strin
 func (Worktrees) Prune(ctx context.Context, repo string) error {
 	_, err := output(ctx, repo, "worktree", "prune")
 	return err
+}
+
+func gone(w domain.Worktree) app.WorktreeGitFacts {
+	var f app.WorktreeGitFacts
+	if w.Repo != "" && notExist(w.Repo) {
+		f.RepoMissing = true
+	}
+	if notExist(w.Path) {
+		f.PathMissing = true
+		return f
+	}
+	data, err := os.ReadFile(filepath.Join(w.Path, ".git"))
+	if err != nil {
+		return f
+	}
+	line := strings.TrimSpace(string(data))
+	if dir, ok := strings.CutPrefix(line, "gitdir: "); ok && notExist(dir) {
+		f.RepoMissing = true
+	}
+	return f
+}
+
+func notExist(path string) bool {
+	_, err := os.Stat(path)
+	return errors.Is(err, os.ErrNotExist)
 }

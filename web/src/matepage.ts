@@ -65,6 +65,16 @@ export function mateLine(env: string, agent: string, status: string): string {
 
 const handle = /^[a-z0-9][a-z0-9_-]*$/;
 
+export function mateSlug(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^[-_]+|[-_]+$/g, "");
+}
+
 export function nameCheck(name: string, defs: Mate[]): { ok: boolean; text: string } {
   if (name === "") {
     return { ok: false, text: "" };
@@ -118,4 +128,16 @@ export function automationRoute(hash: string): { creating: boolean; mate: string
     return { creating: false, mate: "" };
   }
   return { creating: true, mate: new URLSearchParams(query).get("mate") ?? "" };
+}
+
+export function roleLine(prompt: string): string {
+  const line = prompt.trim().split("\n")[0].trim();
+  const end = /^(.+?[.!?])(\s|$)/.exec(line);
+  return end ? end[1] : line;
+}
+
+export function latestThread(items: ThreadItem[]): ThreadItem | undefined {
+  const live = items.filter((t) => !t.ended);
+  const pool = live.length > 0 ? live : items;
+  return pool.reduce<ThreadItem | undefined>((best, t) => (best === undefined || (t.at ?? "") > (best.at ?? "") ? t : best), undefined);
 }

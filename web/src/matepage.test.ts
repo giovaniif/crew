@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Automation } from "./api";
-import { answersIn, automationRoute, harnessLabel, mateAutomations, mateLine, mateRoute, mateThreads, nameCheck, replyHint, threadSearch, toneSteps } from "./matepage";
+import { answersIn, latestThread, roleLine, automationRoute, harnessLabel, mateAutomations, mateLine, mateRoute, mateSlug, mateThreads, nameCheck, replyHint, threadSearch, toneSteps } from "./matepage";
 import type { MateRow } from "./stream";
 
 const row: MateRow = {
@@ -137,5 +137,45 @@ describe("toneSteps", () => {
     expect(toneSteps(tones, { terse: 1, formal: 5 })).toEqual([0, 4]);
     expect(toneSteps(tones, undefined)).toEqual([2, 2]);
     expect(toneSteps(tones, { terse: 9 })).toEqual([2, 2]);
+  });
+});
+
+describe("roleLine", () => {
+  it("keeps the first sentence of the first line", () => {
+    expect(roleLine("You are test-ux for the web app (repo test/web, at ~/www/web). It is a pool app.\nMore.")).toBe("You are test-ux for the web app (repo test/web, at ~/www/web).");
+  });
+
+  it("keeps a first line with no sentence end", () => {
+    expect(roleLine("  Review the api\n\nMore.")).toBe("Review the api");
+  });
+});
+
+describe("latestThread", () => {
+  const item = (session: string, ended: boolean, at?: string) => ({ session, title: session, tag: "App", source: "app" as const, state: "idle" as const, ended, at });
+
+  it("opens the newest live thread", () => {
+    expect(latestThread([item("a", false, "2026-10-01T10:00:00Z"), item("b", false, "2026-10-03T10:00:00Z"), item("c", true, "2026-10-04T10:00:00Z")])?.session).toBe("b");
+  });
+
+  it("opens the newest ended thread when no thread is live", () => {
+    expect(latestThread([item("a", true, "2026-10-01T10:00:00Z"), item("b", true, "2026-10-02T10:00:00Z")])?.session).toBe("b");
+  });
+
+  it("has no thread for a mate with no threads", () => {
+    expect(latestThread([])).toBeUndefined();
+  });
+});
+
+describe("mateSlug", () => {
+  it.each([
+    ["UX Patrol", "ux-patrol"],
+    ["  Ada  ", "ada"],
+    ["Zoë Café 2", "zoe-cafe-2"],
+    ["R2_D2", "r2_d2"],
+    ["--Bot!!", "bot"],
+    ["Ünïcode -- Team.", "unicode-team"],
+    ["!!!", ""],
+  ])("saves %s as %s", (text, slug) => {
+    expect(mateSlug(text)).toBe(slug);
   });
 });
