@@ -1,4 +1,8 @@
 {
   "api": "v1",
-  "build": "v0.12.0+test"
+  "build": "v0.12.0+test",
+  "machine": {
+    "id": "m-test-1",
+    "name": "devbox"
+  }
 }

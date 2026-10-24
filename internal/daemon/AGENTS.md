@@ -135,6 +135,7 @@ See [ADR 0015](../../docs/adr/0015-session-lifecycle.md).
   - Before it writes, it parses the result again. The result must hold exactly the new value.
   - It refuses a key that is set in a different way (an inline table, dotted keys), with a message to edit it by hand. It never touches a file that does not parse.
 - **Backup.** A changed file is first copied to `config.toml.crew-<UTC time>.bak` (mode 600). Then it is replaced atomically with its old mode. If you set the value that it already has, nothing is written and there is no backup. A missing file is created without a backup.
+- **Machine ID.** `WithMachine(name)` makes a stable machine ID one time (16 random bytes as hex) and keeps it as `[machine] id` in `config.toml`, with the backup above. Later starts read it and change nothing. `status` answers `machine` `{"id","name"}`. `Run` passes the hostname as the name. See ADR 0063. Tests: `go test ./internal/daemon/ -run Machine`.
 - **Live.** After a write, the daemon reloads `[defaults.<harness>]` and `[push] away_after`. `[push] away_after` reloads only when presence runs. To turn it on from `"0"`, restart.
 
 ## Automations

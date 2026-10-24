@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"os/signal"
@@ -13,6 +14,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/BurntSushi/toml"
 	"github.com/giovaniif/crew/internal/rpc"
 	"github.com/giovaniif/crew/internal/serve"
 	"github.com/giovaniif/crew/internal/version"
@@ -23,8 +25,9 @@ const serveUsage = "usage: crew serve [--addr host:port] [--cert file --key file
 var errServeUsage = errors.New("usage")
 
 type serveFlags struct {
-	opts serve.Options
-	url  string
+	opts    serve.Options
+	url     string
+	origins []string
 }
 
 func runServe(args []string, stdout, stderr io.Writer) int {
@@ -74,15 +77,44 @@ func parseServe(args []string, home string, stderr io.Writer) (serveFlags, error
 		}
 		f.url = u
 	}
+	origins, err := loadServeOrigins(filepath.Join(home, "config.toml"))
+	if err != nil {
+		return serveFlags{}, err
+	}
+	if err := serve.CheckAllowedOrigins(origins); err != nil {
+		return serveFlags{}, err
+	}
+	f.origins = origins
 	return f, nil
 }
 
+func loadServeOrigins(path string) ([]string, error) {
+	var cfg struct {
+		Serve struct {
+			AllowedOrigins []string `toml:"allowed_origins"`
+		} `toml:"serve"`
+	}
+	if _, err := toml.DecodeFile(path, &cfg); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	return cfg.Serve.AllowedOrigins, nil
+}
+
 func serveIn(ctx context.Context, home string, f serveFlags, stdout, stderr io.Writer) error {
+	var machine rpc.Machine
+	if c, err := connect(ctx, home); err == nil {
+		if st, err := c.Status(ctx); err == nil && st.Machine != nil {
+			machine = *st.Machine
+		}
+		_ = c.Close()
+	}
 	srv, err := serve.New(serve.Config{
-		Build:   version.String(),
-		URL:     f.url,
-		Log:     stdout,
-		Control: startControl,
+		Machine:        machine,
+		Build:          version.String(),
+		URL:            f.url,
+		AllowedOrigins: f.origins,
+		Log:            stdout,
+		Control:        startControl,
 		Dial: func(ctx context.Context) (serve.Daemon, error) {
 			return connect(ctx, home)
 		},
