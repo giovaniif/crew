@@ -418,6 +418,7 @@ fn connect(app: &AppHandle, id: &str) -> Result<(Url, Option<serde_json::Value>)
             if let Some(url) = state.lock().unwrap().tunnel_url(id) {
                 return Ok((url, server.auth.clone()));
             }
+            hub::ssh_ensure_crew(host, &app_version(app))?;
             let tunnel = hub::ssh_tunnel(host)?;
             let port = tunnel.port;
             let saved = server.auth.clone().filter(|a| local::token_works(port, a));
@@ -588,7 +589,10 @@ async fn crew_server_fix(app: AppHandle, webview: Webview, id: String) -> Result
             .ok_or(format!("no server {id}"))?;
         match server.kind {
             Kind::Local => fix_local(&app),
-            Kind::Ssh { host } => hub::ssh_setup(&host),
+            Kind::Ssh { host } => {
+                hub::ssh_ensure_crew(&host, &app_version(&app))?;
+                hub::ssh_setup(&host)
+            }
             Kind::Url { .. } => Err("This server was added by its address, so the app cannot reach it over SSH. Run crew setup daemon on it, or add it again as an SSH server.".into()),
         }
     })
