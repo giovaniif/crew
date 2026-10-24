@@ -296,6 +296,7 @@ func New(store app.Store, pid int, opts ...Option) (*Daemon, error) {
 	if err := d.loadMachine(); err != nil {
 		return nil, err
 	}
+	d.migrateIdentities()
 	return d, nil
 }
 
