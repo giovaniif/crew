@@ -112,3 +112,50 @@ func identityCall(method string) func(r *http.Request, d Daemon) (any, error) {
 		return envCall(r, d, method, params)
 	}
 }
+
+func identityAction(r *http.Request, d Daemon) (any, error) {
+	name, action := r.PathValue("name"), r.PathValue("action")
+	switch {
+	case name == "copy" && action == "begin":
+		return ownerOnly(identityCopyBegin)(r, d)
+	case name == "copy":
+		return ownerOnly(identityImport)(r, d)
+	case action == "export":
+		return ownerOnly(identityExport)(r, d)
+	case action == "secret":
+		return identityCall(rpc.MethodIdentitySetSecret)(r, d)
+	case action == "ssh-key":
+		return identityCall(rpc.MethodIdentitySSHKey)(r, d)
+	}
+	return nil, &rpc.Error{Code: rpc.CodeNotFound, Message: "no endpoint " + r.Method + " " + r.URL.Path}
+}
+
+func identityCopyBegin(r *http.Request, d Daemon) (any, error) {
+	var out rpc.IdentityCopyBegin
+	if err := d.Call(r.Context(), rpc.MethodIdentityCopyBegin, struct{}{}, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func identityExport(r *http.Request, d Daemon) (any, error) {
+	var p rpc.IdentityExportParams
+	if err := decodeBody(r, &p); err != nil {
+		return nil, err
+	}
+	p.Name = r.PathValue("name")
+	var out rpc.IdentityExport
+	if err := d.Call(r.Context(), rpc.MethodIdentityExport, p, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func identityImport(r *http.Request, d Daemon) (any, error) {
+	var p rpc.IdentityImportParams
+	if err := decodeBody(r, &p); err != nil {
+		return nil, err
+	}
+	p.CopyID = r.PathValue("action")
+	return envCall(r, d, rpc.MethodIdentityImport, p)
+}

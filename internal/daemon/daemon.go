@@ -190,6 +190,7 @@ type Daemon struct {
 	browser     browserHub
 	headless    headlessPool
 	machine     rpc.Machine
+	copies      identityCopies
 	machineName string
 }
 
@@ -627,7 +628,8 @@ func (d *Daemon) dispatch(c *conn, line []byte) (*rpc.Response, bool) {
 	case rpc.MethodMateMemory, rpc.MethodMateSetMemory:
 		return d.mateMethod(req), true
 	case rpc.MethodEnvList, rpc.MethodEnvShow, rpc.MethodEnvCreate, rpc.MethodEnvSet, rpc.MethodEnvUnset, rpc.MethodEnvDelete, rpc.MethodEnvSSHKey,
-		rpc.MethodEnvironmentList, rpc.MethodIdentitySet, rpc.MethodIdentityRemove, rpc.MethodIdentitySetSecret, rpc.MethodIdentitySSHKey:
+		rpc.MethodEnvironmentList, rpc.MethodIdentitySet, rpc.MethodIdentityRemove, rpc.MethodIdentitySetSecret, rpc.MethodIdentitySSHKey,
+		rpc.MethodIdentityCopyBegin, rpc.MethodIdentityExport, rpc.MethodIdentityImport:
 		return d.envMethod(req), true
 	case rpc.MethodMateNew:
 		return d.mateNew(req)

@@ -93,6 +93,9 @@ Unknown paths under `/api/` answer `not_found`.
 | `POST /api/v1/identities/{name}/secret` | yes | `identity.set_secret` | `{"secret","value"}` → the `EnvInfo`; the value never comes out |
 | `GET /api/v1/identities/{name}/ssh-key` | yes | `identity.ssh_key` | → the `EnvInfo` with the public key |
 | `POST /api/v1/identities/{name}/ssh-key` | yes | `identity.ssh_key` | `{"action","private_key"}` → the `EnvInfo` |
+| `POST /api/v1/identities/copy/begin` | owner | `identity.copy_begin` | → `{"copy_id","public_key"}`; the one-time X25519 key of the target (ADR 0063) |
+| `POST /api/v1/identities/{name}/export` | owner | `identity.export` | `{"public_key"}` → `{"bundle"}`, sealed to that key; no SSH private key |
+| `POST /api/v1/identities/copy/{copy_id}` | owner | `identity.import` | `{"bundle"}` → the `EnvInfo` with a new SSH public key; `stale` (409) for an expired or used `copy_id` |
 | `GET /api/v1/envs` | yes | `env.list` (old name, one release) | → `{"envs":[EnvInfo]}`; an `EnvInfo` is `{"name","kind","parts","secrets":[{"name","set"}],"public_key","new_public_key","used_by"}` (ADR 0061). No response holds a secret value |
 | `POST /api/v1/envs` | yes | `env.create` | `{"name","kind","parts","git_name","git_email"}` → the `EnvInfo`; the kind is fixed at creation |
 | `GET /api/v1/envs/{name}` | yes | `env.show` | → the `EnvInfo` |
@@ -128,6 +131,7 @@ Unknown paths under `/api/` answer `not_found`.
 | `POST /api/v1/devices/{id}/revoke` | owner | `device.revoke` | → `{}`; the streams of that device close with 4401 |
 | `POST /api/v1/pair/code` | owner | `pair.code` | `{"name"}` (optional, the body can be empty) → `{"code","expires_at"}`, a one-time code for `POST /api/v1/pair` |
 
+- `POST /api/v1/identities/{name}/{action}` is one route, because Go 1.22 patterns for `copy/{copy_id}`, `{name}/export`, `{name}/secret` and `{name}/ssh-key` conflict. It sends `copy/begin`, `copy/<id>` and `<name>/export` to the owner-only methods. Thus an identity with the name `copy` has no `secret` or `ssh-key` route.
 - An "owner" route also needs the owner device. The owner device is the app on the computer that runs crew: the request comes from a loopback address. serve uses the address rule of `pair` (`clientAddr`). Thus a phone through a proxy is not the owner device. Other devices get 403 `forbidden`, and serve does not call the daemon.
 - Auth is `Authorization: Bearer <token>`. Before the method runs, serve checks it with `device.check` on the connection of the request. Then it checks it against the set of revoked device IDs.
 - `pair` passes the address of the caller as `addr`. This is `RemoteAddr`. If the peer is a loopback or private address (the location of a proxy in front of serve), it is the last `X-Forwarded-For` entry, else `X-Real-IP`. serve ignores a forged header from a direct client.
