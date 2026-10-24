@@ -1,10 +1,11 @@
 import { listApprovals, type Approval, type Authed, type EnvInfo, type Fetch, type Mate } from "./api";
 import type { DesktopBridge } from "./desktopBridge";
 import type { ServerListing } from "./servers";
+import { StreamClient, type OpenSocket, type Session, type SocketLike, type StreamSnapshot } from "./stream";
 
 export type MachineInfo = { id: string; name: string };
 
-export type MachineLink = { key: string; name: string; local: boolean; fetch: Fetch; token: string };
+export type MachineLink = { key: string; name: string; local: boolean; fetch: Fetch; token: string; open: OpenSocket };
 
 export type Machines = { links(): Promise<MachineLink[]> };
 
@@ -24,6 +25,7 @@ export type Hub = {
   environments: Tagged<EnvInfo>[];
   mates: Tagged<Mate>[];
   approvals: Tagged<Approval>[];
+  sessions: Tagged<Session>[];
   tagged: boolean;
 };
 
@@ -85,6 +87,7 @@ export function mergeHub(answers: MachineAnswer[]): Hub {
     environments: up.flatMap((a) => tag(a.link.key, a.environments.machine, a.environments.identities ?? [])),
     mates: up.flatMap((a) => tag(a.link.key, a.environments.machine, a.mates)),
     approvals: up.flatMap((a) => tag(a.link.key, a.environments.machine, a.approvals)),
+    sessions: [],
     tagged: machines.length > 1,
   };
 }
@@ -121,6 +124,7 @@ export function desktopMachines(desktop: DesktopBridge): Machines {
         local: s.kind === "local",
         fetch: desktopFetch(desktop, s.id),
         token: "",
+        open: desktopSocket(desktop, s.id),
       }));
     },
   };
@@ -128,13 +132,144 @@ export function desktopMachines(desktop: DesktopBridge): Machines {
 
 export type PairedMachine = { key: string; name: string; url: string; token: string; local: boolean };
 
-export function pairedMachines(paired: PairedMachine[], fetchFn: Fetch): Machines {
+function browserSocket(url: string): SocketLike {
+  return new WebSocket(url);
+}
+
+export function pairedMachines(paired: PairedMachine[], fetchFn: Fetch, socket: (url: string) => SocketLike = browserSocket): Machines {
   return {
     async links() {
       return paired.map((p) => {
         const base = p.url.replace(/\/+$/, "");
-        return { key: p.key, name: p.name, local: p.local, token: p.token, fetch: (path: string, init?: RequestInit) => fetchFn(base + path, init) };
+        const stream = base.replace(/^http/, "ws") + "/api/v1/stream";
+        return {
+          key: p.key,
+          name: p.name,
+          local: p.local,
+          token: p.token,
+          fetch: (path: string, init?: RequestInit) => fetchFn(base + path, init),
+          open: () => socket(stream),
+        };
       });
     },
   };
+}
+
+export const streamEvent = "crew-machine-stream";
+
+type StreamEvent = { stream: number; machine_id: string; frame?: string; closed?: string };
+
+export function desktopSocket(desktop: DesktopBridge, machineId: string): OpenSocket {
+  return () => {
+    let stream: number | null = null;
+    let done = false;
+    let off: (() => void) | null = null;
+    const early: StreamEvent[] = [];
+    const socket: SocketLike = {
+      onopen: null,
+      onmessage: null,
+      onclose: null,
+      onerror: null,
+      send: () => undefined,
+      close: () => {
+        if (done) {
+          return;
+        }
+        done = true;
+        off?.();
+        if (stream !== null) {
+          void desktop.invoke("crew_machine_stream_close", { stream }).catch(() => undefined);
+        }
+      },
+    };
+    const finish = (reason: string) => {
+      if (done) {
+        return;
+      }
+      done = true;
+      off?.();
+      socket.onclose?.(new CloseEvent("close", { code: 1006, reason }));
+    };
+    const deliver = (event: StreamEvent) => {
+      if (done || event.stream !== stream) {
+        return;
+      }
+      if (event.frame !== undefined) {
+        socket.onmessage?.(new MessageEvent("message", { data: event.frame }));
+      }
+      if (event.closed !== undefined) {
+        finish(event.closed);
+      }
+    };
+    void (async () => {
+      try {
+        if (!desktop.listen) {
+          throw new Error("this app cannot listen to events");
+        }
+        const unlisten = await desktop.listen(streamEvent, (payload) => {
+          const event = payload as StreamEvent;
+          if (stream === null) {
+            early.push(event);
+          } else {
+            deliver(event);
+          }
+        });
+        off = unlisten;
+        if (done) {
+          unlisten();
+          return;
+        }
+        const id = (await desktop.invoke("crew_machine_stream", { machineId })) as number;
+        stream = id;
+        if (done) {
+          void desktop.invoke("crew_machine_stream_close", { stream: id }).catch(() => undefined);
+          return;
+        }
+        socket.onopen?.(new Event("open"));
+        for (const event of early.splice(0)) {
+          deliver(event);
+        }
+      } catch (err) {
+        finish(typeof err === "string" ? err : err instanceof Error ? err.message : String(err));
+      }
+    })();
+    return socket;
+  };
+}
+
+export class MachineStreams {
+  private readonly clients: Map<string, StreamClient>;
+
+  constructor(links: MachineLink[]) {
+    this.clients = new Map(links.map((l) => [l.key, new StreamClient({ open: l.open, token: l.token })]));
+  }
+
+  start(): void {
+    for (const client of this.clients.values()) {
+      client.start();
+    }
+  }
+
+  stop(): void {
+    for (const client of this.clients.values()) {
+      client.stop();
+    }
+  }
+
+  subscribe = (listener: () => void): (() => void) => {
+    const offs = [...this.clients.values()].map((c) => c.subscribe(listener));
+    return () => offs.forEach((off) => off());
+  };
+
+  snapshots(): Record<string, StreamSnapshot> {
+    return Object.fromEntries([...this.clients].map(([key, c]) => [key, c.snapshot()]));
+  }
+}
+
+export function withSessions(hub: Hub, snapshots: Record<string, StreamSnapshot>): Hub {
+  const sessions = hub.machines.flatMap((m) => {
+    const state = snapshots[m.key]?.state;
+    return m.machine && state ? tag(m.key, m.machine, state.sessions) : [];
+  });
+  return { ...hub, sessions };
 }
