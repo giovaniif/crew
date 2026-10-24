@@ -59,9 +59,11 @@ go run ./scripts/verify iso panes --expect "identity exec test-bot --harness omp
 
 ### a resume of a custom mate applies the environment again
 
+A mate has one conversation (ADR [0064](../docs/adr/0064-one-conversation-per-mate.md)). Thus `mate new` on the running `test-mate` adds the task to its conversation and starts no new agent. The recipe ends that session and resumes it.
+
 ```sh
 go run ./scripts/verify iso dump --clear
-sid=$(go run ./scripts/verify iso crew -- mate new test-mate "TEST resume" | grep -o 'session [0-9a-f]*' | head -n 1 | cut -d' ' -f2) && go run ./scripts/verify iso dump claude && go run ./scripts/verify iso api POST "/api/v1/sessions/$sid/end" && go run ./scripts/verify iso dump --clear && go run ./scripts/verify iso api POST "/api/v1/sessions/$sid/resume"
+sid=$(go run ./scripts/verify iso crew -- mate new test-mate "TEST resume" | grep -o 'session [0-9a-f]*' | head -n 1 | cut -d' ' -f2) && go run ./scripts/verify iso api POST "/api/v1/sessions/$sid/end" && go run ./scripts/verify iso dump --clear && go run ./scripts/verify iso api POST "/api/v1/sessions/$sid/resume"
 go run ./scripts/verify iso dump claude --has CLAUDE_CONFIG_DIR={home}/identities/test-bot/claude --has CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-TEST-claude-token --unset SSH_AUTH_SOCK
 go run ./scripts/verify iso panes --expect "identity exec test-bot --harness claude -- claude --resume TEST-"
 ```
@@ -86,14 +88,14 @@ go run ./scripts/verify iso homesum --check before
 
 ### the local environment does not change the launch
 
-A mate with no `env` starts with no `crew env exec` and with the environment of the daemon. A mate on `--env local` with no extra variables gets the same environment.
+A mate with no `env` starts with no `crew identity exec` and with the environment of the daemon. A mate on `--env local` with no extra variables gets the same environment. The launch starts with `claude --session-id`, because crew sets the id of the one conversation of the mate.
 
 ```sh
 go run ./scripts/verify iso dump --clear
 go run ./scripts/verify iso crew -- mate set test-plain --agent claude --prompt "TEST plain prompt"
 go run ./scripts/verify iso crew --expect "started a new conversation" -- mate new test-plain "TEST hi"
 go run ./scripts/verify iso dump claude --save plain --has SSH_AUTH_SOCK={home}/TEST-ssh-agent.sock --has CLAUDE_CONFIG_DIR={home}/home/.claude --has CREW_E2E={home}/e2e --unset GIT_CONFIG_GLOBAL --unset GH_CONFIG_DIR
-go run ./scripts/verify iso panes --start 'claude --append-system-prompt "TEST plain prompt'
+go run ./scripts/verify iso panes --start 'claude --session-id ' --expect '--append-system-prompt "TEST plain prompt'
 go run ./scripts/verify iso dump --clear
 go run ./scripts/verify iso crew -- mate set test-local --agent claude --prompt "TEST plain prompt" --env local
 go run ./scripts/verify iso crew --expect "started a new conversation" -- mate new test-local "TEST hi"
