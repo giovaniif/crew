@@ -26,6 +26,7 @@ type EnvironmentStore interface {
 	KeyCreated(env string) (time.Time, error)
 	GitIdentity(env string) (name, email string)
 	CodexLogin(env string) bool
+	PiLogin(env string) bool
 }
 
 type LocalFacts struct {
