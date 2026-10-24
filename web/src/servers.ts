@@ -68,6 +68,8 @@ async function call<T>(desktop: DesktopBridge, cmd: string, args?: Record<string
   }
 }
 
+export type RemoteCrew = { action: "current" | "install" | "upgrade"; server: string | null; app: string };
+
 export class Servers {
   constructor(private desktop: DesktopBridge) {}
 
@@ -77,6 +79,14 @@ export class Servers {
 
   async hosts(): Promise<string[]> {
     return (await call<string[] | null>(this.desktop, "crew_ssh_hosts")) ?? [];
+  }
+
+  crew(target: string): Promise<RemoteCrew> {
+    return call(this.desktop, "crew_server_crew", { target });
+  }
+
+  async install(target: string): Promise<void> {
+    await call(this.desktop, "crew_server_install", { target });
   }
 
   add(kind: "url" | "ssh", target: string, code = ""): Promise<string> {

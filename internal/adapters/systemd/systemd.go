@@ -67,10 +67,11 @@ type State struct {
 	Sub        string
 	Restarts   int
 	MainStatus int
+	Result     string
 }
 
 func Show(ctx context.Context, u Unit, query Query) (State, error) {
-	out, err := query(ctx, "systemctl", "--user", "show", u.file(), "-p", "ActiveState,SubState,NRestarts,ExecMainStatus")
+	out, err := query(ctx, "systemctl", "--user", "show", u.file(), "-p", "ActiveState,SubState,NRestarts,ExecMainStatus,Result")
 	if err != nil {
 		return State{}, err
 	}
@@ -86,22 +87,45 @@ func Show(ctx context.Context, u Unit, query Query) (State, error) {
 			s.Restarts, _ = strconv.Atoi(value)
 		case "ExecMainStatus":
 			s.MainStatus, _ = strconv.Atoi(value)
+		case "Result":
+			s.Result = value
 		}
 	}
 	return s, nil
 }
 
 func Program(u Unit) (string, error) {
+	spec, err := Inspect(u)
+	return spec.Program, err
+}
+
+type Spec struct {
+	Program string
+	Env     map[string]string
+	Restart string
+}
+
+func Inspect(u Unit) (Spec, error) {
 	raw, err := os.ReadFile(u.path())
 	if err != nil {
-		return "", err
+		return Spec{}, err
 	}
+	spec := Spec{Env: map[string]string{}}
 	for _, line := range strings.Split(string(raw), "\n") {
-		if rest, ok := strings.CutPrefix(strings.TrimSpace(line), "ExecStart="); ok {
-			return firstWord(rest), nil
+		key, value, _ := strings.Cut(strings.TrimSpace(line), "=")
+		switch key {
+		case "ExecStart":
+			if spec.Program == "" {
+				spec.Program = firstWord(value)
+			}
+		case "Environment":
+			k, v, _ := strings.Cut(firstWord(value), "=")
+			spec.Env[k] = v
+		case "Restart":
+			spec.Restart = value
 		}
 	}
-	return "", nil
+	return spec, nil
 }
 
 func firstWord(s string) string {
@@ -134,6 +158,8 @@ type Unit struct {
 	Program []string
 	Env     map[string]string
 	Log     string
+
+	RestartOnFailure bool
 }
 
 type Result struct {
@@ -232,7 +258,11 @@ func render(u Unit) ([]byte, error) {
 	for _, k := range names {
 		b.WriteString("Environment=" + quote(k+"="+u.Env[k]) + "\n")
 	}
-	b.WriteString("Restart=always\nRestartSec=2\n")
+	restart := "always"
+	if u.RestartOnFailure {
+		restart = "on-failure"
+	}
+	b.WriteString("Restart=" + restart + "\nRestartSec=2\n")
 	if u.Log != "" {
 		b.WriteString("StandardOutput=append:" + logEscaper.Replace(u.Log) + "\nStandardError=append:" + logEscaper.Replace(u.Log) + "\n")
 	}

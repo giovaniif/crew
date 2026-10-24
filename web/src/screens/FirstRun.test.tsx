@@ -150,4 +150,51 @@ describe("FirstRun", () => {
     await press("Back");
     expect(screen.getByRole("combobox", { name: "SSH host" })).toBeInTheDocument();
   });
+
+  it("does not say that nothing needs sudo", async () => {
+    start();
+    expect(screen.getByText("The next steps pick where agents run, set that computer up and add a workspace.")).toBeInTheDocument();
+    expect(screen.queryByText(/sudo/)).toBeNull();
+    await press("Get started");
+    await userEvent.click(screen.getByRole("radio", { name: /This computer/ }));
+    await press("Continue");
+    expect(screen.queryByText(/sudo/)).toBeNull();
+  });
+
+  async function sshTo(desktop: FakeDesktop, target: string) {
+    start(false, desktop);
+    await userEvent.click(screen.getByRole("radio", { name: /over SSH/ }));
+    await press("Continue");
+    await userEvent.type(screen.getByRole("combobox", { name: "SSH host" }), target);
+    await press("Continue");
+  }
+
+  it("upgrades an older crew on the SSH host before it pairs", async () => {
+    const desktop = new FakeDesktop();
+    desktop.handlers.crew_server_crew = () => ({ action: "upgrade", server: "v0.1.0-beta.2", app: "v0.1.0-beta.6" });
+    await sshTo(desktop, "box");
+    const checklist = screen.getByRole("list", { name: "Set up" });
+    expect(await within(checklist).findByText("crew set up on box")).toBeInTheDocument();
+    expect(within(checklist).getByText("crew v0.1.0-beta.2 on box is older than the app")).toBeInTheDocument();
+    expect(within(checklist).getByText("Installed crew v0.1.0-beta.6 on box")).toBeInTheDocument();
+    expect(desktop.calls.map((c) => c.cmd).filter((c) => c.startsWith("crew_server_") && c !== "crew_servers")).toEqual(["crew_server_crew", "crew_server_install", "crew_server_add"]);
+    expect(desktop.of("crew_server_install")).toEqual([{ target: "box" }]);
+  });
+
+  it("does not install when the crew on the SSH host is current", async () => {
+    const desktop = new FakeDesktop();
+    desktop.handlers.crew_server_crew = () => ({ action: "current", server: "v0.1.0-beta.6", app: "v0.1.0-beta.6" });
+    await sshTo(desktop, "box");
+    expect(await screen.findByText("crew set up on box")).toBeInTheDocument();
+    expect(screen.getByText("crew v0.1.0-beta.6 on box")).toBeInTheDocument();
+    expect(desktop.of("crew_server_install")).toEqual([]);
+  });
+
+  it("stops with a clear text when the crew on the SSH host is newer than the app", async () => {
+    const desktop = new FakeDesktop();
+    desktop.failures.crew_server_crew = "crew on box is v0.2.0, newer than this app (v0.1.0-beta.6). Update the app.";
+    await sshTo(desktop, "box");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Update the app");
+    expect(desktop.of("crew_server_add")).toEqual([]);
+  });
 });

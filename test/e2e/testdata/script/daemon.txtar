@@ -8,8 +8,8 @@ stdout '^uptime '
 stdout '^sessions 0$'
 stdout '^worktrees 0$'
 
-! exec crew daemon
-stderr '^crew daemon: already running \(pid [0-9]+\)$'
+exec crew daemon
+stderr '^crew daemon: a daemon of this build already runs \(pid [0-9]+\), so this one exits$'
 
 exec crew daemon start
 stdout '^crew daemon already running \(pid [0-9]+\)$'
