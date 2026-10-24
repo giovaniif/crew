@@ -11,6 +11,7 @@ fn main() {
             "crew_server_remove",
             "crew_server_fix",
             "crew_server_workspace",
+            "crew_server_complete",
             "crew_browser_open",
             "crew_pick_folder",
             "crew_check_update",
