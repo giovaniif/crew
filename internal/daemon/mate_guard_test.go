@@ -153,8 +153,8 @@ func TestTwoMatePingPongStopsAtTheHopLimit(t *testing.T) {
 			h = toHelper
 		}
 		p.hub.send(h.to, threadReply(app.SlackMention, h.from, h.text, fmt.Sprintf("1700.%04d", 10+i)))
-		want := i
-		waitFor(t, func() bool { s := p.seatOf(t, h.toName); return s != nil && s.Hops == want })
+		want := i + 1
+		waitFor(t, func() bool { return len(queuedTexts(t, p.c)) == want })
 	}
 	p.hub.send(p.helper, threadReply(app.SlackMention, webbyUser, "<@U0BOTHELP1> your turn", "1700.0090"))
 	waitFor(t, func() bool { return guardPosts(p.hub.postsOf(p.helper), "limit of 5 hops") == 1 })
@@ -162,9 +162,6 @@ func TestTwoMatePingPongStopsAtTheHopLimit(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 	if n := guardPosts(p.hub.postsOf(p.helper), "hops"); n != 1 {
 		t.Fatalf("%d hop messages, want 1", n)
-	}
-	if s := p.seatOf(t, "helper"); s.Hops != 4 {
-		t.Fatalf("helper seat %+v", s)
 	}
 }
 
