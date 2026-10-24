@@ -57,7 +57,9 @@ func TestPlanIdentityMigration(t *testing.T) {
 	mate := func(name, env string) Mate {
 		return Mate{Name: name, Prompt: "p", Agent: "claude", Env: env, Enabled: true}
 	}
-	block := func(m Mate) string { return "[[mate]]\nname = \"" + m.Name + "\"\nprompt = \"p\"\nagent = \"claude\"\n" }
+	block := func(m Mate) string {
+		return "[[mate]]\nname = \"" + m.Name + "\"\nprompt = \"p\"\nagent = \"claude\"\n"
+	}
 	envBlock := func(e Environment) string { return EnvTOML(e) }
 	local := Environment{Name: "home", Kind: EnvLocal, Extra: []string{"TEST_X"}}
 	local2 := Environment{Name: "work", Kind: EnvLocal, Extra: []string{"TEST_Y"}}
