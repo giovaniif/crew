@@ -506,6 +506,14 @@ export function setHooks(a: Authed, harness: string, install: boolean): Promise<
   return authedRequest<HarnessSetup>(a, "/api/v1/onboarding/" + (install ? "install" : "remove"), "POST", { harness });
 }
 
+export function getHooks(a: Authed): Promise<{ missing: HooksMissing[] }> {
+  return authedRequest<{ missing: HooksMissing[] }>(a, "/api/v1/hooks");
+}
+
+export function fixHooks(a: Authed, env: string, harness: string): Promise<{ missing: HooksMissing[] }> {
+  return authedRequest<{ missing: HooksMissing[] }>(a, "/api/v1/hooks/fix", "POST", { env, harness });
+}
+
 export function setUpNvim(a: Authed): Promise<NvimSetup> {
   return authedRequest<NvimSetup>(a, "/api/v1/onboarding/nvim", "POST");
 }
@@ -615,7 +623,10 @@ export type EnvInfo = {
   pi_login?: boolean;
   used_by: string[];
   local?: EnvLocal;
+  hooks_missing?: HooksMissing[];
 };
+
+export type HooksMissing = { env: string; harness: string; file: string; reason: string };
 
 export type EnvLocal = {
   git_name: string;

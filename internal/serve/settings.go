@@ -73,6 +73,17 @@ func harnessParams(r *http.Request) (any, error) {
 	return p, nil
 }
 
+func hooksFixParams(r *http.Request) (any, error) {
+	var p rpc.HooksFixParams
+	if err := decodeOne(r, &p, "env and harness"); err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(string(p.Harness)) == "" {
+		return nil, &rpc.Error{Code: rpc.CodeBadRequest, Message: "harness is empty"}
+	}
+	return p, nil
+}
+
 func dirsParams(r *http.Request) (any, error) {
 	path := r.URL.Query().Get("path")
 	if strings.TrimSpace(path) == "" {
@@ -112,6 +123,8 @@ func settingsRoutes() []route {
 		owner("POST /api/v1/onboarding/remove", rpc.MethodOnboardingRemove, harnessParams),
 		owner("POST /api/v1/onboarding/nvim", rpc.MethodOnboardingNvim, noParams),
 		owner("POST /api/v1/onboarding/finish", rpc.MethodOnboardingFinish, noParams),
+		owner("GET /api/v1/hooks", rpc.MethodHooks, noParams),
+		owner("POST /api/v1/hooks/fix", rpc.MethodHooksFix, hooksFixParams),
 		owner("GET /api/v1/workspaces/dirs", rpc.MethodWorkspaceDirs, dirsParams),
 		owner("GET /api/v1/fs/complete", rpc.MethodFSComplete, completeParams),
 		owner("GET /api/v1/devices", rpc.MethodDeviceList, noParams),
