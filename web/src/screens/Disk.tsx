@@ -220,7 +220,7 @@ export function Disk({ api, state, now, go }: { api: Authed; state: StreamState 
           rows.length === 0 ? (
             <p className="muted">{view ? "No worktrees." : ""}</p>
           ) : (
-            <table className="table">
+            <table className="table disk-table disk-wt">
               <thead>
                 <tr>
                   <th scope="col">Worktree</th>
@@ -238,15 +238,15 @@ export function Disk({ api, state, now, go }: { api: Authed; state: StreamState 
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.id}>
-                    <td className="mono">{r.worktree}</td>
-                    <td>{r.session}</td>
+                    <td className="mono clip" title={r.worktree}>{r.worktree}</td>
+                    <td className="clip" title={r.session}>{r.session}</td>
                     <td>{r.pr}</td>
                     <td>
                       <span className={"pill" + (pillTone[r.tone] ?? "")}>{r.status}</span>
                     </td>
                     <td className="num">{r.size}</td>
                     <td className="mono dim">{r.ports}</td>
-                    <td className="muted">{r.plan}</td>
+                    <td className="muted clip" title={r.detail || r.plan}>{r.plan}</td>
                     <td>
                       <Actions row={r} onAction={(a, row) => void onAction(a, row)} />
                     </td>
@@ -260,7 +260,7 @@ export function Disk({ api, state, now, go }: { api: Authed; state: StreamState 
           ports.length === 0 ? (
             <p className="muted">No dev servers are listening.</p>
           ) : (
-            <table className="table">
+            <table className="table disk-table disk-ports">
               <thead>
                 <tr>
                   <th scope="col">Port</th>
@@ -276,8 +276,8 @@ export function Disk({ api, state, now, go }: { api: Authed; state: StreamState 
                 {ports.map((p) => (
                   <tr key={p.key}>
                     <td className="mono">:{p.port}</td>
-                    <td className="mono">{p.command}</td>
-                    <td className="mono">{p.worktree}</td>
+                    <td className="mono clip" title={p.command}>{p.command}</td>
+                    <td className="mono clip" title={p.worktree}>{p.worktree}</td>
                     <td>{p.session}</td>
                     <td>
                       <Button variant="quiet" className="row-action disk-kill" onClick={() => void onAction(killAction(p), p)}>
@@ -294,7 +294,7 @@ export function Disk({ api, state, now, go }: { api: Authed; state: StreamState 
           recent.length === 0 ? (
             <p className="muted">Nothing was cleaned yet.</p>
           ) : (
-            <table className="table">
+            <table className="table disk-table disk-recent">
               <thead>
                 <tr>
                   <th scope="col">Worktree</th>
@@ -306,10 +306,10 @@ export function Disk({ api, state, now, go }: { api: Authed; state: StreamState 
               <tbody>
                 {recent.map((r) => (
                   <tr key={r.key}>
-                    <td className="mono">{r.worktree}</td>
-                    <td className="mono">{r.branch}</td>
+                    <td className="mono clip" title={r.worktree}>{r.worktree}</td>
+                    <td className="mono clip" title={r.branch}>{r.branch}</td>
                     <td>{r.when}</td>
-                    <td>{r.outcome}</td>
+                    <td className="clip" title={r.outcome}>{r.outcome}</td>
                   </tr>
                 ))}
               </tbody>

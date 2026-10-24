@@ -20,6 +20,7 @@ type envHarness struct {
 func (h envHarness) Launch(req app.LaunchRequest) app.PaneSpec {
 	spec := h.HarnessAdapter.Launch(req)
 	spec.Command = domain.EnvLaunchCommand(h.crew, h.env, h.Harness(), spec.Command)
+	spec.Transcript = ""
 	return spec
 }
 
