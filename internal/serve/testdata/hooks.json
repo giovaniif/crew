@@ -1,0 +1,10 @@
+{
+  "missing": [
+    {
+      "env": "local",
+      "harness": "claude",
+      "file": "/home/me/.claude/settings.json",
+      "reason": "crew hooks are missing in ~/.claude/settings.json"
+    }
+  ]
+}
