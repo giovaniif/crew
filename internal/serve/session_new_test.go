@@ -57,7 +57,7 @@ func TestServeNewSessionReportsALaunchFailureWithItsOutput(t *testing.T) {
 func TestServeResolvesAWorkItem(t *testing.T) {
 	f := newFakeDaemon()
 	f.devices[goodToken] = phone
-	f.results[rpc.MethodSessionResolve] = rpc.WorkItemResolved{Source: "pr", Ref: "api#12", Title: "Fix the login redirect", Worktree: "api-12", Workspace: "/home/me/api"}
+	f.results[rpc.MethodSessionResolve] = rpc.WorkItemResolved{Source: "pr", Ref: "api#12", Title: "Fix the login redirect", Worktree: "api-12", Workspace: "/home/me/api", Dir: "/home/me/.crew/worktrees/api/api-12", Git: true}
 	_, ts := startServer(t, f, serve.Config{URL: publicURL})
 	status, out := do(t, ts, "GET", "/api/v1/work-items/resolve?workspace=%2Fhome%2Fme%2Fapi&item=api%2312", goodToken, "")
 	if status != http.StatusOK {

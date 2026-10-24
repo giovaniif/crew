@@ -3,5 +3,7 @@
   "ref": "api#12",
   "title": "Fix the login redirect",
   "worktree": "api-12",
-  "workspace": "/home/me/api"
+  "workspace": "/home/me/api",
+  "dir": "/home/me/.crew/worktrees/api/api-12",
+  "git": true
 }

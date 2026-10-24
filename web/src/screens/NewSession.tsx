@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react";
 import { addWorkspace, expandPath, listWorkspaces, removeWorkspace, resolveWorkItem, sessionOptions, startSession, type HarnessOptions, type WorkItemResolved, type WorkspaceList } from "../api";
 import type { AppEnv } from "../App";
-import { agentChoices, agentValue, defaultLabel, effortChoices, loadChoices, rememberedRoot, saveChoices, splitAgent, taskFields } from "../newsession";
+import { agentChoices, agentValue, defaultLabel, effortChoices, loadChoices, placeLine, rememberedRoot, saveChoices, splitAgent, taskFields } from "../newsession";
 import { Select } from "../ui";
 
 type Resolution = { state: "idle" } | { state: "checking" } | { state: "ok"; item: WorkItemResolved } | { state: "bad"; message: string };
@@ -200,8 +200,7 @@ export function NewSession({ env, token, home: atHome }: { env: AppEnv; token: s
           {resolution.state === "ok" ? (
             <p className="resolution-line" data-testid="resolution-line">
               <span className="dot ok" aria-hidden="true" />
-              <span>{(resolution.item.title || item) + " → new worktree "}</span>
-              <code>{resolution.item.worktree}</code>
+              <span>{(resolution.item.title || item) + " " + placeLine(resolution.item, home)}</span>
             </p>
           ) : null}
           {resolution.state === "bad" ? (
