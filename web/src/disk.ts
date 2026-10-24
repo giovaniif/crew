@@ -1,6 +1,6 @@
 import type { PullRequest, Session, Worktree } from "./stream";
 
-export type CleanupAction = "remove" | "backup_then_ask" | "keep";
+export type CleanupAction = "remove" | "backup_then_ask" | "prune" | "keep";
 
 export type DiskRow = { WorktreeID: string; Size: number; Action: CleanupAction; Reason: string };
 
@@ -113,6 +113,7 @@ export type DiskTableRow = {
   ports: string;
   pgids: number[];
   plan: string;
+  detail: string;
   action: CleanupAction;
 };
 
@@ -122,6 +123,9 @@ export function baseName(path: string): string {
 }
 
 function status(action: CleanupAction, pr: PullRequest | null, detached: boolean): [string, Tone] {
+  if (action === "prune") {
+    return ["Folder gone", "peach"];
+  }
   if (action === "remove") {
     return ["Merged · clean", "green"];
   }
@@ -155,7 +159,20 @@ function plan(row: DiskRow, detached: boolean, removesAt: string | null): string
   if (row.Action === "backup_then_ask") {
     return detached ? "backup branch first" : "back up then ask";
   }
-  return "kept: " + row.Reason;
+  if (row.Action === "prune") {
+    return removesAt ? "prunes at " + removesAt : "prunes in the next cleanup";
+  }
+  return "kept: " + keptLabel(row.Reason);
+}
+
+function keptLabel(reason: string): string {
+  if (reason.startsWith("facts unavailable: process check failed")) {
+    return "process check failed";
+  }
+  if (reason.startsWith("facts unavailable")) {
+    return "git check failed";
+  }
+  return reason;
 }
 
 export type DiskState = { worktrees: Worktree[]; sessions: Pick<Session, "ID" | "name">[] };
@@ -183,6 +200,7 @@ export function diskRows(v: DiskView, state: DiskState | null, timeZone?: string
       ports: own.map((p) => ":" + p.port).join(" "),
       pgids: [...new Set(own.map((p) => p.pgid))].sort((a, b) => a - b),
       plan: plan(row, detached, removesAt),
+      detail: row.Reason,
       action: row.Action,
     };
   });
@@ -215,6 +233,16 @@ export function diskActions(row: DiskTableRow): DiskAction[] {
       title: "Remove…",
       confirm: "Remove " + row.worktree + "? It goes to the crew trash; the branch stays.",
       verb: "Remove",
+      cleanup: { path: row.path, backup: false },
+      pgids: [],
+    });
+  }
+  if (row.action === "prune") {
+    out.push({
+      kind: "remove",
+      title: "Prune…",
+      confirm: "Prune " + row.worktree + "? Its folder is gone. crew runs git worktree prune; the branch stays.",
+      verb: "Prune",
       cleanup: { path: row.path, backup: false },
       pgids: [],
     });

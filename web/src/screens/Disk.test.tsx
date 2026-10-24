@@ -61,6 +61,18 @@ describe("the disk window", () => {
     expect(merged).toHaveTextContent("…");
   });
 
+  it("shows a short cleanup label and the full reason in a tooltip", async () => {
+    const long = "facts unavailable: git status in /home/me/.local/state/loops/work-patrol-20261022T090837Z/681: exit status 128";
+    const body = { ...disk, rows: [{ WorktreeID: "w1", Size: 1, Action: "keep", Reason: long }] };
+    const d = desktop("#/disk", true, undefined, {}, (server) => server.on("GET", "/api/v1/disk", { status: 200, body }));
+    d.live(state());
+    const kept = await row(/api-feat/);
+    const cell = within(kept).getByText("kept: git check failed");
+    expect(cell).toHaveAttribute("title", long);
+    expect(kept).not.toHaveTextContent("exit status 128");
+    expect(screen.getByRole("table")).toHaveClass("disk-table");
+  });
+
   it("asks before Clean up now and shows what it cleaned", async () => {
     const { server } = open();
     server.on("POST", "/api/v1/cleanup/run", { status: 200, body: { items: [{ path: "/w/web-old", branch: "old", action: "remove", reason: "PR #77 merged", outcome: "removed" }] } });

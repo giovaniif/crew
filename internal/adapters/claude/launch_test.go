@@ -43,3 +43,29 @@ func TestLaunchAppendsTheSystemPromptBeforeTheFirstPrompt(t *testing.T) {
 		t.Fatalf("command %v, want %v", got.Command, want)
 	}
 }
+
+func TestLaunchPinsTheSessionIDAndSaysWhereClaudeWritesTheTranscript(t *testing.T) {
+	a := claude.Adapter{ConfigDir: "/home/dev/.claude"}
+	got := a.Launch(app.LaunchRequest{Dir: "/home/dev/.crew/worktrees/web_app/ux", Model: "opus", SessionID: "5f0c1d2e-0000-4000-8000-000000000001", Prompt: "hi"})
+	want := []string{"claude", "--session-id", "5f0c1d2e-0000-4000-8000-000000000001", "--model", "opus", "--", "hi"}
+	if !reflect.DeepEqual(got.Command, want) {
+		t.Fatalf("command %v, want %v", got.Command, want)
+	}
+	if got.Transcript != "/home/dev/.claude/projects/-home-dev--crew-worktrees-web-app-ux/5f0c1d2e-0000-4000-8000-000000000001.jsonl" {
+		t.Fatalf("transcript %q", got.Transcript)
+	}
+}
+
+func TestLaunchOfAResumeKeepsTheResumedIDAndSaysNoTranscript(t *testing.T) {
+	got := claude.Adapter{ConfigDir: "/c"}.Launch(app.LaunchRequest{Dir: "/w", Resume: "4c98", SessionID: "5f0c"})
+	if !reflect.DeepEqual(got.Command, []string{"claude", "--resume", "4c98"}) || got.Transcript != "" {
+		t.Fatalf("spec %+v", got)
+	}
+}
+
+func TestLaunchWithNoConfigDirPinsNoSessionID(t *testing.T) {
+	got := claude.Adapter{}.Launch(app.LaunchRequest{Dir: "/w", SessionID: "5f0c"})
+	if !reflect.DeepEqual(got.Command, []string{"claude"}) || got.Transcript != "" {
+		t.Fatalf("spec %+v", got)
+	}
+}
