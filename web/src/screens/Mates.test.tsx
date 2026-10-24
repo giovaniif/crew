@@ -221,17 +221,11 @@ describe("Mate page", () => {
     expect(await screen.findByText("There is no mate ghost.")).toBeInTheDocument();
   });
 
-  it("saves the environment and the harness from the rail at once", async () => {
+  it("saves the harness from the rail at once", async () => {
     const { server } = setup("#/mates/helper", board, [], undefined, true);
     const user = userEvent.setup();
     const rail = await screen.findByRole("complementary", { name: "Settings of helper" });
-    const picker = await within(rail).findByRole("combobox", { name: "Environment" });
-    await waitFor(() => expect(picker).toHaveTextContent("Local (crew)"));
-    expect(within(rail).getByRole("link", { name: "Edit environment" })).toHaveAttribute("href", "#/envs/local");
-    await user.click(picker);
-    await user.click(await screen.findByRole("option", { name: "test-work" }));
     const saved = () => server.calls.filter((c) => c.method === "POST" && c.path === "/api/v1/mates").map((c) => c.body);
-    await waitFor(() => expect(saved().at(-1)).toMatchObject({ mate: { name: "helper", env: "test-work", agent: "claude", model: "opus" } }));
     await user.click(within(rail).getByRole("radio", { name: "Pi" }));
     await waitFor(() => expect(saved().at(-1)).toMatchObject({ mate: { name: "helper", agent: "omp" } }));
   });
@@ -319,7 +313,7 @@ describe("Mate page on the phone", () => {
   it("shows the header line and the chat, with no thread chips", async () => {
     setup("#/mates/helper");
     expect(await screen.findByRole("heading", { name: "helper" })).toBeInTheDocument();
-    expect(screen.getByText("Local · Claude · working")).toBeInTheDocument();
+    expect(screen.getByText("Your accounts · Claude · working")).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "Threads of helper" })).toBeNull();
     expect(screen.getByRole("button", { name: "More for helper" })).toBeInTheDocument();
     expect(await screen.findByText("I fixed the docs.")).toBeInTheDocument();
@@ -331,7 +325,7 @@ describe("Mate page on the phone", () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Settings of helper" }));
     const sheet = screen.getByRole("dialog", { name: "Settings of helper" });
-    expect(within(sheet).getByRole("combobox", { name: "Environment" })).toBeInTheDocument();
+    expect(within(sheet).getByRole("button", { name: /^Environment:/ })).toBeInTheDocument();
     expect(within(sheet).getByText("Changes apply when the next conversation starts.")).toBeInTheDocument();
     await user.click(within(sheet).getByRole("button", { name: "Done" }));
     expect(screen.queryByRole("dialog")).toBeNull();
@@ -401,22 +395,6 @@ describe("New mate", () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "On-call triage" }));
     expect((screen.getByRole("textbox", { name: "Role" }) as HTMLTextAreaElement).value).toMatch(/triage/i);
-  });
-
-  it("picks the environment from a chip with search and New environment", async () => {
-    const { server } = setup("#/mates/new");
-    const user = userEvent.setup();
-    await user.type(await screen.findByRole("textbox", { name: "Name" }), "scout");
-    await user.type(screen.getByRole("textbox", { name: "Role" }), "Scout.");
-    const chip = screen.getByRole("button", { name: /Environment/ });
-    expect(chip).toHaveTextContent("Local (crew)");
-    await user.click(chip);
-    const menu = await screen.findByRole("menu", { name: "Environment" });
-    expect(within(menu).getByLabelText("Search environments")).toBeInTheDocument();
-    expect(within(menu).getByRole("menuitem", { name: "+ New environment…" })).toBeInTheDocument();
-    await user.click(within(menu).getByRole("menuitemcheckbox", { name: "test-work" }));
-    await user.click(screen.getByRole("button", { name: "Create mate" }));
-    await waitFor(() => expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/mates")?.body).toMatchObject({ mate: { name: "scout", env: "test-work" } }));
   });
 
   it("offers Pi with the agent omp", async () => {

@@ -504,3 +504,285 @@ button.chip.env-chip .chev {
   color: var(--accent);
   text-decoration: none;
 }
+
+.elist .mrow-d {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 8px 8px 4px;
+  margin-top: 6px;
+  font-weight: 600;
+  border-radius: 8px;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.elist .mrow-d:hover {
+  background: var(--bg-hover);
+}
+
+.elist .mrow-d .nm {
+  flex: 1;
+  min-width: 0;
+}
+
+.elist .mrow-d .s {
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+  font-weight: 400;
+}
+
+.elist .mrow-d.on {
+  background: var(--bg-active);
+}
+
+.elist .irow {
+  padding-left: 22px;
+}
+
+.eicon.m {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: transparent;
+}
+
+.eicon.y {
+  background: var(--bg);
+  color: var(--ink-2);
+  border: 1px solid var(--line-2);
+}
+
+.crumb {
+  display: flex;
+  gap: 6px;
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+  margin-bottom: 6px;
+}
+
+.crumb b {
+  color: var(--ink-2);
+  font-weight: 500;
+}
+
+.eedit .gtitle .gnote {
+  font-weight: 400;
+  font-size: 12px;
+  letter-spacing: 0;
+}
+
+.eedit a.opt {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.eedit a.opt:hover {
+  background: var(--bg-hover);
+}
+
+.envs-phone-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.envs-phone-head h2 {
+  margin: 0;
+  font-size: var(--fs-xl);
+}
+
+.envs-phone .pbody {
+  padding: 12px 16px 24px;
+}
+
+.pgrp {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0 12px;
+  margin-bottom: 12px;
+}
+
+.pgh {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--fs-md);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.pgh .muted {
+  font-size: 12px;
+}
+
+.pgrp .mrow {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 1px solid var(--line);
+}
+
+.pgrp .mrow:last-child {
+  border-bottom: 0;
+}
+
+.envs-phone-foot {
+  font-size: 12px;
+  padding-top: 10px;
+}
+
+.mdetail .kv {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 16px;
+}
+
+.mdetail .kv h4 {
+  margin: 0 0 4px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--ink-3);
+  letter-spacing: 0.02em;
+}
+
+.mdetail .kv .r {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.mdetail .kv .r .k {
+  color: var(--ink-2);
+}
+
+.mdetail .kv-btn {
+  justify-content: center;
+  min-height: 44px;
+}
+
+.elist .dot,
+.pgh .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.elist .dot.ok,
+.pgh .dot.ok {
+  background: var(--ok);
+}
+
+.elist .dot.bad,
+.pgh .dot.bad {
+  background: var(--danger);
+}
+
+.eedit .pill.ok {
+  background: oklch(0.95 0.05 150);
+  color: oklch(0.42 0.1 150);
+}
+
+.eedit .pill.bad {
+  background: oklch(0.95 0.04 25);
+  color: var(--danger);
+}
+.ui.menu .eicon {
+  border-radius: 5px;
+}
+
+.ui.select.env-pick {
+  width: 100%;
+  height: auto;
+  min-height: 40px;
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.env-pick-in {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  min-width: 0;
+}
+
+.env-pick-t {
+  display: block;
+}
+
+.env-pick-s {
+  display: block;
+  font-size: 11px;
+  white-space: normal;
+}
+
+.env-kv .env-open,
+.env-kv .env-note {
+  font-size: 12px;
+}
+
+.env-kv .ui-anchor > .env-pick-menu {
+  width: 100%;
+}
+
+.ui.menu.env-menu {
+  width: 320px;
+}
+
+.warnrow {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  font-size: 12px;
+  color: var(--ink-2);
+  background: oklch(0.985 0.012 75);
+  border: 1px solid oklch(0.85 0.08 75);
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+
+.warnrow .dot {
+  margin-top: 5px;
+}
+
+.warnrow.bad {
+  background: oklch(0.985 0.012 25);
+  border-color: oklch(0.85 0.08 25);
+}
+
+.copy-mate .fld {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.copy-mate .fld label {
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+  font-weight: 500;
+}
+
+.copy-mate .fld .ui.select,
+.copy-mate .fld .ui-anchor {
+  width: 100%;
+}
+
+.copy-mate .fld-note {
+  font-size: 12px;
+}
