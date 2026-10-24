@@ -1,0 +1,39 @@
+{
+  "version": "0.1.0-beta.8",
+  "notes": "https://github.com/giovaniif/crew/releases/tag/v0.1.0-beta.8",
+  "pub_date": "2026-10-24T22:41:43Z",
+  "platforms": {
+    "darwin-aarch64": {
+      "url": "https://github.com/giovaniif/crew/releases/download/v0.1.0-beta.8/crew_0.1.0-beta.8_aarch64.app.tar.gz",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSR1N4aEV1d1VWWlVDK2FUM0h3SnpxRGRnVmRueExuTHNlRXA0RDcweEtpWkZ6MDVxQTNWMHpTM09IQUdNOThqQTBvdk5tUFZmS1p4NzRUTTNvTzNWcy9rREFlZ0dPTFFrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyODgxMTA0CWZpbGU6Y3Jldy5hcHAudGFyLmd6CXZlcnNpb246MC4xLjAtYmV0YS44ClZ6T2N2UnJxN1pxMWVCOFFJQWpuVzlDZndpWkVrd1BCNWU4SGR4Ri9aVGJyTVYrSVdoekFhL20zT0VTWS93M2pibVN4UUNhZDgweFN4N2JteTl4b0NRPT0K"
+    },
+    "darwin-x86_64": {
+      "url": "https://github.com/giovaniif/crew/releases/download/v0.1.0-beta.8/crew_0.1.0-beta.8_x64.app.tar.gz",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSR1N4aEV1d1VWWmV3dTcxMEZPeks2TEhHT05raVBKSU5zU0tyeEJPeVpzd0ZydGQ5TzhCb2xlV2xpZHpQWEJGUUdnbUNOL0ljQUx5aFI0aGtjRG5sZ0w5WVdsU1M4Z3dVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyODgxNTg5CWZpbGU6Y3Jldy5hcHAudGFyLmd6CXZlcnNpb246MC4xLjAtYmV0YS44ClpWeHczVVJzMEFxVWk2RCtuK25LdG01Y1FIWlNGQlpqdlZ3YmdWdmxIQmNGWVl6dFJwQm1iQmROVm9IQjdmMEdzdmgvTWRmVDgwbkE0WXMzTHhIK0NBPT0K"
+    },
+    "linux-x86_64": {
+      "url": "https://github.com/giovaniif/crew/releases/download/v0.1.0-beta.8/crew_0.1.0-beta.8_amd64.AppImage",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSR1N4aEV1d1VWWlZnclJGR1J5WVdoM1Q2akV0TUlDUkptV0lkencrT0JOdW5ObE1QandkU01ONjRDRmtvb0syVnRYaVFGYVhOZW5LaFdCa0hjRWdUei9Kb3ZCZUhodVE0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyODgxMzAxCWZpbGU6Y3Jld18wLjEuMC1iZXRhLjhfYW1kNjQuQXBwSW1hZ2UJdmVyc2lvbjowLjEuMC1iZXRhLjgKc2svMGRtSTltdkpiYjhSby9qRUZXK1lOOWlDYnNWUmo4ZW9yTDZUNTlZNTVRRCswQUJ2aHNaVXc2TXBDV1VLK3o4dnE5YURGZnBwWVRRRXoxWDQ0QWc9PQo="
+    },
+    "linux-x86_64-appimage": {
+      "url": "https://github.com/giovaniif/crew/releases/download/v0.1.0-beta.8/crew_0.1.0-beta.8_amd64.AppImage",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSR1N4aEV1d1VWWlZnclJGR1J5WVdoM1Q2akV0TUlDUkptV0lkencrT0JOdW5ObE1QandkU01ONjRDRmtvb0syVnRYaVFGYVhOZW5LaFdCa0hjRWdUei9Kb3ZCZUhodVE0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyODgxMzAxCWZpbGU6Y3Jld18wLjEuMC1iZXRhLjhfYW1kNjQuQXBwSW1hZ2UJdmVyc2lvbjowLjEuMC1iZXRhLjgKc2svMGRtSTltdkpiYjhSby9qRUZXK1lOOWlDYnNWUmo4ZW9yTDZUNTlZNTVRRCswQUJ2aHNaVXc2TXBDV1VLK3o4dnE5YURGZnBwWVRRRXoxWDQ0QWc9PQo="
+    },
+    "linux-x86_64-deb": {
+      "url": "https://github.com/giovaniif/crew/releases/download/v0.1.0-beta.8/crew_0.1.0-beta.8_amd64.deb",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSR1N4aEV1d1VWWmRBdndEamZ2TWFhMkVJSG1zZ3VpbVh5N0hsRmlUeDlROVFsSWJYZVR1VXNqd04zUE9ObE1VOXQrS1M5UU02SGQvSGZvTEZlVXBMZ2RLN3dUellVaHdJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyODgxMzAxCWZpbGU6Y3Jld18wLjEuMC1iZXRhLjhfYW1kNjQuZGViCXZlcnNpb246MC4xLjAtYmV0YS44CjN1QTFoTFo1NkJiMzZtYUdpWlhqa0xZMXZjMjlySGc1emhCMmNzMnRaalFDQWtwcVFOZUxoaGFUZ3gxTENWTUlxUlMrWUJram41U3grSWVMMDdZS0JnPT0K"
+    },
+    "windows-x86_64": {
+      "url": "https://github.com/giovaniif/crew/releases/download/v0.1.0-beta.8/crew_0.1.0_x64-setup.exe",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSR1N4aEV1d1VWWlZMb1ZIL082VUNSSzlsdEF4c05uc2FPMXBCNnJIVEViZnVCQ1VtVzdqelp6TFNiUTI3TFMxVHlHRGFmR3NrZk5hUWtWSVlNNFdBU2JBOG9xK3l4ZVFBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyODgxMTY3CWZpbGU6Y3Jld18wLjEuMF94NjQtc2V0dXAuZXhlCXZlcnNpb246MC4xLjAKUVNLM3RoampWZmpIbTU1MU85UTBQUlBEWHlCbytLbXpEVWlvcjFTaThKSHlGYkVlTTBxdmZQNjFGQmJkSEx3TFFpYXZmdXRhWEdZUnhqamsrNHJUQ1E9PQo="
+    },
+    "windows-x86_64-nsis": {
+      "url": "https://github.com/giovaniif/crew/releases/download/v0.1.0-beta.8/crew_0.1.0_x64-setup.exe",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSR1N4aEV1d1VWWlZMb1ZIL082VUNSSzlsdEF4c05uc2FPMXBCNnJIVEViZnVCQ1VtVzdqelp6TFNiUTI3TFMxVHlHRGFmR3NrZk5hUWtWSVlNNFdBU2JBOG9xK3l4ZVFBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyODgxMTY3CWZpbGU6Y3Jld18wLjEuMF94NjQtc2V0dXAuZXhlCXZlcnNpb246MC4xLjAKUVNLM3RoampWZmpIbTU1MU85UTBQUlBEWHlCbytLbXpEVWlvcjFTaThKSHlGYkVlTTBxdmZQNjFGQmJkSEx3TFFpYXZmdXRhWEdZUnhqamsrNHJUQ1E9PQo="
+    },
+    "windows-x86_64-msi": {
+      "url": "https://github.com/giovaniif/crew/releases/download/v0.1.0-beta.8/crew_0.1.0_x64_en-US.msi",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSR1N4aEV1d1VWWlY0VkowQ29CSmpqUkgrOFcyTmFZZ0ZMaWJ4UWdkTnIxQW13NFBpYUo0SUQrQllnSnkyS0pHaUpTSGloOStRZWhDMk1IZm5rNEF5ZWtWci96bUgvU0FrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyODgxMTY3CWZpbGU6Y3Jld18wLjEuMF94NjRfZW4tVVMubXNpCXZlcnNpb246MC4xLjAKd1VVeUx5VWwwQk15YlU5ZUEwWjdWYy8zdDlzUkZHc2E4dEZEeFZFVmtOclI0L3lzZVBkV1BsWm1mR0xPR01GazlUeE5NWVhwZkY0aHVPUS9BMktoQ1E9PQo="
+    }
+  }
+}
