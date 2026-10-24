@@ -12,7 +12,7 @@ Files in `$CREW_HOME` (default `~/.crew`):
 
 | File | Purpose |
 |---|---|
-| `crew.lock` | `flock` held for the daemon's life; the kernel drops it if the daemon dies. A second daemon exits 1 with `already running (pid N)`. |
+| `crew.lock` | `flock` held for the daemon's life; the kernel drops it if the daemon dies. A second daemon exits 1 with `already running (pid N)`. When a daemon of the same build answers on the socket, the second daemon exits 0 and writes `a daemon of this build already runs`. Thus a service unit does not restart it again and again. |
 | `crew.pid` | written after taking the lock, removed on clean exit |
 | `crew.sock` | the socket, mode 0600; a stale one is removed by the next lock holder |
 | `state.db` | the SQLite store; loaded once on start |

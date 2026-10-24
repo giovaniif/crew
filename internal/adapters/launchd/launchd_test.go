@@ -223,3 +223,35 @@ func TestLaunchdRemoveWithoutAnAgentIsANoop(t *testing.T) {
 		t.Fatalf("removed %v err %v calls %q", removed, err, l.calls)
 	}
 }
+
+func TestLaunchdAgentKeptAliveOnlyOnFailureDoesNotRestartACleanExit(t *testing.T) {
+	dir := t.TempDir()
+	a := agent(dir)
+	a.KeepAliveOnFailure = true
+	if _, err := launchd.Install(context.Background(), a, (&launchctl{}).run); err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := os.ReadFile(filepath.Join(dir, "dev.crew.bridge.me-vps.plist"))
+	if !strings.Contains(string(raw), "<key>KeepAlive</key>\n\t<dict>\n\t\t<key>SuccessfulExit</key>\n\t\t<false/>\n\t</dict>") {
+		t.Fatalf("plist\n%s", raw)
+	}
+}
+
+func TestLaunchdInspectReadsTheBinaryHomeAndKeepAliveOfAnAgent(t *testing.T) {
+	dir := t.TempDir()
+	a := agent(dir)
+	if _, err := launchd.Install(context.Background(), a, (&launchctl{}).run); err != nil {
+		t.Fatal(err)
+	}
+	spec, err := launchd.Inspect(a)
+	if err != nil || spec.Program != "/usr/local/bin/crew" || spec.Env["CREW_HOME"] != "/Users/me/.crew" || !spec.KeepAliveAlways {
+		t.Fatalf("spec %+v err %v", spec, err)
+	}
+	a.KeepAliveOnFailure = true
+	if _, err := launchd.Install(context.Background(), a, (&launchctl{}).run); err != nil {
+		t.Fatal(err)
+	}
+	if spec, _ := launchd.Inspect(a); spec.KeepAliveAlways {
+		t.Fatalf("spec %+v", spec)
+	}
+}
