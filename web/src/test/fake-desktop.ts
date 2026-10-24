@@ -33,6 +33,8 @@ export class FakeDesktop implements DesktopBridge {
         return { servers: this.servers, selected: this.selected, first_run: this.firstRun };
       case "crew_ssh_hosts":
         return this.hosts;
+      case "crew_server_crew":
+        return { action: "current", server: "v0.1.0", app: "v0.1.0" };
       case "crew_server_add": {
         const kind = args?.kind as "url" | "ssh";
         const target = String(args?.target ?? "");
