@@ -28,6 +28,7 @@ type isoState struct {
 	Pane      string          `json:"pane,omitempty"`
 	Worktree  string          `json:"worktree,omitempty"`
 	Started   time.Time       `json:"started"`
+	Second    *isoState       `json:"second,omitempty"`
 }
 
 func isoPath(e *env) string { return filepath.Join(e.state, "iso.json") }
@@ -121,7 +122,7 @@ func isoEnv(e *env, home, socket string) []string {
 var pairCode = regexp.MustCompile(`Code ([A-Z0-9]+),`)
 
 func isoUp(e *env, args []string, r *result) {
-	o, ok := parse(args, nil, []string{"session", "env-fakes"}, r)
+	o, ok := parse(args, nil, []string{"session", "env-fakes", "second"}, r)
 	if !ok {
 		return
 	}
@@ -200,6 +201,16 @@ func isoUp(e *env, args []string, r *result) {
 		r.fail("cannot pair a device: "+err.Error(), "read "+filepath.Join(home, "daemon.log"))
 		return
 	}
+	if o.bools["second"] {
+		second, err := startSecond(e, st)
+		if second != nil {
+			st.Second = second
+		}
+		if err != nil {
+			r.fail("cannot start the second crew: "+err.Error(), "read the logs in the second home")
+			return
+		}
+	}
 	if o.bools["session"] {
 		if err := startSession(e, &st); err != nil {
 			r.fail("cannot start the live session: "+err.Error(), "read "+filepath.Join(home, "daemon.log"))
@@ -214,6 +225,60 @@ func isoUp(e *env, args []string, r *result) {
 	isoReport(st, r)
 }
 
+const secondName = "devbox"
+
+func startSecond(e *env, first isoState) (*isoState, error) {
+	home, err := os.MkdirTemp("/tmp", "crew-iso-")
+	if err != nil {
+		return nil, err
+	}
+	st := &isoState{Home: home, Socket: "crew-iso-" + filepath.Base(home)[len("crew-iso-"):], Bin: first.Bin, Started: e.now()}
+	st.Env = append(isoEnv(e, home, st.Socket), "CREW_MACHINE_NAME="+secondName)
+	if err := seedPersonalHome(filepath.Join(home, "home")); err != nil {
+		return st, err
+	}
+	for _, d := range []string{"e2e", "home/.config", "home/.local/share", "home/.local/state", "home/.claude", "home/.codex"} {
+		_ = os.MkdirAll(filepath.Join(home, d), 0o755)
+	}
+	for _, f := range []string{"onboarded", "e2e/claude.steps", "e2e/codex.steps", "e2e/omp.steps"} {
+		_ = os.WriteFile(filepath.Join(home, f), nil, 0o644)
+	}
+	if out, errs, code := e.sys.exec(cmd{dir: home, env: st.Env, name: st.Bin, args: []string{"daemon", "start"}}); code != 0 {
+		return st, fmt.Errorf("the second daemon did not start: %s", strings.TrimSpace(out+errs))
+	}
+	st.ServePort = e.sys.freePort()
+	st.ServeURL = "http://127.0.0.1:" + strconv.Itoa(st.ServePort)
+	pid, err := e.sys.start(cmd{dir: home, env: st.Env, name: st.Bin, args: []string{"serve", "--addr", "127.0.0.1:" + strconv.Itoa(st.ServePort), "--url", st.ServeURL}}, filepath.Join(home, "serve.log"))
+	if err != nil {
+		return st, err
+	}
+	st.Pids = append(st.Pids, pid)
+	if !waitHTTP(e, st.ServeURL+"/api/v1/hello") {
+		return st, errors.New("the second crew serve does not answer on " + st.ServeURL)
+	}
+	if err := pairDevice(e, st); err != nil {
+		return st, err
+	}
+	return st, writeAppMachines(first, *st)
+}
+
+func writeAppMachines(first, second isoState) error {
+	dir := filepath.Join(first.Home, "home", ".local", "share", "sh.giovani.crew")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return err
+	}
+	url := second.ServeURL + "/"
+	file := map[string]any{"machines": []map[string]any{
+		{"id": "local", "name": "This Mac", "kind": "this"},
+		{"id": "url:" + url, "name": secondName, "kind": "url", "url": url, "auth": map[string]string{"token": second.Token}},
+	}}
+	b, err := json.MarshalIndent(file, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, "machines.json"), b, 0o600)
+}
+
 func viteCmd(e *env, vars []string, port int) cmd {
 	web := filepath.Join(e.repo, "web")
 	return cmd{dir: web, env: vars, name: "node", args: []string{filepath.Join(web, "node_modules", "vite", "bin", "vite.js"), "--host", "127.0.0.1", "--port", strconv.Itoa(port), "--strictPort"}}
@@ -226,6 +291,11 @@ func isoReport(st isoState, r *result) {
 	r.set("serve_url", st.ServeURL)
 	r.set("web_url", st.WebURL)
 	r.set("env", st.Env)
+	if st.Second != nil {
+		r.set("second_home", st.Second.Home)
+		r.set("second_serve_url", st.Second.ServeURL)
+		r.set("second_env", st.Second.Env)
+	}
 	if st.Session != "" {
 		r.set("session", st.Session)
 		r.set("pane", st.Pane)
@@ -337,6 +407,17 @@ func pairDevice(e *env, st *isoState) error {
 }
 
 func stopIso(e *env, st isoState) {
+	if st.Second != nil {
+		second := *st.Second
+		for _, pid := range second.Pids {
+			e.sys.kill(pid)
+		}
+		e.sys.exec(cmd{dir: second.Home, env: second.Env, name: second.Bin, args: []string{"daemon", "stop"}})
+		e.sys.exec(cmd{name: "tmux", args: []string{"-L", second.Socket, "kill-server"}})
+		if home := filepath.Clean(second.Home); filepath.Dir(home) == "/tmp" && strings.HasPrefix(home, "/tmp/crew-iso-") {
+			_ = os.RemoveAll(home)
+		}
+	}
 	for _, pid := range st.Pids {
 		e.sys.kill(pid)
 	}
