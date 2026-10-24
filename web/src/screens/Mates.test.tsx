@@ -200,6 +200,17 @@ describe("Mate page", () => {
     await waitFor(() => expect(calls(server)).toContain("POST /api/v1/mates/webby/reset"));
   });
 
+  it("has a quiet Start fresh in the header that asks inline before it resets the mate", async () => {
+    const { server } = setup("#/mates/webby", board, [], undefined, true);
+    const user = userEvent.setup();
+    const head = await screen.findByRole("banner");
+    await user.click(await within(head).findByRole("button", { name: "Start fresh" }));
+    expect(within(head).getByText("Clear this conversation?")).toBeInTheDocument();
+    expect(calls(server)).not.toContain("POST /api/v1/mates/webby/reset");
+    await user.click(within(head).getByRole("button", { name: "Start fresh" }));
+    await waitFor(() => expect(calls(server)).toContain("POST /api/v1/mates/webby/reset"));
+  });
+
   it("opens an old conversation from the ⋯ menu as history with no composer", async () => {
     setup("#/mates/webby/s7", board, [], undefined, true);
     const conv = await screen.findByRole("region", { name: "Conversation" });
@@ -431,14 +442,15 @@ describe("Mate conversation", () => {
     expect(within(bar).getByRole("button", { name: "Start fresh" })).toBeInTheDocument();
   });
 
-  it("asks before it starts fresh, and starts nothing on Cancel", async () => {
+  it("asks Clear this conversation in the toolbar, and starts nothing on Cancel", async () => {
     const { server } = setup("#/sessions/s2");
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Start fresh" }));
-    const ask = screen.getByRole("dialog", { name: "Start fresh with Webby?" });
-    expect(ask).toHaveTextContent("Webby writes a handoff to memory");
-    await user.click(within(ask).getByRole("button", { name: "Cancel" }));
+    const bar = within(screen.getByRole("toolbar", { name: "Session" }));
+    expect(bar.getByText("Clear this conversation?")).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).toBeNull();
+    await user.click(bar.getByRole("button", { name: "Cancel" }));
+    expect(bar.queryByText("Clear this conversation?")).toBeNull();
     expect(calls(server)).not.toContain("POST /api/v1/sessions/s2/fresh");
   });
 
@@ -446,24 +458,19 @@ describe("Mate conversation", () => {
     const { server } = setup("#/sessions/s2");
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Start fresh" }));
-    const ask = screen.getByRole("dialog");
-    expect(within(ask).getByRole("checkbox", { name: "Keep this worktree" })).toBeChecked();
-    await user.click(within(ask).getByRole("button", { name: "Start fresh" }));
+    await user.click(screen.getByRole("button", { name: "Start fresh" }));
     await waitFor(() => expect(window.location.hash).toBe("#/sessions/s8"));
     expect(calls(server).filter((c) => c.startsWith("POST") && !c.endsWith("/read"))).toEqual(["POST /api/v1/sessions/s2/fresh"]);
-    expect(calls(server)).toContain("POST /api/v1/sessions/s2/read");
     expect(server.calls.find((c) => c.path === "/api/v1/sessions/s2/fresh")?.body).toEqual({ same_worktree: true });
   });
 
-  it("starts fresh in a new worktree when the owner clears Keep this worktree", async () => {
-    const { server } = setup("#/sessions/s2");
-    const user = userEvent.setup();
-    await user.click(await screen.findByRole("button", { name: "Start fresh" }));
-    const ask = screen.getByRole("dialog");
-    await user.click(within(ask).getByRole("checkbox", { name: "Keep this worktree" }));
-    await user.click(within(ask).getByRole("button", { name: "Start fresh" }));
-    await waitFor(() => expect(window.location.hash).toBe("#/sessions/s8"));
-    expect(server.calls.find((c) => c.path === "/api/v1/sessions/s2/fresh")?.body).toEqual({ same_worktree: false });
+  it("tints each message of the mate with the color of the mate and shows no name label", async () => {
+    setup("#/sessions/s2");
+    const log = within(await screen.findByRole("log", { name: "Messages" }));
+    const reply = await log.findByRole("article", { name: "Webby" });
+    expect(within(reply).getByText("I fixed the docs.")).toBeInTheDocument();
+    expect(within(reply).queryByText("Webby")).toBeNull();
+    expect(reply.style.getPropertyValue("--mate")).toMatch(/^#[0-9a-f]{6}$/i);
   });
 
   it("shows the name and face of the mate on each message of the mate", async () => {
@@ -471,7 +478,6 @@ describe("Mate conversation", () => {
     const log = within(await screen.findByRole("log", { name: "Messages" }));
     const reply = await log.findByRole("article", { name: "Webby" });
     expect(within(reply).getByText("I fixed the docs.")).toBeInTheDocument();
-    expect(within(reply).getByText("Webby")).toBeInTheDocument();
     expect(within(reply).getByRole("img", { name: /paused$/ })).toBeInTheDocument();
     expect(log.queryByRole("article", { name: "You" })).toBeNull();
   });
@@ -479,6 +485,12 @@ describe("Mate conversation", () => {
   it("asks you to message the mate by name", async () => {
     setup("#/sessions/s2");
     expect(await screen.findByRole("textbox", { name: "Message" })).toHaveAttribute("placeholder", "Message Webby…");
+  });
+
+  it("gives the whole log of a mate the color of the mate for its tool lines", async () => {
+    setup("#/sessions/s2");
+    const log = await screen.findByRole("log", { name: "Messages" });
+    expect(log.style.getPropertyValue("--mate")).toMatch(/^#[0-9a-f]{6}$/i);
   });
 
   it("shows no face on a session of no mate", async () => {

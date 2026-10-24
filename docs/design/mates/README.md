@@ -68,6 +68,7 @@ The owner approved frames 11 and 12 on 2026-10-23. They replace the environment 
 | [env.css](env.css) | | The new classes for frames 11 and 12. It uses only the tokens of `crew.css`. |
 | [11-environments.html](11-environments.html), [11.png](11.png) | 11a to 11h | Environments: machines, identities, + Machine, copy an identity, the phone |
 | [12-first-run-picker.html](12-first-run-picker.html), [12.png](12.png) | 12a to 12g | The first run, the environment menu, the picker on the mate page, copy a mate, the model |
+| [13-quiet-header-chat.html](13-quiet-header-chat.html), [13a.png](13a.png) to [13d.png](13d.png) | 13a to 13d | Quiet header controls (Start fresh, Interrupt), the session chat as a document, mate bubbles in the color of the mate |
 
 The HTML files open alone in a browser. They use `crew.css` and `canvas.css` from [../redesign/](../redesign/), and `mates.css` and `env.css` from this folder.
 
@@ -104,5 +105,9 @@ The HTML files open alone in a browser. They use `crew.css` and `canvas.css` fro
 | 12e | The rail of the mate page: the picker states (server, identity, This Mac, login missing, not reachable, the open picker with the same machine only) |
 | 12g | Copy a mate to a different machine (⋯ menu) |
 | 12f | The model, the decisions and the word table |
+| 13a | The session chat: no bubbles, tool runs as grey lines that open on click |
+| 13b | A mate chat: bubbles in a light tint of the mate color |
+| 13c | A mate chat while the mate works: Interrupt in the header |
+| 13d | The states of the header controls, also the phone width |
 
 Frame 5 (Settings and Servers) stays in the redesign for history. Do not build Settings › Servers. Use 11a and 11d.

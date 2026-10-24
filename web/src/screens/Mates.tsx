@@ -4,7 +4,7 @@ import { defaultPick, EnvChip, EnvRail, type EnvPick } from "./EnvPicker";
 import { authedOf, useHub } from "../hub";
 import { isYours } from "../envmenu";
 import type { MateEnvironment } from "../api";
-import { ThreadChat } from "./Session";
+import { InterruptButton, StartFreshButton, ThreadChat } from "./Session";
 import {
   type Authed,
   type HarnessOptions,
@@ -832,6 +832,18 @@ export function MatePage({
     }
   }
 
+  const live = shown.session && !shown.history ? snapshot.state?.sessions.find((s) => s.ID === shown.session) : undefined;
+  const working = live && !live.Ended && (live.State === "running" || live.State === "permission");
+  async function freshMate(): Promise<string> {
+    try {
+      await resetMate(api, name);
+      return "";
+    } catch (err) {
+      return message(err);
+    }
+  }
+  const quiet = !live || live.Ended ? null : working ? <InterruptButton key={live.ID} api={api} session={live.ID} /> : <StartFreshButton key={live.ID} onFresh={freshMate} />;
+
   const settings = (inSheet: boolean) =>
     def ? (
       <MateSettings api={api} def={def} tones={tones} channels={row.channels} name={name} connected={connected} canConnect={canConnect} connect={connect} mem={mem} sheet={inSheet} onSaved={reload} />
@@ -867,6 +879,7 @@ export function MatePage({
             <h1>{name}</h1>
             <div className="muted mp-line">{mateLine(envLabel, def?.agent ?? "", state)}</div>
           </div>
+          {quiet}
           <button type="button" className="ui btn quiet mp-info" aria-label={"Settings of " + name} onClick={() => setSheet(true)}>
             ⓘ
           </button>
@@ -906,6 +919,7 @@ export function MatePage({
         </span>
         <span className={"pill mp-state " + state}>{state}</span>
         <span className="spacer" />
+        {quiet}
         <Button disabled={busy} onClick={() => void pause()}>
           {paused ? "Resume" : "Pause"}
         </Button>

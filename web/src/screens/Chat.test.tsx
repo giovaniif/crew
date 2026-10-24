@@ -470,28 +470,30 @@ describe("the composer", () => {
 });
 
 describe("interrupt", () => {
-  it("asks first and does nothing when cancelled", async () => {
-    const server = new FakeServer().on("GET", newest, page([]));
-    const sockets = setup(server);
-    live(sockets);
-    await userEvent.click(screen.getByRole("button", { name: "Interrupt" }));
-    const dialog = within(screen.getByRole("alertdialog", { name: "Interrupt this session?" }));
-    await userEvent.click(dialog.getByRole("button", { name: "Cancel" }));
-    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
-    expect(server.calls.some((c) => c.path.endsWith("/interrupt"))).toBe(false);
-  });
-
-  it("stops a working session once confirmed", async () => {
+  it("stops a working session on one click and says Interrupting while it stops", async () => {
     const server = new FakeServer().on("GET", newest, page([])).on("POST", "/api/v1/sessions/s1/interrupt", { status: 200, body: {} });
     const sockets = setup(server);
     live(sockets);
-    await userEvent.click(screen.getByRole("button", { name: "Interrupt" }));
-    const dialog = within(screen.getByRole("alertdialog", { name: "Interrupt this session?" }));
-    await userEvent.click(dialog.getByRole("button", { name: "Interrupt" }));
-    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+    const button = screen.getByRole("button", { name: "Interrupt" });
+    expect(button).toHaveTextContent("esc");
+    await userEvent.click(button);
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    await waitFor(() => expect(server.calls.some((c) => c.path === "/api/v1/sessions/s1/interrupt")).toBe(true));
     const call = server.calls.findIndex((c) => c.path === "/api/v1/sessions/s1/interrupt");
     expect(server.calls[call]?.method).toBe("POST");
     expect(server.headers[call].authorization).toBe("Bearer t0k");
+    expect(await screen.findByRole("button", { name: "Interrupting…" })).toBeDisabled();
+  });
+
+  it("interrupts on Escape outside a text field", async () => {
+    const server = new FakeServer().on("GET", newest, page([])).on("POST", "/api/v1/sessions/s1/interrupt", { status: 200, body: {} });
+    const sockets = setup(server);
+    live(sockets);
+    await userEvent.type(screen.getByRole("textbox", { name: "Message" }), "{Escape}");
+    expect(server.calls.some((c) => c.path.endsWith("/interrupt"))).toBe(false);
+    (document.activeElement as HTMLElement).blur();
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(server.calls.some((c) => c.path === "/api/v1/sessions/s1/interrupt")).toBe(true));
   });
 
   it("is offered only while the agent works", async () => {
