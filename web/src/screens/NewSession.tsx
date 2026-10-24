@@ -1,8 +1,9 @@
-import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent, type KeyboardEvent } from "react";
 import { addWorkspace, claudeTrust, trustClaude, expandPath, listWorkspaces, removeWorkspace, resolveWorkItem, sessionOptions, startSession, type HarnessOptions, type WorkItemResolved, type WorkspaceList } from "../api";
 import type { AppEnv } from "../App";
 import { agentChoices, agentValue, defaultLabel, effortChoices, loadChoices, placeLine, rememberedRoot, saveChoices, splitAgent, taskFields } from "../newsession";
 import { Button, Select } from "../ui";
+import { LocalHooksBanner } from "./HooksBanner";
 
 type Resolution = { state: "idle" } | { state: "checking" } | { state: "ok"; item: WorkItemResolved } | { state: "bad"; message: string };
 
@@ -21,6 +22,7 @@ function message(err: unknown): string {
 
 export function NewSession({ env, token, home: atHome }: { env: AppEnv; token: string; home?: boolean }) {
   const [remembered] = useState(() => loadChoices(env.storage));
+  const api = useMemo(() => ({ fetch: env.fetch, token }), [env.fetch, token]);
   const [workspaces, setWorkspaces] = useState<Workspaces>({ state: "loading" });
   const [workspace, setWorkspace] = useState(remembered.workspace);
   const [text, setText] = useState("");
@@ -207,6 +209,7 @@ export function NewSession({ env, token, home: atHome }: { env: AppEnv; token: s
         </a>
       )}
       <h1>What should the agent do?</h1>
+      <LocalHooksBanner api={api} />
       {workspaces.state === "failed" ? (
         <div className="error" role="alert">
           <p>{"Could not load workspaces: " + workspaces.message}</p>

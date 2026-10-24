@@ -202,6 +202,23 @@ describe("the sidebar shortcut hint", () => {
   });
 });
 
+describe("the face and color picker", () => {
+  it("centers the face in the face button and in each face tile", () => {
+    expect(rule(".face-pick")["align-items"]).toBe("center");
+    expect(rule(".face-pick")["justify-content"]).toBe("center");
+    expect(rule(".face-pick .face").display).toBe("block");
+    expect(rule(".mt-faces button .face").display).toBe("block");
+  });
+
+  it("shows small swatches in the same six columns as the faces", () => {
+    expect(rule(".face-picker .swatches").display).toBe("grid");
+    expect(rule(".face-picker .swatches")["grid-template-columns"]).toBe("repeat(6, minmax(0, 1fr))");
+    const swatch = rule(".face-picker .swatches .swatch");
+    expect(swatch.padding).toBe("10px");
+    expect(swatch["background-clip"]).toBe("content-box");
+  });
+});
+
 describe("a mate color swatch", () => {
   it("is a circle of the same width and height", () => {
     const swatch = rule(".swatches .swatch");

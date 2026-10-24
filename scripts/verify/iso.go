@@ -270,7 +270,7 @@ func writeAppMachines(first, second isoState) error {
 	url := second.ServeURL + "/"
 	file := map[string]any{"machines": []map[string]any{
 		{"id": "local", "name": "This Mac", "kind": "this"},
-		{"id": "url:" + url, "name": secondName, "kind": "url", "url": url, "auth": map[string]string{"token": second.Token}},
+		{"id": "url:" + url, "name": secondName, "kind": "url", "url": url, "auth": map[string]any{"token": second.Token, "device": second.Device}},
 	}}
 	b, err := json.MarshalIndent(file, "", "  ")
 	if err != nil {

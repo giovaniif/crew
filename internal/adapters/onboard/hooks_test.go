@@ -13,11 +13,41 @@ import (
 
 var local = domain.Environment{Name: "local", Kind: domain.EnvLocal}
 
-func TestAFreshMachineHasNoMissingHooks(t *testing.T) {
+func TestAMachineWithNoHarnessHasNoMissingHooks(t *testing.T) {
 	w := newWorld(t, false)
-	write(t, w.probe.ClaudeSettings, `{"theme":"dark"}`)
 	if got := w.probe.Hooks(context.Background(), nil); len(got) != 0 {
 		t.Errorf("hooks = %+v, want none", got)
+	}
+}
+
+func TestClaudeHooksThatWereNeverSetUpAreReportedWhenClaudeIsUsed(t *testing.T) {
+	ctx := context.Background()
+	w := newWorld(t, false)
+	w.probe.UserHome = w.root
+	write(t, w.probe.ClaudeSettings, `{"theme":"dark"}`)
+	want := domain.HooksMissing{Env: "local", Harness: domain.HarnessClaude, File: w.probe.ClaudeSettings, Reason: "crew hooks are not set up in ~/claude/settings.json", New: true}
+	if got := w.probe.Hooks(ctx, nil); len(got) != 1 || got[0] != want {
+		t.Fatalf("hooks with a claude config = %+v, want %+v", got, want)
+	}
+	if err := w.probe.FixHooks(ctx, local, domain.HarnessClaude); err != nil {
+		t.Fatal(err)
+	}
+	if got := w.probe.Hooks(ctx, nil); len(got) != 0 {
+		t.Errorf("hooks after set up = %+v, want none", got)
+	}
+	if b, _ := os.ReadFile(claude.BackupPath(w.probe.ClaudeSettings)); !strings.Contains(string(b), `"dark"`) {
+		t.Errorf("backup = %s, want the first file", b)
+	}
+
+	p := newWorld(t, false)
+	p.probe.LookPath = func(name string) (string, error) {
+		if name == "claude" {
+			return "/usr/bin/claude", nil
+		}
+		return "", os.ErrNotExist
+	}
+	if got := p.probe.Hooks(ctx, nil); len(got) != 1 || !got[0].New || got[0].Harness != domain.HarnessClaude {
+		t.Errorf("hooks with claude on PATH = %+v, want claude not set up", got)
 	}
 }
 

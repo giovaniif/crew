@@ -54,8 +54,16 @@ export class Servers {
     return call(this.desktop, "crew_server_add", { kind, target, code });
   }
 
-  async open(id: string): Promise<void> {
-    await call(this.desktop, "crew_server_open", { id });
+  async open(id: string, route?: string): Promise<void> {
+    await call(this.desktop, "crew_server_open", route ? { id, route } : { id });
+  }
+
+  async show(id: string, route: string): Promise<void> {
+    if ((await this.list()).selected === id) {
+      window.location.hash = route;
+      return;
+    }
+    await this.open(id, route);
   }
 
   async remove(id: string): Promise<void> {

@@ -670,7 +670,7 @@ export type EnvInfo = {
   hooks_missing?: HooksMissing[];
 };
 
-export type HooksMissing = { env: string; harness: string; file: string; reason: string };
+export type HooksMissing = { env: string; harness: string; file: string; reason: string; new?: boolean };
 
 export type EnvLocal = {
   git_name: string;
