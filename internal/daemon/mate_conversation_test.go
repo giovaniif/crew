@@ -33,7 +33,7 @@ func TestMateMentionsInTwoSlackThreadsGoToTheOneConversation(t *testing.T) {
 		}
 	}
 	texts := queuedTexts(t, r.c)
-	if len(texts) != 2 || !strings.Contains(texts[1], "Source: #C0CHAN002") || !strings.Contains(texts[1], "look at search") {
+	if len(texts) != 2 || !strings.Contains(texts[1], "[Source: #C0CHAN002]") || !strings.Contains(texts[1], "look at search") {
 		t.Fatalf("queued %q", texts)
 	}
 }
@@ -44,7 +44,7 @@ func TestMateDirectMessageGoesToTheConversationAndTheAnswerToTheDM(t *testing.T)
 	r.hub.send(m, app.SlackEvent{Kind: app.SlackDirectMessage, Team: "T0TEAM001", Channel: "D0DM00001", User: mateGuest, Text: "hi, check the build", TS: "1700.0003"})
 	waitFor(t, func() bool { return len(r.mateSessions(t)) == 1 })
 	texts := queuedTexts(t, r.c)
-	if len(texts) != 1 || !strings.Contains(texts[0], "Source: DM") {
+	if len(texts) != 1 || !strings.Contains(texts[0], "[Source: DM]") {
 		t.Fatalf("queued %q", texts)
 	}
 	hookMatePane(t, r.c, "UserPromptSubmit", `{"prompt":"x"}`)
@@ -183,7 +183,7 @@ func TestAutomationOfAMateAppendsToTheConversationEachRun(t *testing.T) {
 		}
 	}
 	texts := queuedTexts(t, r.c)
-	if len(texts) != 3 || !strings.HasPrefix(texts[2], "Source: Automation weekly") {
+	if len(texts) != 3 || !strings.HasPrefix(texts[2], "[Source: Automation weekly]") {
 		t.Fatalf("queued %q", texts)
 	}
 }

@@ -503,6 +503,8 @@ type Status struct {
 	Sessions  int       `json:"sessions"`
 	Worktrees int       `json:"worktrees"`
 	Machine   *Machine  `json:"machine,omitempty"`
+
+	HooksMissing []domain.HooksMissing `json:"hooks_missing,omitempty"`
 }
 
 type Machine struct {

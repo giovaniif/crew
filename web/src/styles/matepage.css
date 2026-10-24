@@ -62,7 +62,7 @@
   justify-content: center;
 }
 
-.mp-more-menu {
+.ui-anchor > .ui.menu.mp-more-menu {
   right: 0;
   left: auto;
 }
@@ -71,77 +71,7 @@
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr) 300px;
-}
-
-.mp-threads {
-  border-right: 1px solid var(--line);
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 8px 6px;
-  gap: 6px;
-}
-
-.mp-threads ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.mp-search {
-  display: flex;
-  gap: 6px;
-  padding: 0 2px;
-}
-
-.mp-search .ui.input {
-  flex: 1;
-  min-width: 0;
-}
-
-.mp-thread {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  min-height: 44px;
-  padding: 7px 8px;
-  border-radius: var(--r-md);
-  color: var(--ink);
-  text-decoration: none;
-}
-
-.mp-thread:hover {
-  background: var(--bg-hover);
-}
-
-.mp-thread.on {
-  background: var(--bg-active);
-}
-
-.mp-thread .dot {
-  margin-top: 6px;
-  flex: none;
-}
-
-.mp-tn {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.mp-tt {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.mp-ts {
-  font-size: var(--fs-xs);
-  color: var(--ink-3);
+  grid-template-columns: minmax(0, 1fr) 300px;
 }
 
 .mp-conv {
@@ -558,6 +488,11 @@
   font-size: 12px;
   font-weight: 600;
   font-style: normal;
+}
+
+.mp-history {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
 }
 
 .mp-first-log {

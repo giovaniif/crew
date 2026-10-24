@@ -3,6 +3,7 @@ import {
   addWorkspace,
   expandPath,
   getConfig,
+  getHooks,
   getOnboarding,
   groupNote,
   listDevices,
@@ -26,6 +27,8 @@ import {
 import { Button, Dialog, Menu, Select, Stepper, Suggest } from "../ui";
 import { usePathSuggestions } from "../pathSuggest";
 import { Group, Opt, ServerTag } from "./SettingsRows";
+import { HooksBanner } from "./HooksBanner";
+import type { HooksMissing } from "../api";
 import { BrowseButton, type PickFolder } from "./BrowseButton";
 
 type Loaded<T> =
@@ -289,6 +292,7 @@ export function WorkspacesGroup({
 type AgentsData = {
   harnesses: HarnessChoices[];
   onboarding: Onboarding;
+  hooks: HooksMissing[];
   config: ConfigValues | null;
   configNote: string;
 };
@@ -299,9 +303,13 @@ function harnessName(h: HarnessChoices): string {
 
 export function AgentsGroup({ api }: { api: Authed }) {
   const load = useCallback(async (): Promise<AgentsData> => {
-    const [options, onboarding] = await Promise.all([
+    const [options, onboarding, hooks] = await Promise.all([
       sessionOptions(api.fetch, api.token),
       getOnboarding(api),
+      getHooks(api).then(
+        (h) => h.missing ?? [],
+        () => [] as HooksMissing[],
+      ),
     ]);
     let config: ConfigValues | null = null;
     let configNote = "";
@@ -313,6 +321,7 @@ export function AgentsGroup({ api }: { api: Authed }) {
     return {
       harnesses: options.harnesses as HarnessChoices[],
       onboarding,
+      hooks,
       config,
       configNote,
     };
@@ -366,7 +375,7 @@ export function AgentsGroup({ api }: { api: Authed }) {
       </>
     );
   }
-  const { harnesses, onboarding, configNote } = loaded.value;
+  const { harnesses, onboarding, hooks: missing, configNote } = loaded.value;
   const value = (key: string) => config?.values[key] ?? "";
   return (
     <>
@@ -382,6 +391,13 @@ export function AgentsGroup({ api }: { api: Authed }) {
             aria-label={harnessName(h)}
           >
             <div className="gtitle">{harnessName(h).toUpperCase()}</div>
+            <HooksBanner
+              api={api}
+              missing={missing.filter(
+                (m) => m.env === "local" && m.harness === h.harness,
+              )}
+              onFixed={reload}
+            />
             <div className="group">
               <Opt
                 lead={
