@@ -1,5 +1,18 @@
 package domain
 
+import "strings"
+
+func PaneOnServer(tmux, socket string) bool {
+	if tmux == "" || socket == "" {
+		return true
+	}
+	path, _, _ := strings.Cut(tmux, ",")
+	if strings.Contains(socket, "/") {
+		return path == socket
+	}
+	return path[strings.LastIndex(path, "/")+1:] == socket
+}
+
 func ClaudeNotification(notificationType string) (HarnessEventKind, bool) {
 	switch notificationType {
 	case "permission_prompt":

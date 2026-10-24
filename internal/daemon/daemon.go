@@ -195,6 +195,7 @@ type Daemon struct {
 	machine     rpc.Machine
 	copies      identityCopies
 	machineName string
+	tmuxSocket  string
 }
 
 func New(store app.Store, pid int, opts ...Option) (*Daemon, error) {
@@ -597,6 +598,9 @@ func (d *Daemon) dispatch(c *conn, line []byte) (*rpc.Response, bool) {
 		if err := json.Unmarshal(req.Params, &h); err != nil {
 			return errorResponse(req.ID, rpc.CodeBadRequest, "hook params: "+err.Error()), true
 		}
+		if !domain.PaneOnServer(h.Tmux, d.tmuxSocket) {
+			h.Pane = ""
+		}
 		var reply rpc.HookReply
 		ok := d.query(func(s *state) {
 			now := d.ws.now()
@@ -614,6 +618,9 @@ func (d *Daemon) dispatch(c *conn, line []byte) (*rpc.Response, bool) {
 		var sl rpc.StatusLine
 		if err := json.Unmarshal(req.Params, &sl); err != nil {
 			return errorResponse(req.ID, rpc.CodeBadRequest, "statusline params: "+err.Error()), true
+		}
+		if !domain.PaneOnServer(sl.Tmux, d.tmuxSocket) {
+			sl.Pane = ""
 		}
 		ok := d.query(func(s *state) { s.statusLine(sl) })
 		return result(req.ID, struct{}{}), ok

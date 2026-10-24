@@ -64,3 +64,9 @@ func (d *Daemon) ensureMachineID() (string, error) {
 	}
 	return id, d.replaceConfig(src, next)
 }
+
+func WithTmuxSocket(socket string) Option {
+	return func(d *Daemon) {
+		d.tmuxSocket = socket
+	}
+}
