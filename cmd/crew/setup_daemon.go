@@ -107,6 +107,9 @@ func runSetupDaemon(args []string, stdout, stderr io.Writer, env func(string) st
 	if svc.launchd {
 		return 0
 	}
+	for _, p := range staleCrewProcs("/proc") {
+		fmt.Fprintf(stdout, "%s (pid %d) runs a replaced crew binary and can start a daemon outside the service; stop it with: kill %d\n", p.Command, p.PID, p.PID)
+	}
 	if on, err := lingerOn(ctx, env); err != nil {
 		fmt.Fprintf(stderr, "crew setup daemon: could not check linger: %v\n", err)
 	} else if !on {
