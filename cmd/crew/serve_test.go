@@ -82,6 +82,31 @@ func TestServeFlagsDefaultToLoopbackAndTheConfiguredURL(t *testing.T) {
 	}
 }
 
+func TestServeFlagsReadTheAllowedOriginsOfTheConfig(t *testing.T) {
+	home := shortHome(t)
+	if err := os.WriteFile(filepath.Join(home, "config.toml"), []byte("[serve]\nurl = \"https://box.example.ts.net\"\nallowed_origins = [\"https://mac.example.ts.net\"]\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	f, err := parseServe(nil, home, io.Discard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(f.origins) != 1 || f.origins[0] != "https://mac.example.ts.net" {
+		t.Fatalf("origins %q", f.origins)
+	}
+}
+
+func TestServeFlagsRefuseAWildcardAllowedOrigin(t *testing.T) {
+	home := shortHome(t)
+	if err := os.WriteFile(filepath.Join(home, "config.toml"), []byte("[serve]\nallowed_origins = [\"*\"]\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, err := parseServe(nil, home, io.Discard)
+	if err == nil || !strings.Contains(err.Error(), "allowed_origins") {
+		t.Fatalf("err %v, want an allowed_origins error", err)
+	}
+}
+
 func TestServeServesTheEmbeddedWebAppAtRoot(t *testing.T) {
 	srv, err := serve.New(serve.Config{Build: "test"})
 	if err != nil {

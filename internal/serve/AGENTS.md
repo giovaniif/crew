@@ -147,6 +147,23 @@ Unknown paths under `/api/` answer `not_found`.
 
 The `/` fallback: `Handler(fallback)` mounts `fallback` at `/`. `Handler(nil)` serves only the API. `cmd/crew/serve.go` passes `Static(Dist())`, the embedded PWA.
 
+## Allowed origins (`[serve] allowed_origins`)
+
+A PWA that is paired with this crew but served from a different origin (ADR 0063) uses the API directly. List each of its origins in `config.toml`:
+
+```toml
+[serve]
+allowed_origins = ["https://mac.example.ts.net"]
+```
+
+- Each entry is an exact origin: a scheme, a host and an optional port. serve ignores default ports. A `*` anywhere, a path or a query makes `crew serve` stop with an `allowed_origins` error before it starts.
+- A request under `/api/` from a listed origin gets `Access-Control-Allow-Origin: <origin>` and `Vary: Origin`. There are no cookies, so there is no `Access-Control-Allow-Credentials`. The token goes in `Authorization`.
+- A preflight (`OPTIONS`) from a listed origin gets 204 with the methods `GET, POST, DELETE, OPTIONS` and the headers `Authorization, Content-Type`. serve does not call the daemon.
+- A request with an `Origin` that is not listed, is not the public URL and is not the host of the request gets 403 `forbidden`. A request with no `Origin` (a CLI or the desktop app) does not change.
+- The stream and the terminal routes also accept a listed origin, also when there is no public URL.
+- An empty list keeps the old behavior: no CORS headers and no `Origin` check on the HTTP API.
+- Tests: `go test ./internal/serve/ ./cmd/crew/ -run 'Origin|ServeFlags'`.
+
 ## The embedded web app (`static.go`)
 
 - `Dist()` is `dist/`, embedded with `//go:embed all:dist`. `make web` builds [web/](../../web/AGENTS.md) into it and writes the shell as `app.html`. The committed `index.html` is the placeholder that a `go build` without Node embeds ("run make web"). See [ADR 0048](../../docs/adr/0048-web-toolchain-and-tdd-parity.md).

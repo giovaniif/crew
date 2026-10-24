@@ -23,7 +23,6 @@ import {
   envLetter,
   envOrder,
   envSub,
-  envTitle,
   extraSecrets,
   isLocal,
   matesText,
@@ -31,6 +30,7 @@ import {
   usedLabel,
 } from "../envs";
 import { Button, Dialog, Menu, Select } from "../ui";
+import { useEnvTitle, useMachine } from "./Machine";
 import { MateFace } from "./Mates";
 
 type Props = { api: Authed; name: string; wide: boolean };
@@ -84,6 +84,7 @@ function EnvList({
   selected: string;
   onNew: () => void;
 }) {
+  const envTitle = useEnvTitle();
   return (
     <div className="elist">
       <div className="elist-head">
@@ -697,6 +698,8 @@ function Editor({
   onNew: (kind: "custom") => void;
   back: boolean;
 }) {
+  const machine = useMachine();
+  const envTitle = useEnvTitle();
   const [env, setEnvInfo] = useState<EnvInfo | null>(null);
   const [error, setError] = useState("");
   const [changed, setChanged] = useState(false);
@@ -872,7 +875,7 @@ function Editor({
           on this machine. crew reads these values and does not change them.
         </p>
         {notice}
-        <div className="gtitle">FOUND ON THIS MAC</div>
+        <div className="gtitle">{"FOUND ON " + machine.toUpperCase()}</div>
         <div className="group">
           {foundRows(env.local).map((r) => (
             <Opt key={r.label} label={r.label} title={r.label}>
@@ -1138,6 +1141,7 @@ function NewDialog({
   onClose: () => void;
   onMade: (name: string) => void;
 }) {
+  const envTitle = useEnvTitle();
   const [name, setName] = useState("");
   const [kind, setKind] = useState<"custom" | "local">(start);
   const [error, setError] = useState("");
@@ -1170,7 +1174,7 @@ function NewDialog({
     },
     {
       v: "local",
-      t: "Local (this Mac)",
+      t: envTitle({ name: "local", kind: "local", parts: [], secrets: [], used_by: [] }),
       s: "Acts as you, with the logins of this machine.",
     },
   ];

@@ -91,3 +91,7 @@ Facts:
 
 - Least access: a mate in a custom environment gets only the account part of its harness. A `claude` mate gets `CLAUDE_CONFIG_DIR` and the Claude token or key. A `codex` mate gets `CODEX_HOME` and `OPENAI_API_KEY`. An `omp` mate gets `PI_CODING_AGENT_DIR` and the Pi keys. The shared parts (`git`, `ssh`, `github`) and the extra variables go to each mate.
 - The daemon starts the pane as `crew env exec <env> --harness <harness> -- ...`. `domain.BuildEnv` takes the harness. `crew env exec` seeds only the dir of that harness. With no `--harness`, all parts apply, as before.
+
+## Amended by ADR 0063 (2026-10-23)
+
+- An environment is now one machine plus one identity. `local` becomes the `yours` identity ("Your accounts"). `custom` becomes a separate identity. See [ADR 0063](0063-environments-are-machine-plus-identity.md).
