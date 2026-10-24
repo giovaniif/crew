@@ -5,6 +5,21 @@ import (
 	"testing"
 )
 
+func TestExpandHomeReplacesOnlyALeadingTilde(t *testing.T) {
+	for in, want := range map[string]string{
+		"~":      "/srv/me",
+		"~/x":    "/srv/me/x",
+		"~x":     "~x",
+		"/a/~/b": "/a/~/b",
+		"rel":    "rel",
+		"/abs":   "/abs",
+	} {
+		if got := ExpandHome(in, "/srv/me"); got != want {
+			t.Errorf("ExpandHome(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
 func TestParsePathInput(t *testing.T) {
 	cases := []struct {
 		name, input string

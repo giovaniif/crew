@@ -3,6 +3,7 @@ package daemon
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"reflect"
 	"time"
@@ -72,6 +73,7 @@ func (d *Daemon) workspaceAdd(req rpc.Request) (*rpc.Response, bool) {
 	if err := json.Unmarshal(req.Params, &p); err != nil {
 		return errorResponse(req.ID, rpc.CodeBadRequest, "params must be {\"path\": string}"), true
 	}
+	p.Path = expandHome(p.Path)
 	if !filepath.IsAbs(p.Path) {
 		return errorResponse(req.ID, rpc.CodeBadRequest, "path must be absolute: "+p.Path), true
 	}
@@ -100,11 +102,20 @@ func (d *Daemon) addWorkspace(root string) (domain.Workspace, *rpc.Error, bool) 
 	return ws, nil, true
 }
 
+func expandHome(path string) string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return path
+	}
+	return domain.ExpandHome(path, home)
+}
+
 func (d *Daemon) workspaceDirs(req rpc.Request) *rpc.Response {
 	var p rpc.WorkspaceDirsParams
 	if err := json.Unmarshal(req.Params, &p); err != nil {
 		return errorResponse(req.ID, rpc.CodeBadRequest, "params must be {\"path\": string}")
 	}
+	p.Path = expandHome(p.Path)
 	if !filepath.IsAbs(p.Path) {
 		return errorResponse(req.ID, rpc.CodeBadRequest, "path must be absolute: "+p.Path)
 	}
