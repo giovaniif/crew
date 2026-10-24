@@ -80,7 +80,7 @@ See [ADR 0015](../../docs/adr/0015-session-lifecycle.md).
   - A single repo gets one worktree at `$CREW_HOME/worktrees/<repo>/<slug>`, branched from `origin/<default>`, and its setup recipe runs.
   - An orchestration root starts at the root with no worktree (`domain.PlanSessionStart`).
 - **First prompt.** `session.new` takes an optional `prompt`.
-  - A fresh session is `idle` when its pane exists, but the harness is still booting. Thus the daemon queues the text in `State.Sends` and holds it (`state.booting`).
+  - A fresh session is `idle` when its pane exists, but the harness is still booting. Thus the daemon holds each send to it (`state.booting`): the first prompt and each `session.send` that comes before the harness is ready. Text that a booting Claude gets can stay in the input box with no Enter, or go to the folder trust dialog, where Enter selects "No, exit" (#917).
   - The hold stays until the first `SessionStart` or `UserPromptSubmit` hook of the harness. Both Claude and Codex install `SessionStart`. Then the text goes out through the normal `session.send` path.
   - A hook can arrive after the pane starts but before the daemon commits the session. The daemon keeps a hook for an unknown pane for 30 s (`state.earlyHooks`, a maximum of 16 for each pane and of 64 panes). When it must keep a hook for a 65th pane, it first removes the expired panes, and then the pane with the oldest hook. When `session.new`, `session.resume`, `session.launch` or an agent `tab.new` commits the session on that pane, the daemon applies the kept hooks again (`commitStartedSession`).
   - If no such hook arrives in 15 s (`WithFirstPromptGrace`), the daemon removes the hold. This occurs when hooks are missing.
