@@ -47,5 +47,5 @@ The HTML files are Claude Design canvases. They do not render alone (they need `
 | 4a | `Automations.tsx`, `AutomationsWindow` |
 | 4b | `Disk.tsx` |
 | 5a–5d | `Settings.tsx`, `ServerSettings.tsx`, `Servers.tsx` |
-| 6a, 6b | `FirstRun.tsx` |
+| 6a, 6b | Removed (issue #894). The first run is `FirstMate.tsx` (frame 12a). |
 | 6c | `SessionList.tsx` connection states, empty states, `Terminal.tsx` gone state |

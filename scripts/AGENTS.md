@@ -82,7 +82,7 @@ Repo tooling. The repo-wide rules are in the [root AGENTS.md](../AGENTS.md).
   - `app shot <route>` and `app drive <route> --steps '<json>'`: the real Tauri app through `tauri-driver`, with the steps and locators of `web`.
     - It builds the web app, `crew` (next to `crew-desktop`) and the debug app. Cargo uses `VERIFY_CARGO_TARGET` (default `/tmp/crew-verify-cargo`).
     - The app runs with the iso `CREW_HOME`, tmux socket and `HOME`, no `CREW_URL` and `PATH=/usr/bin:/bin` (a macOS GUI launch). Thus it starts its own `crew serve`. Under `xvfb-run` when there is no `DISPLAY`.
-    - `desktop/e2e/verify-drive.mjs` plays the steps over WebDriver. It closes the first-run sheet after each `goto`. It does not capture console errors or failed API calls.
+    - `desktop/e2e/verify-drive.mjs` plays the steps over WebDriver. It does not capture console errors or failed API calls.
   - `map status` and `map run <area> [--recipe <label>]`: the recipes in `features/`.
   - `evidence init|add|verify <dir>`: the evidence bundle and the proof bar of ADR 0055. `add` refuses a proof when the checkout is not at the ref of the proof.
   - `design-check [--base ref] [--diff file]`: added lines only.
