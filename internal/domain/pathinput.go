@@ -12,6 +12,16 @@ type PathInput struct {
 	Path   string
 }
 
+func ExpandHome(path, home string) string {
+	if path == "~" {
+		return home
+	}
+	if strings.HasPrefix(path, "~/") {
+		return home + path[1:]
+	}
+	return path
+}
+
 func ParsePathInput(input, base, home string) PathInput {
 	switch {
 	case input == "~":
