@@ -56,13 +56,21 @@ describe("the first run of mates", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Name" }), { target: { value: "UX Patrol" } });
     expect(screen.queryByText("?")).toBeNull();
     expect(screen.getByRole("button", { name: "Change face" })).toBeInTheDocument();
-    expect(screen.getByText("Saves as ux-patrol")).toBeInTheDocument();
+    expect(screen.getByText("Saved as ux-patrol")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
     expect(screen.getByRole("heading", { name: "Where does ux-patrol work?" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Create ux-patrol" }));
     await waitFor(() => expect(window.location.hash).toBe("#/mates/ux-patrol"));
     const saved = server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/mates")?.body as { mate: Record<string, unknown> };
     expect(saved.mate).toMatchObject({ name: "ux-patrol" });
+  });
+
+  it("tells why a name is refused next to the field", () => {
+    const { live } = desktop("#/mates", true, undefined, {}, routes);
+    live();
+    fireEvent.change(screen.getByRole("textbox", { name: "Name" }), { target: { value: "!!!" } });
+    expect(screen.getByText("Use up to 32 letters, digits, - and _.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
   });
 
   it("picks the face and the color from a click on the face", async () => {

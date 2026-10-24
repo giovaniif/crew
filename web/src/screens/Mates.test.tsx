@@ -360,7 +360,7 @@ describe("New mate", () => {
     const { server } = setup("#/mates/new");
     const user = userEvent.setup();
     await user.type(await screen.findByRole("textbox", { name: "Name" }), "UX Patrol");
-    expect(screen.getByText("Saves as ux-patrol")).toBeInTheDocument();
+    expect(screen.getByText("Saved as ux-patrol")).toBeInTheDocument();
     await user.type(screen.getByRole("textbox", { name: "Role" }), "Patrol the UX.");
     await user.click(screen.getByRole("button", { name: "Create mate" }));
     await waitFor(() => expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/mates")?.body).toMatchObject({ mate: { name: "ux-patrol" } }));
