@@ -139,6 +139,12 @@ func (s *Server) routes() []route {
 		{"POST /api/v1/mates/{name}/new", newMateConversation},
 		{"POST /api/v1/sessions/{id}/fresh", freshMateConversation},
 		{"GET /api/v1/mates/{name}/memory", mateMemory},
+		{"GET /api/v1/environments", listEnvironments},
+		{"POST /api/v1/identities/{name}", identityCall(rpc.MethodIdentitySet)},
+		{"DELETE /api/v1/identities/{name}", identityCall(rpc.MethodIdentityRemove)},
+		{"POST /api/v1/identities/{name}/secret", identityCall(rpc.MethodIdentitySetSecret)},
+		{"GET /api/v1/identities/{name}/ssh-key", identityCall(rpc.MethodIdentitySSHKey)},
+		{"POST /api/v1/identities/{name}/ssh-key", identityCall(rpc.MethodIdentitySSHKey)},
 		{"GET /api/v1/envs", listEnvs},
 		{"POST /api/v1/envs", createEnv},
 		{"GET /api/v1/envs/{name}", envByName(rpc.MethodEnvShow)},
@@ -458,7 +464,7 @@ func statusOf(code string) int {
 		return http.StatusForbidden
 	case rpc.CodeNotFound:
 		return http.StatusNotFound
-	case rpc.CodeStale, rpc.CodeInUse:
+	case rpc.CodeStale, rpc.CodeInUse, rpc.CodeWrongMachine:
 		return http.StatusConflict
 	case rpc.CodeRateLimited:
 		return http.StatusTooManyRequests
