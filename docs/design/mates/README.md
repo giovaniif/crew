@@ -34,7 +34,7 @@ Each frame also has its own PNG (`7a.png`, `8b.png` and so on). The HTML files o
 - "New key…" shows the new public key and a warning. The old key stays active until the user confirms that the new key is on GitHub (9d).
 - Local sessions always use this Mac. The Sessions screen has no environment picker.
 - A mate has one conversation (ADR [0064](../../adr/0064-one-conversation-per-mate.md)). Slack channel mentions, Slack DMs, automation runs and the app composer all go into it. Each message has a source tag: App, #channel, DM or Automation. The answer to a Slack message also goes back to its Slack thread or DM.
-- Changed on 2026-10-23, after the frames: the mate page has no threads column (8a), and the phone has no thread chips (8c). The conversation fills the middle. The settings rail does not change. The PNG files still show the old threads; this text is correct.
+- Changed on 2026-10-23, after the frames: the mate page has no threads column (8a), and the phone has no thread chips (8c). The conversation fills the middle. The settings rail does not change. The HTML and the PNG files show this layout.
 - "Start fresh" is in the ⋯ menu of the mate header, with a confirm. It clears the context and starts a new conversation. The old conversation stays as history: the ⋯ menu lists it, and it opens with no composer.
 - On the phone, the ⓘ button of a mate opens its settings as a sheet (8d).
 - A change to a mate or to an environment applies when the next conversation starts. The UI tells this.
