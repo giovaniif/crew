@@ -62,7 +62,7 @@
   justify-content: center;
 }
 
-.mp-more-menu {
+.ui-anchor > .ui.menu.mp-more-menu {
   right: 0;
   left: auto;
 }

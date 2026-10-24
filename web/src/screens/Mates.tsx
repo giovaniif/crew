@@ -799,10 +799,10 @@ export function MatePage({
             <h1>{name}</h1>
             <div className="muted mp-line">{mateLine(envLabel, def?.agent ?? "", state)}</div>
           </div>
-          <MoreMenu api={api} name={name} stopped={board?.stopped ?? false} history={history} />
           <button type="button" className="ui btn quiet mp-info" aria-label={"Settings of " + name} onClick={() => setSheet(true)}>
             ⓘ
           </button>
+          <MoreMenu api={api} name={name} stopped={board?.stopped ?? false} history={history} />
         </header>
         {note && <p role="alert">{note}</p>}
         <section className="mp-conv" aria-label="Conversation">
