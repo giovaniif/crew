@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import Markdown from "react-markdown";
 import { ApiError, answerPrompt, getPrompt, interrupt, markRead, messagesPage, sendMessage, startFresh, unsend, type Authed, type Prompt } from "../api";
-import { faceState, stateWords, type FaceState } from "../faces";
+import { faceColor, faceOf, faceState, stateWords, type FaceState } from "../faces";
 import { messageSource } from "../matepage";
-import { Confirm, MateFace, useMateDefs } from "./Mates";
+import { MateFace, useMateDefs } from "./Mates";
 import { timeInState } from "../sessions";
 import type { Message, QueuedSend, Session, StreamClient, StreamSnapshot, StreamStatus } from "../stream";
 import { emptyTranscript, newestCursor, toolRow, withFrame, withPage, type Transcript } from "../transcript";
@@ -11,7 +11,6 @@ import { Connection, sessionTitle } from "./SessionList";
 import { SessionCommands } from "./SessionCommands";
 import type { KeyValue } from "../auth";
 import { legacyBrowserWord } from "../legacy";
-import { Checkbox } from "../ui";
 
 const stateLabels: Record<string, string> = {
   running: "working",
@@ -45,17 +44,67 @@ function Back() {
   );
 }
 
+function typing(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+  return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
+}
+
+function InterruptButton({ api, session }: { api: Authed; session: string }) {
+  const [stopping, setStopping] = useState(false);
+  const [error, setError] = useState("");
+  const stop = useCallback(async () => {
+    setStopping(true);
+    setError("");
+    try {
+      await interrupt(api, session);
+    } catch (err) {
+      setError(errorText(err));
+      setStopping(false);
+    }
+  }, [api, session]);
+  useEffect(() => {
+    const onKey = (ev: globalThis.KeyboardEvent) => {
+      if (ev.key !== "Escape" || ev.defaultPrevented || stopping || typing(ev.target)) {
+        return;
+      }
+      if (document.querySelector("[role=dialog], [role=alertdialog], [role=menu]")) {
+        return;
+      }
+      void stop();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [stop, stopping]);
+  const label = stopping ? "Interrupting…" : "Interrupt";
+  return (
+    <>
+      {error ? (
+        <span className="qb-error" role="alert">
+          {error}
+        </span>
+      ) : null}
+      <button type="button" className="qb stop" aria-label={label} title={label} disabled={stopping} onClick={() => void stop()}>
+        <span className="sq" aria-hidden="true" />
+        <span className="qb-label">{label}</span>
+        {stopping ? null : <kbd aria-hidden="true">esc</kbd>}
+      </button>
+    </>
+  );
+}
+
 function Header({
   session,
   now,
-  onInterrupt,
+  api,
   mate,
   commands,
   inBar,
 }: {
   session: Session;
   now: number;
-  onInterrupt: () => void;
+  api: Authed;
   mate?: ReactNode;
   commands?: ReactNode;
   inBar?: boolean;
@@ -68,11 +117,7 @@ function Header({
       <div className="chat-bar" role="toolbar" aria-label="Session">
         {inBar ? null : <Back />}
         {mate}
-        {busy(session) && !session.Ended ? (
-          <button type="button" className="interrupt" onClick={onInterrupt}>
-            Interrupt
-          </button>
-        ) : null}
+        {busy(session) && !session.Ended ? <InterruptButton key={session.ID} api={api} session={session.ID} /> : null}
         {commands}
       </div>
       {inBar ? null : <h1>{sessionTitle(session)}</h1>}
@@ -117,6 +162,10 @@ function personaOf(session: Session, snapshot: StreamSnapshot): Persona | undefi
   return { name: mate, avatar: row?.avatar, color: row?.color, state: row ? faceState(row, []) : "idle" };
 }
 
+function mateTint(persona: Persona): string {
+  return faceColor(faceOf(persona.name, persona.avatar), persona.color, false);
+}
+
 function shownName(name: string) {
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
@@ -151,10 +200,9 @@ function MessageLine({ message, persona }: { message: Message; persona?: Persona
   if (persona) {
     const name = shownName(persona.name);
     return (
-      <article data-message className="msg-mate" aria-label={name}>
+      <article data-message className="msg-mate" aria-label={name} style={{ "--mate": mateTint(persona) } as CSSProperties}>
         <MateFace name={persona.name} avatar={persona.avatar} color={persona.color} state={persona.state} px={28} />
         <div className="msg-mate-body">
-          <span className="msg-mate-name">{name}</span>
           <div className="msg msg-assistant msg-bubble">
             <Markdown skipHtml>{message.text ?? ""}</Markdown>
           </div>
@@ -633,65 +681,63 @@ function agentChip(session: Session): string {
   return [session.Harness, session.Model].filter(Boolean).map((w) => capital(String(w))).join(" · ");
 }
 
-function ConfirmInterrupt({ api, session, onClose }: { api: Authed; session: string; onClose: () => void }) {
-  const [error, setError] = useState("");
-  const [sending, setSending] = useState(false);
-  const confirm = async () => {
-    setSending(true);
-    setError("");
-    try {
-      await interrupt(api, session);
-      onClose();
-    } catch (err) {
-      setError(errorText(err));
-      setSending(false);
+export function StartFreshButton({ onFresh }: { onFresh: () => Promise<string> }) {
+  const [asking, setAsking] = useState(false);
+  const [working, setWorking] = useState(false);
+  const [note, setNote] = useState("");
+  async function fresh() {
+    setWorking(true);
+    setNote("");
+    const failed = await onFresh();
+    setWorking(false);
+    if (failed) {
+      setNote(failed);
+    } else {
+      setAsking(false);
     }
-  };
+  }
+  if (!asking) {
+    return (
+      <button type="button" className="qb fresh" aria-label="Start fresh" title="Start fresh" onClick={() => setAsking(true)}>
+        <span className="i" aria-hidden="true">
+          ↺
+        </span>
+        <span className="qb-label">Start fresh</span>
+      </button>
+    );
+  }
   return (
-    <div className="dialog-backdrop">
-      <div className="dialog" role="alertdialog" aria-modal="true" aria-labelledby="interrupt-title" aria-describedby="interrupt-body">
-        <h2 id="interrupt-title">Interrupt this session?</h2>
-        <p id="interrupt-body">The agent stops what it is doing, as if you pressed Escape in its terminal.</p>
-        {error ? (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        ) : null}
-        <div className="dialog-actions">
-          <button type="button" className="secondary" autoFocus onClick={onClose}>
-            Cancel
-          </button>
-          <button type="button" className="danger" disabled={sending} onClick={() => void confirm()}>
-            Interrupt
-          </button>
-        </div>
-      </div>
-    </div>
+    <span className="qb-confirm">
+      <span className="qb-ask">Clear this conversation?</span>
+      {note ? (
+        <span className="qb-error" role="alert">
+          {note}
+        </span>
+      ) : null}
+      <button type="button" className="qb ghost" disabled={working} onClick={() => setAsking(false)}>
+        Cancel
+      </button>
+      <button type="button" className="qb strong" disabled={working} onClick={() => void fresh()}>
+        Start fresh
+      </button>
+    </span>
   );
 }
 
 function MateTools({ api, session, mate, snapshot }: { api: Authed; session: Session; mate: string; snapshot: StreamSnapshot }) {
   const { defs } = useMateDefs(api);
-  const [asking, setAsking] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [note, setNote] = useState("");
-  const [keep, setKeep] = useState(true);
   const def = defs.find((d) => d.name === mate);
   const row = snapshot.state?.mates?.mates.find((m) => m.name === mate);
   const state = row ? faceState(row, []) : "idle";
   const shown = shownName(mate);
 
-  async function fresh() {
-    setBusy(true);
-    setNote("");
+  async function fresh(): Promise<string> {
     try {
-      const out = await startFresh(api, session.ID, keep);
-      setAsking(false);
+      const out = await startFresh(api, session.ID, true);
       window.location.hash = "#/sessions/" + encodeURIComponent(out.ID);
+      return "";
     } catch (err) {
-      setNote(errorText(err));
-    } finally {
-      setBusy(false);
+      return errorText(err);
     }
   }
 
@@ -701,28 +747,7 @@ function MateTools({ api, session, mate, snapshot }: { api: Authed; session: Ses
         <MateFace name={mate} avatar={row?.avatar || def?.avatar} color={row?.color || def?.color} state={state} px={28} />
         <strong>{mate}</strong>
       </a>
-      {session.Ended ? null : (
-        <button type="button" className="mtag fresh" onClick={() => setAsking(true)}>
-          Start fresh
-        </button>
-      )}
-      {asking ? (
-        <Confirm
-          id="start-fresh"
-          title={"Start fresh with " + shown + "?"}
-          body={
-            shown +
-            " writes a handoff to memory, then a new conversation opens in the same worktree. Personality and memory stay. This conversation stays until you end it."
-          }
-          action="Start fresh"
-          busy={busy}
-          note={note}
-          onCancel={() => setAsking(false)}
-          onConfirm={() => void fresh()}
-        >
-          <Checkbox className="mate-bar-keep" label="Keep this worktree" checked={keep} onChange={setKeep} />
-        </Confirm>
-      ) : null}
+      {session.Ended || busy(session) ? null : <StartFreshButton onFresh={fresh} />}
     </>
   );
 }
@@ -748,7 +773,6 @@ export function SessionScreen({
   api: Authed;
   storage?: KeyValue;
 }) {
-  const [confirming, setConfirming] = useState(false);
   const session = snapshot.state?.sessions.find((s) => s.ID === id);
   const unread = session?.Unread ?? false;
   const { fetch, token } = api;
@@ -775,7 +799,7 @@ export function SessionScreen({
       <Header
         session={session}
         now={now}
-        onInterrupt={() => setConfirming(true)}
+        api={api}
         mate={session.Mate?.Name ? <MateTools api={api} session={session} mate={session.Mate.Name} snapshot={snapshot} /> : undefined}
         commands={storage ? <SessionCommands api={api} session={session} storage={storage} button /> : undefined}
         inBar={inBar}
@@ -787,7 +811,6 @@ export function SessionScreen({
         </Chat>
       </main>
       <Composer session={session} api={api} sends={sends} persona={persona} />
-      {confirming ? <ConfirmInterrupt api={api} session={id} onClose={() => setConfirming(false)} /> : null}
     </div>
   );
 }
