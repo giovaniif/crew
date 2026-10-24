@@ -3,10 +3,12 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
 func TestMain(m *testing.M) {
+	userHome, _ := os.UserHomeDir()
 	home, err := os.MkdirTemp("", "crew-cmd-home-")
 	if err != nil {
 		panic(err)
@@ -20,6 +22,10 @@ func TestMain(m *testing.M) {
 	} {
 		_ = os.Setenv(k, v)
 	}
+	if crewHome := filepath.Clean(os.Getenv("CREW_HOME")); userHome != "" && strings.HasPrefix(crewHome+string(filepath.Separator), filepath.Clean(userHome)+string(filepath.Separator)) {
+		_ = os.Unsetenv("CREW_HOME")
+	}
+	_ = os.Unsetenv("AGENTWS_HOME")
 	code := m.Run()
 	_ = os.RemoveAll(home)
 	os.Exit(code)
