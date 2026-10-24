@@ -40,7 +40,7 @@ describe("FirstRun", () => {
     expect(desktop.of("crew_server_fix")).toEqual([{ id: "local" }]);
     await press("Continue");
     expect(progress()).toEqual(["on", "on", "on"]);
-    await userEvent.type(screen.getByRole("textbox", { name: "First workspace" }), "~/code/api");
+    await userEvent.type(screen.getByRole("combobox", { name: "First workspace" }), "~/code/api");
     await press("Open crew");
     expect(desktop.of("crew_server_workspace")).toEqual([{ id: "local", path: "~/code/api" }]);
     expect(desktop.of("crew_server_open")).toEqual([{ id: "local" }]);
@@ -60,7 +60,7 @@ describe("FirstRun", () => {
     await within(screen.getByRole("list", { name: "Set up" })).findByText("crew daemon started");
     await press("Continue");
     await press("Browse…");
-    expect(screen.getByRole("textbox", { name: "First workspace" })).toHaveValue("/home/me/web");
+    expect(screen.getByRole("combobox", { name: "First workspace" })).toHaveValue("/home/me/web");
     expect(picking).toBe("true");
     expect(document.documentElement.dataset.picking).toBeUndefined();
   });
@@ -72,9 +72,9 @@ describe("FirstRun", () => {
     await press("Continue");
     await within(screen.getByRole("list", { name: "Set up" })).findByText("crew daemon started");
     await press("Continue");
-    await userEvent.type(screen.getByRole("textbox", { name: "First workspace" }), "~/code/api");
+    await userEvent.type(screen.getByRole("combobox", { name: "First workspace" }), "~/code/api");
     await press("Browse…");
-    expect(screen.getByRole("textbox", { name: "First workspace" })).toHaveValue("~/code/api");
+    expect(screen.getByRole("combobox", { name: "First workspace" })).toHaveValue("~/code/api");
   });
 
   it("has no folder dialog for a server over SSH", async () => {
@@ -85,8 +85,31 @@ describe("FirstRun", () => {
     await press("Continue");
     await within(screen.getByRole("list", { name: "Set up" })).findByText("crew set up on gpu");
     await press("Continue");
-    expect(screen.getByRole("textbox", { name: "First workspace" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "First workspace" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Browse…" })).toBeNull();
+  });
+
+  it("completes the first workspace with the folders of the server over SSH", async () => {
+    const desktop = new FakeDesktop();
+    desktop.handlers.crew_server_complete = (args) =>
+      args?.path === "~/www/" ? { dir: "/home/me/www", dirs: [{ Name: "bolao-app", Path: "/home/me/www/bolao-app", Git: 1 }] } : { dir: "/home/me", dirs: [{ Name: "www", Path: "/home/me/www", Git: 0 }] };
+    start(false, desktop);
+    await userEvent.click(screen.getByRole("radio", { name: /over SSH/ }));
+    await press("Continue");
+    await userEvent.type(screen.getByRole("combobox", { name: "SSH host" }), "gpu");
+    await press("Continue");
+    await within(screen.getByRole("list", { name: "Set up" })).findByText("crew set up on gpu");
+    await press("Continue");
+    const field = screen.getByRole("combobox", { name: "First workspace" });
+    await userEvent.type(field, "~/w");
+    const list = await screen.findByRole("listbox", { name: "First workspace" });
+    expect(within(list).getAllByRole("option").map((o) => o.textContent)).toEqual(["~/www/"]);
+    expect(desktop.of("crew_server_complete")).toContainEqual({ id: "ssh:gpu", path: "~/w" });
+    await userEvent.keyboard("{Tab}");
+    expect(field).toHaveValue("~/www/");
+    await within(screen.getByRole("listbox", { name: "First workspace" })).findByText("~/www/bolao-app/");
+    await userEvent.keyboard("{Tab}");
+    expect(field).toHaveValue("~/www/bolao-app/");
   });
 
   it("skips the first workspace and still opens crew", async () => {
