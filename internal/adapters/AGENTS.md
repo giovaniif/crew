@@ -30,6 +30,7 @@ Implementations of the `app` ports. All exec, disk and network calls are here. g
 
     Thus the scan does not recognise old scrollback and unknown dialogs.
   - Fixtures are in the `testdata/prompt/` of each adapter. They are not real captures: they are built from the dialog strings in the installed binaries (Claude 2.1.288, Codex 0.93). When a dialog changes, capture them again with `tmux capture-pane -p`. Codex 0.93 has no web-fetch approval dialog.
+- **Folder trust** (`claude.Trust`, `app.ClaudeTrust`): Claude keeps the trust of a folder in `$CLAUDE_CONFIG_DIR/.claude.json` (else `~/.claude.json`) as `projects[<dir>].hasTrustDialogAccepted`. A trusted parent folder trusts its subfolders, and a worktree gets the trust of its main checkout (checked with claude 2.1.310). `Trusted(dir)` reads the flags (`domain.ClaudeTrusts`). `TrustDir(dir)` writes nothing when the folder is already trusted. Else it copies the file to `.claude.json.crew-<time>.bak` and then replaces it atomically, with all other keys kept. To undo, restore the backup. Test: `go test ./internal/adapters/claude/ -run Trust`.
 - `claude.Installed` and `codex.Installed` run the merge of Setup in memory. They report if the merge changes nothing. Thus the walkthrough and the CLI agree.
 
 ## Others
