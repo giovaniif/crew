@@ -110,6 +110,15 @@ func TestPiMateGetsTheMateSystemPromptOnStartAndResume(t *testing.T) {
 	}
 }
 
+func TestMateOnYoursWithNoExtraVariablesKeepsTodaysCommand(t *testing.T) {
+	config := envLaunchMates + "\n[[mate]]\nname = \"mine\"\nprompt = \"You help.\"\nagent = \"claude\"\nrepos = [\"api\"]\nenvironment = { machine_id = \"m-test\", identity_id = \"yours\" }\n"
+	r := startMateRigWith(t, &memStore{}, config, daemon.WithEnvLauncher("/opt/crew"))
+	start, resume := startAndResumeMate(t, r, "mine", "claude")
+	if start[0] != "claude" || resume[0] != "claude" {
+		t.Fatalf("start %q resume %q", start, resume)
+	}
+}
+
 func TestMateWithNoEnvKeepsTodaysCommand(t *testing.T) {
 	r := startMateRigWith(t, &memStore{}, envLaunchMates, daemon.WithEnvLauncher("/opt/crew"))
 	start, resume := startAndResumeMate(t, r, "plain", "claude")
