@@ -1011,7 +1011,7 @@ export function NewMate({ api, repos: known }: { api: Authed; repos: string[] })
     <main className="mp-new">
       <form className="create" aria-label="New mate" onSubmit={(e) => void create(e)}>
         <h1>New mate</h1>
-        <p className="lead">A mate is a long-lived agent with a name, a role and its own threads.</p>
+        <p className="lead">Whose accounts does it use, and where does it run? Pick one environment.</p>
         <div className="composer mp-composer">
           <div className="namel">
             <FaceButton name={mate.name || "nova"} avatar={mate.avatar} color={mate.color} onPick={(patch) => setMate({ ...mate, ...patch })} />
