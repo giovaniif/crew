@@ -433,7 +433,12 @@ func (c *Client) AttachBrowser(ctx context.Context) (<-chan BrowserCall, error) 
 	if err != nil {
 		return nil, err
 	}
+	var early []BrowserCall
 	resp, err := c.await(ctx, ch)
+	for err == nil && resp.Browser != nil {
+		early = append(early, *resp.Browser)
+		resp, err = c.await(ctx, ch)
+	}
 	if err == nil {
 		err = checkBuild(MethodBrowserAttach, resp)
 	}
@@ -446,6 +451,9 @@ func (c *Client) AttachBrowser(ctx context.Context) (<-chan BrowserCall, error) 
 	}
 	calls := make(chan BrowserCall, 16)
 	go func() {
+		for _, call := range early {
+			calls <- call
+		}
 		defer close(calls)
 		for resp := range ch {
 			if resp.Browser != nil {
