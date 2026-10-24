@@ -476,6 +476,12 @@ describe("Mate conversation", () => {
     expect(await screen.findByRole("textbox", { name: "Message" })).toHaveAttribute("placeholder", "Message Webby…");
   });
 
+  it("gives the whole log of a mate the color of the mate for its tool lines", async () => {
+    setup("#/sessions/s2");
+    const log = await screen.findByRole("log", { name: "Messages" });
+    expect(log.style.getPropertyValue("--mate")).toMatch(/^#[0-9a-f]{6}$/i);
+  });
+
   it("shows no face on a session of no mate", async () => {
     setup("#/sessions/s1");
     const log = within(await screen.findByRole("log", { name: "Messages" }));
