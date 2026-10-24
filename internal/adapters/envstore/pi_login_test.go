@@ -1,14 +1,15 @@
-package envstore
+package envstore_test
 
 import (
 	"path/filepath"
 	"testing"
 
+	"github.com/giovaniif/crew/internal/adapters/envstore"
 	"github.com/giovaniif/crew/internal/domain"
 )
 
 func TestPiLoginIsAnEnabledCredentialInTheAgentDBOfTheEnvironment(t *testing.T) {
-	s := Store{Home: t.TempDir()}
+	s := envstore.Store{Home: t.TempDir()}
 	for _, name := range []string{"bot", "old"} {
 		if err := s.Save(domain.Environment{Name: name, Kind: domain.EnvCustom, Parts: []domain.EnvPart{domain.EnvPi}}); err != nil {
 			t.Fatal(err)
