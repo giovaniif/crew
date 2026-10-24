@@ -45,7 +45,7 @@ agent = "claude"
 repos = ["api"]
 `
 
-var envPrefix = []string{"/opt/crew", "env", "exec", "test-bot", "--harness"}
+var envPrefix = []string{"/opt/crew", "identity", "exec", "test-bot", "--harness"}
 
 func envWrapped(cmd []string, harness string) bool {
 	n := len(envPrefix)
