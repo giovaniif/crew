@@ -23,6 +23,7 @@ func TestCheck(t *testing.T) {
 			"sub/AGENTS.md:3: broken link ../nope/AGENTS.md#a",
 		}},
 		{"skipped", nil},
+		{"adrclash", []string{"docs/adr: number 0001 is used by 0001-a.md and 0001-b.md"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.fixture, func(t *testing.T) {
