@@ -94,7 +94,7 @@ func Run(ctx context.Context, home string) (err error) {
 	sizes := app.NewDiskSizes(wsfs.Du{}, diskWorkers, diskSizeTTL, time.Now)
 	opts := []Option{
 		WithWorkspaces(wsfs.FS{}, gitadapter.Inspector{}),
-		WithHarnesses(host, claude.Adapter{}, codex.Adapter{}, omp.Adapter{}),
+		WithHarnesses(host, claude.Adapter{ConfigDir: claudeConfigDir()}, codex.Adapter{}, omp.Adapter{}),
 		WithSessions(gitadapter.Adder{}, runRecipe, worktreeHome),
 		WithProjectSetup(setup.Shell{Out: os.Stderr}),
 		WithAutomationPrecheck(setup.Shell{Out: os.Stderr}),
@@ -198,7 +198,7 @@ func (h testHooks) cleanupClock() time.Time { return time.Now().Add(h.clockSkew)
 func readHarnessConfig() map[domain.Harness]StartDefaults {
 	out := map[domain.Harness]StartDefaults{}
 	home, _ := os.UserHomeDir()
-	claudeDir := cmp.Or(os.Getenv("CLAUDE_CONFIG_DIR"), filepath.Join(home, ".claude"))
+	claudeDir := claudeConfigDir()
 	if model, effort, err := claude.ReadDefaults(filepath.Join(claudeDir, "settings.json")); err == nil {
 		out[domain.HarnessClaude] = StartDefaults{Model: model, Effort: effort}
 	}
@@ -225,4 +225,9 @@ func machineName() string {
 		return name
 	}
 	return "crew"
+}
+
+func claudeConfigDir() string {
+	home, _ := os.UserHomeDir()
+	return cmp.Or(os.Getenv("CLAUDE_CONFIG_DIR"), filepath.Join(home, ".claude"))
 }
