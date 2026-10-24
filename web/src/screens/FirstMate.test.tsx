@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { desktop, goldenState } from "../test/desktop";
 import type { FakeServer } from "../test/fake-server";
@@ -48,6 +48,37 @@ describe("the first run of mates", () => {
     expect(saved.mate).toMatchObject({ name: "test-ada", agent: "claude", enabled: true });
     expect(String(saved.mate.prompt)).not.toBe("");
     expect(saved.mate.env).toBeUndefined();
+  });
+
+  it("shows a face and the saved slug for a name with spaces and capitals", async () => {
+    const { live, server } = desktop("#/mates", true, undefined, {}, routes);
+    live();
+    fireEvent.change(screen.getByRole("textbox", { name: "Name" }), { target: { value: "UX Patrol" } });
+    expect(screen.queryByText("?")).toBeNull();
+    expect(screen.getByRole("button", { name: "Change face" })).toBeInTheDocument();
+    expect(screen.getByText("Saves as ux-patrol")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(screen.getByRole("heading", { name: "Where does ux-patrol work?" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Create ux-patrol" }));
+    await waitFor(() => expect(window.location.hash).toBe("#/mates/ux-patrol"));
+    const saved = server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/mates")?.body as { mate: Record<string, unknown> };
+    expect(saved.mate).toMatchObject({ name: "ux-patrol" });
+  });
+
+  it("picks the face and the color from a click on the face", async () => {
+    const { live, server } = desktop("#/mates", true, undefined, {}, routes);
+    live();
+    fireEvent.change(screen.getByRole("textbox", { name: "Name" }), { target: { value: "test-ada" } });
+    fireEvent.click(screen.getByRole("button", { name: "Change face" }));
+    const picker = screen.getByRole("dialog", { name: "Face and color" });
+    fireEvent.click(within(picker).getByRole("button", { name: "Owl" }));
+    fireEvent.click(within(picker).getByRole("button", { name: "Color #40a02b" }));
+    fireEvent.click(within(picker).getByRole("button", { name: "Done" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    fireEvent.click(screen.getByRole("button", { name: "Create test-ada" }));
+    await waitFor(() => expect(window.location.hash).toBe("#/mates/test-ada"));
+    const saved = server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/mates")?.body as { mate: Record<string, unknown> };
+    expect(saved.mate).toMatchObject({ avatar: "owl", color: "#40a02b" });
   });
 
   it("makes a Custom environment for the mate and opens its editor", async () => {
