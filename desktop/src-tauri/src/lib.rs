@@ -32,8 +32,6 @@ use servers::{Kind, LOCAL_ID};
 #[cfg(desktop)]
 const TRAY: &str = "crew";
 
-#[cfg(desktop)]
-
 pub const DEFAULT_URL: &str = "http://127.0.0.1:7420/";
 
 #[derive(Debug, PartialEq)]
