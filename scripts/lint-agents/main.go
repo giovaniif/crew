@@ -22,6 +22,11 @@ const (
 var (
 	linkPattern = regexp.MustCompile(`\]\(([^)\s]+)\)`)
 	codeSpan    = regexp.MustCompile("`[^`]*`")
+	adrName     = regexp.MustCompile(`^(\d{4})-.*\.md$`)
+	oldADRPairs = map[string]bool{
+		"0042-mouse.md 0042-resume-ended-sessions.md": true,
+		"0050-automations.md 0050-remove-linear.md":   true,
+	}
 )
 
 func main() {
@@ -58,6 +63,11 @@ func check(root string, maxLines int) ([]string, error) {
 	if n := bytes.Count(rootAgents, []byte("\n")); n > maxLines {
 		findings = append(findings, fmt.Sprintf("%s: %d lines, over the %d-line limit", agentsFile, n, maxLines))
 	}
+	clashes, err := adrClashes(root)
+	if err != nil {
+		return nil, err
+	}
+	findings = append(findings, clashes...)
 	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -84,6 +94,30 @@ func check(root string, maxLines int) ([]string, error) {
 		return err
 	})
 	return findings, err
+}
+
+func adrClashes(root string) ([]string, error) {
+	entries, err := os.ReadDir(filepath.Join(root, "docs", "adr"))
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	seen := map[string]string{}
+	var findings []string
+	for _, e := range entries {
+		m := adrName.FindStringSubmatch(e.Name())
+		if m == nil {
+			continue
+		}
+		if first, ok := seen[m[1]]; ok && !oldADRPairs[first+" "+e.Name()] {
+			findings = append(findings, fmt.Sprintf("docs/adr: number %s is used by %s and %s", m[1], first, e.Name()))
+			continue
+		}
+		seen[m[1]] = e.Name()
+	}
+	return findings, nil
 }
 
 func skipDir(name string) bool {

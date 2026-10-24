@@ -105,6 +105,11 @@ const (
 	MethodMateImport    = "mate.import"
 )
 
+type MateNewResult struct {
+	domain.Session
+	Added bool `json:"added,omitempty"`
+}
+
 type MateNewParams struct {
 	Name   string `json:"name"`
 	Repo   string `json:"repo,omitempty"`

@@ -77,6 +77,7 @@ func TestMateSourcePromptMarksWhereTheMessageCameFrom(t *testing.T) {
 	}{
 		{"app", MateSource{}, "hi"},
 		{"channel", MateSource{Channel: "C123"}, "[Source: #C123] hi"},
+		{"named channel", MateSource{Channel: "C123", ChannelName: "general"}, "[Source: #general] hi"},
 		{"dm", MateSource{Channel: "D123"}, "[Source: DM] hi"},
 		{"automation", MateSource{Automation: "weekly"}, "[Source: Automation weekly] hi"},
 	}

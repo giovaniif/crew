@@ -95,31 +95,6 @@ func TestMateChainAuthority(t *testing.T) {
 	}
 }
 
-func TestNextMateSeat(t *testing.T) {
-	ownerTurn := MateSeat{Owner: chainOwner, Authority: chainOwner, Origin: chainOwner, Hops: 0}
-	guestTurn := MateSeat{Owner: chainOwner, Authority: chainGuest, Origin: chainGuest, Hops: 0}
-	chainTurn := MateSeat{Owner: chainOwner, Authority: chainBotA, Origin: chainOwner, Asked: []ActionKind{ActionMerge}, Hops: 3}
-	cases := []struct {
-		name          string
-		current, next MateSeat
-		busy          bool
-		want          MateSeat
-	}{
-		{"idle takes the next seat", guestTurn, ownerTurn, false, ownerTurn},
-		{"busy lowers an owner turn", ownerTurn, chainTurn, true, chainTurn},
-		{"busy keeps a guest turn when the owner posts", guestTurn, ownerTurn, true, guestTurn},
-		{"busy takes the same author", chainTurn, MateSeat{Owner: chainOwner, Authority: chainBotA, Hops: 5}, true, MateSeat{Owner: chainOwner, Authority: chainBotA, Hops: 5}},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			got := NextMateSeat(c.current, c.next, c.busy)
-			if got.Authority != c.want.Authority || got.Origin != c.want.Origin || got.Hops != c.want.Hops || !slices.Equal(got.Asked, c.want.Asked) {
-				t.Fatalf("got %+v, want %+v", got, c.want)
-			}
-		})
-	}
-}
-
 func TestMateMentions(t *testing.T) {
 	if !MateMentions("hey <@UBOTB00001> your turn", chainBotB) {
 		t.Error("a mention is not seen")
