@@ -13,14 +13,15 @@ import (
 )
 
 type fakeSlackHub struct {
-	mu      sync.Mutex
-	mates   []*fakeSlackMate
-	fail    string
-	replies []app.SlackMessage
-	names   map[string]string
-	users   map[string]string
-	chans   map[string][]string
-	seq     int
+	mu        sync.Mutex
+	mates     []*fakeSlackMate
+	fail      string
+	replies   []app.SlackMessage
+	names     map[string]string
+	users     map[string]string
+	chans     map[string][]string
+	chanNames map[string]string
+	seq       int
 }
 
 type fakeSlackMate struct {
@@ -64,7 +65,7 @@ func (m *fakeSlackMate) Run(ctx context.Context, handle func(app.SlackEvent), st
 	user := m.hub.users[m.bot]
 	chans := m.hub.chans[m.bot]
 	m.hub.mu.Unlock()
-	status(app.SlackStatus{State: domain.MateConnected, User: user, Channels: chans})
+	status(app.SlackStatus{State: domain.MateConnected, User: user, Channels: chans, ChannelNames: m.hub.chanNames})
 	<-ctx.Done()
 	m.hub.mu.Lock()
 	m.stopped = true
