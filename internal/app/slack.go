@@ -39,7 +39,8 @@ type SlackStatus struct {
 	Error string
 	User  string
 
-	Channels []string
+	Channels     []string
+	ChannelNames map[string]string
 }
 
 type SlackMate interface {
