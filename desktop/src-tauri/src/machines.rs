@@ -28,6 +28,8 @@ pub struct Machine {
 pub struct MachineFile {
     #[serde(default)]
     pub machines: Vec<Machine>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub selected: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -40,6 +42,7 @@ impl From<&Store> for MachineFile {
     fn from(store: &Store) -> Self {
         MachineFile {
             machines: store.servers.iter().map(machine_of).collect(),
+            selected: Some(store.selected.clone()).filter(|id| id != LOCAL_ID),
         }
     }
 }
@@ -54,6 +57,9 @@ impl From<MachineFile> for Store {
                     store.servers.push(server);
                 }
             }
+        }
+        if let Some(id) = file.selected {
+            store.selected = id;
         }
         store
     }

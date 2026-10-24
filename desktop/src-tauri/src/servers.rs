@@ -405,3 +405,10 @@ pub fn connect_url(ios: bool) -> &'static str {
         "http://tauri.localhost/index.html?change"
     }
 }
+
+pub fn routed(mut url: url::Url, route: Option<String>) -> url::Url {
+    if let Some(hash) = route.as_deref().and_then(|r| r.strip_prefix('#')) {
+        url.set_fragment(Some(hash));
+    }
+    url
+}

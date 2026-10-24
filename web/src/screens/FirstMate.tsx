@@ -159,7 +159,12 @@ export function FirstMate({ api, storage, wide, desktop }: { api: Authed; storag
         { name: mate, prompt: prompt.trim() || fallbackPrompt, agent, ...look, enabled: true },
         { machine_id: place.machine.machine.id, identity_id: identity },
       );
-      window.location.hash = "#/mates/" + encodeURIComponent(mate);
+      const route = "#/mates/" + encodeURIComponent(mate);
+      if (servers) {
+        await servers.show(place.link.key, route);
+      } else {
+        window.location.hash = route;
+      }
     } catch (err) {
       setError(message(err));
     } finally {
