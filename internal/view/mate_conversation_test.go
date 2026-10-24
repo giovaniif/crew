@@ -44,10 +44,10 @@ func TestViewMatesListTheLocalConversationsNewestFirst(t *testing.T) {
 	if iris.Name != "iris" || iris.Avatar != "iris" || iris.Color != "#cba6f7" {
 		t.Fatalf("iris %+v", iris.MateStatus)
 	}
-	if len(iris.Conversations) != 2 {
+	if len(iris.Conversations) != 3 {
 		t.Fatalf("conversations %+v", iris.Conversations)
 	}
-	first, second := iris.Conversations[0], iris.Conversations[1]
+	first, second := iris.Conversations[0], iris.Conversations[2]
 	if first.Session != "new" || first.Name != "review login" || first.State != domain.StateRunning || first.Ended || !first.StartedAt.Equal(t0.Add(time.Hour)) {
 		t.Errorf("first %+v", first)
 	}
@@ -73,5 +73,30 @@ func TestViewMatesChangeWhenALocalConversationStarts(t *testing.T) {
 	}
 	if mates == nil || len(mates.Mates[1].Conversations) != 1 || mates.Mates[1].Conversations[0].Session != "third" {
 		t.Fatalf("mates %+v", mates)
+	}
+}
+
+func TestViewMateConversationIsTheNewestSessionAndTheOthersAreHistory(t *testing.T) {
+	_, state := view.NewNative(localMateFixture())
+	iris := state.Mates.Mates[0]
+	if iris.Conversation != "new" {
+		t.Fatalf("conversation %q", iris.Conversation)
+	}
+	for _, c := range iris.Conversations {
+		if c.History != (c.Session != "new") {
+			t.Errorf("%s history %v", c.Session, c.History)
+		}
+	}
+	if bolt := state.Mates.Mates[1]; bolt.Conversation != "" {
+		t.Errorf("bolt conversation %q", bolt.Conversation)
+	}
+}
+
+func TestViewMateConversationSkipsASessionThatWasStartedFresh(t *testing.T) {
+	fixture := localMateFixture()
+	fixture.Sessions[1].Mate = &domain.MateSeat{Name: "iris", Local: true, History: true}
+	_, state := view.NewNative(fixture)
+	if got := state.Mates.Mates[0].Conversation; got != "slack" {
+		t.Fatalf("conversation %q, want slack", got)
 	}
 }
