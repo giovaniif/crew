@@ -646,7 +646,7 @@ func (d *Daemon) dispatch(c *conn, line []byte) (*rpc.Response, bool) {
 		return d.switchSession(req)
 	case rpc.MethodSessionRename, rpc.MethodSessionUnpin:
 		return d.pinName(req)
-	case rpc.MethodWorkspaceAdd, rpc.MethodWorkspaceList, rpc.MethodWorkspaceRemove, rpc.MethodWorkspaceDirs,
+	case rpc.MethodWorkspaceAdd, rpc.MethodWorkspaceList, rpc.MethodWorkspaceRemove, rpc.MethodWorkspaceDirs, rpc.MethodFSComplete,
 		rpc.MethodProjectAdd, rpc.MethodProjectList, rpc.MethodProjectRemove:
 		if resp, ok, handled := d.workspaceMethod(req); handled {
 			return resp, ok

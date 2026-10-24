@@ -1,9 +1,12 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import type { KeyValue } from "../auth";
 import { rememberWorkspace } from "../newsession";
+import { usePathSuggestions } from "../pathSuggest";
 import { backStep, nextStep, sshTarget, type Servers, type Step, type Where } from "../servers";
 import { Button, RadioGroup, Suggest } from "../ui";
 import { BrowseButton } from "./BrowseButton";
+
+type CrewRow = { text: string; state: "busy" | "ok" | "bad" };
 
 type SetupState = { state: "idle" } | { state: "busy" } | { state: "done"; id: string } | { state: "failed"; message: string };
 
@@ -25,6 +28,7 @@ export function FirstRun({ servers, welcome, onClose, storage, mac }: FirstRunPr
   const [host, setHost] = useState("");
   const [hosts, setHosts] = useState<string[]>([]);
   const [setup, setSetup] = useState<SetupState>({ state: "idle" });
+  const [crewRows, setCrewRows] = useState<CrewRow[]>([]);
   const [path, setPath] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -47,9 +51,40 @@ export function FirstRun({ servers, welcome, onClose, storage, mac }: FirstRunPr
   const target = where === "ssh" ? host.trim() : where === "url" ? address.trim() : here;
   const hostBad = where === "ssh" && host.trim() !== "" && sshTarget(host) === null;
   const id = setup.state === "done" ? setup.id : "";
+  const complete = useCallback((p: string) => servers.complete(id, p), [servers, id]);
+  const folders = usePathSuggestions(id && (step === "workspace" || step === "done") ? complete : null, path);
+
+  async function prepareCrew(target: string): Promise<boolean> {
+    const rows: CrewRow[] = [{ text: "Checking crew on " + target, state: "busy" }];
+    const show = () => setCrewRows(rows.map((r) => ({ ...r })));
+    show();
+    try {
+      const found = await servers.crew(target);
+      if (found.action === "current") {
+        rows[0] = { text: found.server ? "crew " + found.server + " on " + target : "crew on " + target, state: "ok" };
+      } else {
+        rows[0] = { text: found.action === "upgrade" ? "crew " + found.server + " on " + target + " is older than the app" : "crew is not installed on " + target, state: "ok" };
+        rows.push({ text: "Installing crew " + found.app + " on " + target, state: "busy" });
+        show();
+        await servers.install(target);
+        rows[1] = { text: "Installed crew " + found.app + " on " + target, state: "ok" };
+      }
+      show();
+      return true;
+    } catch (err) {
+      rows[rows.length - 1].state = "bad";
+      show();
+      setSetup({ state: "failed", message: errorText(err) });
+      return false;
+    }
+  }
 
   async function runSetup() {
     setSetup({ state: "busy" });
+    setCrewRows([]);
+    if (where === "ssh" && !(await prepareCrew(host.trim()))) {
+      return;
+    }
     try {
       if (where === "local") {
         await servers.fix("local");
@@ -130,7 +165,7 @@ export function FirstRun({ servers, welcome, onClose, storage, mac }: FirstRunPr
         {step === "welcome" ? (
           <>
             <h1>Welcome to crew</h1>
-            <p className="lead">The next steps pick where agents run, set that computer up and add a workspace. Nothing needs sudo.</p>
+            <p className="lead">The next steps pick where agents run, set that computer up and add a workspace.</p>
           </>
         ) : null}
         {step === "location" ? (
@@ -191,17 +226,24 @@ export function FirstRun({ servers, welcome, onClose, storage, mac }: FirstRunPr
         {step === "setup" ? (
           <>
             <h1>{where === "url" ? "Pairing with " + target : "Setting up " + (where === "local" ? here.replace("This", "this") : target)}</h1>
-            <p className="lead">Nothing needs sudo.</p>
             <ul className="ob-checklist" aria-label="Set up">
-              <li>
-                {setup.state === "done" ? <span className="ok">✓</span> : setup.state === "failed" ? <span className="bad">✗</span> : <span className="spin" aria-hidden="true" />}
-                <span className="grow">{setup.state === "done" ? done : doing}</span>
-                {setup.state === "failed" ? (
-                  <Button className="sm" onClick={runSetup}>
-                    Try again
-                  </Button>
-                ) : null}
-              </li>
+              {crewRows.map((row) => (
+                <li key={row.text}>
+                  {row.state === "ok" ? <span className="ok">✓</span> : row.state === "bad" ? <span className="bad">✗</span> : <span className="spin" aria-hidden="true" />}
+                  <span className="grow">{row.text}</span>
+                </li>
+              ))}
+              {crewRows.some((r) => r.state === "busy") ? null : (
+                <li>
+                  {setup.state === "done" ? <span className="ok">✓</span> : setup.state === "failed" ? <span className="bad">✗</span> : <span className="spin" aria-hidden="true" />}
+                  <span className="grow">{setup.state === "done" ? done : doing}</span>
+                  {setup.state === "failed" ? (
+                    <Button className="sm" onClick={runSetup}>
+                      Try again
+                    </Button>
+                  ) : null}
+                </li>
+              )}
             </ul>
             {setup.state === "failed" ? (
               <p className="error" role="alert">
@@ -216,7 +258,7 @@ export function FirstRun({ servers, welcome, onClose, storage, mac }: FirstRunPr
             <p className="lead">Add the first workspace, or skip and add one later.</p>
             <div className="ob-section">FIRST WORKSPACE</div>
             <div className="ob-path">
-              <input className="ui input mono" aria-label="First workspace" type="text" autoCapitalize="off" spellCheck={false} placeholder="~/code/web" value={path} onChange={(e) => setPath(e.target.value)} />
+              <Suggest label="First workspace" className="mono" type="text" autoCapitalize="off" autoComplete="off" spellCheck={false} placeholder="~/code/web" value={path} onChange={setPath} suggestions={folders} />
               {where === "local" ? <BrowseButton pick={(near) => servers.pickFolder(near)} near={path.trim() || undefined} onPick={setPath} onError={setError} /> : null}
             </div>
             <p className="ob-note">A git repository or a folder of them. It becomes your default project.</p>

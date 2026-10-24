@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { EnvInfo } from "../api";
-import { envLetter, envTitle, usedLabel } from "../envs";
+import { envLetter, usedLabel } from "../envs";
+import { useEnvTitle } from "./Machine";
 import { mateEnvName } from "../mateshome";
 import { Menu, Select } from "../ui";
 
@@ -40,6 +41,7 @@ export function EnvRail({
   value: string | undefined;
   onChange: (env: string | undefined) => void;
 }) {
+  const envTitle = useEnvTitle();
   const list = withLocal(envs);
   const name = mateEnvName(value);
   const current = list.find((e) => e.name === name) ?? {
@@ -80,6 +82,7 @@ export function EnvChip({
   value: string | undefined;
   onChange: (env: string | undefined) => void;
 }) {
+  const envTitle = useEnvTitle();
   const [open, setOpen] = useState(false);
   const anchor = useRef<HTMLSpanElement>(null);
   const list = withLocal(envs);

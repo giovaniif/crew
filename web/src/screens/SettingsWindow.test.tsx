@@ -44,6 +44,7 @@ function withServer(server: FakeServer) {
     .on("POST", "/api/v1/onboarding/install", { status: 200, body: { installed: true, file: "/home/me/.codex/hooks.json" } })
     .on("GET", "/api/v1/session-options", { status: 200, body: options })
     .on("GET", "/api/v1/workspaces", { status: 200, body: { workspaces: [{ Root: "/home/me/api", Kind: "single", LastUsed: "" }], last_used: "/home/me/api" } })
+    .on("GET", "/api/v1/fs/complete?path=~%2Fw", { status: 200, body: { dir: "/home/me", dirs: [{ Name: "web", Path: "/home/me/web", Git: 1 }, { Name: "www", Path: "/home/me/www", Git: 0 }] } })
     .on("GET", "/api/v1/workspaces/dirs?path=%2Fhome%2Fme", {
       status: 200,
       body: { dirs: [{ Name: "web", Path: "/home/me/web", Git: 1 }, { Name: "notes", Path: "/home/me/notes", Git: 0 }, { Name: "api", Path: "/home/me/api", Git: 1 }] },
@@ -199,9 +200,10 @@ describe("the server settings", () => {
     expect(await screen.findByText("/home/me/api")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Add a folder…" }));
     await userEvent.type(screen.getByRole("combobox", { name: "Workspace path" }), "~/w");
-    const list = await screen.findByRole("listbox", { name: "Folders" });
-    expect(within(list).getAllByRole("option").map((o) => o.textContent)).toEqual(["/home/me/web"]);
-    await userEvent.click(within(list).getByRole("option", { name: "/home/me/web" }));
+    const list = await screen.findByRole("listbox", { name: "Workspace path" });
+    expect(within(list).getAllByRole("option").map((o) => o.textContent)).toEqual(["~/web/", "~/www/"]);
+    await userEvent.click(within(list).getByRole("option", { name: "~/web/" }));
+    expect(screen.getByRole("combobox", { name: "Workspace path" })).toHaveValue("~/web/");
     await userEvent.click(screen.getByRole("button", { name: "Add workspace" }));
     await waitFor(() => expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/workspaces")?.body).toEqual({ path: "/home/me/web" }));
   });

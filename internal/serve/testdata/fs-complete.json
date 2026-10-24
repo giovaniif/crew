@@ -1,0 +1,10 @@
+{
+  "dir": "/home/me",
+  "dirs": [
+    {
+      "Name": "web",
+      "Path": "/home/me/web",
+      "Git": 1
+    }
+  ]
+}

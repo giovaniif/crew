@@ -23,6 +23,7 @@ const (
 	MethodWorkspaceList    = "workspace.list"
 	MethodWorkspaceRemove  = "workspace.remove"
 	MethodWorkspaceDirs    = "workspace.dirs"
+	MethodFSComplete       = "fs.complete"
 	MethodProjectAdd       = "project.add"
 	MethodProjectList      = "project.list"
 	MethodProjectRemove    = "project.remove"
@@ -371,6 +372,17 @@ func Mismatch(daemonBuild, clientBuild string, daemonBuilt, clientBuilt int64) *
 
 type WorkspaceAddParams struct {
 	Path string `json:"path"`
+}
+
+const FSCompleteLimit = 50
+
+type FSCompleteParams struct {
+	Path string `json:"path"`
+}
+
+type FSComplete struct {
+	Dir  string         `json:"dir"`
+	Dirs []domain.Child `json:"dirs"`
 }
 
 type WorkspaceDirsParams struct {

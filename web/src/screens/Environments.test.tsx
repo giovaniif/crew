@@ -82,7 +82,7 @@ describe("the environments page", () => {
     const list = await screen.findByRole("list", { name: "Environments" });
     const rows = within(list).getAllByRole("link");
     expect(rows.map((r) => r.textContent)).toEqual([
-      expect.stringContaining("Local (this Mac)Your logins · 2 mates"),
+      expect.stringContaining("Local (crew)Your logins · 2 mates"),
       expect.stringContaining("test-workCustom · 2 mates"),
       expect.stringContaining("test-sandboxCustom · not used"),
     ]);
@@ -235,7 +235,7 @@ describe("the environments page", () => {
   it("shows Local as read-only with extra variables and Duplicate as Custom…", async () => {
     const user = userEvent.setup();
     open("#/envs/local");
-    expect(await screen.findByRole("heading", { name: "Local (this Mac)" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Local (crew)" })).toBeInTheDocument();
     expect(screen.getByText("ada, june")).toBeInTheDocument();
     expect(screen.queryByLabelText("Name")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "New key…" })).not.toBeInTheDocument();

@@ -40,7 +40,7 @@ describe("FirstRun", () => {
     expect(desktop.of("crew_server_fix")).toEqual([{ id: "local" }]);
     await press("Continue");
     expect(progress()).toEqual(["on", "on", "on"]);
-    await userEvent.type(screen.getByRole("textbox", { name: "First workspace" }), "~/code/api");
+    await userEvent.type(screen.getByRole("combobox", { name: "First workspace" }), "~/code/api");
     await press("Open crew");
     expect(desktop.of("crew_server_workspace")).toEqual([{ id: "local", path: "~/code/api" }]);
     expect(desktop.of("crew_server_open")).toEqual([{ id: "local" }]);
@@ -60,7 +60,7 @@ describe("FirstRun", () => {
     await within(screen.getByRole("list", { name: "Set up" })).findByText("crew daemon started");
     await press("Continue");
     await press("Browse…");
-    expect(screen.getByRole("textbox", { name: "First workspace" })).toHaveValue("/home/me/web");
+    expect(screen.getByRole("combobox", { name: "First workspace" })).toHaveValue("/home/me/web");
     expect(picking).toBe("true");
     expect(document.documentElement.dataset.picking).toBeUndefined();
   });
@@ -72,9 +72,9 @@ describe("FirstRun", () => {
     await press("Continue");
     await within(screen.getByRole("list", { name: "Set up" })).findByText("crew daemon started");
     await press("Continue");
-    await userEvent.type(screen.getByRole("textbox", { name: "First workspace" }), "~/code/api");
+    await userEvent.type(screen.getByRole("combobox", { name: "First workspace" }), "~/code/api");
     await press("Browse…");
-    expect(screen.getByRole("textbox", { name: "First workspace" })).toHaveValue("~/code/api");
+    expect(screen.getByRole("combobox", { name: "First workspace" })).toHaveValue("~/code/api");
   });
 
   it("has no folder dialog for a server over SSH", async () => {
@@ -85,8 +85,31 @@ describe("FirstRun", () => {
     await press("Continue");
     await within(screen.getByRole("list", { name: "Set up" })).findByText("crew set up on gpu");
     await press("Continue");
-    expect(screen.getByRole("textbox", { name: "First workspace" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "First workspace" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Browse…" })).toBeNull();
+  });
+
+  it("completes the first workspace with the folders of the server over SSH", async () => {
+    const desktop = new FakeDesktop();
+    desktop.handlers.crew_server_complete = (args) =>
+      args?.path === "~/www/" ? { dir: "/home/me/www", dirs: [{ Name: "bolao-app", Path: "/home/me/www/bolao-app", Git: 1 }] } : { dir: "/home/me", dirs: [{ Name: "www", Path: "/home/me/www", Git: 0 }] };
+    start(false, desktop);
+    await userEvent.click(screen.getByRole("radio", { name: /over SSH/ }));
+    await press("Continue");
+    await userEvent.type(screen.getByRole("combobox", { name: "SSH host" }), "gpu");
+    await press("Continue");
+    await within(screen.getByRole("list", { name: "Set up" })).findByText("crew set up on gpu");
+    await press("Continue");
+    const field = screen.getByRole("combobox", { name: "First workspace" });
+    await userEvent.type(field, "~/w");
+    const list = await screen.findByRole("listbox", { name: "First workspace" });
+    expect(within(list).getAllByRole("option").map((o) => o.textContent)).toEqual(["~/www/"]);
+    expect(desktop.of("crew_server_complete")).toContainEqual({ id: "ssh:gpu", path: "~/w" });
+    await userEvent.keyboard("{Tab}");
+    expect(field).toHaveValue("~/www/");
+    expect(await screen.findByRole("option", { name: "~/www/bolao-app/" })).toBeInTheDocument();
+    await userEvent.keyboard("{Tab}");
+    expect(field).toHaveValue("~/www/bolao-app/");
   });
 
   it("skips the first workspace and still opens crew", async () => {
@@ -149,5 +172,52 @@ describe("FirstRun", () => {
     expect(await screen.findByText("crew set up on box")).toBeInTheDocument();
     await press("Back");
     expect(screen.getByRole("combobox", { name: "SSH host" })).toBeInTheDocument();
+  });
+
+  it("does not say that nothing needs sudo", async () => {
+    start();
+    expect(screen.getByText("The next steps pick where agents run, set that computer up and add a workspace.")).toBeInTheDocument();
+    expect(screen.queryByText(/sudo/)).toBeNull();
+    await press("Get started");
+    await userEvent.click(screen.getByRole("radio", { name: /This computer/ }));
+    await press("Continue");
+    expect(screen.queryByText(/sudo/)).toBeNull();
+  });
+
+  async function sshTo(desktop: FakeDesktop, target: string) {
+    start(false, desktop);
+    await userEvent.click(screen.getByRole("radio", { name: /over SSH/ }));
+    await press("Continue");
+    await userEvent.type(screen.getByRole("combobox", { name: "SSH host" }), target);
+    await press("Continue");
+  }
+
+  it("upgrades an older crew on the SSH host before it pairs", async () => {
+    const desktop = new FakeDesktop();
+    desktop.handlers.crew_server_crew = () => ({ action: "upgrade", server: "v0.1.0-beta.2", app: "v0.1.0-beta.6" });
+    await sshTo(desktop, "box");
+    const checklist = screen.getByRole("list", { name: "Set up" });
+    expect(await within(checklist).findByText("crew set up on box")).toBeInTheDocument();
+    expect(within(checklist).getByText("crew v0.1.0-beta.2 on box is older than the app")).toBeInTheDocument();
+    expect(within(checklist).getByText("Installed crew v0.1.0-beta.6 on box")).toBeInTheDocument();
+    expect(desktop.calls.map((c) => c.cmd).filter((c) => c.startsWith("crew_server_") && c !== "crew_servers")).toEqual(["crew_server_crew", "crew_server_install", "crew_server_add"]);
+    expect(desktop.of("crew_server_install")).toEqual([{ target: "box" }]);
+  });
+
+  it("does not install when the crew on the SSH host is current", async () => {
+    const desktop = new FakeDesktop();
+    desktop.handlers.crew_server_crew = () => ({ action: "current", server: "v0.1.0-beta.6", app: "v0.1.0-beta.6" });
+    await sshTo(desktop, "box");
+    expect(await screen.findByText("crew set up on box")).toBeInTheDocument();
+    expect(screen.getByText("crew v0.1.0-beta.6 on box")).toBeInTheDocument();
+    expect(desktop.of("crew_server_install")).toEqual([]);
+  });
+
+  it("stops with a clear text when the crew on the SSH host is newer than the app", async () => {
+    const desktop = new FakeDesktop();
+    desktop.failures.crew_server_crew = "crew on box is v0.2.0, newer than this app (v0.1.0-beta.6). Update the app.";
+    await sshTo(desktop, "box");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Update the app");
+    expect(desktop.of("crew_server_add")).toEqual([]);
   });
 });
