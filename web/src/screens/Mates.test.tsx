@@ -204,7 +204,7 @@ describe("Mate page", () => {
     const user = userEvent.setup();
     const rail = await screen.findByRole("complementary", { name: "Settings of helper" });
     const picker = await within(rail).findByRole("combobox", { name: "Environment" });
-    await waitFor(() => expect(picker).toHaveTextContent("Local (this Mac)"));
+    await waitFor(() => expect(picker).toHaveTextContent("Local (crew)"));
     expect(within(rail).getByRole("link", { name: "Edit environment" })).toHaveAttribute("href", "#/envs/local");
     await user.click(picker);
     await user.click(await screen.findByRole("option", { name: "test-work" }));
@@ -369,7 +369,7 @@ describe("New mate", () => {
     await user.type(await screen.findByRole("textbox", { name: "Name" }), "scout");
     await user.type(screen.getByRole("textbox", { name: "Role" }), "Scout.");
     const chip = screen.getByRole("button", { name: /Environment/ });
-    expect(chip).toHaveTextContent("Local (this Mac)");
+    expect(chip).toHaveTextContent("Local (crew)");
     await user.click(chip);
     const menu = await screen.findByRole("menu", { name: "Environment" });
     expect(within(menu).getByLabelText("Search environments")).toBeInTheDocument();
