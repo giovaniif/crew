@@ -6,46 +6,6 @@ export type ServerRow = { id: string; name: string; kind: ServerKind; detail: st
 export type ServerListing = { servers: ServerRow[]; selected: string; first_run: boolean };
 
 export type Where = ServerKind;
-export type Step = "welcome" | "location" | "host" | "setup" | "workspace" | "done";
-
-const order: Step[] = ["welcome", "location", "host", "setup", "workspace", "done"];
-
-const titles: Record<Step, string> = {
-  welcome: "Welcome",
-  location: "Where agents run",
-  host: "Server",
-  setup: "Set up",
-  workspace: "Workspace",
-  done: "Done",
-};
-
-export function stepTitle(step: Step): string {
-  return titles[step];
-}
-
-export function flowSteps(where: Where): Step[] {
-  return order.filter((s) => s !== "host" || where !== "local");
-}
-
-export function nextStep(step: Step, where: Where): Step {
-  const steps = flowSteps(where);
-  const at = steps.indexOf(step);
-  return steps[Math.min(at + 1, steps.length - 1)];
-}
-
-export function backStep(step: Step, where: Where): Step {
-  const steps = flowSteps(where);
-  const at = steps.indexOf(step);
-  return steps[Math.max(at - 1, 0)];
-}
-
-export function primaryTitle(step: Step): string {
-  if (step === "welcome") {
-    return "Get started";
-  }
-  return step === "done" ? "Open crew" : "Continue";
-}
-
 export function sshTarget(text: string): string | null {
   const target = text.trim();
   if (target === "" || target.startsWith("-") || /[\s'"]/.test(target)) {

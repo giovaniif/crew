@@ -55,9 +55,9 @@ Each frame also has its own PNG (`7a.png`, `8b.png` and so on). The HTML files o
 | 9c | Set a secret | new dialog |
 | 9d | New SSH key, confirm | new panel state |
 | 10a | Sessions | `SessionList.tsx` and the old sidebar session rows |
-| 10b, 10c | First run | `FirstRun.tsx` (frames 6a, 6b) |
+| 10b, 10c | First run | Removed (issue #894). See `FirstMate.tsx` |
 | 10d | Settings: Notifications | `Settings.tsx` (frame 5b) |
-| 10e | First run, phone | `FirstRun.tsx` on the phone |
+| 10e | First run, phone | Removed (issue #894). See `FirstMate.tsx` |
 
 ## Environments are machine plus identity (frames 11 and 12)
 

@@ -10,7 +10,6 @@ import { timeInState } from "../sessions";
 import { Segmented } from "../ui";
 import type { Servers } from "../servers";
 import type { DesktopBridge } from "../desktopBridge";
-import { FirstRun } from "./FirstRun";
 import { useServerListing } from "./Servers";
 import { BrowserPane, type BrowserStore } from "./Browser";
 import { NewSession } from "./NewSession";
@@ -322,25 +321,6 @@ function Empty({ snapshot, live, keys }: { snapshot: StreamSnapshot; live: numbe
   );
 }
 
-function Sheet({ children, onClose, label }: { children: ReactNode; onClose: () => void; label: string }) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-  return (
-    <div className="sheet-backdrop">
-      <div className="sheet" role="dialog" aria-modal="true" aria-label={label}>
-        {children}
-      </div>
-    </div>
-  );
-}
-
 function usePendingApprovals(api: Authed, hash: string): number {
   const [n, setN] = useState(0);
   useEffect(() => {
@@ -376,12 +356,6 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
   const [menu, setMenu] = useState<(MenuPoint & { id: string }) | null>(null);
   const [listing] = useServerListing(servers);
   const outerMachine = useMachine();
-  const [firstRun, setFirstRun] = useState(false);
-  useEffect(() => {
-    if (listing?.first_run) {
-      setFirstRun(true);
-    }
-  }, [listing]);
   const keys = modifierKeys(env.userAgent);
   const route = parseRoute(hash);
   const selectedId = route.screen === "session" ? route.id : null;
@@ -531,17 +505,6 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
         />
         {menu && menuSession ? <SessionCommands key={"menu-" + menu.id} api={api} session={menuSession} storage={env.storage} openAt={menu} /> : null}
         <main className="main-column">{main}</main>
-        {servers && firstRun ? (
-          <Sheet label="Add a server" onClose={() => setFirstRun(false)}>
-            <FirstRun
-              servers={servers}
-              welcome={firstRun}
-              storage={env.storage}
-              mac={/Macintosh/.test(env.userAgent)}
-              onClose={() => setFirstRun(false)}
-            />
-          </Sheet>
-        ) : null}
       </div>
     </MachineContext.Provider>
   );

@@ -2,6 +2,27 @@ package domain
 
 import "testing"
 
+func TestPaneIsOnTheCrewServerOnlyWhenTheTmuxSocketIsCrews(t *testing.T) {
+	cases := []struct {
+		tmux, socket string
+		want         bool
+	}{
+		{"/tmp/tmux-1000/crew,1337712,0", "crew", true},
+		{"/tmp/tmux-1000/default,773337,0", "crew", false},
+		{"/tmp/tmux-1000/crew-dev,5,0", "crew", false},
+		{"/private/tmp/tmux-501/crew-test,5,0", "crew-test", true},
+		{"/tmp/tmux-1000/crew,5,0", "/tmp/tmux-1000/crew", true},
+		{"/tmp/tmux-1000/other,5,0", "/tmp/tmux-1000/crew", false},
+		{"", "crew", true},
+		{"/tmp/tmux-1000/default,1,0", "", true},
+	}
+	for _, c := range cases {
+		if got := PaneOnServer(c.tmux, c.socket); got != c.want {
+			t.Errorf("PaneOnServer(%q, %q) = %v, want %v", c.tmux, c.socket, got, c.want)
+		}
+	}
+}
+
 func TestHookEventNamesMapToHarnessEvents(t *testing.T) {
 	cases := []struct {
 		harness Harness

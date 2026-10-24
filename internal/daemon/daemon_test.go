@@ -437,6 +437,41 @@ func TestCodexHookReportsModelAtOnceAndEffortAndUsageFromTheRollout(t *testing.T
 	}
 }
 
+func TestHookFromAPaneOfAnotherTmuxServerNeverReachesTheSessionWithTheSamePaneID(t *testing.T) {
+	d, path := start(t, &memStore{}, daemon.WithTmuxSocket("crew"))
+	c := dial(t, path)
+	ctx := context.Background()
+	sub, err := c.Subscribe(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d.Post(daemon.SessionChanged{Session: domain.Session{ID: "a", Harness: domain.HarnessClaude, Pane: "%1", State: domain.StateIdle}})
+	next(t, sub.Diffs)
+	outside := `{"session_id":"other","transcript_path":"/home/dev/.claude/projects/web/other.jsonl"}`
+	for _, event := range []string{"SessionStart", "UserPromptSubmit", "Stop"} {
+		h := rpc.Hook{Harness: "claude", Event: event, Pane: "%1", Tmux: "/tmp/tmux-1000/default,77,0", At: time.Now(), Payload: json.RawMessage(outside)}
+		if err := c.Call(ctx, rpc.MethodHook, h, nil); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sl := rpc.StatusLine{Pane: "%1", Tmux: "/tmp/tmux-1000/default,77,0", Report: domain.StatusReport{At: time.Now(), Model: "x"}}
+	if err := c.Call(ctx, rpc.MethodStatusLine, sl, nil); err != nil {
+		t.Fatal(err)
+	}
+	d.Post(daemon.WorktreeChanged{Worktree: domain.Worktree{ID: "w"}})
+	if diff := next(t, sub.Diffs); diff.Worktree == nil {
+		t.Fatalf("outside hook produced %+v", diff)
+	}
+	own := rpc.Hook{Harness: "claude", Event: "SessionStart", Pane: "%1", Tmux: "/tmp/tmux-1000/crew,5,0", At: time.Now(),
+		Payload: json.RawMessage(`{"session_id":"s1","transcript_path":"/home/dev/.claude/projects/api/s1.jsonl"}`)}
+	if err := c.Call(ctx, rpc.MethodHook, own, nil); err != nil {
+		t.Fatal(err)
+	}
+	if diff := next(t, sub.Diffs); diff.Session == nil || diff.Session.Transcript != "/home/dev/.claude/projects/api/s1.jsonl" {
+		t.Fatalf("own hook diff %+v", diff)
+	}
+}
+
 func TestHookTranscriptPathSetsTheSessionTranscriptAndALaterOneReplacesIt(t *testing.T) {
 	d, path := start(t, &memStore{})
 	c := dial(t, path)
