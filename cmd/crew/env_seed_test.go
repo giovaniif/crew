@@ -46,7 +46,7 @@ func TestSeedEnvInstallsHooksAndSeedsEachHarnessDir(t *testing.T) {
 	if err := seedEnv(s, "test-bot", environ, work, "/opt/crew"); err != nil {
 		t.Fatal(err)
 	}
-	envDir := filepath.Join(home, "envs", "test-bot")
+	envDir := filepath.Join(home, "identities", "test-bot")
 	for file, want := range map[string]string{
 		"claude/settings.json":   "hook --harness claude",
 		"claude/.claude.json":    work,

@@ -40,7 +40,7 @@ func RemoveEnvBlock(src, name string) string {
 }
 
 func ValidateMateEnv(m Mate, envs []Environment) error {
-	if m.Env == "" || m.Env == string(EnvLocal) {
+	if m.Env == "" || m.Env == string(EnvLocal) || m.Env == IdentityYours {
 		return nil
 	}
 	for _, e := range envs {

@@ -14,16 +14,20 @@ import (
 )
 
 type mateDoc struct {
-	Name     string          `toml:"name"`
-	Prompt   string          `toml:"prompt"`
-	Agent    string          `toml:"agent"`
-	Model    string          `toml:"model"`
-	Effort   string          `toml:"effort"`
-	Repos    []string        `toml:"repos"`
-	Owner    string          `toml:"owner"`
-	Avatar   string          `toml:"avatar"`
-	Color    string          `toml:"color"`
-	Env      string          `toml:"env"`
+	Name        string   `toml:"name"`
+	Prompt      string   `toml:"prompt"`
+	Agent       string   `toml:"agent"`
+	Model       string   `toml:"model"`
+	Effort      string   `toml:"effort"`
+	Repos       []string `toml:"repos"`
+	Owner       string   `toml:"owner"`
+	Avatar      string   `toml:"avatar"`
+	Color       string   `toml:"color"`
+	Env         string   `toml:"env"`
+	Environment struct {
+		MachineID  string `toml:"machine_id"`
+		IdentityID string `toml:"identity_id"`
+	} `toml:"environment"`
 	Tone     domain.MateTone `toml:"tone"`
 	NoMemory bool            `toml:"no_memory"`
 	Enabled  *bool           `toml:"enabled"`
@@ -45,8 +49,12 @@ func parseMates(text, path string) ([]domain.Mate, []string) {
 	}
 	mates := make([]domain.Mate, len(doc.Mate))
 	for i, d := range doc.Mate {
+		if d.Environment.IdentityID != "" {
+			d.Env = d.Environment.IdentityID
+		}
 		mates[i] = domain.Mate{
-			Name: d.Name, Prompt: d.Prompt, Agent: d.Agent, Model: d.Model, Effort: d.Effort,
+			Machine: d.Environment.MachineID,
+			Name:    d.Name, Prompt: d.Prompt, Agent: d.Agent, Model: d.Model, Effort: d.Effort,
 			Repos: d.Repos, Owner: d.Owner, Avatar: d.Avatar, Color: d.Color, Env: d.Env, Tone: d.Tone, NoMemory: d.NoMemory, Enabled: d.Enabled == nil || *d.Enabled,
 		}
 	}
@@ -205,6 +213,14 @@ func (d *Daemon) mateSet(req rpc.Request) *rpc.Response {
 		return errorResponse(req.ID, rpc.CodeBadRequest, "mate.set params: "+err.Error())
 	}
 	m := p.Mate
+	if d.machine.ID != "" {
+		if m.Env == "" || m.Env == string(domain.EnvLocal) {
+			m.Env = domain.IdentityYours
+		}
+		if m.Machine == "" {
+			m.Machine = d.machine.ID
+		}
+	}
 	if err := domain.ValidateMate(m, d.registeredWorkspaces()); err != nil {
 		return errorResponse(req.ID, rpc.CodeBadRequest, err.Error())
 	}
