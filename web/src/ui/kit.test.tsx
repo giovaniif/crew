@@ -227,6 +227,24 @@ describe("Suggest", () => {
     await userEvent.keyboard("{ArrowDown}{Enter}");
     expect(input).toHaveValue("sonnet");
   });
+
+  it("accepts the first suggestion with Tab and stays open after a folder", async () => {
+    function Host() {
+      const [v, setV] = useState("~/w");
+      const s = v === "~/www/" ? ["~/www/api/", "~/www/web/"] : ["~/www/"];
+      return <Suggest label="Path" value={v} onChange={setV} suggestions={s} />;
+    }
+    render(<Host />);
+    const input = screen.getByRole("combobox", { name: "Path" });
+    await userEvent.click(input);
+    await userEvent.keyboard("{Tab}");
+    expect(input).toHaveValue("~/www/");
+    expect(input).toHaveFocus();
+    const list = screen.getByRole("listbox", { name: "Path" });
+    expect(within(list).getAllByRole("option").map((o) => o.textContent)).toEqual(["~/www/api/", "~/www/web/"]);
+    await userEvent.keyboard("{ArrowDown}{ArrowDown}{Enter}");
+    expect(input).toHaveValue("~/www/web/");
+  });
 });
 
 describe("Dialog and Toast", () => {

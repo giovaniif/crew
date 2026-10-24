@@ -309,6 +309,51 @@ func TestWorkspacePathsExpandALeadingTildeToTheDaemonsHome(t *testing.T) {
 	}
 }
 
+func TestFSCompleteListsMatchingFoldersFromTheDaemonsHome(t *testing.T) {
+	t.Setenv("HOME", "/srv/me")
+	many := []domain.Child{
+		{Name: "web", Path: "/srv/me/web", Git: domain.GitDir},
+		{Name: ".config", Path: "/srv/me/.config"},
+		{Name: "Work", Path: "/srv/me/Work"},
+		{Name: "api", Path: "/srv/me/api"},
+	}
+	for i := range 80 {
+		many = append(many, domain.Child{Name: fmt.Sprintf("x%02d", i), Path: fmt.Sprintf("/srv/me/x%02d", i)})
+	}
+	fs := fakeFS{children: map[string][]domain.Child{"/srv/me": many}, dirErrs: map[string]error{"/srv/me/gone": errors.New("no such file or directory")}}
+	_, path := start(t, &memStore{}, daemon.WithWorkspaces(fs, fakeGit{}))
+	c := dial(t, path)
+	ctx := context.Background()
+	cases := []struct {
+		partial string
+		dir     string
+		names   []string
+	}{
+		{"~/w", "/srv/me", []string{"web", "Work"}},
+		{"w", "/srv/me", []string{"web", "Work"}},
+		{"/srv/me/w", "/srv/me", []string{"web", "Work"}},
+		{"~/.c", "/srv/me", []string{".config"}},
+		{"~/gone/a", "/srv/me/gone", []string{}},
+	}
+	for _, tc := range cases {
+		var out rpc.FSComplete
+		if err := c.Call(ctx, rpc.MethodFSComplete, rpc.FSCompleteParams{Path: tc.partial}, &out); err != nil {
+			t.Fatalf("%q: %v", tc.partial, err)
+		}
+		names := []string{}
+		for _, d := range out.Dirs {
+			names = append(names, d.Name)
+		}
+		if out.Dir != tc.dir || !reflect.DeepEqual(names, tc.names) {
+			t.Errorf("%q = %s %v, want %s %v", tc.partial, out.Dir, names, tc.dir, tc.names)
+		}
+	}
+	var all rpc.FSComplete
+	if err := c.Call(ctx, rpc.MethodFSComplete, rpc.FSCompleteParams{Path: "~/"}, &all); err != nil || len(all.Dirs) != rpc.FSCompleteLimit {
+		t.Errorf("~/ gave %d folders, want the limit %d: %v", len(all.Dirs), rpc.FSCompleteLimit, err)
+	}
+}
+
 func TestWorkspaceDirsErrorNamesTheFolder(t *testing.T) {
 	c, _ := startWorkspaces(t, &memStore{})
 	_, err := c.WorkspaceDirs(context.Background(), "/gone/")

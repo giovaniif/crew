@@ -125,6 +125,7 @@ Each RPC request and response contains the build (`version.String()`). The daemo
   - `workspace.list` (→ `{"workspaces": [...], "last_used": root}`).
   - `workspace.remove` (`{"root": …}`).
   - `workspace.dirs` (`{"path": abs}` → `{"dirs": [Child]}`): the subfolders of the folder, for the path completion of the dialog. It registers nothing.
+  - `fs.complete` (`{"path"}` → `{"dir","dirs": [Child]}`): the completion of a typed folder path, for the workspace fields of the app. `~` and `~/` are the HOME of the daemon, and a relative path starts in HOME. An absolute path that the user types is also listed, because only the owner device can call it. It gives only folders (a symlink to a folder counts) with their names, paths and git marker, never file contents. It gives dot folders only when the last part starts with `.`, sorts by name without case and gives a maximum of `FSCompleteLimit` (50). A folder that it cannot read gives no folders, not an error. It changes nothing.
   - `project.add` (`{"path": abs, "name", "setup"}` → `Project`). It is `bad_request` unless the path discovers one or more repos. It also adds the workspace.
   - `project.list` (→ `{"projects": [...]}`).
   - `project.remove` (`{"root"}`). The workspace stays.

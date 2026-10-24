@@ -54,6 +54,8 @@ func (d *Daemon) workspaceMethod(req rpc.Request) (resp *rpc.Response, ok, handl
 		resp, ok = d.workspaceAdd(req)
 	case rpc.MethodWorkspaceRemove:
 		resp, ok = d.workspaceRemove(req)
+	case rpc.MethodFSComplete:
+		resp, ok = d.fsComplete(req), true
 	case rpc.MethodWorkspaceDirs:
 		resp, ok = d.workspaceDirs(req), true
 	case rpc.MethodProjectAdd:
@@ -108,6 +110,24 @@ func expandHome(path string) string {
 		return path
 	}
 	return domain.ExpandHome(path, home)
+}
+
+func (d *Daemon) fsComplete(req rpc.Request) *rpc.Response {
+	var p rpc.FSCompleteParams
+	if err := json.Unmarshal(req.Params, &p); err != nil {
+		return errorResponse(req.ID, rpc.CodeBadRequest, "params must be {\"path\": string}")
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return errorResponse(req.ID, rpc.CodeFailed, "no home folder: "+err.Error())
+	}
+	in := domain.ParsePathInput(p.Path, home, home)
+	children, _ := d.ws.fs.Children(in.Dir)
+	dirs := domain.CompleteDirs(children, in.Prefix)
+	if len(dirs) > rpc.FSCompleteLimit {
+		dirs = dirs[:rpc.FSCompleteLimit]
+	}
+	return result(req.ID, rpc.FSComplete{Dir: in.Dir, Dirs: dirs})
 }
 
 func (d *Daemon) workspaceDirs(req rpc.Request) *rpc.Response {

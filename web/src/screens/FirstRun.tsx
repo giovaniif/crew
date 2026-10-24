@@ -1,6 +1,7 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import type { KeyValue } from "../auth";
 import { rememberWorkspace } from "../newsession";
+import { usePathSuggestions } from "../pathSuggest";
 import { backStep, nextStep, sshTarget, type Servers, type Step, type Where } from "../servers";
 import { Button, RadioGroup, Suggest } from "../ui";
 import { BrowseButton } from "./BrowseButton";
@@ -50,6 +51,8 @@ export function FirstRun({ servers, welcome, onClose, storage, mac }: FirstRunPr
   const target = where === "ssh" ? host.trim() : where === "url" ? address.trim() : here;
   const hostBad = where === "ssh" && host.trim() !== "" && sshTarget(host) === null;
   const id = setup.state === "done" ? setup.id : "";
+  const complete = useCallback((p: string) => servers.complete(id, p), [servers, id]);
+  const folders = usePathSuggestions(id && (step === "workspace" || step === "done") ? complete : null, path);
 
   async function prepareCrew(target: string): Promise<boolean> {
     const rows: CrewRow[] = [{ text: "Checking crew on " + target, state: "busy" }];
@@ -255,7 +258,7 @@ export function FirstRun({ servers, welcome, onClose, storage, mac }: FirstRunPr
             <p className="lead">Add the first workspace, or skip and add one later.</p>
             <div className="ob-section">FIRST WORKSPACE</div>
             <div className="ob-path">
-              <input className="ui input mono" aria-label="First workspace" type="text" autoCapitalize="off" spellCheck={false} placeholder="~/code/web" value={path} onChange={(e) => setPath(e.target.value)} />
+              <Suggest label="First workspace" className="mono" type="text" autoCapitalize="off" autoComplete="off" spellCheck={false} placeholder="~/code/web" value={path} onChange={setPath} suggestions={folders} />
               {where === "local" ? <BrowseButton pick={(near) => servers.pickFolder(near)} near={path.trim() || undefined} onPick={setPath} onError={setError} /> : null}
             </div>
             <p className="ob-note">A git repository or a folder of them. It becomes your default project.</p>

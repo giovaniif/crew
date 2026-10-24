@@ -236,6 +236,15 @@ pub fn add_workspace(base: &Url, token: &str, path: &str) -> Result<(), String> 
     Ok(())
 }
 
+pub fn complete_path(base: &Url, token: &str, path: &str) -> Result<serde_json::Value, String> {
+    let query: String = url::form_urlencoded::byte_serialize(path.as_bytes()).collect();
+    let (status, reply) = http(base, "GET", &format!("/api/v1/fs/complete?path={query}"), Some(token), None)?;
+    if status != 200 {
+        return Err(error_text(status, &reply));
+    }
+    serde_json::from_str(&reply).map_err(|e| e.to_string())
+}
+
 pub fn ssh_config_hosts(home: Option<&Path>) -> Vec<String> {
     home.and_then(|h| std::fs::read_to_string(h.join(".ssh").join("config")).ok())
         .map(|text| servers::ssh_hosts(&text))
