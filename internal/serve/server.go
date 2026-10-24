@@ -32,26 +32,30 @@ type Daemon interface {
 }
 
 type Config struct {
-	Build       string
-	URL         string
-	Dial        func(ctx context.Context) (Daemon, error)
-	AuthTimeout time.Duration
-	Log         io.Writer
-	Now         func() time.Time
-	Control     func(ctx context.Context, argv []string) (io.ReadWriteCloser, error)
+	Build          string
+	URL            string
+	AllowedOrigins []string
+	Dial           func(ctx context.Context) (Daemon, error)
+	AuthTimeout    time.Duration
+	Log            io.Writer
+	Now            func() time.Time
+	Control        func(ctx context.Context, argv []string) (io.ReadWriteCloser, error)
+	Machine        rpc.Machine
 }
 
 type Server struct {
 	cfg     Config
 	origin  string
+	allowed map[string]bool
 	base    context.Context
 	streams *registry
 	log     *limitedLog
 }
 
 type Hello struct {
-	API   string `json:"api"`
-	Build string `json:"build"`
+	API     string       `json:"api"`
+	Build   string       `json:"build"`
+	Machine *rpc.Machine `json:"machine,omitempty"`
 }
 
 type ErrorBody struct {
@@ -75,6 +79,11 @@ func New(cfg Config) (*Server, error) {
 		}
 		s.origin = origin
 	}
+	allowed, err := allowedOrigins(cfg.AllowedOrigins)
+	if err != nil {
+		return nil, err
+	}
+	s.allowed = allowed
 	return s, nil
 }
 
@@ -122,6 +131,7 @@ func (s *Server) routes() []route {
 		{"POST /api/v1/mates", setMate},
 		{"POST /api/v1/mates/stop", stopMates},
 		{"POST /api/v1/mates/{name}/pause", mateByName(rpc.MethodMatePause)},
+		{"POST /api/v1/mates/{name}/reset", mateByName(rpc.MethodMateReset)},
 		{"POST /api/v1/mates/{name}/resume", mateByName(rpc.MethodMateResume)},
 		{"GET /api/v1/mates/{name}/setup", mateSetup},
 		{"POST /api/v1/mates/{name}/tokens", setMateTokens},
@@ -162,11 +172,19 @@ func (s *Server) Handler(fallback http.Handler) http.Handler {
 	if fallback != nil {
 		mux.Handle("/", fallback)
 	}
-	return mux
+	if len(s.allowed) == 0 {
+		return mux
+	}
+	return s.cors(mux)
 }
 
 func (s *Server) hello(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, Hello{API: APIVersion, Build: s.cfg.Build})
+	h := Hello{API: APIVersion, Build: s.cfg.Build}
+	if s.cfg.Machine.ID != "" {
+		m := s.cfg.Machine
+		h.Machine = &m
+	}
+	writeJSON(w, http.StatusOK, h)
 }
 
 func (s *Server) pair(w http.ResponseWriter, r *http.Request) {

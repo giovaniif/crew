@@ -44,7 +44,7 @@ Unknown paths under `/api/` answer `not_found`.
 
 | Endpoint | Auth | Daemon method | Body → response |
 |---|---|---|---|
-| `GET /api/v1/hello` | no | none | → `{"api":"v1","build"}` (serve's build, which is the daemon's) |
+| `GET /api/v1/hello` | no | none | → `{"api":"v1","build","machine":{"id","name"}}` (serve's build, which is the daemon's; `machine` comes from the `status` of the daemon when serve starts, ADR 0063) |
 | `POST /api/v1/pair` | no | `pair.redeem` | `{"code","name"}` → `{"device":{"id","name","created_at","last_seen"},"token"}` |
 | `GET /api/v1/workspaces` | yes | `workspace.list` | → `{"workspaces":[Workspace],"last_used"}` |
 | `POST /api/v1/workspaces` | yes | `workspace.add` | `{"path"}` (absolute, or it starts with `~`, which the daemon changes to its HOME; not blank, no other keys) → the `Workspace` |
@@ -102,6 +102,7 @@ Unknown paths under `/api/` answer `not_found`.
 | `POST /api/v1/sessions/{id}/review/comments` | yes | `review.comment` | `{"worktree","path","start_line","end_line","code","body","removed"}` → the `ReviewDraft` |
 | `POST /api/v1/sessions/{id}/review/send` | yes | `review.send` | `{"note"}` (optional, the body can be empty) → the queued `ReviewDraft`; an empty draft is `bad_request` |
 | `POST /api/v1/sessions/{id}/review/hunk` | yes | `review.hunk` | `{"worktree","file","hunk","action"}` (`action` is `stage` or `revert`) → `{}`; when git refuses the patch, it is `failed` with the message of git. The app sends `file` with only the hunk (`hunk` 0), so the body stays below 64 KiB |
+| `POST /api/v1/mates/{name}/reset` | yes | `mate.reset` | no body → `{}`; "Start fresh" in the ⋯ menu of the mate header |
 | `POST /api/v1/sessions/{id}/fresh` | yes | `mate.fresh` | `{"same_worktree","prompt"}` (optional, the body can be empty) → the new session; "Start fresh" on a mate session |
 | `GET /api/v1/disk` | yes | `disk.view`, `subscribe` | → the `DiskView` (tiles, `rows`, `recent`) and `ports` `[{"port","pgid","command","worktree","session"}]`, from the worktrees of one snapshot, because the stream drops `Ports` |
 | `POST /api/v1/cleanup/worktree` | owner | `cleanup.worktree` | `{"path","backup"}` (`path` not blank, no other keys) → the `CleanupItem` with its `outcome`. The daemon applies the cleanup rules again. It never removes a `keep` worktree, and it removes a dirty worktree only with `backup` |
@@ -140,6 +141,23 @@ Unknown paths under `/api/` answer `not_found`.
 3. Add the method to `allowed` in `server_test.go`, and the endpoint to `authedEndpoints`. Then the token and allowlist tests cover it. Add a row to the table above.
 
 The `/` fallback: `Handler(fallback)` mounts `fallback` at `/`. `Handler(nil)` serves only the API. `cmd/crew/serve.go` passes `Static(Dist())`, the embedded PWA.
+
+## Allowed origins (`[serve] allowed_origins`)
+
+A PWA that is paired with this crew but served from a different origin (ADR 0063) uses the API directly. List each of its origins in `config.toml`:
+
+```toml
+[serve]
+allowed_origins = ["https://mac.example.ts.net"]
+```
+
+- Each entry is an exact origin: a scheme, a host and an optional port. serve ignores default ports. A `*` anywhere, a path or a query makes `crew serve` stop with an `allowed_origins` error before it starts.
+- A request under `/api/` from a listed origin gets `Access-Control-Allow-Origin: <origin>` and `Vary: Origin`. There are no cookies, so there is no `Access-Control-Allow-Credentials`. The token goes in `Authorization`.
+- A preflight (`OPTIONS`) from a listed origin gets 204 with the methods `GET, POST, DELETE, OPTIONS` and the headers `Authorization, Content-Type`. serve does not call the daemon.
+- A request with an `Origin` that is not listed, is not the public URL and is not the host of the request gets 403 `forbidden`. A request with no `Origin` (a CLI or the desktop app) does not change.
+- The stream and the terminal routes also accept a listed origin, also when there is no public URL.
+- An empty list keeps the old behavior: no CORS headers and no `Origin` check on the HTTP API.
+- Tests: `go test ./internal/serve/ ./cmd/crew/ -run 'Origin|ServeFlags'`.
 
 ## The embedded web app (`static.go`)
 

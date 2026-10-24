@@ -166,6 +166,32 @@ describe("Mate page", () => {
     expect(screen.queryByRole("link", { name: "Open in Slack" })).toBeNull();
   });
 
+  it("opens a mate with no threads straight into a chat, and the first message starts an app thread", async () => {
+    const { server } = setup("#/mates/fresh", board, [], undefined, true);
+    server.on("POST", "/api/v1/mates/fresh/new", { status: 200, body: { ID: "s10" } }).on("POST", "/api/v1/sessions/s10/messages", { status: 200, body: { id: "m1" } });
+    const box = await screen.findByRole("textbox", { name: "Message" });
+    expect(box).toHaveAttribute("placeholder", "Message Fresh…");
+    expect(box).toHaveFocus();
+    expect(screen.queryByText(/No threads yet/)).toBeNull();
+    await userEvent.setup().type(box, "hello{Enter}");
+    await waitFor(() => expect(window.location.hash).toBe("#/mates/fresh/s10"));
+    expect(calls(server)).toEqual(expect.arrayContaining(["POST /api/v1/mates/fresh/new", "POST /api/v1/sessions/s10/messages"]));
+  });
+
+  it("has a New thread icon button with a tooltip next to the search", async () => {
+    setup("#/mates/helper", board, [], undefined, true);
+    const add = await screen.findByRole("button", { name: "New thread" });
+    expect(add).toHaveAttribute("title", "New thread");
+    expect(add.querySelector("svg")).not.toBeNull();
+    expect(add).toHaveTextContent("");
+  });
+
+  it("shows the faces of the look at their real size", async () => {
+    setup("#/mates/helper", board, [], undefined, true);
+    const rail = await screen.findByRole("complementary", { name: "Settings of helper" });
+    expect(within(rail).getByRole("button", { name: "Bolt" }).querySelector("svg")).toHaveAttribute("width", "28");
+  });
+
   it("starts an app thread with New and opens it on the mate page", async () => {
     const { server } = setup("#/mates/helper", board, [], undefined, true);
     await userEvent.setup().click(await screen.findByRole("button", { name: "New thread" }));

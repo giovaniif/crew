@@ -87,7 +87,25 @@ func (d *Daemon) mateNew(req rpc.Request) (*rpc.Response, bool) {
 	if err := json.Unmarshal(req.Params, &p); err != nil || strings.TrimSpace(p.Name) == "" {
 		return errorResponse(req.ID, rpc.CodeBadRequest, "mate.new needs a name"), true
 	}
-	return d.startMateConversation(req.ID, p, mateStart{})
+	if _, _, ok := d.findMate(p.Name); !ok || !domain.SendableText(p.Prompt) {
+		return d.startMateConversation(req.ID, p, mateStart{})
+	}
+	in := domain.MateInput{Seat: domain.MateSeat{Local: true}}
+	var resp *rpc.Response
+	session, rerr, ok := d.mateDeliver(p.Name, p.Prompt, in, func(prompt string, in *domain.MateInput) (domain.Session, *rpc.Error, bool) {
+		r, ok := d.startMateConversation(req.ID, rpc.MateNewParams{Name: p.Name, Repo: p.Repo, Prompt: prompt}, mateStart{input: in})
+		resp = r
+		return domain.Session{}, nil, ok
+	})
+	switch {
+	case !ok:
+		return nil, false
+	case resp != nil:
+		return resp, true
+	case rerr != nil:
+		return errorResponse(req.ID, rerr.Code, rerr.Message), true
+	}
+	return result(req.ID, session), true
 }
 
 func (d *Daemon) mateFresh(req rpc.Request) (*rpc.Response, bool) {
@@ -115,6 +133,9 @@ func (d *Daemon) mateFresh(req rpc.Request) (*rpc.Response, bool) {
 			return errorResponse(req.ID, resp.Error.Code, "crew could not ask for a handoff: "+resp.Error.Message), true
 		}
 	}
+	if !d.retireMateSession(old.ID) {
+		return nil, false
+	}
 	dir := ""
 	if p.SameWorktree {
 		dir = old.Dir
@@ -126,6 +147,7 @@ type mateStart struct {
 	dir       string
 	workspace string
 	freshFrom string
+	input     *domain.MateInput
 }
 
 func (d *Daemon) startMateConversation(id uint64, p rpc.MateNewParams, at mateStart) (*rpc.Response, bool) {
@@ -153,7 +175,7 @@ func (d *Daemon) startMateConversation(id uint64, p rpc.MateNewParams, at mateSt
 	seat := &domain.MateSeat{Name: m.Name, Owner: m.Owner, Local: true, FreshFrom: at.freshFrom}
 	session, rerr, ok := d.startSessionWith(rpc.NewSessionParams{
 		Workspace: root, WorkItem: mateWorkItem(m.Name, p.Prompt), Harness: m.Agent, Model: m.Model, Effort: m.Effort, Prompt: p.Prompt,
-	}, "", sessionExtras{system: system, seat: seat, dir: at.dir, env: m.Env})
+	}, "", sessionExtras{system: system, seat: seat, dir: at.dir, env: m.Env, input: at.input})
 	switch {
 	case !ok:
 		return nil, false

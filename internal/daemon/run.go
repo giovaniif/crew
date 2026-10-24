@@ -102,6 +102,7 @@ func Run(ctx context.Context, home string) (err error) {
 		WithStartDefaults(startDefaults),
 		WithHarnessConfig(readHarnessConfig),
 		WithConfig(filepath.Join(home, "config.toml")),
+		WithMachine(machineName()),
 		WithEnvLauncher(self),
 		WithNotifier(banners, notify.New(), sounds),
 		WithWorktrees(gitadapter.Worktrees{}, &github.Finder{}),
@@ -218,6 +219,13 @@ func tmuxSocket(ctx context.Context) (string, error) {
 		return "", err
 	}
 	return domain.TmuxSocket("", legacy), nil
+}
+
+func machineName() string {
+	if name, err := os.Hostname(); err == nil && name != "" {
+		return name
+	}
+	return "crew"
 }
 
 func claudeConfigDir() string {

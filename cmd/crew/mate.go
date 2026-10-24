@@ -14,7 +14,7 @@ import (
 	"github.com/giovaniif/crew/internal/rpc"
 )
 
-const mateUsage = "usage: crew mate list | show <name> | remove <name> | add <name> [--agent a] [--prompt p] | new <name> [--repo r] [text] | slack <name> [--no-open] | memory <name> | tokens <name> [--clear] | claim <name> | pause <name> | resume <name> | stop [--off] | set <name> [--agent a] [--prompt p] [--model m] [--effort e] [--repo r]... [--no-repos] [--owner id] [--avatar id] [--color #rrggbb] [--env e] [--enable|--disable]"
+const mateUsage = "usage: crew mate list | show <name> | remove <name> | add <name> [--agent a] [--prompt p] | new <name> [--repo r] [text] | slack <name> [--no-open] | memory <name> | tokens <name> [--clear] | claim <name> | pause <name> | resume <name> | reset <name> | stop [--off] | set <name> [--agent a] [--prompt p] [--model m] [--effort e] [--repo r]... [--no-repos] [--owner id] [--avatar id] [--color #rrggbb] [--env e] [--enable|--disable]"
 
 func runMate(args []string, stdout, stderr io.Writer) int {
 	if !mateArgsOK(args) {
@@ -35,7 +35,7 @@ func mateArgsOK(args []string) bool {
 	switch args[0] {
 	case "list":
 		return len(args) == 1
-	case "show", "remove", "claim", "pause", "resume", "memory":
+	case "show", "remove", "claim", "pause", "resume", "reset", "memory":
 		return len(args) == 2
 	case "slack":
 		return len(args) == 2 || len(args) == 3 && args[2] == "--no-open"
@@ -156,7 +156,7 @@ func mateCommand(args []string, stdout io.Writer) error {
 			return err
 		}
 		fmt.Fprintf(stdout, "%s (%d of %d bytes)\n%s", mem.Path, len(mem.Text), mem.Limit, mem.Text)
-	case "pause", "resume", "stop":
+	case "pause", "resume", "reset", "stop":
 		return mateControl(ctx, c, stdout, args)
 	case "tokens":
 		return mateTokens(ctx, c, stdMateIO(stdout), args[1], len(args) == 3)
@@ -253,6 +253,13 @@ func mateControl(ctx context.Context, c mateCaller, out io.Writer, args []string
 		} else {
 			fmt.Fprintln(out, "all mates can start turns again")
 		}
+		return nil
+	}
+	if args[0] == "reset" {
+		if err := c.Call(ctx, rpc.MethodMateReset, rpc.MateNameParams{Name: args[1]}, nil); err != nil {
+			return err
+		}
+		fmt.Fprintf(out, "%s starts a fresh conversation at the next message; the old one stays as history\n", args[1])
 		return nil
 	}
 	method, word := rpc.MethodMatePause, "paused"
