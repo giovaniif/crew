@@ -89,7 +89,7 @@ func TestMateEnvIntegrationAppliesTheEnvInThePaneAndKeepsSecretsOutOfPs(t *testi
 		env = string(b)
 		return err == nil && env != ""
 	})
-	for _, want := range []string{"CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-TEST", "GH_TOKEN=TEST-gh-token", "CLAUDE_CONFIG_DIR=" + filepath.Join(home, "envs", "test-bot", "claude")} {
+	for _, want := range []string{"CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-TEST", "GH_TOKEN=TEST-gh-token", "CLAUDE_CONFIG_DIR=" + filepath.Join(home, "identities", "test-bot", "claude")} {
 		if !strings.Contains(env, want+"\n") {
 			t.Errorf("pane env has no %s:\n%s", want, env)
 		}

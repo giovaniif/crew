@@ -28,7 +28,11 @@ func MateTOML(m Mate) string {
 	field("owner", m.Owner)
 	field("avatar", m.Avatar)
 	field("color", m.Color)
-	field("env", m.Env)
+	if m.Env != "" && m.Machine != "" {
+		fmt.Fprintf(&b, "environment = { machine_id = %s, identity_id = %s }\n", tomlString(m.Machine), tomlString(m.Env))
+	} else {
+		field("env", m.Env)
+	}
 	b.WriteString(mateToneTOML(m.Tone))
 	if m.NoMemory {
 		b.WriteString("no_memory = true\n")

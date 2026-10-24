@@ -130,9 +130,13 @@ func parseMateNew(args []string) (rpc.MateNewParams, error) {
 }
 
 func mateNew(ctx context.Context, c mateCaller, out io.Writer, p rpc.MateNewParams) error {
-	var s domain.Session
+	var s rpc.MateNewResult
 	if err := c.Call(ctx, rpc.MethodMateNew, p, &s); err != nil {
 		return err
+	}
+	if s.Added {
+		fmt.Fprintf(out, "added to the conversation with %s: session %s\n", p.Name, s.ID)
+		return nil
 	}
 	fmt.Fprintf(out, "started a new conversation with %s: session %s\n", p.Name, s.ID)
 	return nil

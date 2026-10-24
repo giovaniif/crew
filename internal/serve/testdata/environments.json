@@ -1,0 +1,27 @@
+{
+  "machine": {
+    "id": "m-test-1",
+    "name": "devbox"
+  },
+  "identities": [
+    {
+      "name": "yours",
+      "label": "Your accounts",
+      "kind": "local",
+      "parts": [],
+      "secrets": [],
+      "used_by": []
+    }
+  ],
+  "found": {
+    "git_name": "TEST Owner",
+    "git_email": "",
+    "ssh_agent": false,
+    "ssh_keys": 0,
+    "github": true,
+    "github_user": "",
+    "claude": false,
+    "codex": false,
+    "pi": false
+  }
+}

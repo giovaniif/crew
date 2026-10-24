@@ -353,6 +353,7 @@ const (
 	CodeRateLimited        = "rate_limited"
 	CodeStale              = "stale"
 	CodeInUse              = "in_use"
+	CodeWrongMachine       = "wrong_machine"
 )
 
 func AnyBuild(method string) bool {

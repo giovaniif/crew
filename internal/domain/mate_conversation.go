@@ -1,10 +1,14 @@
 package domain
 
-import "strings"
+import (
+	"cmp"
+	"strings"
+)
 
 type MateSource struct {
-	Channel    string
-	Automation string
+	Channel     string
+	ChannelName string
+	Automation  string
 }
 
 type MateInput struct {
@@ -43,7 +47,7 @@ func MateSourcePrompt(src MateSource, text string) string {
 	case strings.HasPrefix(src.Channel, "D"):
 		tag = "DM"
 	case src.Channel != "":
-		tag = "#" + src.Channel
+		tag = "#" + cmp.Or(src.ChannelName, src.Channel)
 	default:
 		return text
 	}

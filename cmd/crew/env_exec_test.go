@@ -59,7 +59,7 @@ func TestEnvExecAppliesACustomEnvironment(t *testing.T) {
 	}
 	want := map[string]string{
 		"GH_TOKEN": "TEST-gh", "CLAUDE_CODE_OAUTH_TOKEN": "sk-ant-oat01-TEST", "LINEAR_API_KEY": "TEST-lin",
-		"CLAUDE_CONFIG_DIR": filepath.Join(home, "envs", "test-bot", "claude"), "GH_CONFIG_DIR": filepath.Join(home, "envs", "test-bot", "gh"),
+		"CLAUDE_CONFIG_DIR": filepath.Join(home, "identities", "test-bot", "claude"), "GH_CONFIG_DIR": filepath.Join(home, "identities", "test-bot", "gh"),
 		"CREW_HOME": home,
 	}
 	for k, v := range want {
@@ -132,6 +132,20 @@ func TestEnvExecMissingProgramNamesItAndNoValue(t *testing.T) {
 	}
 }
 
+func TestIdentityExecIsTheNewNameOfEnvExec(t *testing.T) {
+	home := t.TempDir()
+	s := envstore.Store{Home: home}
+	if err := s.Save(domain.Environment{Name: "test-bot", Kind: domain.EnvCustom, Parts: []domain.EnvPart{domain.EnvGitHub}}); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("CREW_HOME", home)
+	var stderr bytes.Buffer
+	code := run([]string{"identity", "exec", "test-bot", "--", "crew-no-such-program"}, &bytes.Buffer{}, &stderr)
+	if code != 127 || !strings.Contains(stderr.String(), "crew-no-such-program") {
+		t.Errorf("exit %d, stderr %q", code, stderr.String())
+	}
+}
+
 func TestEnvExecWithAHarnessGivesOnlyItsAccountAndSeedsOnlyItsDir(t *testing.T) {
 	home := t.TempDir()
 	s := envstore.Store{Home: home}
@@ -147,7 +161,7 @@ func TestEnvExecWithAHarnessGivesOnlyItsAccountAndSeedsOnlyItsDir(t *testing.T) 
 	if err != nil {
 		t.Fatalf("%v: %s", err, stderr)
 	}
-	if got["GH_TOKEN"] != "TEST-gh" || got["OPENAI_API_KEY"] != "TEST-oai" || got["CODEX_HOME"] != filepath.Join(home, "envs", "test-bot", "codex") {
+	if got["GH_TOKEN"] != "TEST-gh" || got["OPENAI_API_KEY"] != "TEST-oai" || got["CODEX_HOME"] != filepath.Join(home, "identities", "test-bot", "codex") {
 		t.Errorf("codex account missing: %v", got)
 	}
 	for _, k := range []string{"CLAUDE_CONFIG_DIR", "CLAUDE_CODE_OAUTH_TOKEN"} {
@@ -155,7 +169,7 @@ func TestEnvExecWithAHarnessGivesOnlyItsAccountAndSeedsOnlyItsDir(t *testing.T) 
 			t.Errorf("%s given to a codex mate", k)
 		}
 	}
-	if _, err := os.Stat(filepath.Join(home, "envs", "test-bot", "claude", "settings.json")); err == nil {
+	if _, err := os.Stat(filepath.Join(home, "identities", "test-bot", "claude", "settings.json")); err == nil {
 		t.Error("the claude dir was seeded for a codex mate")
 	}
 }
@@ -185,7 +199,7 @@ func TestEnvLoginOmpWritesOnlyIntoTheEnvDir(t *testing.T) {
 	if err := cmd.Run(); err != nil {
 		t.Fatalf("%v: %s", err, stderr.String())
 	}
-	got, err := os.ReadFile(filepath.Join(home, "envs", "test-bot", "omp", "agent.db"))
+	got, err := os.ReadFile(filepath.Join(home, "identities", "test-bot", "omp", "agent.db"))
 	if err != nil || string(got) != "login" {
 		t.Errorf("env agent.db %q, %v", got, err)
 	}

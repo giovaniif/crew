@@ -51,7 +51,8 @@ type MateShowParams struct {
 }
 
 type MateSetParams struct {
-	Mate Mate `json:"mate"`
+	Mate        Mate             `json:"mate"`
+	Environment *MateEnvironment `json:"environment,omitempty"`
 }
 
 type MateRemoveParams struct {
@@ -101,6 +102,11 @@ const (
 	MethodMateMemory    = "mate.memory"
 	MethodMateSetMemory = "mate.set_memory"
 )
+
+type MateNewResult struct {
+	domain.Session
+	Added bool `json:"added,omitempty"`
+}
 
 type MateNewParams struct {
 	Name   string `json:"name"`

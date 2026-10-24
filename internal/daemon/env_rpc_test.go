@@ -74,7 +74,7 @@ func TestEnvCreateWritesTheDefinitionAndListsItsSecretsAsNotSet(t *testing.T) {
 	if !strings.Contains(string(body), `name = "bot"`) {
 		t.Errorf("config.toml:\n%s", body)
 	}
-	git, err := os.ReadFile(filepath.Join(home, "envs", "bot", "gitconfig"))
+	git, err := os.ReadFile(filepath.Join(home, "identities", "bot", "gitconfig"))
 	if err != nil || !strings.Contains(string(git), "bot@example.com") {
 		t.Errorf("gitconfig %q, %v", git, err)
 	}
@@ -110,7 +110,7 @@ func TestEnvSetStoresASecretAndNoAnswerOrLogHoldsTheValue(t *testing.T) {
 	if set, _ := secretSet(got, "GH_TOKEN"); !set {
 		t.Errorf("GH_TOKEN not set in %+v", got.Secrets)
 	}
-	data, err := os.ReadFile(filepath.Join(home, "secrets", "env", "bot", "GH_TOKEN"))
+	data, err := os.ReadFile(filepath.Join(home, "secrets", "identity", "bot", "GH_TOKEN"))
 	if err != nil || string(data) != envTestSecret {
 		t.Errorf("secret file %q, %v", data, err)
 	}
@@ -240,7 +240,7 @@ func TestEnvUnsetClearsASecret(t *testing.T) {
 	if set, _ := secretSet(got, "GH_TOKEN"); set {
 		t.Errorf("still set: %+v", got.Secrets)
 	}
-	if _, err := os.Stat(filepath.Join(home, "secrets", "env", "bot", "GH_TOKEN")); err == nil {
+	if _, err := os.Stat(filepath.Join(home, "secrets", "identity", "bot", "GH_TOKEN")); err == nil {
 		t.Error("the file stays")
 	}
 }
@@ -270,7 +270,7 @@ func TestEnvDeleteRemovesAnUnusedEnvironment(t *testing.T) {
 	if _, err := envCall(c, rpc.MethodEnvShow, rpc.EnvNameParams{Name: "bot"}); callCode(err) != rpc.CodeNotFound {
 		t.Errorf("show after delete: err = %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(home, "envs", "bot")); err == nil {
+	if _, err := os.Stat(filepath.Join(home, "identities", "bot")); err == nil {
 		t.Error("the env dir stays")
 	}
 }

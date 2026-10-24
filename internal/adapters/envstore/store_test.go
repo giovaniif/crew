@@ -46,7 +46,7 @@ func TestSaveWritesTheDefinitionAndDirs(t *testing.T) {
 		t.Fatal(err)
 	}
 	cfg := readFile(t, filepath.Join(home, "config.toml"))
-	if !strings.HasPrefix(cfg, "# mine\n") || !strings.Contains(cfg, "[[env]]\nname = \"test-bot\"") {
+	if !strings.HasPrefix(cfg, "# mine\n") || !strings.Contains(cfg, "[[identity]]\nid = \"test-bot\"") {
 		t.Fatalf("config:\n%s", cfg)
 	}
 	if mode(t, filepath.Join(home, "config.toml")) != 0o640 {
@@ -56,7 +56,7 @@ func TestSaveWritesTheDefinitionAndDirs(t *testing.T) {
 	if len(baks) != 1 {
 		t.Errorf("want one backup, got %v", baks)
 	}
-	for _, dir := range []string{"envs/test-bot", "envs/test-bot/gh", "envs/test-bot/claude", "secrets/env/test-bot"} {
+	for _, dir := range []string{"identities/test-bot", "identities/test-bot/gh", "identities/test-bot/claude", "secrets/identity/test-bot"} {
 		if mode(t, filepath.Join(home, dir)) != 0o700 {
 			t.Errorf("%s is not 700", dir)
 		}
@@ -65,7 +65,7 @@ func TestSaveWritesTheDefinitionAndDirs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Kind != domain.EnvCustom || len(got.Parts) != 3 || got.Home != filepath.Join(home, "envs", "test-bot") || got.Secrets != filepath.Join(home, "secrets", "env", "test-bot") {
+	if got.Kind != domain.EnvCustom || len(got.Parts) != 3 || got.Home != filepath.Join(home, "identities", "test-bot") || got.Secrets != filepath.Join(home, "secrets", "identity", "test-bot") {
 		t.Fatalf("got %+v", got)
 	}
 }
@@ -95,7 +95,7 @@ func TestSecretsAreFilesAndNeverInConfig(t *testing.T) {
 	if err := s.SetSecret("test-bot", "LINEAR_API_KEY", "TEST-lin"); err != nil {
 		t.Fatal(err)
 	}
-	file := filepath.Join(home, "secrets", "env", "test-bot", "GH_TOKEN")
+	file := filepath.Join(home, "secrets", "identity", "test-bot", "GH_TOKEN")
 	if mode(t, file) != 0o600 {
 		t.Error("secret is not 600")
 	}
@@ -137,7 +137,7 @@ func TestGitConfigHasOnlyTheIdentity(t *testing.T) {
 	if err := s.WriteGitConfig("test-bot", "Test Bot", "bot@example.com"); err != nil {
 		t.Fatal(err)
 	}
-	path := filepath.Join(home, "envs", "test-bot", "gitconfig")
+	path := filepath.Join(home, "identities", "test-bot", "gitconfig")
 	want := "[user]\n\tname = \"Test Bot\"\n\temail = \"bot@example.com\"\n"
 	if got := readFile(t, path); got != want {
 		t.Fatalf("got %q", got)
@@ -162,7 +162,7 @@ func TestSSHKeyIsMadeOnceAndRotatedOnConfirm(t *testing.T) {
 	if !strings.HasPrefix(pub, "ssh-ed25519 ") {
 		t.Fatalf("pub %q", pub)
 	}
-	key := filepath.Join(home, "secrets", "env", "test-bot", "ssh", "id_ed25519")
+	key := filepath.Join(home, "secrets", "identity", "test-bot", "ssh", "id_ed25519")
 	if mode(t, key) != 0o600 || mode(t, filepath.Dir(key)) != 0o700 {
 		t.Error("key modes")
 	}
@@ -203,7 +203,7 @@ func TestImportSSHKey(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	private, err := os.ReadFile(filepath.Join(other.Home, "secrets", "env", "test-bot", "ssh", "id_ed25519"))
+	private, err := os.ReadFile(filepath.Join(other.Home, "secrets", "identity", "test-bot", "ssh", "id_ed25519"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -242,10 +242,10 @@ func TestDeleteRemovesAllAndRefusesWhileAMateUsesIt(t *testing.T) {
 	if err := s.Delete("test-bot"); err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(readFile(t, cfg), "[[env]]") {
+	if strings.Contains(readFile(t, cfg), "[[identity]]") {
 		t.Error("definition stays")
 	}
-	for _, dir := range []string{"envs/test-bot", "secrets/env/test-bot"} {
+	for _, dir := range []string{"identities/test-bot", "secrets/identity/test-bot"} {
 		if _, err := os.Stat(filepath.Join(home, dir)); !os.IsNotExist(err) {
 			t.Errorf("%s stays", dir)
 		}
@@ -275,7 +275,34 @@ func TestListAndLocal(t *testing.T) {
 		t.Fatalf("list %+v", list)
 	}
 	got, err := s.Get("")
-	if err != nil || got.Kind != domain.EnvLocal || got.Name != "local" {
+	if err != nil || got.Kind != domain.EnvLocal || got.Name != domain.IdentityYours {
 		t.Fatalf("empty name is the local env: %+v %v", got, err)
+	}
+}
+
+func TestAnOldEnvTableStillReadsWithItsOldDirs(t *testing.T) {
+	s, home := newStore(t)
+	if err := os.WriteFile(filepath.Join(home, "config.toml"), []byte("[[env]]\nname = \"old\"\nkind = \"custom\"\nparts = [\"github\"]\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.Get("old")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Kind != domain.EnvCustom || got.Home != filepath.Join(home, "envs", "old") || got.Secrets != filepath.Join(home, "secrets", "env", "old") {
+		t.Fatalf("got %+v", got)
+	}
+}
+
+func TestYoursAndLocalNameTheYoursIdentity(t *testing.T) {
+	s, home := newStore(t)
+	if err := os.WriteFile(filepath.Join(home, "config.toml"), []byte("[[identity]]\nid = \"yours\"\nname = \"Your accounts\"\nkind = \"yours\"\nextra = [\"TEST_A\"]\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"", "local", "yours"} {
+		got, err := s.Get(name)
+		if err != nil || got.Name != domain.IdentityYours || got.Kind != domain.EnvLocal || len(got.Extra) != 1 || got.Label != "Your accounts" {
+			t.Fatalf("%q: %+v %v", name, got, err)
+		}
 	}
 }

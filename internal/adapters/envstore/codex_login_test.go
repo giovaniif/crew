@@ -16,7 +16,7 @@ func TestCodexLoginIsTheAuthFileInTheCodexDirOfTheEnvironment(t *testing.T) {
 	if s.CodexLogin("bot") {
 		t.Fatal("login before auth.json")
 	}
-	if err := os.WriteFile(filepath.Join(s.Home, "envs", "bot", "codex", "auth.json"), []byte("not json"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(s.Home, "identities", "bot", "codex", "auth.json"), []byte("not json"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if !s.CodexLogin("bot") {
