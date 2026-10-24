@@ -208,7 +208,18 @@ describe("the environments page", () => {
     expect(pi).toHaveTextContent("not found");
     expect(within(screen.getByRole("group", { name: "Claude" })).queryByRole("button", { name: "How to log in" })).not.toBeInTheDocument();
     await user.click(within(pi).getByRole("button", { name: "How to log in" }));
-    expect(within(pi).getByText("omp")).toBeInTheDocument();
+    expect(within(pi).getByText("omp login")).toBeInTheDocument();
+  });
+
+  it("shows the Pi login command of a custom environment that has no Pi key", async () => {
+    const user = userEvent.setup();
+    open("#/envs/test-sandbox", true, (s) =>
+      s.on("GET", "/api/v1/envs/test-sandbox", { status: 200, body: { ...sandbox, parts: ["pi"], secrets: [{ name: "ANTHROPIC_API_KEY", set: false }, { name: "OPENAI_API_KEY", set: false }] } }),
+    );
+    const pi = await screen.findByRole("group", { name: "Pi" });
+    await user.click(within(pi).getByRole("button", { name: "How to log in" }));
+    expect(within(pi).getByText("crew env login test-sandbox --harness omp")).toBeInTheDocument();
+    expect(within(pi).getByText("crew env set test-sandbox ANTHROPIC_API_KEY")).toBeInTheDocument();
   });
 
   it("shows how to log in to a harness of a custom environment that has no login", async () => {

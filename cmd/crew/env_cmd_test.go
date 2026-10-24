@@ -114,7 +114,7 @@ func TestEnvSetRefusesAnEmptyValue(t *testing.T) {
 }
 
 func TestRunEnvRejectsBadArgumentsAndHelp(t *testing.T) {
-	for _, args := range [][]string{nil, {"bogus"}, {"show"}, {"show", "--help"}, {"delete", "-h"}, {"list", "x"}, {"unset", "bot"}, {"create", "--help"}, {"login"}, {"ssh-key", "bot", "--bogus"}} {
+	for _, args := range [][]string{nil, {"bogus"}, {"show"}, {"show", "--help"}, {"delete", "-h"}, {"list", "x"}, {"unset", "bot"}, {"create", "--help"}, {"login"}, {"login", "bot", "--harness"}, {"login", "bot", "--harness", "bogus"}, {"login", "bot", "omp"}, {"ssh-key", "bot", "--bogus"}} {
 		var out, errOut bytes.Buffer
 		if code := runEnv(args, &out, &errOut); code != 2 || !strings.Contains(errOut.String(), "usage: crew env") {
 			t.Errorf("%v: code %d, stderr %q", args, code, errOut.String())
@@ -123,8 +123,20 @@ func TestRunEnvRejectsBadArgumentsAndHelp(t *testing.T) {
 }
 
 func TestEnvLoginRunsTheHarnessLoginInsideTheEnvironment(t *testing.T) {
-	if got := envLoginArgv("bot"); !reflect.DeepEqual(got, []string{"exec", "bot", "--harness", "claude", "--", "claude", "setup-token"}) {
-		t.Errorf("argv %v", got)
+	for _, c := range []struct {
+		args []string
+		want []string
+	}{
+		{[]string{"login", "bot"}, []string{"exec", "bot", "--harness", "claude", "--", "claude", "setup-token"}},
+		{[]string{"login", "bot", "--harness", "claude"}, []string{"exec", "bot", "--harness", "claude", "--", "claude", "setup-token"}},
+		{[]string{"login", "bot", "--harness", "omp"}, []string{"exec", "bot", "--harness", "omp", "--", "omp", "login"}},
+	} {
+		if !envArgsOK(c.args) {
+			t.Errorf("%v refused", c.args)
+		}
+		if got := envLoginArgvFor(c.args[1], envLoginHarness(c.args)); !reflect.DeepEqual(got, c.want) {
+			t.Errorf("%v: argv %v", c.args, got)
+		}
 	}
 }
 

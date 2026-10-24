@@ -441,12 +441,7 @@ function foundRows(l: EnvLocal | undefined): Found[] {
       label: "Pi",
       ok: l.pi,
       text: login(l.pi),
-      how: (
-        <>
-          Run <span className="mono">omp</span>, then type{" "}
-          <span className="mono">/login</span>
-        </>
-      ),
+      how: <span className="mono">omp login</span>,
     },
   ];
 }
@@ -1093,6 +1088,12 @@ function Editor({
                   />
                   {a.set ? null : (
                     <HowTo>
+                      {a.part === "pi" ? (
+                        <>
+                          <span className="mono">{`crew env login ${env.name} --harness omp`}</span>
+                          {" or "}
+                        </>
+                      ) : null}
                       <span className="mono">{`crew env set ${env.name} ${a.keys[0] ?? ""}`}</span>
                     </HowTo>
                   )}

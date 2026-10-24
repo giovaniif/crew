@@ -24,7 +24,7 @@ func TestEnvLoginWithACodexHarnessRunsTheCodexDeviceLogin(t *testing.T) {
 }
 
 func TestEnvLoginRejectsAnUnknownHarness(t *testing.T) {
-	for _, args := range [][]string{{"login", "bot", "--harness"}, {"login", "bot", "--harness", "bogus"}, {"login", "bot", "--harness", "omp"}, {"login", "bot", "codex"}} {
+	for _, args := range [][]string{{"login", "bot", "--harness"}, {"login", "bot", "--harness", "bogus"}, {"login", "bot", "codex"}} {
 		var out, errOut bytes.Buffer
 		if code := runEnv(args, &out, &errOut); code != 2 || !strings.Contains(errOut.String(), "usage: crew env") {
 			t.Errorf("%v: code %d, stderr %q", args, code, errOut.String())

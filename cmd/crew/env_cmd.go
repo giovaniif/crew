@@ -39,7 +39,7 @@ func envArgsOK(args []string) bool {
 	case "show", "delete":
 		return len(args) == 2
 	case "login":
-		return len(args) == 2 || len(args) == 4 && args[2] == "--harness" && (args[3] == string(domain.HarnessClaude) || args[3] == string(domain.HarnessCodex))
+		return len(args) == 2 || len(args) == 4 && args[2] == "--harness" && (args[3] == string(domain.HarnessClaude) || args[3] == string(domain.HarnessCodex) || args[3] == string(domain.HarnessOmp))
 	case "create":
 		return len(args) >= 2 && noHelp
 	case "set":
@@ -63,6 +63,9 @@ func envLoginArgv(name string) []string {
 func envLoginArgvFor(name string, harness domain.Harness) []string {
 	if harness == domain.HarnessCodex {
 		return []string{"exec", name, "--harness", "codex", "--", "codex", "login", "--device-auth"}
+	}
+	if harness == domain.HarnessOmp {
+		return []string{"exec", name, "--harness", "omp", "--", "omp", "login"}
 	}
 	return envLoginArgv(name)
 }

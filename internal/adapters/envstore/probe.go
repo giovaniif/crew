@@ -2,6 +2,7 @@ package envstore
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"os"
 	"os/exec"
@@ -13,6 +14,8 @@ import (
 
 	"github.com/giovaniif/crew/internal/app"
 	"github.com/giovaniif/crew/internal/domain"
+
+	_ "modernc.org/sqlite"
 )
 
 type Probe struct {
@@ -64,8 +67,21 @@ func (p Probe) Local() app.LocalFacts {
 	f.GitHub = f.GitHub || p.Env("GH_TOKEN") != "" || p.Env("GITHUB_TOKEN") != ""
 	f.Claude = p.anyVar("CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_API_KEY") || exists(filepath.Join(p.dir("CLAUDE_CONFIG_DIR", ".claude"), ".credentials.json")) || p.claudeKeychain()
 	f.Codex = p.anyVar("OPENAI_API_KEY") || exists(filepath.Join(p.dir("CODEX_HOME", ".codex"), "auth.json"))
-	f.Pi = p.anyVar(domain.EnvSecretNames(domain.Environment{Kind: domain.EnvCustom, Parts: []domain.EnvPart{domain.EnvPi}})...) || exists(filepath.Join(p.dir("PI_CODING_AGENT_DIR", filepath.Join(".omp", "agent")), "auth.json"))
+	f.Pi = p.anyVar(domain.EnvSecretNames(domain.Environment{Kind: domain.EnvCustom, Parts: []domain.EnvPart{domain.EnvPi}})...) || piLogin(filepath.Join(p.dir("PI_CODING_AGENT_DIR", filepath.Join(".omp", "agent")), "agent.db"))
 	return f
+}
+
+func piLogin(path string) bool {
+	if !exists(path) {
+		return false
+	}
+	db, err := sql.Open("sqlite", "file:"+path+"?mode=ro")
+	if err != nil {
+		return false
+	}
+	defer func() { _ = db.Close() }()
+	var one int
+	return db.QueryRow("SELECT 1 FROM auth_credentials WHERE disabled_cause IS NULL LIMIT 1").Scan(&one) == nil
 }
 
 func (p Probe) output(name string, args ...string) string {
