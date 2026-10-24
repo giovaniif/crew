@@ -74,3 +74,7 @@ The owner agreed on 2026-10-21 in #531. #531 removed `macos/`, the `macos` CI jo
 - The app does not look native on macOS. The owner accepts this.
 - The build needs Rust and the Tauri system libraries. `go build` and `make web` do not need them.
 - The browser of [ADR 0051](0051-browser-in-mac-app.md) and its cookie import use WebKit APIs of macOS. They need a new design for Tauri. A separate issue holds this work.
+
+## Amended by ADR 0063 (2026-10-23)
+
+- The server list becomes a list of machines. The app shows all machines in one window and one merged list. The server switcher and Settings › Servers go away. See [ADR 0063](0063-environments-are-machine-plus-identity.md).
