@@ -46,6 +46,24 @@ func TestFindPrefersCrewChromiumThenTheKnownNames(t *testing.T) {
 	}
 }
 
+func TestBrowsersLookUpChromiumOnlyWhenATabOpens(t *testing.T) {
+	var looked []string
+	look := func(name string) (string, error) {
+		looked = append(looked, name)
+		return "", errors.New("not found")
+	}
+	b := Lazy(func(string) string { return "" }, look)
+	if len(looked) != 0 {
+		t.Fatalf("looked up %q before a tab opened", looked)
+	}
+	if _, err := b.Open(context.Background(), "s1"); err == nil || !strings.Contains(err.Error(), "no Chromium found") {
+		t.Fatalf("open: %v", err)
+	}
+	if len(looked) == 0 {
+		t.Fatal("open did not look up Chromium")
+	}
+}
+
 func TestInstallHintNamesAPackageAndCrewChromium(t *testing.T) {
 	hint := InstallHint()
 	for _, want := range []string{"chromium", "CREW_CHROMIUM"} {
