@@ -51,7 +51,8 @@ type MateShowParams struct {
 }
 
 type MateSetParams struct {
-	Mate Mate `json:"mate"`
+	Mate        Mate             `json:"mate"`
+	Environment *MateEnvironment `json:"environment,omitempty"`
 }
 
 type MateRemoveParams struct {

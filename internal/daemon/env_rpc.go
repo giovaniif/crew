@@ -54,6 +54,12 @@ func (d *Daemon) envMethod(req rpc.Request) *rpc.Response {
 	if req.Method == rpc.MethodEnvList {
 		return d.envList(req, mates)
 	}
+	if req.Method == rpc.MethodEnvironmentList {
+		return d.environmentList(req, mates)
+	}
+	if failed := d.identityAlias(&req); failed != nil {
+		return failed
+	}
 	var p struct {
 		Name string `json:"name"`
 	}
@@ -94,7 +100,7 @@ func (d *Daemon) envMethod(req rpc.Request) *rpc.Response {
 }
 
 func (d *Daemon) envInfo(env domain.Environment, mates []domain.Mate) rpc.EnvInfo {
-	info := rpc.EnvInfo{Name: env.Name, Kind: env.Kind, Parts: env.Parts, Secrets: []rpc.EnvSecret{}, UsedBy: []string{}}
+	info := rpc.EnvInfo{Name: env.Name, Label: env.Label, Kind: env.Kind, Parts: env.Parts, Secrets: []rpc.EnvSecret{}, UsedBy: []string{}}
 	if info.Parts == nil {
 		info.Parts = []domain.EnvPart{}
 	}
@@ -137,7 +143,7 @@ func (d *Daemon) envList(req rpc.Request, mates []domain.Mate) *rpc.Response {
 	out := rpc.EnvList{Envs: []rpc.EnvInfo{}}
 	hasLocal := false
 	for _, env := range list {
-		hasLocal = hasLocal || env.Name == string(domain.EnvLocal)
+		hasLocal = hasLocal || env.Name == string(domain.EnvLocal) || env.Name == domain.IdentityYours
 	}
 	if !hasLocal {
 		out.Envs = append(out.Envs, d.envInfo(domain.Environment{Name: string(domain.EnvLocal), Kind: domain.EnvLocal}, mates))
@@ -280,4 +286,65 @@ func (d *Daemon) envSSHKey(req rpc.Request, env domain.Environment, mates []doma
 		info.NewPublicKey = next
 	}
 	return result(req.ID, info)
+}
+
+func (d *Daemon) environmentList(req rpc.Request, mates []domain.Mate) *rpc.Response {
+	list, err := d.envs.List()
+	if err != nil {
+		return errorResponse(req.ID, rpc.CodeFailed, err.Error())
+	}
+	yours, err := d.envs.Get(domain.IdentityYours)
+	if err != nil {
+		return errorResponse(req.ID, rpc.CodeFailed, err.Error())
+	}
+	out := rpc.EnvironmentList{Machine: d.machine, Identities: []rpc.EnvInfo{}}
+	first := d.envInfo(yours, mates)
+	out.Found, first.Local = first.Local, nil
+	out.Identities = append(out.Identities, first)
+	for _, env := range list {
+		if env.Name != yours.Name {
+			out.Identities = append(out.Identities, d.envInfo(env, mates))
+		}
+	}
+	return result(req.ID, out)
+}
+
+func isYours(name string) bool {
+	return name == "" || name == domain.IdentityYours || name == string(domain.EnvLocal)
+}
+
+func (d *Daemon) identityAlias(req *rpc.Request) *rpc.Response {
+	switch req.Method {
+	case rpc.MethodIdentitySetSecret:
+		req.Method = rpc.MethodEnvSet
+	case rpc.MethodIdentitySSHKey:
+		req.Method = rpc.MethodEnvSSHKey
+	case rpc.MethodIdentityRemove:
+		var p rpc.EnvNameParams
+		_ = json.Unmarshal(req.Params, &p)
+		if isYours(p.Name) {
+			return errorResponse(req.ID, rpc.CodeBadRequest, "Your accounts is always there: crew cannot remove it")
+		}
+		req.Method = rpc.MethodEnvDelete
+	case rpc.MethodIdentitySet:
+		var p rpc.EnvCreateParams
+		if err := json.Unmarshal(req.Params, &p); err != nil {
+			return errorResponse(req.ID, rpc.CodeBadRequest, "identity.set params: "+err.Error())
+		}
+		if !d.envExists(p.Name) {
+			if p.Kind == "" {
+				p.Kind = domain.EnvCustom
+			}
+			req.Method = rpc.MethodEnvCreate
+			req.Params, _ = json.Marshal(p)
+			return nil
+		}
+		set := rpc.EnvSetParams{Name: p.Name, GitName: p.GitName, GitEmail: p.GitEmail}
+		if p.Parts != nil {
+			set.Parts = &p.Parts
+		}
+		req.Method = rpc.MethodEnvSet
+		req.Params, _ = json.Marshal(set)
+	}
+	return nil
 }

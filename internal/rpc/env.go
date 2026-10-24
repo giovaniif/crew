@@ -10,7 +10,24 @@ const (
 	MethodEnvUnset  = "env.unset"
 	MethodEnvDelete = "env.delete"
 	MethodEnvSSHKey = "env.ssh_key"
+
+	MethodEnvironmentList   = "environment.list"
+	MethodIdentitySet       = "identity.set"
+	MethodIdentityRemove    = "identity.remove"
+	MethodIdentitySetSecret = "identity.set_secret"
+	MethodIdentitySSHKey    = "identity.ssh_key"
 )
+
+type EnvironmentList struct {
+	Machine    Machine   `json:"machine"`
+	Identities []EnvInfo `json:"identities"`
+	Found      *EnvLocal `json:"found,omitempty"`
+}
+
+type MateEnvironment struct {
+	MachineID  string `json:"machine_id"`
+	IdentityID string `json:"identity_id"`
+}
 
 const (
 	EnvSSHKeyShow    = ""
@@ -28,6 +45,7 @@ type EnvSecret struct {
 
 type EnvInfo struct {
 	Name         string           `json:"name"`
+	Label        string           `json:"label,omitempty"`
 	Kind         domain.EnvKind   `json:"kind"`
 	Parts        []domain.EnvPart `json:"parts"`
 	Secrets      []EnvSecret      `json:"secrets"`
@@ -64,7 +82,7 @@ type EnvNameParams struct {
 
 type EnvCreateParams struct {
 	Name     string           `json:"name"`
-	Kind     domain.EnvKind   `json:"kind"`
+	Kind     domain.EnvKind   `json:"kind,omitempty"`
 	Parts    []domain.EnvPart `json:"parts,omitempty"`
 	GitName  string           `json:"git_name,omitempty"`
 	GitEmail string           `json:"git_email,omitempty"`

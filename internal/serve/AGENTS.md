@@ -36,7 +36,7 @@ The log never contains a token. It writes a maximum of `LogBurst` (20) lines for
 
 Each response is JSON with `Cache-Control: no-store`. An error is `{"error":{"code","message"}}` with the `rpc` code of the daemon and an HTTP status:
 
-- `bad_request` 400, `unauthorized` 401, `forbidden` 403, `not_found` 404, `stale` 409, `in_use` 409, `rate_limited` 429.
+- `bad_request` 400, `unauthorized` 401, `forbidden` 403, `not_found` 404, `stale` 409, `in_use` 409, `wrong_machine` 409, `rate_limited` 429.
 - `failed`/`launch_failed` 500, `unknown_method` 501, `version_mismatch` 502.
 - `unavailable` 503. This status also applies when the daemon is not reachable.
 
@@ -77,7 +77,7 @@ Unknown paths under `/api/` answer `not_found`.
 | `POST /api/v1/approvals/{id}/approve` | yes | `approval.decide` | → the granted `Approval`; `stale` (409) when it is decided or expired, `not_found` for an unknown ID |
 | `POST /api/v1/approvals/{id}/deny` | yes | `approval.decide` | → the denied `Approval`; the same errors |
 | `GET /api/v1/mates` | yes | `mate.list` | → `{"mates","problems","states","limits"}`, the definitions of the mates (`[]` when none) |
-| `POST /api/v1/mates` | yes | `mate.set` | `{"mate"}` → the saved mate; adds a mate or changes its settings, also its `env` |
+| `POST /api/v1/mates` | yes | `mate.set` | `{"mate","environment":{"machine_id","identity_id"}}` (`environment` optional) → the saved mate; adds a mate or changes its settings, also its `env`. A different `machine_id` gets `wrong_machine` (409) |
 | `POST /api/v1/mates/stop` | yes | `mate.stop_all` | `{"stop"}` → the limits; the kill switch for all mates |
 | `POST /api/v1/mates/{name}/pause` | yes | `mate.pause` | → the saved mate |
 | `POST /api/v1/mates/{name}/resume` | yes | `mate.resume` | → the saved mate |
@@ -87,7 +87,13 @@ Unknown paths under `/api/` answer `not_found`.
 | `POST /api/v1/mates/{name}/new` | yes | `mate.new` | `{"repo","prompt"}` (both optional, the body can be empty) → the new session |
 | `GET /api/v1/mates/{name}/memory` | yes | `mate.memory` | → `{"name","path","text","limit"}` |
 | `POST /api/v1/mates/{name}/memory` | yes | `mate.set_memory` | `{"text"}` → the same; an empty text clears the memory |
-| `GET /api/v1/envs` | yes | `env.list` | → `{"envs":[EnvInfo]}`; an `EnvInfo` is `{"name","kind","parts","secrets":[{"name","set"}],"public_key","new_public_key","used_by"}` (ADR 0061). No response holds a secret value |
+| `GET /api/v1/environments` | yes | `environment.list` | → `{"machine":{"id","name"},"identities":[EnvInfo],"found"}` (ADR 0063); no secret value |
+| `POST /api/v1/identities/{name}` | yes | `identity.set` | `{"kind","parts","git_name","git_email"}` → the `EnvInfo`; it makes the identity or changes it |
+| `DELETE /api/v1/identities/{name}` | yes | `identity.remove` | → the `EnvInfo`; `bad_request` for `yours`, `in_use` (409) while a mate uses it |
+| `POST /api/v1/identities/{name}/secret` | yes | `identity.set_secret` | `{"secret","value"}` → the `EnvInfo`; the value never comes out |
+| `GET /api/v1/identities/{name}/ssh-key` | yes | `identity.ssh_key` | → the `EnvInfo` with the public key |
+| `POST /api/v1/identities/{name}/ssh-key` | yes | `identity.ssh_key` | `{"action","private_key"}` → the `EnvInfo` |
+| `GET /api/v1/envs` | yes | `env.list` (old name, one release) | → `{"envs":[EnvInfo]}`; an `EnvInfo` is `{"name","kind","parts","secrets":[{"name","set"}],"public_key","new_public_key","used_by"}` (ADR 0061). No response holds a secret value |
 | `POST /api/v1/envs` | yes | `env.create` | `{"name","kind","parts","git_name","git_email"}` → the `EnvInfo`; the kind is fixed at creation |
 | `GET /api/v1/envs/{name}` | yes | `env.show` | → the `EnvInfo` |
 | `POST /api/v1/envs/{name}` | yes | `env.set` | `{"parts","git_name","git_email","secret","value"}` → the `EnvInfo`; the name comes from the path. Secrets are write-only: `value` goes in and never comes out |

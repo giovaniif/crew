@@ -213,6 +213,12 @@ func (d *Daemon) mateSet(req rpc.Request) *rpc.Response {
 		return errorResponse(req.ID, rpc.CodeBadRequest, "mate.set params: "+err.Error())
 	}
 	m := p.Mate
+	if p.Environment != nil {
+		if p.Environment.MachineID != d.machine.ID {
+			return errorResponse(req.ID, rpc.CodeWrongMachine, fmt.Sprintf("mate %s: machine %s is not this machine", m.Name, p.Environment.MachineID))
+		}
+		m.Env, m.Machine = p.Environment.IdentityID, p.Environment.MachineID
+	}
 	if d.machine.ID != "" {
 		if m.Env == "" || m.Env == string(domain.EnvLocal) {
 			m.Env = domain.IdentityYours
