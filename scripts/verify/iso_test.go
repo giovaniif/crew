@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -9,6 +10,7 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+	"time"
 )
 
 func TestFakeClaudeChatSendsTheSameSessionIDOnEachStartInAWorktree(t *testing.T) {
@@ -276,5 +278,26 @@ func TestIsoUpSessionFailsCleanlyWhenCrewNewFails(t *testing.T) {
 	}
 	if len(fs.killed) != 2 {
 		t.Errorf("did not stop what it started: %v", fs.killed)
+	}
+}
+
+func TestIsoUpGivesTheFakeOmpAStepsFileSoItHoldsItsPane(t *testing.T) {
+	e, fs := testEnv(t)
+	isoReady(fs)
+	got, code := runJSON(t, e, "iso", "up")
+	if code != 0 {
+		t.Fatalf("exit %d: %s", code, problemText(got))
+	}
+	fake, err := filepath.Abs(filepath.Join("..", "..", "test", "e2e", "testdata", "bin", "omp"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+	c := exec.CommandContext(ctx, fake)
+	c.Env = append(os.Environ(), "CREW_E2E="+filepath.Join(got["home"].(string), "e2e"), "CREW_HOME="+t.TempDir())
+	out, err := c.CombinedOutput()
+	if ctx.Err() == nil {
+		t.Errorf("the fake omp exited before the timeout: %v: %s", err, out)
 	}
 }
