@@ -30,6 +30,8 @@ type Agent struct {
 	Env     map[string]string
 	Log     string
 	UID     int
+
+	KeepAliveOnFailure bool
 }
 
 type Result struct {
@@ -129,7 +131,11 @@ func render(a Agent) []byte {
 	key("\t", "RunAtLoad")
 	b.WriteString("\t<true/>\n")
 	key("\t", "KeepAlive")
-	b.WriteString("\t<true/>\n")
+	if a.KeepAliveOnFailure {
+		b.WriteString("\t<dict>\n\t\t<key>SuccessfulExit</key>\n\t\t<false/>\n\t</dict>\n")
+	} else {
+		b.WriteString("\t<true/>\n")
+	}
 	if a.Log != "" {
 		key("\t", "StandardOutPath")
 		str("\t", a.Log)
@@ -138,4 +144,53 @@ func render(a Agent) []byte {
 	}
 	b.WriteString("</dict>\n</plist>\n")
 	return b.Bytes()
+}
+
+type Spec struct {
+	Program         string
+	Env             map[string]string
+	KeepAliveAlways bool
+}
+
+type plistNode struct {
+	XMLName  xml.Name
+	Content  string      `xml:",chardata"`
+	Children []plistNode `xml:",any"`
+}
+
+func Inspect(a Agent) (Spec, error) {
+	raw, err := os.ReadFile(a.path())
+	if err != nil {
+		return Spec{}, err
+	}
+	var root plistNode
+	if err := xml.Unmarshal(raw, &root); err != nil {
+		return Spec{}, err
+	}
+	spec := Spec{Env: map[string]string{}}
+	for _, dict := range root.Children {
+		if dict.XMLName.Local != "dict" {
+			continue
+		}
+		items := dict.Children
+		for i := 0; i+1 < len(items); i++ {
+			if items[i].XMLName.Local != "key" {
+				continue
+			}
+			value := items[i+1]
+			switch items[i].Content {
+			case "ProgramArguments":
+				if len(value.Children) > 0 {
+					spec.Program = value.Children[0].Content
+				}
+			case "EnvironmentVariables":
+				for j := 0; j+1 < len(value.Children); j += 2 {
+					spec.Env[value.Children[j].Content] = value.Children[j+1].Content
+				}
+			case "KeepAlive":
+				spec.KeepAliveAlways = value.XMLName.Local == "true"
+			}
+		}
+	}
+	return spec, nil
 }
