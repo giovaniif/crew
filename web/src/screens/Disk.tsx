@@ -130,6 +130,15 @@ export function Disk({ api, state, now, go }: { api: Authed; state: StreamState 
       }
       return;
     }
+    if (action.kind === "copy" && action.path) {
+      try {
+        await navigator.clipboard.writeText(action.path);
+        setNote("Copied " + action.path);
+      } catch {
+        setNote(action.path);
+      }
+      return;
+    }
     setActionError("");
     setPending({ action, worktree: row.worktree });
   };
