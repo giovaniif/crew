@@ -15,7 +15,7 @@ export function shownConversation(row: MateRow, route: string): { session: strin
   return { session: row.conversation ?? "", history: false };
 }
 
-const sourceLine = /^Source: ([^\n]+)\n\n/;
+const sourceLine = /^\[Source: ([^\]\n]+)\] /;
 
 export function messageSource(text: string): { tag: string; text: string } {
   const m = sourceLine.exec(text);
