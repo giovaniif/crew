@@ -119,7 +119,7 @@ func reportStatus(home, pane string, input []byte) error {
 	if err != nil {
 		return err
 	}
-	return sendOnce(home, rpc.MethodStatusLine, rpc.StatusLine{Pane: pane, Report: report})
+	return sendOnce(home, rpc.MethodStatusLine, rpc.StatusLine{Pane: pane, Tmux: os.Getenv("TMUX"), Report: report})
 }
 
 func sendOnce(home, method string, params any) error {

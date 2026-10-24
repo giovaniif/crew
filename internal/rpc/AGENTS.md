@@ -36,6 +36,7 @@ Each RPC request and response contains the build (`version.String()`). The daemo
 
 - `hook` carries one harness hook: `{"harness","event","pane","at","payload"}`. `payload` is the stdin JSON of the hook.
   - The daemon maps `pane` to the session whose `Pane` matches (`domain.SessionOnPane`). It maps the name to a harness event (`domain.HookEvent`), then applies it. It ignores unknown panes and names.
+  - `tmux` is the `$TMUX` of the hook process. Pane IDs are only unique in one tmux server. Thus, when the socket in `tmux` is not the tmux server of the daemon (`domain.PaneOnServer`), the daemon ignores the pane. A `claude` that crew did not start, in a different tmux server, never gets attached to a crew session. `statusline` does the same.
   - The result is a `HookReply`. The hook prints its optional `output` for the harness.
 - `statusline` carries one status-line update: `{"pane","report"}`. The daemon applies it with `Session.Report` to the session on that pane.
 - `session.launch` (`{"harness","dir","model","effort","name","prompt"}` → `Session`) opens a pane through the harness adapter and adds an `idle` session on it.

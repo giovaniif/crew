@@ -20,7 +20,9 @@ export function CopyMate({ api, name, onClose }: { api: Authed; name: string; on
   const state = useHub(api);
   const { list } = useMachineEnvironments(api);
   const source = list?.machine;
-  const targets = state.hub ? envGroups(state.hub).filter((g) => g.up && g.machineId !== source?.id) : [];
+  const groups = state.hub ? envGroups(state.hub) : [];
+  const targets = groups.filter((g) => g.up && g.machineId !== source?.id);
+  const sourceLabel = groups.find((g) => g.up && g.machineId === source?.id)?.label;
   const [key, setKey] = useState("");
   const [id, setId] = useState("yours");
   const [copy, setCopy] = useState<string | null>(null);
@@ -53,7 +55,7 @@ export function CopyMate({ api, name, onClose }: { api: Authed; name: string; on
 
   return (
     <Dialog title={"Copy " + name + " to another machine"} onClose={onClose} className="copy-mate">
-      <p>{"crew makes a new mate on the target machine with the same role, memory and look. " + name + " stays on " + (source?.name ?? "its machine") + " and keeps its threads."}</p>
+      <p>{"crew makes a new mate on the target machine with the same role, memory and look. " + name + " stays on " + (sourceLabel ?? "its machine") + " and keeps its threads."}</p>
       {done ? (
         <p role="status">{done}</p>
       ) : targets.length === 0 ? (

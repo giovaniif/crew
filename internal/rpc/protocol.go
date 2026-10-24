@@ -315,6 +315,7 @@ type SessionRef struct {
 
 type StatusLine struct {
 	Pane   string              `json:"pane"`
+	Tmux   string              `json:"tmux,omitempty"`
 	Report domain.StatusReport `json:"report"`
 }
 
@@ -331,6 +332,7 @@ type Hook struct {
 	Harness string          `json:"harness"`
 	Event   string          `json:"event"`
 	Pane    string          `json:"pane"`
+	Tmux    string          `json:"tmux,omitempty"`
 	At      time.Time       `json:"at"`
 	Payload json.RawMessage `json:"payload,omitempty"`
 	Action  *domain.Action  `json:"action,omitempty"`

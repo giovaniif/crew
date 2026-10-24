@@ -231,6 +231,7 @@ func TestPreToolUseSeesASymlinkOutOfTheWorktree(t *testing.T) {
 }
 
 func TestHookSendsPaneTimeAndPayload(t *testing.T) {
+	t.Setenv("TMUX", "/tmp/tmux-1000/crew,5,0")
 	home := shortHome(t)
 	got := make(chan rpc.Request, 1)
 	fakeDaemon(t, home, func(req rpc.Request) *rpc.Response { got <- req; return nil })
@@ -243,7 +244,7 @@ func TestHookSendsPaneTimeAndPayload(t *testing.T) {
 	if err := json.Unmarshal(req.Params, &h); err != nil {
 		t.Fatal(err)
 	}
-	if req.Method != rpc.MethodHook || h.Harness != "claude" || h.Event != "PreToolUse" || h.Pane != "%3" ||
+	if req.Method != rpc.MethodHook || h.Harness != "claude" || h.Event != "PreToolUse" || h.Pane != "%3" || h.Tmux != "/tmp/tmux-1000/crew,5,0" ||
 		string(h.Payload) != `{"tool_name":"Bash"}` || h.At.Before(before.Add(-time.Second)) {
 		t.Fatalf("request %+v, hook %+v", req, h)
 	}
