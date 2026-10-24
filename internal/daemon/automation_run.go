@@ -111,7 +111,7 @@ func (d *Daemon) startAutomation(a domain.Automation, t automationTrigger) (doma
 	if !d.query(func(s *state) {
 		in = domain.AutomationRunInput{Runs: slices.Collect(maps.Values(s.automationRuns)), Live: map[string]bool{}}
 		for id, sess := range s.sessions {
-			if !sess.Ended {
+			if !sess.Ended && (a.Mate == "" || sess.Mate == nil) {
 				in.Live[id] = true
 			}
 		}
@@ -217,16 +217,21 @@ func (d *Daemon) startAsMate(a domain.Automation, plan domain.AutomationStart) (
 	if err != nil {
 		return domain.Session{}, &rpc.Error{Code: rpc.CodeFailed, Message: err.Error()}, true
 	}
-	p := rpc.NewSessionParams{Workspace: plan.Workspace, WorkItem: plan.WorkItem, Harness: m.Agent, Model: m.Model, Effort: m.Effort, Prompt: plan.Prompt}
-	extra := sessionExtras{
-		system: domain.MateSystemPrompt(m, memory, d.mateMemoryPath(m.Name)),
-		seat:   &domain.MateSeat{Name: m.Name, Owner: m.Owner, Local: true, Automation: a.Name},
-		env:    m.Env,
-	}
-	if plan.Kind == domain.AutomationStartLaunch {
-		p.Workspace, extra.dir = plan.Dir, plan.Dir
-	}
-	return d.startSessionWith(p, "", extra)
+	seat := domain.MateSeat{Name: m.Name, Owner: m.Owner, Local: true, Automation: a.Name}
+	text := domain.MateSourcePrompt(domain.MateSource{Automation: a.Name}, plan.Prompt)
+	return d.mateDeliver(m.Name, text, domain.MateInput{Seat: seat}, func(prompt string, in *domain.MateInput) (domain.Session, *rpc.Error, bool) {
+		p := rpc.NewSessionParams{Workspace: plan.Workspace, WorkItem: plan.WorkItem, Harness: m.Agent, Model: m.Model, Effort: m.Effort, Prompt: prompt}
+		extra := sessionExtras{
+			system: domain.MateSystemPrompt(m, memory, d.mateMemoryPath(m.Name)),
+			seat:   &seat,
+			env:    m.Env,
+			input:  in,
+		}
+		if plan.Kind == domain.AutomationStartLaunch {
+			p.Workspace, extra.dir = plan.Dir, plan.Dir
+		}
+		return d.startSessionWith(p, "", extra)
+	})
 }
 
 func (d *Daemon) automationRunsMethod(req rpc.Request) (*rpc.Response, bool) {
