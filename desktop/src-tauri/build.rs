@@ -10,6 +10,8 @@ fn main() {
             "crew_server_open",
             "crew_server_remove",
             "crew_server_fix",
+            "crew_server_crew",
+            "crew_server_install",
             "crew_server_workspace",
             "crew_browser_open",
             "crew_pick_folder",

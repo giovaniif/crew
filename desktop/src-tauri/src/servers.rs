@@ -320,6 +320,82 @@ pub fn server_url(input: &str) -> Option<String> {
     Some(format!("{}/", url.origin().ascii_serialization()))
 }
 
+pub const INSTALL_SCRIPT: &str = include_str!("../../../scripts/install.sh");
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(tag = "action", content = "server", rename_all = "lowercase")]
+pub enum Plan {
+    Current,
+    Install,
+    Upgrade(String),
+    Newer(String),
+}
+
+pub fn tag(version: &str) -> String {
+    let version = version.trim();
+    if version.starts_with('v') {
+        version.to_string()
+    } else {
+        format!("v{version}")
+    }
+}
+
+pub fn server_version(output: &str) -> Option<String> {
+    output
+        .lines()
+        .find_map(|l| l.trim().strip_prefix("crew "))
+        .and_then(|rest| rest.split_whitespace().next())
+        .map(str::to_string)
+}
+
+pub fn plan(output: &str, app: &str) -> Plan {
+    if output.lines().any(|l| l.trim() == "missing") {
+        return Plan::Install;
+    }
+    let Some(server) = server_version(output) else {
+        return Plan::Install;
+    };
+    if !crate::update::newer("0.0.0", app) {
+        return Plan::Current;
+    }
+    if crate::update::newer(&server, app) {
+        Plan::Upgrade(server)
+    } else if crate::update::newer(app, &server) {
+        Plan::Newer(server)
+    } else {
+        Plan::Current
+    }
+}
+
+pub fn version_argv(host: &str) -> Vec<String> {
+    ssh_argv(
+        host,
+        &[],
+        "command -v crew >/dev/null 2>&1 || { echo missing; exit 0; }; CREW_NO_UPDATE_CHECK=1 crew version",
+    )
+}
+
+pub fn install_argv(host: &str, app: &str) -> Vec<String> {
+    let script = format!(
+        "old=$(command -v crew 2>/dev/null); if [ -n \"$old\" ] && [ -w \"$(dirname \"$old\")\" ]; then CREW_INSTALL_DIR=$(dirname \"$old\"); export CREW_INSTALL_DIR; fi; CREW_VERSION={} sh -c {} && {{ crew daemon stop >/dev/null 2>&1; true; }}",
+        shell_quote(&tag(app)),
+        shell_quote(INSTALL_SCRIPT)
+    );
+    ssh_argv(host, &[], &script)
+}
+
+pub fn newer_failure(host: &str, server: &str, app: &str) -> String {
+    format!(
+        "crew on {host} is {}, newer than this app ({}). Update the app, then try again.",
+        tag(server),
+        tag(app)
+    )
+}
+
+pub fn too_old(host: &str, server: &str, app: &str) -> String {
+    format!("crew on {host} is too old ({}); the app needs {}", tag(server), tag(app))
+}
+
 pub fn connect_url(ios: bool) -> &'static str {
     if ios {
         "tauri://localhost/index.html?change"
