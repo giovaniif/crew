@@ -188,20 +188,21 @@
     display: none;
   }
 
+  .disk .disk-wt th:nth-child(5),
+  .disk .disk-wt td:nth-child(5) {
+    display: none;
+  }
+
   .disk .disk-wt th:nth-child(1) {
-    width: 30%;
+    width: 32%;
   }
 
   .disk .disk-wt th:nth-child(4) {
-    width: 96px;
-  }
-
-  .disk .disk-wt th:nth-child(5) {
-    width: 56px;
+    width: 84px;
   }
 
   .disk .disk-wt th:nth-child(8) {
-    width: 96px;
+    width: 72px;
   }
 }
 
