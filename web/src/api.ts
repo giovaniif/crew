@@ -406,6 +406,22 @@ export function saveMate(a: Authed, mate: Mate, environment?: MateEnvironment): 
   return authedRequest<Mate>(a, "/api/v1/mates", "POST", environment ? { mate, environment } : { mate });
 }
 
+export type MateExport = { mate: Mate; memory: string };
+
+export function mateExport(a: Authed, name: string): Promise<MateExport> {
+  return authedRequest<MateExport>(a, matePath(name, "export"));
+}
+
+export function mateImport(a: Authed, exported: MateExport, environment: MateEnvironment): Promise<Mate> {
+  return authedRequest<Mate>(a, "/api/v1/mates/import", "POST", { export: exported, environment });
+}
+
+export type MachineEnvironments = { machine: { id: string; name: string }; identities: EnvInfo[] | null; found?: EnvLocal };
+
+export function environmentList(a: Authed): Promise<MachineEnvironments> {
+  return authedRequest<MachineEnvironments>(a, "/api/v1/environments");
+}
+
 export function pauseMate(a: Authed, name: string, pause: boolean): Promise<Mate> {
   return authedRequest<Mate>(a, matePath(name, pause ? "pause" : "resume"), "POST");
 }

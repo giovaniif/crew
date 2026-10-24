@@ -117,6 +117,22 @@ func TestIdentityImportRefusesABundleForADifferentKeyAndAnUnknownCopyID(t *testi
 	}
 }
 
+func TestIdentityImportOfANameInUseGetsANumberedName(t *testing.T) {
+	source, _ := copyDaemon(t)
+	target, _ := copyDaemon(t)
+	callRaw(t, source, rpc.MethodIdentitySet, rpc.EnvCreateParams{Name: "work-bot", Kind: domain.EnvCustom, Parts: []domain.EnvPart{domain.EnvGitHub}}, nil)
+	callRaw(t, target, rpc.MethodIdentitySet, rpc.EnvCreateParams{Name: "work-bot", Kind: domain.EnvCustom, Parts: []domain.EnvPart{domain.EnvGitHub}}, nil)
+	var begin rpc.IdentityCopyBegin
+	callRaw(t, target, rpc.MethodIdentityCopyBegin, struct{}{}, &begin)
+	var export rpc.IdentityExport
+	callRaw(t, source, rpc.MethodIdentityExport, rpc.IdentityExportParams{Name: "work-bot", PublicKey: begin.PublicKey}, &export)
+	var got rpc.EnvInfo
+	callRaw(t, target, rpc.MethodIdentityImport, rpc.IdentityImportParams{CopyID: begin.CopyID, Bundle: export.Bundle}, &got)
+	if got.Name != "work-bot-2" {
+		t.Fatalf("imported as %q, want work-bot-2", got.Name)
+	}
+}
+
 func TestIdentityExportRefusesYours(t *testing.T) {
 	source, _ := copyDaemon(t)
 	target, _ := copyDaemon(t)
