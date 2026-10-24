@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="./mates.css" />
+<style>
+.qb{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:7px;border:1px solid var(--line);background:var(--bg);color:var(--ink-2,#555);font-size:12px;font-weight:450;cursor:pointer;white-space:nowrap;flex:none}
+.qb:hover,.qb.hov{background:var(--bg-hover,#f4f4f5);color:var(--ink)}
+.qb.ghost{border-color:transparent;background:transparent}
+.qb.ghost.hov{background:var(--bg-hover,#f4f4f5)}
+.qb .i{font-size:12px;opacity:.75}
+.qb.stop{color:#b4433a}
+.qb.stop .sq{width:8px;height:8px;border-radius:2px;background:#c4554b}
+.qb.stop.hov{background:#fdf1f0;border-color:#f1d3d0}
+.qb.dis{opacity:.45;cursor:default}
+.qb kbd{font:inherit;font-size:11px;color:var(--muted,#999);margin-left:2px}
+.doc{max-width:720px;margin:0 auto;padding:28px 32px 16px;display:flex;flex-direction:column;gap:14px;font-size:14px;line-height:1.6;color:var(--ink)}
+.doc p{margin:0}
+.doc .u{align-self:flex-end;max-width:80%;background:#f2f2f3;border-radius:14px;padding:9px 14px}
+.doc .t{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#8a8a90;line-height:1.4}
+.doc .t .c{font-size:9px;width:10px;color:#aaa}
+.doc .t code{font-size:12px;color:#77777d;background:none;padding:0}
+.doc .t.open{flex-direction:column;align-items:flex-start;gap:4px}
+.doc .t pre{margin:2px 0 0 18px;font-size:12px;color:#666;background:#f7f7f8;border-radius:8px;padding:8px 10px;width:calc(100% - 18px)}
+.doc ul{margin:0;padding-left:20px}
+.doc code{font-size:12.5px;background:#f2f2f3;border-radius:4px;padding:1px 5px}
+.mt{max-width:720px;margin:0 auto;padding:24px 32px 16px;display:flex;flex-direction:column;gap:12px;font-size:14px;line-height:1.55}
+.mt .row2{display:flex;gap:10px;align-items:flex-start}
+.mt .bub{max-width:78%;border-radius:16px;padding:10px 14px;border:0}
+.mt .ag{background:var(--mt);border-top-left-radius:6px}
+.mt .us{align-self:flex-end;background:#f2f2f3;border-top-right-radius:6px}
+.mt .bub p{margin:0 0 6px}.mt .bub p:last-child{margin:0}
+.mt .t{font-size:12.5px;color:var(--mtx);opacity:.85;display:flex;gap:6px;align-items:center}
+.mt .t code{background:none;padding:0;font-size:12px;color:inherit}
+.mface{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:500;flex:none}
+.salmon{--mc:#e8836f;--mt:#fdf0ec;--mtx:#a4513f}
+.green{--mc:#4fa36b;--mt:#ecf6ef;--mtx:#2f7346}
+.states{display:grid;grid-template-columns:180px 1fr;gap:18px 24px;padding:28px;font-size:13px;align-items:center;background:var(--bg)}
+.states .k{color:#8a8a90;font-size:12px}
+.states .h{display:flex;gap:8px;align-items:center;padding:8px 12px;border:1px solid var(--line);border-radius:10px}
+</style>
+</head>
+<body>
+<section id="t13">
+<h1>13 Quiet header controls and chat styles</h1>
+<p><b>Header:</b> Start fresh and Interrupt become small quiet controls (26px, white, hairline border, icon + label). Interrupt replaces Start fresh only while the agent works; it keeps a small red square and red text, and gets a red tint only on hover. <b>Session</b> reads like a document: no bubbles, avatars or sender labels; user turns are a soft grey block at right; tool runs are one grey line that opens on click. <b>Mate</b> keeps bubbles in the mate's own color: a light tint, no border, no bold; the user bubble is neutral grey.</p>
+
+<h2 id="13a">13a Session screen: document flow, no bubbles</h2>
+<div class="bar"><span class="title">fix-login-redirect</span> <span class="sub">web · Claude · opus</span> <span class="pill blue">working</span> <button class="qb stop"><span class="sq"></span>Interrupt<kbd>esc</kbd></button> <button class="qb ghost">Changes <span class="i">+42 −8</span></button></div>
+<div class="doc">
+<div class="u">The login page sends users back to / instead of the page they came from. Can you fix it?</div>
+<p>I will find where the redirect target is set after a login.</p>
+<div class="t"><span class="c">›</span>Searched for <code>redirectTo</code> · 6 results</div>
+<div class="t"><span class="c">›</span>Read <code>src/auth/login.tsx</code></div>
+<p>The <code>next</code> query value is read, but the form posts without it. Thus the server falls back to <code>/</code>. I will keep the value in a hidden field and check it against an allow list, so it cannot point to a different site.</p>
+<div class="t"><span class="c">›</span>Edited <code>src/auth/login.tsx</code> · +18 −4</div>
+<div class="t open"><div style="display:flex;gap:8px;align-items:center"><span class="c">⌄</span>Background command completed · <code>npm test -- auth</code> · 4.1s</div><pre>✓ login keeps next param (12 ms)
+✓ rejects external next URL (3 ms)
+Tests: 14 passed, 14 total</pre></div>
+<p>All 14 auth tests pass. Changes:</p>
+<ul><li>The form keeps <code>next</code> in a hidden field.</li><li>Only same-origin paths are accepted.</li></ul>
+<div class="t"><span class="c" style="color:#4a7dd8">●</span>Running <code>npm run lint</code>…</div>
+</div>
+
+<h2 id="13b">13b Mate screen, salmon mate "ux"</h2>
+<div class="salmon">
+<div class="bar"><span class="mface" style="background:var(--mc);width:22px;height:22px;font-size:10px">U</span><span class="title">ux</span> <span class="sub">Interface reviewer</span> <button class="qb"><span class="i">↺</span>Start fresh</button></div>
+<div class="mt">
+<div class="bub us">Can you check the spacing on the settings page?</div>
+<div class="row2"><span class="mface" style="background:var(--mc)">U</span><div class="bub ag"><p>Sure. I opened the settings page at 1280 and 390 wide.</p><div class="t">✓ Took 2 screenshots</div></div></div>
+<div class="row2"><span class="mface" style="visibility:hidden"></span><div class="bub ag"><p>Two things: the section titles sit 4px too close to the rows, and the toggles do not line up with the labels on the phone width. I can fix both in one small PR.</p></div></div>
+<div class="bub us">Yes, go ahead.</div>
+<div class="row2"><span class="mface" style="background:var(--mc)">U</span><div class="bub ag"><div class="t">● Editing <code>settings.css</code></div></div></div>
+</div>
+</div>
+
+<h2 id="13c">13c Mate screen, green mate "ops", working</h2>
+<div class="green">
+<div class="bar"><span class="mface" style="background:var(--mc);width:22px;height:22px;font-size:10px">O</span><span class="title">ops</span> <span class="sub">On-call triage</span> <span class="pill blue">working</span> <button class="qb stop"><span class="sq"></span>Interrupt</button></div>
+<div class="mt">
+<div class="bub us">The deploy for api failed. What happened?</div>
+<div class="row2"><span class="mface" style="background:var(--mc)">O</span><div class="bub ag"><p>The build step timed out after 10 minutes. The cache key changed in #42, so each run starts cold.</p><div class="t">✓ Read the last 5 CI runs</div></div></div>
+<div class="row2"><span class="mface" style="background:var(--mc)">O</span><div class="bub ag"><div class="t">● Running <code>gh run rerun --failed</code></div></div></div>
+</div>
+</div>
+
+<h2 id="13d">13d Header control states</h2>
+<div class="states" style="width:760px">
+<span class="k">Idle</span><div class="h"><span style="flex:1"></span><button class="qb"><span class="i">↺</span>Start fresh</button></div>
+<span class="k">Idle, hover</span><div class="h"><span style="flex:1"></span><button class="qb hov"><span class="i">↺</span>Start fresh</button></div>
+<span class="k">Working (replaces Start fresh)</span><div class="h"><span class="pill blue">working</span><span style="flex:1"></span><button class="qb stop"><span class="sq"></span>Interrupt<kbd>esc</kbd></button></div>
+<span class="k">Working, hover</span><div class="h"><span class="pill blue">working</span><span style="flex:1"></span><button class="qb stop hov"><span class="sq"></span>Interrupt<kbd>esc</kbd></button></div>
+<span class="k">Interrupting</span><div class="h"><span class="pill">stopping</span><span style="flex:1"></span><button class="qb stop dis"><span class="sq"></span>Interrupting…</button></div>
+<span class="k">Start fresh, confirm</span><div class="h"><span style="flex:1"></span><span class="k">Clear this conversation?</span><button class="qb ghost">Cancel</button><button class="qb" style="color:var(--ink);border-color:#cfcfd4">Start fresh</button></div>
+<span class="k">Narrow (phone)</span><div class="h" style="width:240px"><span style="flex:1"></span><button class="qb ghost" style="width:36px;justify-content:center;padding:0" title="Start fresh">↺</button><button class="qb stop" style="width:36px;justify-content:center;padding:0" title="Interrupt"><span class="sq"></span></button></div>
+</div>
+</section>
+</body>
+</html>
