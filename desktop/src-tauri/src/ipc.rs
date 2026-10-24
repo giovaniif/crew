@@ -10,6 +10,9 @@ pub const SERVER_COMMANDS: &[&str] = &[
     "allow-crew-server-crew",
     "allow-crew-server-install",
     "allow-crew-server-workspace",
+    "allow-crew-machine-request",
+    "allow-crew-machine-stream",
+    "allow-crew-machine-stream-close",
 ];
 
 fn local_origin(url: &Url) -> Option<(String, u16)> {
