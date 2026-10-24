@@ -112,6 +112,7 @@ Each RPC request and response contains the build (`version.String()`). The daemo
     - `identity.set` (`{"name","kind","parts","git_name","git_email"}`) makes the identity (the default kind is `custom`, thus `separate`), or changes the parts and the git identity of an identity that exists.
     - `identity.remove` (`{"name"}`) is `env.delete`. It refuses `yours` (and `local`) with `bad_request`.
     - `identity.set_secret` (`{"name","secret","value"}`) is `env.set` with a secret. `identity.ssh_key` is `env.ssh_key`.
+    - `mate.export` (`{"name"}` → `{"mate","memory"}`) gives the role, the look, the harness and the memory of a mate (`domain.ExportableMate`). It has no token, no owner, no environment and no conversation. `mate.import` (`{"export","environment"}` → the new mate) makes a new mate from it. A used name gets the next free number (`domain.MateImportName`). Repos that this daemon does not have are dropped. A different `machine_id` gets `wrong_machine`.
     - `mate.set` takes `"environment":{"machine_id","identity_id"}` next to `mate`. A `machine_id` that is not the ID of this daemon gets `wrong_machine`.
   - `env.list` (`{}` → `{"envs"}`) gives each `[[env]]` table. It also gives `local` when the file has no `local` table. `used_by` lists the mates of the environment (for `local`, also the mates with no `env`).
   - `env.show` (`{"name"}`). An unknown name is `not_found`.

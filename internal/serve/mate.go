@@ -62,6 +62,26 @@ func mateSetup(r *http.Request, d Daemon) (any, error) {
 	return out, nil
 }
 
+func exportMate(r *http.Request, d Daemon) (any, error) {
+	var out rpc.MateExport
+	if err := d.Call(r.Context(), rpc.MethodMateExport, rpc.MateNameParams{Name: r.PathValue("name")}, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func importMate(r *http.Request, d Daemon) (any, error) {
+	var p rpc.MateImportParams
+	if err := decodeBody(r, &p); err != nil {
+		return nil, err
+	}
+	var out domain.Mate
+	if err := d.Call(r.Context(), rpc.MethodMateImport, p, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func setMateTokens(r *http.Request, d Daemon) (any, error) {
 	var p rpc.MateSetTokensParams
 	if err := decodeBody(r, &p); err != nil {

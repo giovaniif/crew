@@ -159,6 +159,11 @@ func (d *Daemon) mateMethod(req rpc.Request) *rpc.Response {
 		return d.mateStopAll(req)
 	case rpc.MethodMateMemory, rpc.MethodMateSetMemory:
 		return d.mateMemory(req)
+	case rpc.MethodMateExport:
+		return d.mateExport(req)
+	case rpc.MethodMateImport:
+		defer d.kickMates()
+		return d.mateImport(req)
 	}
 	src, err := readConfig(d.cfg.path)
 	if err != nil {

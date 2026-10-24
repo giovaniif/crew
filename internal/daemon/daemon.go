@@ -624,7 +624,7 @@ func (d *Daemon) dispatch(c *conn, line []byte) (*rpc.Response, bool) {
 	case rpc.MethodMateList, rpc.MethodMateShow, rpc.MethodMateSet, rpc.MethodMateRemove, rpc.MethodMateSetTokens, rpc.MethodMateClearTokens, rpc.MethodMateClaim,
 		rpc.MethodMatePause, rpc.MethodMateResume, rpc.MethodMateStopAll, rpc.MethodMateSetup:
 		return d.mateMethod(req), true
-	case rpc.MethodMateMemory, rpc.MethodMateSetMemory:
+	case rpc.MethodMateMemory, rpc.MethodMateSetMemory, rpc.MethodMateExport, rpc.MethodMateImport:
 		return d.mateMethod(req), true
 	case rpc.MethodEnvList, rpc.MethodEnvShow, rpc.MethodEnvCreate, rpc.MethodEnvSet, rpc.MethodEnvUnset, rpc.MethodEnvDelete, rpc.MethodEnvSSHKey,
 		rpc.MethodEnvironmentList, rpc.MethodIdentitySet, rpc.MethodIdentityRemove, rpc.MethodIdentitySetSecret, rpc.MethodIdentitySSHKey:
