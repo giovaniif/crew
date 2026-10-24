@@ -49,7 +49,6 @@ go run ./scripts/verify app drive / --steps '[{"click":{"text":"TEST live sessio
 - The steps and locators are the same as `web drive`. One viewport (`app`, 1440x900). It does not capture console errors or failed API calls.
 - The app starts with `PATH=/usr/bin:/bin`, as a macOS GUI launch does, and with no `CREW_URL`. Thus it starts its own `crew serve` on the iso `CREW_HOME`, as on a Mac. Use it for bugs that only the app shows.
 - It needs `cargo`, `tauri-driver` and `WebKitWebDriver` (see `desktop/AGENTS.md`). The first build takes minutes and needs about 10 GB free (`df -h /`). Cargo reuses `VERIFY_CARGO_TARGET` (default `/tmp/crew-verify-cargo`). Remove it when you are done.
-- After each `goto`, it closes the first-run sheet of the new app data dir.
 
 CLI of the isolated crew:
 
