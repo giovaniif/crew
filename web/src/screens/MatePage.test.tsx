@@ -31,7 +31,7 @@ describe("MatePage environment rail (frame 12e)", () => {
     const picker = await within(r).findByRole("button", { name: /^Environment:/ });
     await waitFor(() => expect(picker).toHaveTextContent("devbox · your accounts"));
     expect(picker).toHaveTextContent("Runs on devbox. Acts as you (Giovani, @owner).");
-    expect(within(r).getByRole("link", { name: "Open environment" })).toHaveAttribute("href", "#/envs/yours");
+    expect(within(r).getByRole("link", { name: "Open environment" })).toHaveAttribute("href", "#/envs/this/yours");
   });
 
   it("shows a separate identity", async () => {
@@ -52,7 +52,7 @@ describe("MatePage environment rail (frame 12e)", () => {
     mount({ hash: "#/mates/ada", host: "devbox.example.ts.net", machines: [devbox("work-bot", "codex")] });
     const r = await rail();
     expect(await within(r).findByText(/work-bot has no Codex key, and ada uses Codex\./)).toBeInTheDocument();
-    expect(within(r).getByRole("link", { name: "Set key" })).toHaveAttribute("href", "#/envs/work-bot");
+    expect(within(r).getByRole("link", { name: "Set key" })).toHaveAttribute("href", "#/envs/this/work-bot");
   });
 
   it("says when the machine is not reachable", async () => {
