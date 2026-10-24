@@ -282,7 +282,7 @@ function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, g
   if (parseRoute(hash).screen === "home") {
     const board = snapshot.state?.mates;
     if (board && board.mates.length === 0 && !firstMateSkipped(env.storage)) {
-      return { screen: <FirstMate api={api} storage={env.storage} wide={wide} />, tab: "mates" };
+      return { screen: <FirstMate api={api} storage={env.storage} wide={wide} desktop={env.desktop} />, tab: "mates" };
     }
     return { screen: <MatesHome api={api} now={now} board={board} wide={wide} />, tab: "mates" };
   }

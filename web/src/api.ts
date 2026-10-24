@@ -400,8 +400,10 @@ export function listMates(a: Authed): Promise<MateList> {
   return authedRequest<MateList>(a, "/api/v1/mates");
 }
 
-export function saveMate(a: Authed, mate: Mate): Promise<Mate> {
-  return authedRequest<Mate>(a, "/api/v1/mates", "POST", { mate });
+export type MateEnvironment = { machine_id: string; identity_id: string };
+
+export function saveMate(a: Authed, mate: Mate, environment?: MateEnvironment): Promise<Mate> {
+  return authedRequest<Mate>(a, "/api/v1/mates", "POST", environment ? { mate, environment } : { mate });
 }
 
 export function pauseMate(a: Authed, name: string, pause: boolean): Promise<Mate> {
