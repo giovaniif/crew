@@ -26,6 +26,8 @@ func TestServeMateRoutesCallTheDaemon(t *testing.T) {
 		{"POST", "/api/v1/mates/helper/new", "", rpc.MethodMateNew, `{"name":"helper"}`, ``},
 		{"GET", "/api/v1/mates/helper/memory", "", rpc.MethodMateMemory, `{"name":"helper"}`, ``},
 		{"POST", "/api/v1/mates/helper/memory", `{"text":"note","name":"other"}`, rpc.MethodMateSetMemory, `{"name":"helper","text":"note"}`, ``},
+		{"GET", "/api/v1/mates/helper/export", "", rpc.MethodMateExport, `{"name":"helper"}`, ``},
+		{"POST", "/api/v1/mates/import", `{"export":{"mate":{"name":"helper","prompt":"Help.","agent":"claude","enabled":true},"memory":"note"},"environment":{"machine_id":"m-test-1","identity_id":"yours"}}`, rpc.MethodMateImport, `{"export":{"mate":{"name":"helper","prompt":"Help.","agent":"claude","enabled":true},"memory":"note"},"environment":{"machine_id":"m-test-1","identity_id":"yours"}}`, ``},
 	} {
 		f := newFakeDaemon()
 		f.devices[goodToken] = phone
