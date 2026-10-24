@@ -237,6 +237,25 @@ describe("the server settings", () => {
     await waitFor(() => expect(server.calls.find((c) => c.path === "/api/v1/onboarding/install")?.body).toEqual({ harness: "codex" }));
   });
 
+  it("warns when another tool removed the crew hooks of an agent, and fixes them", async () => {
+    let fixed = false;
+    const view = desktop("#/settings", true);
+    const server = withServer(view.server)
+        .on("GET", "/api/v1/hooks", () => ({
+          status: 200,
+          body: { missing: fixed ? [] : [{ env: "local", harness: "claude", file: "/home/me/.claude/settings.json", reason: "crew hooks are missing in ~/.claude/settings.json" }] },
+        }))
+        .on("POST", "/api/v1/hooks/fix", () => ((fixed = true), { status: 200, body: { missing: [] } }));
+    view.live();
+    await userEvent.click(within(screen.getByRole("navigation", { name: "Settings" })).getByRole("button", { name: "Sessions" }));
+    const claude = await screen.findByRole("group", { name: "Claude Code" });
+    const alert = await within(claude).findByRole("alert");
+    expect(alert).toHaveTextContent("crew hooks are missing in ~/.claude/settings.json");
+    await userEvent.click(within(alert).getByRole("button", { name: "Fix" }));
+    await waitFor(() => expect(within(screen.getByRole("group", { name: "Claude Code" })).queryByRole("alert")).not.toBeInTheDocument());
+    expect(server.calls.find((c) => c.path === "/api/v1/hooks/fix")?.body).toEqual({ env: "local", harness: "claude" });
+  });
+
   it("saves the agent defaults and the fallback threshold in config.toml", async () => {
     const { server } = await open("Sessions");
     const claude = await screen.findByRole("group", { name: "Claude Code" });

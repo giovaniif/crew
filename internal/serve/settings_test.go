@@ -24,6 +24,8 @@ var settingsEndpoints = []authedEndpoint{
 	{"POST", "/api/v1/devices/t4bl3t00/revoke", ""},
 	{"POST", "/api/v1/pair/code", `{"name":"tablet"}`},
 	{"GET", "/api/v1/fs/complete?path=~%2Fw", ""},
+	{"GET", "/api/v1/hooks", ""},
+	{"POST", "/api/v1/hooks/fix", `{"env":"local","harness":"claude"}`},
 }
 
 func TestServeSettingsRoutesCallTheirDaemonMethods(t *testing.T) {
@@ -56,6 +58,8 @@ func TestServeSettingsRoutesCallTheirDaemonMethods(t *testing.T) {
 		{settingsEndpoints[10], rpc.MethodPairCode, `{"name":"tablet"}`, rpc.PairCode{Code: "482913", ExpiresAt: expires}, "pair-code.json"},
 		{settingsEndpoints[11], rpc.MethodFSComplete, `{"path":"~/w"}`,
 			rpc.FSComplete{Dir: "/home/me", Dirs: []domain.Child{{Name: "web", Path: "/home/me/web", Git: domain.GitDir}}}, "fs-complete.json"},
+		{settingsEndpoints[12], rpc.MethodHooks, `{}`, hooksStatus, "hooks.json"},
+		{settingsEndpoints[13], rpc.MethodHooksFix, `{"env":"local","harness":"claude"}`, hooksStatus, "hooks.json"},
 	}
 	for _, c := range cases {
 		t.Run(c.ep.method+" "+c.ep.path, func(t *testing.T) {
@@ -119,3 +123,5 @@ func TestServeSettingsBodiesAreChecked(t *testing.T) {
 		t.Fatalf("a refused body reached the daemon: %v", f.methods())
 	}
 }
+
+var hooksStatus = rpc.HooksStatus{Missing: []domain.HooksMissing{{Env: "local", Harness: domain.HarnessClaude, File: "/home/me/.claude/settings.json", Reason: "crew hooks are missing in ~/.claude/settings.json"}}}
