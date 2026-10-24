@@ -18,7 +18,7 @@ const workspaces = {
 };
 const resolveURL = (workspace: string, item: string) => "/api/v1/work-items/resolve?" + new URLSearchParams({ workspace, item }).toString();
 
-function setup(options: { remembered?: unknown; workspacesDown?: boolean } = {}) {
+function setup(options: { remembered?: unknown; workspacesDown?: boolean; routes?: (s: FakeServer) => void } = {}) {
   window.location.hash = "#/new";
   const sockets = new FakeSockets();
   const storage = new MemoryStorage();
@@ -46,6 +46,7 @@ function setup(options: { remembered?: unknown; workspacesDown?: boolean } = {})
       return () => window.removeEventListener("hashchange", listener);
     },
   };
+  options.routes?.(server);
   render(<App env={env} />);
   return { server, storage, sockets };
 }
@@ -89,6 +90,18 @@ describe("starting a session from the phone", () => {
     await userEvent.click(link);
     expect(await screen.findByRole("heading", { name: "What should the agent do?" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Sessions" })).toHaveAttribute("href", "#/sessions");
+  });
+
+  it("offers to set up the Claude hooks when crew never set them up", async () => {
+    let fixed = false;
+    const { server } = setup({ routes: (s) => void s
+      .on("GET", "/api/v1/hooks", () => ({ status: 200, body: { missing: fixed ? [] : [{ env: "local", harness: "claude", file: "/home/me/.claude/settings.json", reason: "crew hooks are not set up in ~/.claude/settings.json", new: true }] } }))
+      .on("POST", "/api/v1/hooks/fix", () => ((fixed = true), { status: 200, body: { missing: [] } })) });
+    const alert = await screen.findByRole("alert", { name: "Claude hooks" });
+    expect(alert).toHaveTextContent("crew hooks are not set up in ~/.claude/settings.json. Without them, crew can not see what Claude does.");
+    await userEvent.click(within(alert).getByRole("button", { name: "Set up" }));
+    await waitFor(() => expect(screen.queryByRole("alert", { name: "Claude hooks" })).not.toBeInTheDocument());
+    expect(server.calls.find((c) => c.path === "/api/v1/hooks/fix")?.body).toEqual({ env: "local", harness: "claude" });
   });
 
   it("defaults to the daemon's last used project, Claude, and no model or effort", async () => {

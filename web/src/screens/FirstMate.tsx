@@ -8,6 +8,7 @@ import { Servers, sshTarget } from "../servers";
 import { Button, RadioGroup, Select } from "../ui";
 import { mateSlug, nameCheck } from "../matepage";
 import { FaceButton } from "./Mates";
+import { LocalHooksBanner } from "./HooksBanner";
 
 const skipKey = "crew.firstmate";
 
@@ -95,6 +96,7 @@ export function FirstMate({ api, storage, wide, desktop }: { api: Authed; storag
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [look, setLook] = useState<{ avatar?: string; color?: string }>({});
+  const placeApi = useMemo(() => (place ? { fetch: place.link.fetch, token: place.link.token } : null), [place]);
   const mate = mateSlug(name);
   const valid = handle.test(mate);
 
@@ -292,6 +294,7 @@ export function FirstMate({ api, storage, wide, desktop }: { api: Authed; storag
                 {"Mates in this environment act as you on " + (place.machine.local ? "this Mac" : where) + ". To use a bot account, add a separate identity later in Environments."}
               </div>
             </div>
+            {placeApi && step === "ready" ? <LocalHooksBanner api={placeApi} /> : null}
             <div className="fm-buttons">
               {desktop ? (
                 <Button variant="quiet" onClick={() => setStep("where")}>

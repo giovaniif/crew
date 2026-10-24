@@ -2,7 +2,7 @@ package domain
 
 import "testing"
 
-func TestHooksAreMissingOnlyWhenCrewSetThemUpBefore(t *testing.T) {
+func TestHooksAreMissingWhenCrewSetThemUpBeforeOrTheHarnessIsUsed(t *testing.T) {
 	cases := []struct {
 		name   string
 		setup  HarnessSetup
@@ -16,12 +16,18 @@ func TestHooksAreMissingOnlyWhenCrewSetThemUpBefore(t *testing.T) {
 		{"home prefix only", HarnessSetup{File: "/home/u2/settings.json", SetUp: true}, true, "crew hooks are missing in /home/u2/settings.json"},
 		{"unreadable", HarnessSetup{File: "/home/u/.codex/hooks.json", SetUp: true, Err: "bad JSON"}, true, "crew can not read ~/.codex/hooks.json: bad JSON"},
 		{"unreadable but never set up", HarnessSetup{File: "/home/u/.codex/hooks.json", Err: "bad JSON"}, false, ""},
+		{"used but never set up", HarnessSetup{File: "/home/u/.claude/settings.json", Used: true}, true, "crew hooks are not set up in ~/.claude/settings.json"},
+		{"used and installed", HarnessSetup{File: "/home/u/.claude/settings.json", Used: true, Installed: true}, false, ""},
+		{"used and unreadable", HarnessSetup{File: "/home/u/.claude/settings.json", Used: true, Err: "bad JSON"}, true, "crew can not read ~/.claude/settings.json: bad JSON"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			got, ok := CheckHooks("local", HarnessClaude, c.setup, "/home/u")
 			if ok != c.ok || got.Reason != c.reason {
 				t.Fatalf("CheckHooks = %+v, %v; want %v, %q", got, ok, c.ok, c.reason)
+			}
+			if ok && got.New != (!c.setup.SetUp) {
+				t.Errorf("CheckHooks new = %v, want %v", got.New, !c.setup.SetUp)
 			}
 			if ok && (got.Env != "local" || got.Harness != HarnessClaude || got.File != c.setup.File) {
 				t.Errorf("CheckHooks = %+v, want env local, harness claude, file %s", got, c.setup.File)

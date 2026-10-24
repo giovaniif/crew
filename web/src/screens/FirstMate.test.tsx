@@ -45,6 +45,20 @@ describe("the first run of mates on a server", () => {
     expect(screen.queryByRole("button", { name: "Back" })).not.toBeInTheDocument();
   });
 
+  it("sets up the Claude hooks on the machine in step 2 (12b)", async () => {
+    let fixed = false;
+    const { live, server } = desktop("#/mates", true, undefined, {}, (s) =>
+      routes(s)
+        .on("GET", "/api/v1/hooks", () => ({ status: 200, body: { missing: fixed ? [] : [{ env: "local", harness: "claude", file: "/home/me/.claude/settings.json", reason: "crew hooks are not set up in ~/.claude/settings.json", new: true }] } }))
+        .on("POST", "/api/v1/hooks/fix", () => ((fixed = true), { status: 200, body: { missing: [] } })),
+    );
+    live();
+    const alert = await screen.findByRole("alert", { name: "Claude hooks" });
+    fireEvent.click(within(alert).getByRole("button", { name: "Set up" }));
+    await waitFor(() => expect(screen.queryByRole("alert", { name: "Claude hooks" })).not.toBeInTheDocument());
+    expect(server.calls.find((c) => c.path === "/api/v1/hooks/fix")?.body).toEqual({ env: "local", harness: "claude" });
+  });
+
   it("makes the first mate with the environment already picked (12c)", async () => {
     const { live, server } = desktop("#/mates", true, undefined, {}, routes);
     live();

@@ -325,6 +325,11 @@
   margin-bottom: 16px;
 }
 
+.notice > button {
+  flex: none;
+  white-space: nowrap;
+}
+
 .used-faces {
   display: inline-flex;
 }
