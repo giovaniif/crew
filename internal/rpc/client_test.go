@@ -163,6 +163,54 @@ func TestCallsCarryTheClientBuild(t *testing.T) {
 	}
 }
 
+func TestAttachBrowserKeepsACallThatArrivesBeforeTheAttachReply(t *testing.T) {
+	path := filepath.Join(shortDir(t), "crew.sock")
+	ln, err := net.Listen("unix", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = ln.Close() })
+	go func() {
+		conn, err := ln.Accept()
+		if err != nil {
+			return
+		}
+		defer func() { _ = conn.Close() }()
+		sc := bufio.NewScanner(conn)
+		enc := json.NewEncoder(conn)
+		if !sc.Scan() {
+			return
+		}
+		var req rpc.Request
+		if json.Unmarshal(sc.Bytes(), &req) != nil {
+			return
+		}
+		_ = enc.Encode(rpc.Response{V: rpc.Version, ID: req.ID, Build: req.Build, Browser: &rpc.BrowserCall{Call: 7, Session: "s1", Command: "snapshot"}})
+		_ = enc.Encode(rpc.Response{V: rpc.Version, ID: req.ID, Build: req.Build, Result: json.RawMessage(`{"attached":true}`)})
+		for sc.Scan() {
+		}
+	}()
+	c, err := rpc.Dial(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = c.Close() }()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	calls, err := c.AttachBrowser(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case call := <-calls:
+		if call.Call != 7 || call.Command != "snapshot" {
+			t.Fatalf("call %+v", call)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("the call that came before the attach reply was lost")
+	}
+}
+
 func TestADaemonThatNamesNoBuildIsRefused(t *testing.T) {
 	path := filepath.Join(shortDir(t), "crew.sock")
 	serveRaw(t, path, func(req rpc.Request) rpc.Response {
