@@ -34,21 +34,9 @@ const harnesses: { value: Harness; label: string }[] = [
 ];
 
 const roles: { label: string; prompt: string }[] = [
-  {
-    label: "Careful reviewer",
-    prompt:
-      "Review the pull requests of the team. Read each change with care and point out bugs, risks and missing tests.",
-  },
-  {
-    label: "Fast bug fixer",
-    prompt:
-      "Fix the bugs that the team gives you. Find the cause, make the smallest fix, add a test and open a pull request.",
-  },
-  {
-    label: "On-call triage",
-    prompt:
-      "Triage the alerts and the reports that come in. Find the likely cause, tell who owns it and suggest the next step.",
-  },
+  { label: "Careful reviewer", prompt: "Review the pull requests of the team. Read each change with care and point out bugs, risks and missing tests." },
+  { label: "Fast bug fixer", prompt: "Fix the bugs that the team gives you. Find the cause, make the smallest fix, add a test and open a pull request." },
+  { label: "On-call triage", prompt: "Triage the alerts and the reports that come in. Find the likely cause, tell who owns it and suggest the next step." },
 ];
 
 const fallbackPrompt = "Help the team with the tasks that it gives you.";
@@ -59,15 +47,7 @@ function message(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
-export function FirstMate({
-  api,
-  storage,
-  wide,
-}: {
-  api: Authed;
-  storage: KeyValue;
-  wide: boolean;
-}) {
+export function FirstMate({ api, storage, wide }: { api: Authed; storage: KeyValue; wide: boolean }) {
   const [step, setStep] = useState<1 | 2>(1);
   const [name, setName] = useState("");
   const [prompt, setPrompt] = useState("");
@@ -84,30 +64,13 @@ export function FirstMate({
     setError("");
     try {
       if (where === "custom") {
-        const env = await createEnv(api, {
-          name: mate,
-          kind: "custom",
-          parts: customParts,
-        });
+        const env = await createEnv(api, { name: mate, kind: "custom", parts: customParts });
         await envSSHKey(api, env.name, "make");
-        await saveMate(api, {
-          name: mate,
-          prompt: prompt.trim() || fallbackPrompt,
-          agent,
-          env: env.name,
-          ...look,
-          enabled: true,
-        });
+        await saveMate(api, { name: mate, prompt: prompt.trim() || fallbackPrompt, agent, env: env.name, ...look, enabled: true });
         window.location.hash = "#/envs/" + encodeURIComponent(env.name);
         return;
       }
-      await saveMate(api, {
-        name: mate,
-        prompt: prompt.trim() || fallbackPrompt,
-        agent,
-        ...look,
-        enabled: true,
-      });
+      await saveMate(api, { name: mate, prompt: prompt.trim() || fallbackPrompt, agent, ...look, enabled: true });
       window.location.hash = "#/mates/" + encodeURIComponent(mate);
     } catch (err) {
       setError(message(err));
@@ -143,25 +106,9 @@ export function FirstMate({
     return (
       <main className="fm fm-phone">
         <h1>Make your first mate</h1>
-        <p className="lead">
-          A mate is an agent that stays: a name, a role, its own threads.
-        </p>
-        <input
-          className="ui input"
-          aria-label="Name"
-          placeholder="Name"
-          autoCapitalize="off"
-          spellCheck={false}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <Select
-          label="Harness"
-          value={agent}
-          options={harnesses}
-          onChange={setAgent}
-          className="fm-select"
-        />
+        <p className="lead">A mate is an agent that stays: a name, a role, its own threads.</p>
+        <input className="ui input" aria-label="Name" placeholder="Name" autoCapitalize="off" spellCheck={false} value={name} onChange={(e) => setName(e.target.value)} />
+        <Select label="Harness" value={agent} options={harnesses} onChange={setAgent} className="fm-select" />
         <Select
           label="Environment"
           value={where}
@@ -172,11 +119,7 @@ export function FirstMate({
           onChange={setWhere}
           className="fm-select"
         />
-        <Button
-          variant="primary"
-          disabled={!valid || busy}
-          onClick={() => void create()}
-        >
+        <Button variant="primary" disabled={!valid || busy} onClick={() => void create()}>
           Next
         </Button>
         {alert}
@@ -194,10 +137,7 @@ export function FirstMate({
       {step === 1 ? (
         <>
           <h1>Make your first mate</h1>
-          <p className="lead">
-            A mate is an agent that stays: it has a name, a role, its own
-            threads, and it can answer in Slack.
-          </p>
+          <p className="lead">A mate is an agent that stays: it has a name, a role, its own threads, and it can answer in Slack.</p>
           <form
             className="fm-composer"
             onSubmit={(e) => {
@@ -209,68 +149,26 @@ export function FirstMate({
           >
             <div className="fm-name">
               {valid ? (
-                <FaceButton
-                  name={mate}
-                  avatar={look.avatar}
-                  color={look.color}
-                  onPick={(patch) => setLook({ ...look, ...patch })}
-                />
+                <FaceButton name={mate} avatar={look.avatar} color={look.color} onPick={(patch) => setLook({ ...look, ...patch })} />
               ) : (
-                <span className="fm-q" aria-hidden="true">
-                  ?
-                </span>
+                <span className="fm-q" aria-hidden="true">?</span>
               )}
-              <input
-                aria-label="Name"
-                placeholder="Name, for example ada"
-                autoCapitalize="off"
-                spellCheck={false}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-              {valid && mate !== name && (
-                <span className="fm-slug muted">{"Saved as " + mate}</span>
-              )}
-              {!valid && name.trim() !== "" && (
-                <span className="fm-slug bad">
-                  {nameCheck(mate || name.trim(), []).text}
-                </span>
-              )}
+              <input aria-label="Name" placeholder="Name, for example ada" autoCapitalize="off" spellCheck={false} value={name} onChange={(e) => setName(e.target.value)} />
+              {valid && mate !== name && <span className="fm-slug muted">{"Saved as " + mate}</span>}
+              {!valid && name.trim() !== "" && <span className="fm-slug bad">{nameCheck(mate || name.trim(), []).text}</span>}
             </div>
-            <textarea
-              aria-label="Role"
-              rows={2}
-              placeholder="What should it do? For example: review PRs in api and web."
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-            />
+            <textarea aria-label="Role" rows={2} placeholder="What should it do? For example: review PRs in api and web." value={prompt} onChange={(e) => setPrompt(e.target.value)} />
             <div className="fm-foot">
-              <Select
-                label="Harness"
-                value={agent}
-                options={harnesses}
-                onChange={setAgent}
-                className="fm-chip"
-              />
+              <Select label="Harness" value={agent} options={harnesses} onChange={setAgent} className="fm-chip" />
               <span className="spacer" />
-              <Button
-                variant="primary"
-                type="submit"
-                className="fm-next"
-                disabled={!valid}
-              >
+              <Button variant="primary" type="submit" className="fm-next" disabled={!valid}>
                 Next
               </Button>
             </div>
           </form>
           <div className="fm-suggest">
             {roles.map((r) => (
-              <button
-                key={r.label}
-                type="button"
-                className="ui chip"
-                onClick={() => setPrompt(r.prompt)}
-              >
+              <button key={r.label} type="button" className="ui chip" onClick={() => setPrompt(r.prompt)}>
                 {r.label}
               </button>
             ))}
@@ -280,11 +178,7 @@ export function FirstMate({
       ) : (
         <>
           <h1>{"Where does " + mate + " work?"}</h1>
-          <p className="lead">
-            {"Pick the environment: the git identity, keys and accounts " +
-              mate +
-              " uses. You can change it later."}
-          </p>
+          <p className="lead">{"Pick the environment: the git identity, keys and accounts " + mate + " uses. You can change it later."}</p>
           <RadioGroup
             label="Environment"
             className="fm-pick"
@@ -295,21 +189,12 @@ export function FirstMate({
               {
                 value: "local" as Where,
                 label: <span className="t">Local (this Mac)</span>,
-                detail: (
-                  <span className="s">
-                    Act as you. Uses your git, SSH, gh and Claude logins.
-                  </span>
-                ),
+                detail: <span className="s">Act as you. Uses your git, SSH, gh and Claude logins.</span>,
               },
               {
                 value: "custom" as Where,
                 label: <span className="t">New Custom environment</span>,
-                detail: (
-                  <span className="s">
-                    Isolated. Own git name, a new SSH key, its own tokens. Best
-                    for a bot account.
-                  </span>
-                ),
+                detail: <span className="s">Isolated. Own git name, a new SSH key, its own tokens. Best for a bot account.</span>,
               },
             ]}
           />
@@ -317,11 +202,7 @@ export function FirstMate({
             <Button variant="quiet" onClick={() => setStep(1)}>
               Back
             </Button>
-            <Button
-              variant="primary"
-              disabled={busy}
-              onClick={() => void create()}
-            >
+            <Button variant="primary" disabled={busy} onClick={() => void create()}>
               {"Create " + mate}
             </Button>
           </div>
