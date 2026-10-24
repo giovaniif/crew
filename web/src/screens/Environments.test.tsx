@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { EnvInfo } from "../api";
 import { desktop } from "../test/desktop";
+import { FakeDesktop } from "../test/fake-desktop";
 import type { FakeServer } from "../test/fake-server";
 
 afterEach(() => {
@@ -27,8 +28,11 @@ const work: EnvInfo = {
 };
 const sandbox: EnvInfo = { name: "test-sandbox", kind: "custom", parts: ["github"], secrets: [{ name: "GH_TOKEN", set: false }], used_by: [] };
 
+const found = { git_name: "TEST Owner", git_email: "", ssh_agent: false, ssh_keys: 1, github: true, github_user: "owner", claude: true, codex: false, pi: false };
+
 function routes(server: FakeServer) {
   server
+    .on("GET", "/api/v1/environments", { status: 200, body: { machine: { id: "m-devbox", name: "devbox" }, identities: [local, work, sandbox], found } })
     .on("GET", "/api/v1/envs", { status: 200, body: { envs: [local, work, sandbox] } })
     .on("GET", "/api/v1/envs/test-work", { status: 200, body: work })
     .on("GET", "/api/v1/envs/local", { status: 200, body: local })
@@ -71,27 +75,66 @@ describe("the environments page", () => {
   });
 
   it("shows the Claude account with Replace and no Remove", async () => {
-    open("#/envs/test-work");
+    open("#/envs/this/test-work");
     const claude = await screen.findByRole("group", { name: "Claude" });
     expect(within(claude).getByRole("button", { name: "Replace" })).toBeInTheDocument();
     expect(within(claude).queryByRole("button", { name: "Remove" })).not.toBeInTheDocument();
   });
 
-  it("lists Local first, then each environment with its kind and mates", async () => {
+  it("lists the machine, then Your accounts and each separate identity under it", async () => {
     open("#/envs");
     const list = await screen.findByRole("list", { name: "Environments" });
+    await waitFor(() => expect(within(list).getAllByRole("link").length).toBe(4));
     const rows = within(list).getAllByRole("link");
     expect(rows.map((r) => r.textContent)).toEqual([
-      expect.stringContaining("Local (crew)Your logins · 2 mates"),
-      expect.stringContaining("test-workCustom · 2 mates"),
-      expect.stringContaining("test-sandboxCustom · not used"),
+      expect.stringContaining("devbox"),
+      expect.stringContaining("Your accountsada, june"),
+      expect.stringContaining("test-workSeparate identity · 2 mates"),
+      expect.stringContaining("test-sandboxSeparate identity"),
     ]);
+    expect(rows[0]).toHaveAttribute("aria-current", "page");
+    expect(document.body.textContent).not.toMatch(/Local|Custom|Servers/);
+  });
+
+  it("shows the selected machine with its connection, the found logins and its separate identities (11a)", async () => {
+    open("#/envs/this");
+    expect(await screen.findByRole("heading", { name: "devbox" })).toBeInTheDocument();
+    expect(screen.getByText("connected")).toBeInTheDocument();
+    expect(screen.getByText("CONNECTION")).toBeInTheDocument();
+    expect(await screen.findByRole("group", { name: "crew on devbox" })).toHaveTextContent("running · v0.12.0+abc");
+    expect(screen.getByText("YOUR ACCOUNTS ON DEVBOX")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Git identity" })).toHaveTextContent("TEST Owner · from ~/.gitconfig on devbox");
+    expect(screen.getByRole("group", { name: "SSH" })).toHaveTextContent("1 key in ~/.ssh on devbox");
+    expect(screen.getByRole("group", { name: "Codex" })).toHaveTextContent("not found");
+    expect(screen.getByText("SEPARATE IDENTITIES ON DEVBOX")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Own git name, SSH key and tokens · rex, milo/ })).toHaveAttribute("href", "#/envs/this/test-work");
+    expect(screen.getByRole("button", { name: "+ Separate identity" })).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/Local|Custom|Servers/);
+  });
+
+  it("on the phone groups the identities by machine and opens the machine detail (11e, 11f)", async () => {
+    open("#/envs", false);
+    const group = await screen.findByRole("group", { name: "devbox" });
+    expect(group).toHaveTextContent("connected");
+    expect(within(group).getByRole("link", { name: /Your accounts/ })).toHaveAttribute("href", "#/envs/this/local");
+    expect(within(group).getByRole("link", { name: /devbox/ })).toHaveAttribute("href", "#/envs/this");
+    expect(screen.getByText("An environment is a machine and the accounts a mate uses on it.")).toBeInTheDocument();
+  });
+
+  it("shows the machine detail on the phone (11f)", async () => {
+    open("#/envs/this", false);
+    expect(await screen.findByRole("heading", { name: "devbox" })).toBeInTheDocument();
+    expect(screen.getByText("SEPARATE IDENTITIES")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /test-work · rex, milo/ })).toHaveAttribute("href", "#/envs/this/test-work");
+    expect(screen.getByRole("button", { name: "+ Separate identity" })).toBeInTheDocument();
   });
 
   it("shows a custom environment with secrets as set or not set and the public key", async () => {
-    open("#/envs/test-work");
+    open("#/envs/this/test-work");
     expect(await screen.findByRole("heading", { name: "test-work" })).toBeInTheDocument();
-    expect(screen.getByText("kind is set at creation", { exact: false })).toBeInTheDocument();
+    expect(screen.getByText("Separate identity", { selector: ".pill" })).toBeInTheDocument();
+    expect(screen.getByText("on devbox")).toBeInTheDocument();
+    expect(screen.getByText(/Mates with this environment run on devbox, but not as you/)).toBeInTheDocument();
     expect(screen.getByText("2 mates")).toBeInTheDocument();
     expect(screen.getByText("ssh-ed25519 AAAATESTOLD crew-test-work")).toBeInTheDocument();
     const pi = screen.getByRole("group", { name: "Pi" });
@@ -107,7 +150,7 @@ describe("the environments page", () => {
   it("sets a secret through a password dialog, sends it once and never shows it", async () => {
     const user = userEvent.setup();
     const after = { ...work, secrets: work.secrets.map((s) => (s.name === "GEMINI_API_KEY" ? { ...s, set: true } : s)) };
-    const { server } = open("#/envs/test-work", true, (s) => s.on("POST", "/api/v1/envs/test-work", { status: 200, body: after }));
+    const { server } = open("#/envs/this/test-work", true, (s) => s.on("POST", "/api/v1/envs/test-work", { status: 200, body: after }));
     await user.click(within(await screen.findByRole("group", { name: "Pi" })).getByRole("button", { name: "Set…" }));
     const dialog = screen.getByRole("dialog", { name: "Set Pi API key" });
     expect(dialog).toHaveTextContent("rex and milo use it from their next conversation.");
@@ -127,7 +170,7 @@ describe("the environments page", () => {
 
   it("removes a secret with unset", async () => {
     const user = userEvent.setup();
-    const { server } = open("#/envs/test-work", true, (s) => s.on("POST", "/api/v1/envs/test-work/unset", { status: 200, body: work }));
+    const { server } = open("#/envs/this/test-work", true, (s) => s.on("POST", "/api/v1/envs/test-work/unset", { status: 200, body: work }));
     await user.click(within(await screen.findByRole("group", { name: "Codex" })).getByRole("button", { name: "Remove" }));
     await waitFor(() => expect(server.calls.some((c) => c.path === "/api/v1/envs/test-work/unset")).toBe(true));
     expect(server.calls.find((c) => c.path === "/api/v1/envs/test-work/unset")?.body).toEqual({ secret: "OPENAI_API_KEY" });
@@ -135,7 +178,7 @@ describe("the environments page", () => {
 
   it("makes a new SSH key and keeps the old one until you confirm it is on GitHub", async () => {
     const user = userEvent.setup();
-    const { server } = open("#/envs/test-work", true, (s) =>
+    const { server } = open("#/envs/this/test-work", true, (s) =>
       s.on("POST", "/api/v1/envs/test-work/ssh-key", (call) => {
         const action = (call.body as { action: string }).action;
         if (action === "rotate") {
@@ -155,7 +198,7 @@ describe("the environments page", () => {
 
   it("cancels a new key: it posts cancel and the old key stays", async () => {
     const user = userEvent.setup();
-    const { server } = open("#/envs/test-work", true, (s) =>
+    const { server } = open("#/envs/this/test-work", true, (s) =>
       s.on("POST", "/api/v1/envs/test-work/ssh-key", (call) => {
         const action = (call.body as { action: string }).action;
         return { status: 200, body: action === "rotate" ? { ...work, new_public_key: "ssh-ed25519 AAAATESTNEW crew-test-work" } : work };
@@ -169,7 +212,7 @@ describe("the environments page", () => {
   });
 
   it("shows a pending new key from the server after a reload", async () => {
-    open("#/envs/test-work", true, (s) =>
+    open("#/envs/this/test-work", true, (s) =>
       s.on("GET", "/api/v1/envs/test-work", { status: 200, body: { ...work, new_public_key: "ssh-ed25519 AAAATESTNEW crew-test-work" } }),
     );
     expect(await screen.findByText("ssh-ed25519 AAAATESTNEW crew-test-work")).toBeInTheDocument();
@@ -177,14 +220,14 @@ describe("the environments page", () => {
   });
 
   it("shows the date of the SSH key", async () => {
-    open("#/envs/test-work", true, (s) =>
+    open("#/envs/this/test-work", true, (s) =>
       s.on("GET", "/api/v1/envs/test-work", { status: 200, body: { ...work, key_created: "2026-10-21T12:00:00Z" } }),
     );
     expect(await screen.findByText("· Oct 21")).toBeInTheDocument();
   });
 
   it("fills the git identity from the server", async () => {
-    open("#/envs/test-work", true, (s) =>
+    open("#/envs/this/test-work", true, (s) =>
       s.on("GET", "/api/v1/envs/test-work", { status: 200, body: { ...work, git_name: "TEST bot", git_email: "bot@example.com" } }),
     );
     expect(await screen.findByLabelText("Name")).toHaveValue("TEST bot");
@@ -193,7 +236,7 @@ describe("the environments page", () => {
 
   it("shows what crew found on this machine for Local, and how to log in", async () => {
     const user = userEvent.setup();
-    open("#/envs/local", true, (s) =>
+    open("#/envs/this/local", true, (s) =>
       s.on("GET", "/api/v1/envs/local", {
         status: 200,
         body: { ...local, local: { git_name: "TEST Owner", git_email: "owner@example.com", ssh_agent: true, ssh_keys: 2, github: true, github_user: "owner", claude: true, codex: true, pi: false } },
@@ -213,7 +256,7 @@ describe("the environments page", () => {
 
   it("shows the Pi login command of a custom environment that has no Pi key", async () => {
     const user = userEvent.setup();
-    open("#/envs/test-sandbox", true, (s) =>
+    open("#/envs/this/test-sandbox", true, (s) =>
       s.on("GET", "/api/v1/envs/test-sandbox", { status: 200, body: { ...sandbox, parts: ["pi"], secrets: [{ name: "ANTHROPIC_API_KEY", set: false }, { name: "OPENAI_API_KEY", set: false }] } }),
     );
     const pi = await screen.findByRole("group", { name: "Pi" });
@@ -224,7 +267,7 @@ describe("the environments page", () => {
 
   it("shows how to log in to a harness of a custom environment that has no login", async () => {
     const user = userEvent.setup();
-    open("#/envs/test-sandbox", true, (s) =>
+    open("#/envs/this/test-sandbox", true, (s) =>
       s.on("GET", "/api/v1/envs/test-sandbox", { status: 200, body: { ...sandbox, parts: ["claude"], secrets: [{ name: "CLAUDE_CODE_OAUTH_TOKEN", set: false }, { name: "ANTHROPIC_API_KEY", set: false }] } }),
     );
     const claude = await screen.findByRole("group", { name: "Claude" });
@@ -232,33 +275,35 @@ describe("the environments page", () => {
     expect(within(claude).getByText("crew env login test-sandbox")).toBeInTheDocument();
   });
 
-  it("shows Local as read-only with extra variables and Duplicate as Custom…", async () => {
+  it("shows Your accounts as read-only with extra variables and Make a separate identity from this… (11c)", async () => {
     const user = userEvent.setup();
-    open("#/envs/local");
-    expect(await screen.findByRole("heading", { name: "Local (crew)" })).toBeInTheDocument();
-    expect(screen.getByText("ada, june")).toBeInTheDocument();
+    open("#/envs/this/local");
+    expect(await screen.findByRole("heading", { name: "Your accounts on devbox" })).toBeInTheDocument();
+    expect(screen.getByText("FOUND ON DEVBOX")).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/Local|Custom|Servers/);
+    expect(screen.getByRole("link", { name: "ada, june", current: false })).toBeInTheDocument();
     expect(screen.queryByLabelText("Name")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "New key…" })).not.toBeInTheDocument();
     expect(screen.getByRole("group", { name: "LINEAR_API_KEY" })).toHaveTextContent("set");
-    await user.click(screen.getByRole("button", { name: "Duplicate as Custom…" }));
-    const dialog = screen.getByRole("dialog", { name: "New environment" });
-    expect(within(dialog).getByRole("radio", { name: /Custom/ })).toHaveAttribute("aria-checked", "true");
+    await user.click(screen.getByRole("button", { name: "Make a separate identity from this…" }));
+    expect(screen.getByRole("dialog", { name: "New separate identity on devbox" })).toBeInTheDocument();
   });
 
   it("creates a custom environment with all parts and a key, and opens it", async () => {
     const user = userEvent.setup();
     const made: EnvInfo = { ...sandbox, name: "test-new", used_by: [] };
-    const { server } = open("#/envs/local", true, (s) =>
+    const { server } = open("#/envs/this/local", true, (s) =>
       s
         .on("POST", "/api/v1/envs", { status: 200, body: made })
         .on("POST", "/api/v1/envs/test-new/ssh-key", { status: 200, body: made })
         .on("GET", "/api/v1/envs/test-new", { status: 200, body: made }),
     );
-    await user.click(await screen.findByRole("button", { name: "New" }));
-    const dialog = screen.getByRole("dialog", { name: "New environment" });
+    window.location.hash = "#/envs/this";
+    await user.click(await screen.findByRole("button", { name: "+ Separate identity" }));
+    const dialog = screen.getByRole("dialog", { name: "New separate identity on devbox" });
     await user.type(within(dialog).getByLabelText("Name"), "test-new");
     await user.click(within(dialog).getByRole("button", { name: "Create" }));
-    await waitFor(() => expect(window.location.hash).toBe("#/envs/test-new"));
+    await waitFor(() => expect(window.location.hash).toBe("#/envs/this/test-new"));
     expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/envs")?.body).toEqual({
       name: "test-new",
       kind: "custom",
@@ -269,7 +314,7 @@ describe("the environments page", () => {
 
   it("shows why a delete is refused while mates use the environment", async () => {
     const user = userEvent.setup();
-    open("#/envs/test-work", true, (s) =>
+    open("#/envs/this/test-work", true, (s) =>
       s.on("DELETE", "/api/v1/envs/test-work", { status: 500, body: { error: { code: "failed", message: "environment test-work is used by mate rex, milo" } } }),
     );
     await user.click(await screen.findByRole("button", { name: "More actions" }));
@@ -280,7 +325,7 @@ describe("the environments page", () => {
 
   it("saves the git identity when both fields are filled", async () => {
     const user = userEvent.setup();
-    const { server } = open("#/envs/test-work", true, (s) => s.on("POST", "/api/v1/envs/test-work", { status: 200, body: work }));
+    const { server } = open("#/envs/this/test-work", true, (s) => s.on("POST", "/api/v1/envs/test-work", { status: 200, body: work }));
     await user.type(await screen.findByLabelText("Name"), "TEST bot");
     await user.type(screen.getByLabelText("Email"), "bot@example.com");
     await user.tab();
@@ -297,7 +342,7 @@ describe("the environments page", () => {
     const user = userEvent.setup();
     const missing = [{ env: "local", harness: "claude", file: "/home/me/.claude/settings.json", reason: "crew hooks are missing in ~/.claude/settings.json" }];
     let fixed = false;
-    const { server } = open("#/envs/local", true, (s) =>
+    const { server } = open("#/envs/this/local", true, (s) =>
       s
         .on("GET", "/api/v1/envs/local", () => ({ status: 200, body: fixed ? local : { ...local, hooks_missing: missing } }))
         .on("POST", "/api/v1/hooks/fix", () => ((fixed = true), { status: 200, body: { missing: [] } })),
@@ -307,5 +352,78 @@ describe("the environments page", () => {
     await user.click(within(alert).getByRole("button", { name: "Fix" }));
     await waitFor(() => expect(screen.queryByRole("alert", { name: "Claude hooks" })).not.toBeInTheDocument());
     expect(server.calls.find((c) => c.path === "/api/v1/hooks/fix")?.body).toEqual({ env: "local", harness: "claude" });
+  });
+});
+
+function machineRoutes(id: string, name: string, identities: EnvInfo[], mates: string[]) {
+  return (path: string) => {
+    const body =
+      path === "/api/v1/environments"
+        ? { machine: { id, name }, identities, found }
+        : path === "/api/v1/mates"
+          ? { mates: mates.map((m) => ({ name: m })) }
+          : path === "/api/v1/hello"
+            ? { api: "v1", build: "v0.42.1" }
+            : path.startsWith("/api/v1/envs/")
+              ? identities.find((e) => path === "/api/v1/envs/" + e.name)
+              : [];
+    return { status: 200, body: JSON.stringify(body ?? {}) };
+  };
+}
+
+function twoMachines(hash: string, wide = true) {
+  const app = new FakeDesktop();
+  app.servers = [
+    { id: "local", name: "This computer", kind: "local", detail: "crew on this computer" },
+    { id: "ssh:giovani@devbox", name: "devbox", kind: "ssh", detail: "over SSH" },
+    { id: "ssh:ci", name: "ci-runner", kind: "ssh", detail: "over SSH" },
+  ];
+  const mac = machineRoutes("m-mac", "mac", [{ ...local, used_by: ["ada"] }], ["ada"]);
+  const box = machineRoutes("m-box", "devbox", [{ ...local, used_by: ["rex"] }, { ...work, name: "work-bot", used_by: ["milo"] }], ["rex"]);
+  app.handlers.crew_machine_request = (args) => {
+    if (args?.machineId === "ssh:ci") {
+      throw "machine not reachable";
+    }
+    return (args?.machineId === "local" ? mac : box)(String(args?.path));
+  };
+  const d = desktop(hash, wide, undefined, { desktop: app }, routes);
+  d.live();
+  return { ...d, app };
+}
+
+describe("environments on several machines", () => {
+  it("lists each machine with its identities, This Mac first, and a machine that does not answer", async () => {
+    twoMachines("#/envs");
+    const list = await screen.findByRole("list", { name: "Environments" });
+    await waitFor(() => expect(within(list).getAllByRole("link").length).toBe(7));
+    expect(within(list).getAllByRole("link").map((r) => r.textContent)).toEqual([
+      expect.stringContaining("This Maccrew runs here"),
+      expect.stringContaining("Your accountsada"),
+      expect.stringContaining("devboxSSH · giovani@devbox"),
+      expect.stringContaining("Your accountsrex"),
+      expect.stringContaining("work-botSeparate identity · milo"),
+      expect.stringContaining("ci-runnerSSH · not reachable"),
+      expect.stringContaining("Your accountsnot used"),
+    ]);
+    expect(screen.getByRole("button", { name: "+ Machine" })).toBeInTheDocument();
+  });
+
+  it("opens an identity of a different machine through that machine (11b)", async () => {
+    const { app } = twoMachines("#/envs/" + encodeURIComponent("ssh:giovani@devbox") + "/work-bot");
+    expect(await screen.findByRole("heading", { name: "work-bot" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Breadcrumb")).toHaveTextContent("devbox›work-bot");
+    expect(app.of("crew_machine_request")).toContainEqual(expect.objectContaining({ machineId: "ssh:giovani@devbox", path: "/api/v1/envs/work-bot" }));
+  });
+
+  it("shows the SSH address of a server", async () => {
+    twoMachines("#/envs/" + encodeURIComponent("ssh:giovani@devbox"));
+    expect(await screen.findByRole("group", { name: "Address" })).toHaveTextContent("giovani@devbox");
+    expect(screen.getByText("A server that you connected over SSH. Its own crew runs there, so mates on devbox keep working when this Mac sleeps.")).toBeInTheDocument();
+  });
+
+  it("shows machine not reachable for a machine that does not answer", async () => {
+    twoMachines("#/envs/" + encodeURIComponent("ssh:ci"));
+    expect(await screen.findByRole("heading", { name: "ci-runner" })).toBeInTheDocument();
+    expect(screen.getAllByText("machine not reachable").length).toBeGreaterThan(0);
   });
 });

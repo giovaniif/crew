@@ -1,10 +1,23 @@
 import {
+  createContext,
   useCallback,
+  useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
 } from "react";
+import type { DesktopBridge } from "../desktopBridge";
+import {
+  desktopMachines,
+  loadHub,
+  notReachable,
+  pairedMachines,
+  type Hub,
+  type MachineLink,
+  type MachineState,
+} from "../machines";
 import {
   type Authed,
   createEnv,
@@ -20,21 +33,26 @@ import {
 import {
   accountRows,
   customParts,
-  envLetter,
   envOrder,
-  envSub,
   extraSecrets,
+  identitySub,
   isLocal,
+  machineAddress,
+  machineTitle,
+  machineWhere,
   matesText,
   secretSet,
   usedLabel,
 } from "../envs";
 import { Button, Dialog, Menu, Select } from "../ui";
-import { useEnvTitle, useMachine } from "./Machine";
 import { MateFace } from "./Mates";
 import { HooksBanner } from "./HooksBanner";
 
-type Props = { api: Authed; name: string; wide: boolean };
+type Props = { api: Authed; route: string; wide: boolean; desktop?: DesktopBridge };
+
+type Place = { title: string; where: string; key: string };
+
+const PlaceContext = createContext<Place>({ title: "This Mac", where: "this Mac", key: "" });
 
 function message(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
@@ -65,56 +83,340 @@ export function useEnvs(api: Authed): {
   return { envs, error, reload: useCallback(() => setTick((n) => n + 1), []) };
 }
 
-function EIcon({ env }: { env: EnvInfo }) {
+
+function safe(part: string): string {
+  try {
+    return decodeURIComponent(part);
+  } catch {
+    return part;
+  }
+}
+
+function machineHref(key: string): string {
+  return "#/envs/" + encodeURIComponent(key);
+}
+
+function identityHref(key: string, name: string): string {
+  return machineHref(key) + "/" + encodeURIComponent(name);
+}
+
+function machineIcon(m: MachineState): string {
+  return m.local ? "⌘" : "▣";
+}
+
+function machineSub(m: MachineState): string {
+  if (m.local) {
+    return "crew runs here";
+  }
+  const address = machineAddress(m.key);
+  if (m.key.startsWith("ssh:")) {
+    return "SSH · " + (m.state === "down" ? "not reachable" : address);
+  }
+  return m.state === "down" ? "not reachable" : "paired";
+}
+
+function machineStatus(m: MachineState): string {
+  if (m.state === "down") {
+    return "not reachable";
+  }
+  return m.key.startsWith("ssh:") ? "SSH · connected" : "connected";
+}
+
+const unusedYours: EnvInfo = { name: "yours", kind: "local", parts: [], secrets: [], used_by: [] };
+
+function identitiesOf(hub: Hub, m: MachineState): EnvInfo[] {
+  const list = hub.environments.filter((e) => e.key === m.key).map((e) => e.item);
+  return list.length === 0 ? [unusedYours] : envOrder(list);
+}
+
+function IdentityIcon({ env, small }: { env: EnvInfo; small?: boolean }) {
   return (
-    <span
-      className={"eicon" + (env.kind === "custom" ? " c" : "")}
-      aria-hidden="true"
-    >
-      {envLetter(env)}
+    <span className={"eicon " + (env.kind === "local" ? "y" : "c") + (small ? " sm" : "")} aria-hidden="true">
+      {env.kind === "local" ? "Y" : env.name.charAt(0).toUpperCase()}
     </span>
   );
 }
 
+function identityTitle(env: EnvInfo): string {
+  return env.kind === "local" ? "Your accounts" : env.name;
+}
+
 function EnvList({
-  envs,
+  hub,
   selected,
-  onNew,
+  onMachine,
 }: {
-  envs: EnvInfo[];
-  selected: string;
-  onNew: () => void;
+  hub: Hub;
+  selected: { key: string; name: string };
+  onMachine: () => void;
 }) {
-  const envTitle = useEnvTitle();
   return (
     <div className="elist">
       <div className="elist-head">
         <span className="elist-title">Environments</span>
         <span className="spacer" />
-        <Button variant="primary" className="sm" onClick={onNew}>
-          New
+        <Button className="sm" onClick={onMachine}>
+          + Machine
         </Button>
       </div>
       <ul className="side-scroll elist-rows" aria-label="Environments">
-        {envs.map((e) => (
-          <li key={e.name}>
-            <a
-              className={"row" + (e.name === selected ? " on" : "")}
-              href={"#/envs/" + encodeURIComponent(e.name)}
-              aria-current={e.name === selected ? "page" : undefined}
-            >
-              <EIcon env={e} />
-              <div className="nm">
-                <div>{envTitle(e)}</div>
-                <div className="s">{envSub(e)}</div>
-              </div>
-            </a>
-          </li>
-        ))}
+        {hub.machines.flatMap((m) => {
+          const on = selected.key === m.key && selected.name === "";
+          return [
+            <li key={m.key}>
+              <a className={"mrow-d" + (on ? " on" : "")} href={machineHref(m.key)} aria-current={on ? "page" : undefined}>
+                <span className="eicon m" aria-hidden="true">
+                  {machineIcon(m)}
+                </span>
+                <div className="nm">
+                  <div>{machineTitle(m.local, m.name)}</div>
+                  <div className="s">{machineSub(m)}</div>
+                </div>
+                <span className={"dot " + (m.state === "up" ? "ok" : "bad")} />
+              </a>
+            </li>,
+            ...identitiesOf(hub, m).map((e) => {
+              const here = selected.key === m.key && selected.name !== "" && (selected.name === e.name || (isLocal(e) && (selected.name === "local" || selected.name === "yours")));
+              return (
+                <li key={m.key + "/" + e.name}>
+                  <a className={"row irow" + (here ? " on" : "")} href={identityHref(m.key, e.name)} aria-current={here ? "page" : undefined}>
+                    <IdentityIcon env={e} />
+                    <div className="nm">
+                      <div>{identityTitle(e)}</div>
+                      <div className="s">{identitySub(e)}</div>
+                    </div>
+                  </a>
+                </li>
+              );
+            }),
+          ];
+        })}
       </ul>
-      <div className="elist-foot muted">
-        A mate runs with the git identity, keys and accounts of its environment.
+      <div className="elist-foot muted">An environment is a machine and the accounts a mate uses on it.</div>
+    </div>
+  );
+}
+
+function PhoneList({ hub, onNew }: { hub: Hub; onNew: () => void }) {
+  return (
+    <div className="pbody">
+      <div className="page-head envs-phone-head">
+        <h2>Environments</h2>
+        <span className="spacer" />
+        <Button variant="icon" aria-label="+ Machine" onClick={onNew}>
+          +
+        </Button>
       </div>
+      {hub.machines.map((m) => (
+        <div key={m.key} className="pgrp" role="group" aria-label={machineTitle(m.local, m.name)}>
+          <a className="pgh" href={machineHref(m.key)}>
+            <span className={"dot " + (m.state === "up" ? "ok" : "bad")} />
+            <b>{machineTitle(m.local, m.name)}</b>
+            <span className="muted">{machineStatus(m)}</span>
+            <span className="spacer" />
+            <span className="muted">›</span>
+          </a>
+          {identitiesOf(hub, m).map((e) => (
+            <a key={e.name} className="mrow" href={identityHref(m.key, e.name)}>
+              <IdentityIcon env={e} />
+              <div className="g">
+                <div className="t">{identityTitle(e)}</div>
+                <div className="s">{identitySub(e)}</div>
+              </div>
+              <span className="muted">›</span>
+            </a>
+          ))}
+        </div>
+      ))}
+      <div className="muted envs-phone-foot">An environment is a machine and the accounts a mate uses on it.</div>
+    </div>
+  );
+}
+
+type Contact = { build: string; ms: number } | null;
+
+function useContact(link: MachineLink | undefined, up: boolean, tick: number): Contact {
+  const [contact, setContact] = useState<Contact>(null);
+  useEffect(() => {
+    setContact(null);
+    if (!link || !up) {
+      return;
+    }
+    let on = true;
+    const start = Date.now();
+    link
+      .fetch("/api/v1/hello", { cache: "no-store" })
+      .then(async (res) => {
+        const body = (await res.json()) as { build?: string };
+        if (on) {
+          setContact({ build: body.build ?? "", ms: Date.now() - start });
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      on = false;
+    };
+  }, [link, up, tick]);
+  return contact;
+}
+
+function MachineDetail({
+  m,
+  link,
+  hub,
+  wide,
+  onNew,
+}: {
+  m: MachineState;
+  link: MachineLink | undefined;
+  hub: Hub;
+  wide: boolean;
+  onNew: () => void;
+}) {
+  const [tick, setTick] = useState(0);
+  const contact = useContact(link, m.state === "up", tick);
+  const title = machineTitle(m.local, m.name);
+  const where = machineWhere(m.local, m.name);
+  const address = machineAddress(m.key);
+  const separate = identitiesOf(hub, m).filter((e) => e.kind !== "local");
+  const up = m.state === "up";
+  const pill = up ? <span className="pill ok">connected</span> : <span className="pill bad">not reachable</span>;
+  const crew = (
+    <span className={up ? "set-y" : "set-n"}>
+      {up ? (wide && contact?.build ? "running · " + contact.build : "running") : notReachable}
+    </span>
+  );
+  const found = (m.found ? foundRows(m.found, m.local ? "" : where) : []).filter((r) => wide || (r.label !== "Git identity" && r.label !== "SSH"));
+  if (!wide) {
+    return (
+      <div className="eedit mdetail">
+        <div className="page-head">
+          <a className="ui icon-btn" href="#/envs" aria-label="Back">
+            ‹
+          </a>
+          <span className="eicon m" aria-hidden="true">
+            {machineIcon(m)}
+          </span>
+          <h2>{title}</h2>
+          <span className="spacer" />
+          {pill}
+        </div>
+        <div className="kv">
+          <h4>CONNECTION</h4>
+          {address ? (
+            <div className="r" role="group" aria-label="Address">
+              <span className="k">Address</span>
+              <span className="mono dim small">{address}</span>
+            </div>
+          ) : null}
+          <div className="r" role="group" aria-label={"crew on " + where}>
+            <span className="k">{"crew on " + where}</span>
+            {crew}
+          </div>
+        </div>
+        {up ? (
+          <div className="kv">
+            <h4>{"YOUR ACCOUNTS ON " + where.toUpperCase()}</h4>
+            {found.map((r) => (
+              <div key={r.label} className="r" role="group" aria-label={r.label}>
+                <span className="k">{r.label}</span>
+                <span className={r.ok ? "set-y" : "set-n"}>{r.text}</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
+        <div className="kv">
+          <h4>SEPARATE IDENTITIES</h4>
+          {separate.map((e) => (
+            <a key={e.name} className="r" href={identityHref(m.key, e.name)}>
+              <span>{e.name + (e.used_by.length > 0 ? " · " + e.used_by.join(", ") : "")}</span>
+              <span className="muted">›</span>
+            </a>
+          ))}
+          {up ? (
+            <Button className="kv-btn" onClick={onNew}>
+              + Separate identity
+            </Button>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="eedit">
+      <div className="page-head">
+        <span className="eicon m" aria-hidden="true">
+          {machineIcon(m)}
+        </span>
+        <h2>{title}</h2>
+        {pill}
+        <span className="spacer" />
+        {up ? (
+          <Button className="sm" onClick={onNew}>
+            + Separate identity
+          </Button>
+        ) : null}
+      </div>
+      <p className="dim lead">
+        {m.local
+          ? "The computer that runs this app. Its own crew runs here, so mates on this Mac stop when this Mac sleeps."
+          : m.key.startsWith("ssh:")
+            ? "A server that you connected over SSH. Its own crew runs there, so mates on " + where + " keep working when this Mac sleeps."
+            : "A server where its own crew runs, so mates on " + where + " keep working when this device sleeps."}
+      </p>
+      <div className="gtitle">CONNECTION</div>
+      <div className="group">
+        {address ? (
+          <Opt label="Address" title="Address">
+            <span className="mono dim">{address}</span>
+          </Opt>
+        ) : null}
+        <Opt label={"crew on " + where} title={"crew on " + where}>
+          {crew}
+        </Opt>
+        <Opt label="Last contact" title="Last contact">
+          <span className="dim">{up ? (contact ? "now · " + contact.ms + " ms" : "now") : notReachable}</span>
+          <Button variant="quiet" className="sm" onClick={() => setTick((n) => n + 1)}>
+            Test
+          </Button>
+        </Opt>
+      </div>
+      {up ? (
+        <>
+          <div className="gtitle">
+            {"YOUR ACCOUNTS ON " + where.toUpperCase()}
+            <span className="spacer" />
+            <span className="muted gnote">crew reads these and does not change them</span>
+          </div>
+          <div className="group">
+            {found.map((r) => (
+              <Opt key={r.label} label={r.label} title={r.label}>
+                <span className={r.ok ? "set-y" : "set-n"}>{r.text}</span>
+                {!r.ok && r.how ? <HowTo>{r.how}</HowTo> : null}
+              </Opt>
+            ))}
+          </div>
+          <div className="gtitle">{"SEPARATE IDENTITIES ON " + where.toUpperCase()}</div>
+          <div className="group">
+            {separate.length > 0 ? (
+              separate.map((e) => (
+                <a key={e.name} className="opt" href={identityHref(m.key, e.name)}>
+                  <IdentityIcon env={e} small />
+                  <div className="l">
+                    <div className="t">{e.name}</div>
+                    <div className="s">{"Own git name, SSH key and tokens" + (e.used_by.length > 0 ? " · " + e.used_by.join(", ") : "")}</div>
+                  </div>
+                  <span className="muted">›</span>
+                </a>
+              ))
+            ) : (
+              <div className="opt">
+                <span className="muted">No separate identity yet.</span>
+              </div>
+            )}
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }
@@ -317,7 +619,7 @@ function GitIdentity({
   };
   return (
     <>
-      <div className="gtitle">GIT IDENTITY</div>
+      <div className="gtitle">GIT NAME</div>
       <div className="group">
         <div className="opt">
           <label className="l t" htmlFor="env-git-name">
@@ -394,23 +696,26 @@ function HowTo({ children }: { children: ReactNode }) {
 
 type Found = { label: string; ok: boolean; text: string; how?: ReactNode };
 
-function foundRows(l: EnvLocal | undefined): Found[] {
+function foundRows(l: EnvLocal | undefined, on = ""): Found[] {
   if (!l) {
     return [];
   }
+  const at = on ? " on " + on : "";
   const login = (ok: boolean) => (ok ? "logged in" : "not found");
   return [
     {
       label: "Git identity",
       ok: l.git_name !== "",
-      text: l.git_name ? l.git_name + " · from ~/.gitconfig" : "not set",
+      text: l.git_name ? l.git_name + " · from ~/.gitconfig" + at : "not set",
     },
     {
       label: "SSH",
       ok: l.ssh_agent,
       text: l.ssh_agent
         ? "ssh-agent · " + l.ssh_keys + (l.ssh_keys === 1 ? " key" : " keys")
-        : "no ssh-agent",
+        : l.ssh_keys > 0
+          ? l.ssh_keys + (l.ssh_keys === 1 ? " key" : " keys") + " in ~/.ssh" + at
+          : "no ssh-agent",
     },
     {
       label: "GitHub CLI",
@@ -461,6 +766,7 @@ function SSHKey({
   env: EnvInfo;
   onSaved: (e: EnvInfo, changed: boolean) => void;
 }) {
+  const place = useContext(PlaceContext);
   const [error, setError] = useState("");
   const next = env.new_public_key ?? "";
   const run = (action: "make" | "rotate" | "confirm" | "cancel") => {
@@ -540,7 +846,7 @@ function SSHKey({
         <div className="opt keyopt">
           <div className="keyhead">
             <span className="t">
-              {env.public_key ? "ed25519 key made by crew" : "No SSH key yet"}
+              {env.public_key ? "ed25519 key that crew made on " + place.where : "No SSH key yet"}
             </span>
             {env.public_key && made ? (
               <span className="muted small">· {made}</span>
@@ -572,8 +878,8 @@ function SSHKey({
             <div className="keybox">{env.public_key}</div>
           ) : null}
           <div className="muted small">
-            Add this key to GitHub: Settings › SSH and GPG keys › New SSH key.
-            The private key never leaves this machine.
+            Add this key to the GitHub account of {env.name}. The private key
+            stays on {place.where}.
           </div>
           {alert}
         </div>
@@ -587,9 +893,13 @@ function UsedBy({ env }: { env: EnvInfo }) {
     return (
       <>
         <span className="muted small">Used by</span>
-        <span className="small used-names">
-          {env.used_by.length > 0 ? env.used_by.join(", ") : "no mate"}
-        </span>
+        {env.used_by.length > 0 ? (
+          <a className="small" href="#/mates">
+            {env.used_by.join(", ")}
+          </a>
+        ) : (
+          <span className="small used-names">no mate</span>
+        )}
       </>
     );
   }
@@ -696,11 +1006,10 @@ function Editor({
   api: Authed;
   name: string;
   onChanged: () => void;
-  onNew: (kind: "custom") => void;
+  onNew: () => void;
   back: boolean;
 }) {
-  const machine = useMachine();
-  const envTitle = useEnvTitle();
+  const place = useContext(PlaceContext);
   const [env, setEnvInfo] = useState<EnvInfo | null>(null);
   const [error, setError] = useState("");
   const [changed, setChanged] = useState(false);
@@ -775,7 +1084,7 @@ function Editor({
   const notice = changed ? (
     <div className="notice" role="status">
       <span className="dot wait" />
-      You changed this environment.{" "}
+      You changed {local ? "Your accounts" : env.name}.{" "}
       {env.used_by.length > 0
         ? matesText(env.used_by) + " get"
         : "Mates that use it get"}{" "}
@@ -848,47 +1157,61 @@ function Editor({
           onDeleted={() => {
             setDeleting(false);
             onChanged();
-            window.location.hash = "#/envs";
+            window.location.hash = "#/envs/" + encodeURIComponent(place.key);
           }}
         />
       ) : null}
     </>
   );
-  const head = (
-    <div className="page-head">
-      {back ? (
-        <a className="ui icon-btn" href="#/envs" aria-label="Back">
-          ‹
-        </a>
-      ) : null}
-      <EIcon env={env} />
-      <h2>{envTitle(env)}</h2>
-      {local ? (
-        <span className="pill">Local</span>
-      ) : (
-        <span className="pill blue">Custom</span>
-      )}
-      {local ? null : (
-        <span className="muted small kind-note">
-          isolated · kind is set at creation
-        </span>
-      )}
-      <span className="spacer" />
-      <UsedBy env={env} />
-      {isLocal(env) ? null : <MoreMenu onDelete={() => setDeleting(true)} />}
+  const crumb = (
+    <div className="crumb" aria-label="Breadcrumb">
+      <span>{place.title}</span>
+      <span>›</span>
+      <b>{local ? "Your accounts" : env.name}</b>
     </div>
+  );
+  const backLink = back ? (
+    <a className="ui icon-btn" href={"#/envs/" + encodeURIComponent(place.key)} aria-label="Back">
+      ‹
+    </a>
+  ) : null;
+  const head = local ? (
+    <>
+      {crumb}
+      <div className="page-head">
+        {backLink}
+        <IdentityIcon env={env} />
+        <h2>{"Your accounts on " + place.title}</h2>
+        <span className="spacer" />
+        <UsedBy env={env} />
+      </div>
+    </>
+  ) : (
+    <>
+      {crumb}
+      <div className="page-head">
+        {backLink}
+        <IdentityIcon env={env} />
+        <h2>{env.name}</h2>
+        <span className="pill blue">Separate identity</span>
+        <span className="muted small">{"on " + place.where}</span>
+        <span className="spacer" />
+        <UsedBy env={env} />
+        <MoreMenu onDelete={() => setDeleting(true)} />
+      </div>
+    </>
   );
   if (local) {
     return (
       <div className="eedit">
         {head}
         <p className="dim lead">
-          Mates in this environment act as you. They use what is already set up
-          on this machine. crew reads these values and does not change them.
+          Mates with this environment act as you on {place.where}. They use the
+          logins that are already here.
         </p>
         {hooks}
         {notice}
-        <div className="gtitle">{"FOUND ON " + machine.toUpperCase()}</div>
+        <div className="gtitle">{"FOUND ON " + place.title.toUpperCase()}</div>
         <div className="group">
           {foundRows(env.local).map((r) => (
             <Opt key={r.label} label={r.label} title={r.label}>
@@ -914,7 +1237,7 @@ function Editor({
           </p>
         ) : null}
         <div className="eactions">
-          <Button onClick={() => onNew("custom")}>Duplicate as Custom…</Button>
+          <Button onClick={onNew}>Make a separate identity from this…</Button>
         </div>
         {dialogs}
       </div>
@@ -923,6 +1246,10 @@ function Editor({
   return (
     <div className="eedit">
       {head}
+      <p className="dim lead">
+        Mates with this environment run on {place.where}, but not as you. They
+        commit, push and call the harness with the accounts below.
+      </p>
       {hooks}
       {notice}
       {env.parts.includes("git") ? (
@@ -942,14 +1269,16 @@ function Editor({
       {env.parts.includes("ssh") ? (
         <SSHKey api={api} env={env} onSaved={saved} />
       ) : null}
+      {env.parts.includes("github") || accounts.length > 0 ? (
+        <div className="gtitle">ACCOUNTS</div>
+      ) : null}
       {env.parts.includes("github") ? (
         <>
-          <div className="gtitle">GITHUB</div>
           <div className="group">
             <Opt
               label="GitHub token"
-              title="Token"
-              sub="Used by gh and for HTTPS pushes. Needs repo scope."
+              title="GitHub token"
+              sub="For gh and HTTPS pushes"
             >
               <SecretButtons
                 set={secretSet(env, "GH_TOKEN")}
@@ -968,7 +1297,6 @@ function Editor({
       ) : null}
       {accounts.length > 0 ? (
         <>
-          <div className="gtitle">HARNESS ACCOUNTS</div>
           <div className="group">
             {accounts.map((a) =>
               a.part === "claude" ? (
@@ -1136,8 +1464,7 @@ function Editor({
         </p>
       ) : null}
       <div className="muted small efoot">
-        crew stores secrets on this machine and never shows them again. You can
-        replace or remove a secret, but not read it.
+        crew stores secrets on {place.where} and never shows them again.
       </div>
       {dialogs}
     </div>
@@ -1146,33 +1473,23 @@ function Editor({
 
 function NewDialog({
   api,
-  kind: start,
   onClose,
   onMade,
 }: {
   api: Authed;
-  kind: "custom" | "local";
   onClose: () => void;
   onMade: (name: string) => void;
 }) {
-  const envTitle = useEnvTitle();
+  const place = useContext(PlaceContext);
   const [name, setName] = useState("");
-  const [kind, setKind] = useState<"custom" | "local">(start);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const create = async () => {
     setBusy(true);
     setError("");
     try {
-      const made = await createEnv(
-        api,
-        kind === "custom"
-          ? { name: name.trim(), kind, parts: customParts }
-          : { name: name.trim(), kind },
-      );
-      if (kind === "custom") {
-        await envSSHKey(api, made.name, "make");
-      }
+      const made = await createEnv(api, { name: name.trim(), kind: "custom", parts: customParts });
+      await envSSHKey(api, made.name, "make");
       onMade(made.name);
     } catch (err) {
       setError(message(err));
@@ -1180,20 +1497,8 @@ function NewDialog({
       setBusy(false);
     }
   };
-  const kinds: { v: "custom" | "local"; t: string; s: string }[] = [
-    {
-      v: "custom",
-      t: "Custom",
-      s: "Isolated. Its own git identity, SSH key, GitHub token and accounts.",
-    },
-    {
-      v: "local",
-      t: envTitle({ name: "local", kind: "local", parts: [], secrets: [], used_by: [] }),
-      s: "Acts as you, with the logins of this machine.",
-    },
-  ];
   return (
-    <Dialog title="New environment" onClose={onClose} className="env-new">
+    <Dialog title={"New separate identity on " + place.where} onClose={onClose} className="env-new">
       <label className="field">
         <span>Name</span>
         <input
@@ -1201,30 +1506,14 @@ function NewDialog({
           aria-label="Name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="work"
+          placeholder="work-bot"
           autoComplete="off"
           spellCheck={false}
         />
       </label>
-      <div className="kind" role="radiogroup" aria-label="Kind">
-        {kinds.map((k) => (
-          <button
-            key={k.v}
-            type="button"
-            role="radio"
-            aria-checked={kind === k.v}
-            className={"preset" + (kind === k.v ? " on" : "")}
-            onClick={() => setKind(k.v)}
-          >
-            <div>
-              <div className="t">{k.t}</div>
-              <div className="s">{k.s}</div>
-            </div>
-          </button>
-        ))}
-      </div>
       <div className="muted small">
-        You select the kind only now. You cannot change it later.
+        Its own git name, SSH key, GitHub token and harness accounts. crew makes
+        the SSH key on {place.where}.
       </div>
       {error ? (
         <p className="error" role="alert">
@@ -1235,11 +1524,7 @@ function NewDialog({
         <Button variant="quiet" onClick={onClose}>
           Cancel
         </Button>
-        <Button
-          variant="primary"
-          disabled={busy || name.trim() === ""}
-          onClick={() => void create()}
-        >
+        <Button variant="primary" disabled={busy || name.trim() === ""} onClick={() => void create()}>
           Create
         </Button>
       </div>
@@ -1247,71 +1532,102 @@ function NewDialog({
   );
 }
 
-export function Environments({ api, name, wide }: Props) {
-  const { envs, error, reload } = useEnvs(api);
-  const [making, setMaking] = useState<"custom" | "local" | null>(null);
-  const selected = name || (wide ? (envs[0]?.name ?? "") : "");
-  const dialog = making ? (
-    <NewDialog
-      api={api}
-      kind={making}
-      onClose={() => setMaking(null)}
-      onMade={(n) => {
-        setMaking(null);
-        reload();
-        window.location.hash = "#/envs/" + encodeURIComponent(n);
-      }}
-    />
-  ) : null;
+function authedOf(link: MachineLink): Authed {
+  return { fetch: link.fetch, token: link.token };
+}
+
+function useHub(api: Authed, desktop: DesktopBridge | undefined, tick: number) {
+  const machines = useMemo(
+    () => (desktop ? desktopMachines(desktop) : pairedMachines([{ key: "this", name: "", url: "", token: api.token, local: false }], api.fetch)),
+    [desktop, api],
+  );
+  const [state, setState] = useState<{ links: MachineLink[]; hub: Hub } | null>(null);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    let on = true;
+    machines
+      .links()
+      .then(async (links) => {
+        const hub = await loadHub(links);
+        if (on) {
+          setState({ links, hub });
+          setError("");
+        }
+      })
+      .catch((err) => on && setError(message(err)));
+    return () => {
+      on = false;
+    };
+  }, [machines, tick]);
+  return { state, error };
+}
+
+export function Environments({ api, route, wide, desktop }: Props) {
+  const [tick, setTick] = useState(0);
+  const reload = useCallback(() => setTick((n) => n + 1), []);
+  const { state, error } = useHub(api, desktop, tick);
+  const [making, setMaking] = useState(false);
+  const apis = useRef(new Map<string, Authed>());
+  const remember = (link: MachineLink) => {
+    const made = authedOf(link);
+    apis.current.set(link.key, made);
+    return made;
+  };
+  const slash = route.indexOf("/");
+  const key = safe(slash < 0 ? route : route.slice(0, slash));
+  const name = slash < 0 ? "" : safe(route.slice(slash + 1));
   const alert = error ? (
     <p className="error" role="alert">
       {error}
     </p>
   ) : null;
+  if (!state) {
+    return wide ? <div className="envpane">{alert}</div> : <main className="screen mh-phone envs-phone">{alert}</main>;
+  }
+  const { hub, links } = state;
+  const m = hub.machines.find((x) => x.key === key) ?? (wide && key === "" ? hub.machines[0] : undefined);
+  const link = m ? links.find((l) => l.key === m.key) : undefined;
+  const place: Place = m ? { title: machineTitle(m.local, m.name), where: machineWhere(m.local, m.name), key: m.key } : { title: "", where: "", key: "" };
+  const linkApi = link ? (apis.current.get(link.key) ?? remember(link)) : api;
+  const dialog =
+    making && link ? (
+      <NewDialog
+        api={linkApi}
+        onClose={() => setMaking(false)}
+        onMade={(n) => {
+          setMaking(false);
+          reload();
+          window.location.hash = identityHref(place.key, n);
+        }}
+      />
+    ) : null;
+  const machineAdd = () => {
+    window.location.hash = "#/servers/add";
+  };
+  const right =
+    m && name ? (
+      <Editor key={m.key + "/" + name} api={linkApi} name={name} onChanged={reload} onNew={() => setMaking(true)} back={!wide} />
+    ) : m ? (
+      <MachineDetail m={m} link={link} hub={hub} wide={wide} onNew={() => setMaking(true)} />
+    ) : null;
   if (!wide) {
-    if (name) {
-      return (
+    return (
+      <PlaceContext.Provider value={place}>
         <main className="screen mh-phone envs-phone">
-          <Editor
-            key={name}
-            api={api}
-            name={name}
-            onChanged={reload}
-            onNew={setMaking}
-            back
-          />
+          {alert}
+          {right ?? <PhoneList hub={hub} onNew={machineAdd} />}
           {dialog}
         </main>
-      );
-    }
-    return (
-      <main className="screen mh-phone envs-phone">
-        {alert}
-        <EnvList envs={envs} selected="" onNew={() => setMaking("custom")} />
-        {dialog}
-      </main>
+      </PlaceContext.Provider>
     );
   }
   return (
-    <div className="envpane">
-      <EnvList
-        envs={envs}
-        selected={selected}
-        onNew={() => setMaking("custom")}
-      />
-      {selected ? (
-        <Editor
-          key={selected}
-          api={api}
-          name={selected}
-          onChanged={reload}
-          onNew={setMaking}
-          back={false}
-        />
-      ) : (
-        <div className="eedit">{alert}</div>
-      )}
-      {dialog}
-    </div>
+    <PlaceContext.Provider value={place}>
+      <div className="envpane">
+        <EnvList hub={hub} selected={{ key: m?.key ?? "", name }} onMachine={machineAdd} />
+        {right ?? <div className="eedit">{alert}</div>}
+        {dialog}
+      </div>
+    </PlaceContext.Provider>
   );
 }
