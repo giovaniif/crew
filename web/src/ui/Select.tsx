@@ -15,19 +15,22 @@ export type SelectProps<T extends string> = {
 };
 
 const menuWidth = 220;
+const menuMaxWidth = 480;
 const menuHeight = 320;
 const gap = 4;
 const edge = 8;
 
 export function menuPlace(rect: { left: number; top: number; bottom: number; width: number }, view: { width: number; height: number }): CSSProperties {
-  const width = Math.min(Math.max(menuWidth, rect.width), view.width - 2 * edge);
-  const left = Math.max(edge, Math.min(rect.left, view.width - width - edge));
+  const minWidth = Math.min(Math.max(menuWidth, rect.width), view.width - 2 * edge);
+  const left = Math.max(edge, Math.min(rect.left, view.width - minWidth - edge));
+  const maxWidth = Math.max(minWidth, Math.min(menuMaxWidth, view.width - left - edge));
+  const size = { minWidth: minWidth + "px", maxWidth: maxWidth + "px" };
   const below = view.height - rect.bottom - gap - edge;
   const up = below < Math.min(menuHeight, 160) && rect.top > below;
   const room = Math.max(120, Math.min(menuHeight, up ? rect.top - gap - edge : below));
   return up
-    ? { position: "fixed", left: left + "px", top: "auto", bottom: view.height - rect.top + gap + "px", width: width + "px", maxHeight: room + "px" }
-    : { position: "fixed", left: left + "px", top: rect.bottom + gap + "px", width: width + "px", maxHeight: room + "px" };
+    ? { position: "fixed", left: left + "px", top: "auto", bottom: view.height - rect.top + gap + "px", ...size, maxHeight: room + "px" }
+    : { position: "fixed", left: left + "px", top: rect.bottom + gap + "px", ...size, maxHeight: room + "px" };
 }
 
 export function Select<T extends string>({ label, value, options, onChange, disabled, search, placeholder, className }: SelectProps<T>) {

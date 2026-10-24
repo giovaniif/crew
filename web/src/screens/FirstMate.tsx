@@ -232,15 +232,19 @@ export function FirstMate({ api, storage, wide, desktop }: { api: Authed; storag
           ]}
         />
         {pick === "ssh" ? (
-          <input
-            className="ui input mono fm-address"
-            aria-label="SSH address"
-            placeholder="giovani@devbox.tail.ts.net"
-            autoComplete="off"
-            spellCheck={false}
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-          />
+          <>
+            <input
+              className="ui input mono fm-address"
+              aria-label="SSH host"
+              placeholder="user@host or server"
+              autoComplete="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+            />
+            <p className="fm-hint muted">Type the host as for ssh: user@host or a Host alias of ~/.ssh/config. Do not type the ssh command.</p>
+          </>
         ) : null}
         <div className="fm-buttons">
           <Button variant="primary" disabled={busy || (pick === "ssh" && address.trim() === "")} onClick={() => void connect()}>

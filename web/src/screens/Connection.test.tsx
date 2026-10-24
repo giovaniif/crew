@@ -16,7 +16,7 @@ function banner() {
 
 describe("the connection banner", () => {
   it("is a thin row with a spinner and Retry while it reconnects", async () => {
-    const { live, sockets } = desktop("", true, undefined, { retryDelay: () => 7000 });
+    const { live, sockets } = desktop("#/sessions", true, undefined, { retryDelay: () => 7000 });
     live();
     sockets.last.drop(1006);
     expect(banner().querySelector(".spin")).not.toBeNull();
@@ -26,7 +26,7 @@ describe("the connection banner", () => {
 
   it("copies the update command on a build mismatch", async () => {
     const user = userEvent.setup();
-    const { live, sockets } = desktop("", true, undefined, slow);
+    const { live, sockets } = desktop("#/sessions", true, undefined, slow);
     live();
     sockets.last.drop(4502, "daemon runs crew v0.13.0 but this client is v0.12.0");
     await user.click(within(banner()).getByRole("button", { name: "Copy update command" }));
@@ -35,7 +35,7 @@ describe("the connection banner", () => {
   });
 
   it("says there is no crew daemon when the daemon is not reachable", () => {
-    const { live, sockets } = desktop("", true, undefined, slow);
+    const { live, sockets } = desktop("#/sessions", true, undefined, slow);
     live();
     sockets.last.drop(1013, "the crew daemon is not reachable: connect: no such file or directory");
     expect(banner()).toHaveTextContent("No crew daemon · retrying");
@@ -43,14 +43,14 @@ describe("the connection banner", () => {
   });
 
   it("counts down to the next try when the connection drops", () => {
-    const { live, sockets } = desktop("", true, undefined, { retryDelay: () => 7000 });
+    const { live, sockets } = desktop("#/sessions", true, undefined, { retryDelay: () => 7000 });
     live();
     sockets.last.drop(1006);
     expect(banner()).toHaveTextContent("Reconnecting in 7 s");
   });
 
   it("stops on a build mismatch and connects again on Reconnect", async () => {
-    const { live, sockets } = desktop("", true, undefined, { retryDelay: () => 5 });
+    const { live, sockets } = desktop("#/sessions", true, undefined, { retryDelay: () => 5 });
     live();
     sockets.last.drop(4502, "daemon runs crew v0.13.0 but this client is v0.12.0");
     expect(banner()).toHaveTextContent("The server runs another crew version");
@@ -63,14 +63,14 @@ describe("the connection banner", () => {
   });
 
   it("has no Fix outside the desktop app", () => {
-    const { live, sockets } = desktop("", true, undefined, slow);
+    const { live, sockets } = desktop("#/sessions", true, undefined, slow);
     live();
     sockets.last.drop(1013, "the crew daemon went away");
     expect(within(banner()).queryByRole("button", { name: "Fix" })).not.toBeInTheDocument();
   });
 
   it("offers Fix in the desktop app while it retries and while it reconnects", async () => {
-    const { live, sockets } = desktop("", true, undefined, { retryDelay: (n) => (n === 0 ? 5 : 60000), desktopFix: async () => undefined });
+    const { live, sockets } = desktop("#/sessions", true, undefined, { retryDelay: (n) => (n === 0 ? 5 : 60000), desktopFix: async () => undefined });
     live();
     sockets.last.drop(1013, "the crew daemon went away");
     expect(within(banner()).getByRole("button", { name: "Fix" })).toBeInTheDocument();
@@ -83,7 +83,7 @@ describe("the connection banner", () => {
   it("runs the fix and then connects again", async () => {
     const done = new Deferred<void>();
     let fixed = 0;
-    const { live, sockets } = desktop("", true, undefined, {
+    const { live, sockets } = desktop("#/sessions", true, undefined, {
       ...slow,
       desktopFix: () => {
         fixed++;
@@ -100,7 +100,7 @@ describe("the connection banner", () => {
   });
 
   it("shows the reason of the check when the fix fails", async () => {
-    const { live, sockets } = desktop("", true, undefined, {
+    const { live, sockets } = desktop("#/sessions", true, undefined, {
       ...slow,
       desktopFix: () => Promise.reject(new Error("the unit runs /usr/local/bin/crew, which does not exist")),
     });

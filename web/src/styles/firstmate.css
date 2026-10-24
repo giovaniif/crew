@@ -393,3 +393,10 @@
 .fm .fm-note {
   margin-top: 12px;
 }
+
+.fm .fm-hint {
+  width: 560px;
+  max-width: 100%;
+  margin: 6px 0 0;
+  font-size: var(--fs-sm);
+}
