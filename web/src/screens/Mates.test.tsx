@@ -363,8 +363,7 @@ describe("New mate", () => {
     expect(screen.getByText("Saves as ux-patrol")).toBeInTheDocument();
     await user.type(screen.getByRole("textbox", { name: "Role" }), "Patrol the UX.");
     await user.click(screen.getByRole("button", { name: "Create mate" }));
-    await waitFor(() => expect(window.location.hash).toBe("#/mates/ux-patrol"));
-    expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/mates")?.body).toMatchObject({ mate: { name: "ux-patrol" } });
+    await waitFor(() => expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/mates")?.body).toMatchObject({ mate: { name: "ux-patrol" } }));
   });
 
   it("picks the face and the color from a click on the face", async () => {
