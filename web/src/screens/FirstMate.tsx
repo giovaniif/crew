@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { createEnv, envSSHKey, saveMate, type Authed } from "../api";
+import { useEffect, useMemo, useState } from "react";
+import { saveMate, type Authed, type EnvInfo, type EnvLocal } from "../api";
 import type { KeyValue } from "../auth";
-import { customParts, envParts } from "../envs";
-import { useEnvs } from "./Environments";
-import { useMachine } from "./Machine";
+import type { DesktopBridge } from "../desktopBridge";
+import { envOrder, machineTitle } from "../envs";
+import { desktopMachines, loadHub, pairedMachines, type MachineLink, type MachineState } from "../machines";
+import { Servers, sshTarget } from "../servers";
 import { Button, RadioGroup, Select } from "../ui";
 import { mateSlug, nameCheck } from "../matepage";
 import { FaceButton } from "./Mates";
@@ -34,12 +35,6 @@ const harnesses: { value: Harness; label: string }[] = [
   { value: "omp", label: "Pi" },
 ];
 
-const roles: { label: string; prompt: string }[] = [
-  { label: "Careful reviewer", prompt: "Review the pull requests of the team. Read each change with care and point out bugs, risks and missing tests." },
-  { label: "Fast bug fixer", prompt: "Fix the bugs that the team gives you. Find the cause, make the smallest fix, add a test and open a pull request." },
-  { label: "On-call triage", prompt: "Triage the alerts and the reports that come in. Find the likely cause, tell who owns it and suggest the next step." },
-];
-
 const fallbackPrompt = "Help the team with the tasks that it gives you.";
 
 const handle = /^[a-z0-9][a-z0-9_-]{0,31}$/;
@@ -48,43 +43,122 @@ function message(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
-export function FirstMate({ api, storage, wide }: { api: Authed; storage: KeyValue; wide: boolean }) {
-  const [step, setStep] = useState<1 | 2>(1);
+type Place = { link: MachineLink; machine: MachineState; identities: EnvInfo[] };
+
+function chips(f: EnvLocal | null | undefined): { text: string; ok: boolean }[] {
+  if (!f) {
+    return [];
+  }
+  return [
+    { text: f.git_name ? "git: " + f.git_name : "git", ok: f.git_name !== "" },
+    { text: "SSH", ok: f.ssh_agent || f.ssh_keys > 0 },
+    { text: f.github ? (f.github_user ? "gh @" + f.github_user : "gh") : "gh", ok: f.github },
+    { text: "Claude", ok: f.claude },
+    { text: "Codex", ok: f.codex },
+    { text: "Pi", ok: f.pi },
+  ];
+}
+
+async function placeOf(link: MachineLink): Promise<Place> {
+  const hub = await loadHub([link]);
+  const machine = hub.machines[0];
+  if (!machine || machine.state !== "up") {
+    throw new Error("machine not reachable");
+  }
+  return { link, machine, identities: envOrder(hub.environments.map((e) => e.item)) };
+}
+
+function envLabel(place: Place, e: EnvInfo): string {
+  return machineTitle(place.machine.local, place.machine.name) + " · " + (e.kind === "local" ? "your accounts" : e.name);
+}
+
+function Progress({ at }: { at: number }) {
+  return (
+    <ol className="fm-steps" aria-label="Progress">
+      {[1, 2, 3].map((n) => (
+        <li key={n} data-state={n <= at ? "on" : "off"} />
+      ))}
+    </ol>
+  );
+}
+
+export function FirstMate({ api, storage, wide, desktop }: { api: Authed; storage: KeyValue; wide: boolean; desktop?: DesktopBridge }) {
+  const servers = useMemo(() => (desktop ? new Servers(desktop) : undefined), [desktop]);
+  const [step, setStep] = useState<"where" | "ready" | "mate">(desktop && wide ? "where" : "ready");
+  const [place, setPlace] = useState<Place | null>(null);
+  const [pick, setPick] = useState<"this" | "ssh">("ssh");
+  const [address, setAddress] = useState("");
   const [name, setName] = useState("");
   const [prompt, setPrompt] = useState("");
   const [agent, setAgent] = useState<Harness>("claude");
-  const [where, setWhere] = useState("local");
-  const machine = useMachine();
-  const { envs } = useEnvs(api);
-  const custom = envs.filter((e) => e.kind === "custom");
-  const places = [
-    { value: "local", label: "Your accounts on " + machine, detail: "Uses the git, SSH, gh and Claude logins that are already on " + machine + ". Good for your own repos." },
-    ...custom.map((e) => ({ value: "env:" + e.name, label: e.name, detail: envParts(e) })),
-    { value: "new", label: "New environment…", detail: "A separate identity: its own git name, SSH key and tokens. Good for a bot or work account." },
-  ];
+  const [identity, setIdentity] = useState("yours");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [look, setLook] = useState<{ avatar?: string; color?: string }>({});
   const mate = mateSlug(name);
   const valid = handle.test(mate);
 
-  async function create() {
+  useEffect(() => {
+    if (desktop && wide) {
+      return;
+    }
+    let on = true;
+    const links = desktop ? desktopMachines(desktop).links() : pairedMachines([{ key: "this", name: "", url: "", token: api.token, local: false }], api.fetch).links();
+    links
+      .then((all) => placeOf(all[0]))
+      .then((p) => on && setPlace(p))
+      .catch((err) => on && setError(message(err)));
+    return () => {
+      on = false;
+    };
+  }, [api, desktop, wide]);
+
+  async function connect() {
+    if (!desktop || !servers) {
+      return;
+    }
     setBusy(true);
     setError("");
     try {
-      if (where.startsWith("env:")) {
-        await saveMate(api, { name: mate, prompt: prompt.trim() || fallbackPrompt, agent, env: where.slice(4), ...look, enabled: true });
-        window.location.hash = "#/mates/" + encodeURIComponent(mate);
-        return;
+      let id = "local";
+      if (pick === "ssh") {
+        const target = sshTarget(address);
+        if (!target) {
+          throw new Error("Type a host name, not ssh options.");
+        }
+        const remote = await servers.crew(target);
+        if (remote.action !== "current") {
+          await servers.install(target);
+        }
+        id = await servers.add("ssh", target);
       }
-      if (where === "new") {
-        const env = await createEnv(api, { name: mate, kind: "custom", parts: customParts });
-        await envSSHKey(api, env.name, "make");
-        await saveMate(api, { name: mate, prompt: prompt.trim() || fallbackPrompt, agent, env: env.name, ...look, enabled: true });
-        window.location.hash = "#/envs/" + encodeURIComponent(env.name);
-        return;
+      const links = await desktopMachines(desktop).links();
+      const link = links.find((l) => l.key === id);
+      if (!link) {
+        throw new Error("machine not reachable");
       }
-      await saveMate(api, { name: mate, prompt: prompt.trim() || fallbackPrompt, agent, ...look, enabled: true });
+      setPlace(await placeOf(link));
+      setIdentity("yours");
+      setStep("ready");
+    } catch (err) {
+      setError(message(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function create() {
+    if (!place?.machine.machine) {
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      await saveMate(
+        { fetch: place.link.fetch, token: place.link.token },
+        { name: mate, prompt: prompt.trim() || fallbackPrompt, agent, ...look, enabled: true },
+        { machine_id: place.machine.machine.id, identity_id: identity },
+      );
       window.location.hash = "#/mates/" + encodeURIComponent(mate);
     } catch (err) {
       setError(message(err));
@@ -116,21 +190,22 @@ export function FirstMate({ api, storage, wide }: { api: Authed; storage: KeyVal
     </p>
   );
 
+  const envOptions = place
+    ? place.identities.map((e) => ({ value: e.kind === "local" ? "yours" : e.name, label: envLabel(place, e) }))
+    : [];
+  const chosen = place?.identities.find((e) => (e.kind === "local" ? "yours" : e.name) === identity);
+  const where = place ? machineTitle(place.machine.local, place.machine.name) : "";
+  const gitName = chosen?.kind === "local" ? place?.machine.found?.git_name : chosen?.git_name;
+
   if (!wide) {
     return (
       <main className="fm fm-phone">
         <h1>Make your first mate</h1>
-        <p className="lead">A mate is an agent that stays: a name, a role, its own threads.</p>
+        <p className="lead">A mate is an agent that stays: a name, a role and its own threads.</p>
         <input className="ui input" aria-label="Name" placeholder="Name" autoCapitalize="off" spellCheck={false} value={name} onChange={(e) => setName(e.target.value)} />
         <Select label="Harness" value={agent} options={harnesses} onChange={setAgent} className="fm-select" />
-        <Select
-          label="Environment"
-          value={where}
-          options={places.map((o) => ({ value: o.value, label: "Environment: " + o.label }))}
-          onChange={setWhere}
-          className="fm-select"
-        />
-        <Button variant="primary" disabled={!valid || busy} onClick={() => void create()}>
+        {place ? <Select label="Environment" value={identity} options={envOptions} onChange={setIdentity} className="fm-select" /> : null}
+        <Button variant="primary" disabled={!valid || busy || !place} onClick={() => void create()}>
           Next
         </Button>
         {alert}
@@ -139,80 +214,136 @@ export function FirstMate({ api, storage, wide }: { api: Authed; storage: KeyVal
     );
   }
 
-  return (
-    <main className="fm">
-      <ol className="fm-steps" aria-label="Progress">
-        <li data-state="on" />
-        <li data-state={step === 2 ? "on" : "off"} />
-      </ol>
-      {step === 1 ? (
-        <>
-          <h1>Make your first mate</h1>
-          <p className="lead">A mate is an agent that stays: it has a name, a role, its own threads, and it can answer in Slack.</p>
-          <form
-            className="fm-composer"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (valid) {
-                setStep(2);
-              }
-            }}
-          >
-            <div className="fm-name">
-              {valid ? (
-                <FaceButton name={mate} avatar={look.avatar} color={look.color} onPick={(patch) => setLook({ ...look, ...patch })} />
-              ) : (
-                <span className="fm-q" aria-hidden="true">?</span>
-              )}
-              <input aria-label="Name" placeholder="Name, for example ada" autoCapitalize="off" spellCheck={false} value={name} onChange={(e) => setName(e.target.value)} />
-              {valid && mate !== name && <span className="fm-slug muted">{"Saved as " + mate}</span>}
-              {!valid && name.trim() !== "" && <span className="fm-slug bad">{nameCheck(mate || name.trim(), []).text}</span>}
+  if (step === "where") {
+    return (
+      <main className="fm">
+        <Progress at={1} />
+        <h1>Where does crew run your mates?</h1>
+        <p className="lead">Pick the machine. Mates on a server keep working when this Mac sleeps.</p>
+        <RadioGroup
+          label="Machine"
+          className="fm-pick fm-where"
+          itemClassName="preset"
+          value={pick}
+          onChange={(v) => setPick(v as "this" | "ssh")}
+          options={[
+            { value: "this", label: <span className="t">This Mac</span>, detail: <span className="s">Mates stop when the Mac sleeps.</span> },
+            { value: "ssh", label: <span className="t">A server over SSH</span>, detail: <span className="s">A Linux box or VM that you can SSH to.</span> },
+          ]}
+        />
+        {pick === "ssh" ? (
+          <input
+            className="ui input mono fm-address"
+            aria-label="SSH address"
+            placeholder="giovani@devbox.tail.ts.net"
+            autoComplete="off"
+            spellCheck={false}
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+          />
+        ) : null}
+        <div className="fm-buttons">
+          <Button variant="primary" disabled={busy || (pick === "ssh" && address.trim() === "")} onClick={() => void connect()}>
+            Connect
+          </Button>
+        </div>
+        {alert}
+        {instead}
+      </main>
+    );
+  }
+
+  if (step === "ready" || !place) {
+    return (
+      <main className="fm">
+        <Progress at={2} />
+        {place ? (
+          <>
+            <h1>{where + " is ready"}</h1>
+            <p className="lead">{"crew runs on " + (place.machine.local ? "this Mac" : where) + " now. It found your logins there, so this environment is ready to use."}</p>
+            <div className="envcard" role="group" aria-label={where + " · your accounts"}>
+              <div className="ech">
+                <span className="eicon m" aria-hidden="true">
+                  {place.machine.local ? "⌘" : "▣"}
+                </span>
+                <div className="ech-t">
+                  <div className="t">{where + " · your accounts"}</div>
+                  <div className="s">New environment</div>
+                </div>
+                <span className="pill ok">connected</span>
+              </div>
+              <div className="echips">
+                {chips(place.machine.found).map((c) => (
+                  <span key={c.text} className={c.ok ? "set-y" : "set-n"}>
+                    {c.text}
+                  </span>
+                ))}
+              </div>
+              <div className="muted small">
+                {"Mates in this environment act as you on " + (place.machine.local ? "this Mac" : where) + ". To use a bot account, add a separate identity later in Environments."}
+              </div>
             </div>
-            <textarea aria-label="Role" rows={2} placeholder="What should it do? For example: review PRs in api and web." value={prompt} onChange={(e) => setPrompt(e.target.value)} />
-            <div className="fm-foot">
-              <Select label="Harness" value={agent} options={harnesses} onChange={setAgent} className="fm-chip" />
-              <span className="spacer" />
-              <Button variant="primary" type="submit" className="fm-next" disabled={!valid}>
-                Next
+            <div className="fm-buttons">
+              {desktop ? (
+                <Button variant="quiet" onClick={() => setStep("where")}>
+                  Back
+                </Button>
+              ) : null}
+              <Button variant="primary" onClick={() => setStep("mate")}>
+                Next: make a mate
               </Button>
             </div>
-          </form>
-          <div className="fm-suggest">
-            {roles.map((r) => (
-              <button key={r.label} type="button" className="ui chip" onClick={() => setPrompt(r.prompt)}>
-                {r.label}
-              </button>
-            ))}
-          </div>
-          {instead}
-        </>
-      ) : (
-        <>
-          <h1>{"Whose accounts does " + mate + " use?"}</h1>
-          <p className="lead">{mate + " runs on " + machine + ". Pick the git identity, SSH key and logins it uses there. You can change it later."}</p>
-          <RadioGroup
-            label="Environment"
-            className="fm-pick"
-            itemClassName="preset"
-            value={where}
-            onChange={setWhere}
-            options={places.map((o) => ({
-              value: o.value,
-              label: <span className="t">{o.label}</span>,
-              detail: <span className="s">{o.detail}</span>,
-            }))}
-          />
-          <div className="fm-buttons">
-            <Button variant="quiet" onClick={() => setStep(1)}>
-              Back
-            </Button>
-            <Button variant="primary" disabled={busy} onClick={() => void create()}>
-              {"Create " + mate}
-            </Button>
-          </div>
-          {alert}
-        </>
-      )}
+          </>
+        ) : (
+          <div aria-busy="true" />
+        )}
+        {alert}
+        {instead}
+      </main>
+    );
+  }
+
+  return (
+    <main className="fm">
+      <Progress at={3} />
+      <h1>Make your first mate</h1>
+      <p className="lead">A mate is an agent that stays: a name, a role and its own threads.</p>
+      <form
+        className="fm-composer"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (valid) {
+            void create();
+          }
+        }}
+      >
+        <div className="fm-name">
+          {valid ? (
+            <FaceButton name={mate} avatar={look.avatar} color={look.color} onPick={(patch) => setLook({ ...look, ...patch })} />
+          ) : (
+            <span className="fm-q" aria-hidden="true">?</span>
+          )}
+          <input aria-label="Name" placeholder="Name, for example ada" autoCapitalize="off" spellCheck={false} value={name} onChange={(e) => setName(e.target.value)} />
+          {valid && mate !== name && <span className="fm-slug muted">{"Saved as " + mate}</span>}
+          {!valid && name.trim() !== "" && <span className="fm-slug bad">{nameCheck(mate || name.trim(), []).text}</span>}
+        </div>
+        <textarea aria-label="Role" rows={2} placeholder="What should it do? For example: review PRs in api and web." value={prompt} onChange={(e) => setPrompt(e.target.value)} />
+        <div className="fm-foot">
+          <Select label="Harness" value={agent} options={harnesses} onChange={setAgent} className="fm-chip" />
+          <Select label="Environment" value={identity} options={envOptions} onChange={setIdentity} className="fm-chip fm-env" />
+          <span className="spacer" />
+          <Button variant="primary" type="submit" className="fm-next" disabled={!valid || busy}>
+            {"Create " + (mate || "mate")}
+          </Button>
+        </div>
+      </form>
+      {valid ? <div className="muted small fm-note">{mate + " runs on " + where + (gitName ? " and commits as " + gitName : "") + "."}</div> : null}
+      <div className="fm-buttons">
+        <Button variant="quiet" onClick={() => setStep("ready")}>
+          Back
+        </Button>
+      </div>
+      {alert}
     </main>
   );
 }

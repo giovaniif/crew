@@ -304,3 +304,64 @@
 .fm-slug.bad {
   color: var(--danger);
 }
+
+.fm .envcard {
+  width: 520px;
+  max-width: 100%;
+  text-align: left;
+  border: 1px solid var(--line-2);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fm .ech {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fm .ech-t {
+  flex: 1;
+  min-width: 0;
+}
+
+.fm .ech .t {
+  font-weight: 600;
+}
+
+.fm .ech .s {
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+}
+
+.fm .echips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.fm .envcard .pill.ok {
+  background: oklch(0.95 0.05 150);
+  color: oklch(0.42 0.1 150);
+}
+
+.fm .fm-address {
+  width: 560px;
+  max-width: 100%;
+  margin-top: 8px;
+}
+
+.fm .fm-where {
+  width: 560px;
+  max-width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.fm .fm-note {
+  margin-top: 12px;
+}

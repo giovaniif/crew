@@ -803,3 +803,40 @@ button.chip.env-chip .chev {
   align-items: center;
   gap: 6px;
 }
+
+.connect-server .fld {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.connect-server .fld label {
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+  font-weight: 500;
+}
+
+.connect-server .steplist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: var(--fs-sm);
+  background: var(--bg-sunken);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-top: 4px;
+}
+
+.connect-server .steplist div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.connect-server .dot.run {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+}

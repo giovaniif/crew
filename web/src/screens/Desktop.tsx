@@ -11,7 +11,7 @@ import { Segmented } from "../ui";
 import type { Servers } from "../servers";
 import type { DesktopBridge } from "../desktopBridge";
 import { FirstRun } from "./FirstRun";
-import { ServerChip, useServerListing } from "./Servers";
+import { useServerListing } from "./Servers";
 import { BrowserPane, type BrowserStore } from "./Browser";
 import { NewSession } from "./NewSession";
 import { ReviewPane } from "./Review";
@@ -527,31 +527,18 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
           hash={hash}
           keys={keys}
           approvals={approvals}
-          chip={servers ? <ServerChip servers={servers} listing={listing} go={go} /> : null}
+          chip={null}
         />
         {menu && menuSession ? <SessionCommands key={"menu-" + menu.id} api={api} session={menuSession} storage={env.storage} openAt={menu} /> : null}
         <main className="main-column">{main}</main>
-        {servers && (firstRun || hash === "#/servers/add") ? (
-          <Sheet
-            label="Add a server"
-            onClose={() => {
-              setFirstRun(false);
-              if (hash === "#/servers/add") {
-                go("#/servers");
-              }
-            }}
-          >
+        {servers && firstRun ? (
+          <Sheet label="Add a server" onClose={() => setFirstRun(false)}>
             <FirstRun
               servers={servers}
               welcome={firstRun}
               storage={env.storage}
               mac={/Macintosh/.test(env.userAgent)}
-              onClose={() => {
-                setFirstRun(false);
-                if (hash === "#/servers/add") {
-                  go("#/servers");
-                }
-              }}
+              onClose={() => setFirstRun(false)}
             />
           </Sheet>
         ) : null}

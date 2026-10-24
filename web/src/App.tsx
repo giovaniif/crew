@@ -25,7 +25,6 @@ import { NewSession } from "./screens/NewSession";
 import { Pair } from "./screens/Pair";
 import { SessionScreen } from "./screens/Session";
 import { SessionList } from "./screens/SessionList";
-import { FirstRun } from "./screens/FirstRun";
 import { Settings, type UpdateCheck } from "./screens/Settings";
 import { PhoneSession } from "./screens/PhoneSession";
 import { ReviewPane } from "./screens/Review";
@@ -175,13 +174,6 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
   if (route.screen === "new") {
     return <NewSession env={env} token={auth.token} />;
   }
-  if (hash === "#/servers/add" && servers) {
-    return (
-      <main className="screen">
-        <FirstRun servers={servers} welcome={false} storage={env.storage} mac={/Macintosh/.test(env.userAgent)} onClose={() => go("#/servers")} />
-      </main>
-    );
-  }
   if (route.screen === "session") {
     const phoneSession = snapshot.state?.sessions.find((s) => s.ID === route.id) ?? null;
     return (
@@ -240,6 +232,9 @@ function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, g
   if (auto.creating) {
     return { screen: <Automations key={hash} api={api} now={now} forMate={auto.mate} />, tab: "more" };
   }
+  if (hash === "#/servers" || hash === "#/servers/add") {
+    return { screen: <Environments api={api} route="" wide={wide} desktop={env.desktop} />, tab: "more" };
+  }
   if (hash === "#/envs" || hash.startsWith("#/envs/")) {
     return { screen: <Environments api={api} route={hash === "#/envs" ? "" : hash.slice("#/envs/".length)} wide={wide} desktop={env.desktop} />, tab: "more" };
   }
@@ -262,7 +257,7 @@ function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, g
   if (hash === "#/approvals") {
     return { screen: <Approvals api={api} now={now} visibility={env.visibility} />, tab: "approvals" };
   }
-  if (hash === "#/settings" || (hash === "#/servers" && servers)) {
+  if (hash === "#/settings") {
     return {
       screen: (
         <>
@@ -279,7 +274,6 @@ function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, g
             desktop={!!env.desktop}
             local={!!env.desktopAuth}
             servers={servers}
-            initial={hash === "#/servers" ? "servers" : undefined}
             checkUpdate={env.desktop ? () => env.desktop!.invoke("crew_check_update") as Promise<UpdateCheck> : undefined}
           />
         </>
@@ -290,7 +284,7 @@ function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, g
   if (parseRoute(hash).screen === "home") {
     const board = snapshot.state?.mates;
     if (board && board.mates.length === 0 && !firstMateSkipped(env.storage)) {
-      return { screen: <FirstMate api={api} storage={env.storage} wide={wide} />, tab: "mates" };
+      return { screen: <FirstMate api={api} storage={env.storage} wide={wide} desktop={env.desktop} />, tab: "mates" };
     }
     return { screen: <MatesHome api={api} now={now} board={board} wide={wide} />, tab: "mates" };
   }
