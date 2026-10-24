@@ -54,8 +54,15 @@ func (d *Daemon) envMethod(req rpc.Request) *rpc.Response {
 	if req.Method == rpc.MethodEnvList {
 		return d.envList(req, mates)
 	}
-	if req.Method == rpc.MethodEnvironmentList {
+	switch req.Method {
+	case rpc.MethodEnvironmentList:
 		return d.environmentList(req, mates)
+	case rpc.MethodIdentityCopyBegin:
+		return d.identityCopyBegin(req)
+	case rpc.MethodIdentityExport:
+		return d.identityExport(req)
+	case rpc.MethodIdentityImport:
+		return d.identityImport(req, mates)
 	}
 	if failed := d.identityAlias(&req); failed != nil {
 		return failed

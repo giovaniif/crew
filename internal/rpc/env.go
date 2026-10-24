@@ -16,6 +16,9 @@ const (
 	MethodIdentityRemove    = "identity.remove"
 	MethodIdentitySetSecret = "identity.set_secret"
 	MethodIdentitySSHKey    = "identity.ssh_key"
+	MethodIdentityCopyBegin = "identity.copy_begin"
+	MethodIdentityExport    = "identity.export"
+	MethodIdentityImport    = "identity.import"
 )
 
 type EnvironmentList struct {
@@ -107,4 +110,23 @@ type EnvSSHKeyParams struct {
 	Name       string `json:"name"`
 	Action     string `json:"action,omitempty"`
 	PrivateKey string `json:"private_key,omitempty"`
+}
+
+type IdentityCopyBegin struct {
+	CopyID    string `json:"copy_id"`
+	PublicKey string `json:"public_key"`
+}
+
+type IdentityExportParams struct {
+	Name      string `json:"name"`
+	PublicKey string `json:"public_key"`
+}
+
+type IdentityExport struct {
+	Bundle string `json:"bundle"`
+}
+
+type IdentityImportParams struct {
+	CopyID string `json:"copy_id"`
+	Bundle string `json:"bundle"`
 }
