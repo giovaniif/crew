@@ -555,3 +555,19 @@
   min-width: 20px;
   min-height: 20px;
 }
+
+.qb kbd {
+  background: none;
+  border: 0;
+  padding: 0;
+  box-shadow: none;
+}
+
+.chat-bar > .qb,
+.chat-bar > .qb-confirm {
+  margin-left: auto;
+}
+
+.chat-log > .tool + .tool {
+  margin-top: -12px;
+}
