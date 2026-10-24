@@ -113,7 +113,7 @@ Expect: nvim runs, also with the GUI `PATH` of the app, and `:pwd` prints the pa
 
 ```sh
 go run ./scripts/verify iso crew -- new --workspace "$TEST_REPO" --harness claude "TEST fresh install"
-go run ./scripts/verify iso crew -- send <session> "TEST what is this project"
+go run ./scripts/verify web drive / --viewport desktop --out-dir /tmp/crew-verify-map/live-session --steps '[{"click":{"text":"TEST fresh install","exact":false}},{"fill":{"role":"textbox","name":"Message"},"value":"TEST what is this project"},{"press":"Enter"},{"wait":20000},{"shot":"fresh-send.png"}]'
 ```
 
 Expect: the daemon holds the send until the `SessionStart` hook (or 15 s with no hooks), and then the agent pane shows the message as a submitted prompt, not as text in the input box. Do this for each release with a `CLAUDE_CONFIG_DIR` that has no crew hooks and a repo that Claude trusts (#917).
