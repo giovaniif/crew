@@ -73,6 +73,15 @@ async function open() {
 }
 
 describe("the Automations window", () => {
+  it("marks only Automations as the current item of the sidebar", async () => {
+    await open();
+    const nav = screen.getByRole("navigation", { name: "Sidebar" });
+    const current = within(nav)
+      .getAllByRole("link")
+      .filter((a) => a.getAttribute("aria-current") === "page");
+    expect(current.map((a) => a.textContent)).toEqual(["↻Automations"]);
+  });
+
   it("opens from the sidebar and filters the list", async () => {
     await open();
     await screen.findByRole("row", { name: "fix-ci" });

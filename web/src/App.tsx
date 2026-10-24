@@ -1,3 +1,5 @@
+import { machineName } from "./envs";
+import { MachineContext } from "./screens/Machine";
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { sessionPane, tokenRefused, unpairDevice, type Fetch } from "./api";
 import { clearAuth, loadAuth, saveAuth, type Auth, type KeyValue } from "./auth";
@@ -5,7 +7,7 @@ import { pairCodeFromHash } from "./display";
 import { useDesktopAttention, type DesktopBridge } from "./desktopBridge";
 import { disablePush, noPush, type PushEnv } from "./push";
 import { modifierKeys } from "./desktop";
-import { parseRoute } from "./route";
+import { parseRoute, phoneTab } from "./route";
 import { Approvals } from "./screens/Approvals";
 import { Automations } from "./screens/Automations";
 import { automationRoute } from "./matepage";
@@ -203,7 +205,7 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
     return (
       <>
         {other.screen}
-        <Tabs current={other.tab} />
+        <Tabs current={phoneTab(hash)} />
       </>
     );
   }
@@ -215,7 +217,7 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
         </a>
       )}
       <SessionList host={env.host} snapshot={snapshot} now={now} onRetry={retry} />
-      <Tabs current="sessions" />
+      <Tabs current={phoneTab(hash)} />
     </>
   );
 }
@@ -306,7 +308,11 @@ const refusedNotice =
   "This device was removed from crew, or the server rejected its login. Pair it again with a new code from crew remote pair.";
 
 export function App({ env }: { env: AppEnv }) {
-  return <Paired env={env} />;
+  return (
+    <MachineContext.Provider value={machineName(null, env.host)}>
+      <Paired env={env} />
+    </MachineContext.Provider>
+  );
 }
 
 function Paired({ env }: { env: AppEnv }) {

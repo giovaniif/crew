@@ -17,7 +17,7 @@ Pure types and rules. This package does no IO and does not import other `interna
   - `done` marks the session unread only when it does not have focus. `Focus()` clears the mark.
 - `NameFor(task, prs)`: naming precedence (pin, PR title, prompt summary), with `SummarizeText`, `PinName` and `WithTitle`. See [ADR 0026](../../docs/adr/0026-session-naming.md).
 - `BannerFor(session, name, effect)` and `Coalescer`: which notify effects become a banner (not for muted sessions), and the rule of one banner every 10 s for each session.
-- `PlanCleanup(worktree, facts, now)`: the cleanup decision (`remove`, `backup_then_ask` or `keep` with a reason). See [ADR 0021](../../docs/adr/0021-worktree-cleanup.md).
+- `PlanCleanup(worktree, facts, now)`: the cleanup decision (`remove`, `backup_then_ask`, `prune` or `keep` with a reason). If the repo is gone, the decision is `keep` ("repo moved or missing"), because the folder can hold work. If only the folder is gone, the decision is `prune` ("folder is gone"). See [ADR 0021](../../docs/adr/0021-worktree-cleanup.md).
 - `StateSince(session, events)`: when a session went into its state. It finds this when it applies the events of the session through `Apply` again.
 - `WorktreeLabel(worktrees)`: `repo@branch +N`, as banner titles and the phone show it.
 - `Quotas(sessions)`, `Quota.Low`/`Stale`, `Advise(quotas, harness)`: the usage bar and the low-quota warning. See [ADR 0017](../../docs/adr/0017-usage-and-limits-bar.md).

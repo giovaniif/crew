@@ -34,3 +34,34 @@ export function openSessionView(id: string, view: SessionView): void {
   }
   window.location.hash = target;
 }
+
+export type NavItem = "mates" | "sessions" | "new" | "approvals" | "automations" | "envs" | "disk" | "settings" | "more";
+
+const navPrefixes: [string, NavItem][] = [
+  ["#/mates", "mates"],
+  ["#/sessions", "sessions"],
+  ["#/new", "new"],
+  ["#/approvals", "approvals"],
+  ["#/automations", "automations"],
+  ["#/envs", "envs"],
+  ["#/disk", "disk"],
+  ["#/settings", "settings"],
+  ["#/servers", "settings"],
+  ["#/more", "more"],
+];
+
+export function navItem(hash: string): NavItem {
+  if (parseRoute(hash).screen === "home") {
+    return "mates";
+  }
+  const path = hash.split("?")[0];
+  const hit = navPrefixes.find(([prefix]) => path === prefix || path.startsWith(prefix + "/"));
+  return hit ? hit[1] : "sessions";
+}
+
+export type PhoneTab = "mates" | "sessions" | "approvals" | "more";
+
+export function phoneTab(hash: string): PhoneTab {
+  const item = navItem(hash);
+  return item === "mates" || item === "sessions" || item === "approvals" ? item : item === "new" ? "sessions" : "more";
+}
