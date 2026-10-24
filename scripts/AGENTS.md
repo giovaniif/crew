@@ -59,7 +59,7 @@ Repo tooling. The repo-wide rules are in the [root AGENTS.md](../AGENTS.md).
   - Each command prints exactly one JSON object with `ok`, `problems` (`{msg, hint}`) and its data. The exit code is 0 for ok, 1 for a failure and 2 for a usage error.
   - Its state is in `VERIFY_HOME` (default `/tmp/crew-verify-$UID-<hash of the checkout path>`). Thus each checkout has its own isolated crew, and parallel verifiers in different worktrees do not collide. `verify` exports `VERIFY_HOME` to the recipes that it runs.
   - `doctor`: the tools (go, git, tmux, node 22.18+, `web/node_modules`, the Playwright Chromium), the branch, the machine load, TCP port 5199 and `/tmp`.
-  - `iso up [--session] [--env-fakes]|down|seed [--sessions n] [--codex]|crew|dump|homesum|leaks|panes|file|api`: an isolated crew.
+  - `iso up [--session] [--env-fakes] [--second]|down|seed [--sessions n] [--codex]|crew|dump|homesum|leaks|panes|file|api`: an isolated crew.
     - It has a `CREW_HOME` under `/tmp`, its own tmux socket, its own TCP ports and a temporary `HOME`.
     - The e2e fakes (`claude`, `codex`, `omp`, `gh`, `terminal-notifier`, `osascript`) are first on `PATH`. `up` writes an empty `claude.steps`, `codex.steps` and `omp.steps` in `$CREW_HOME/e2e`, so each fake harness holds its pane. Slack, ntfy and GitHub tokens are blank.
     - `up` starts `crew serve` and the Vite dev server (`CREW_API`). It pairs the device `TEST-verify` with `crew remote pair` and `POST /api/v1/pair`. It never prints the token.
@@ -71,6 +71,7 @@ Repo tooling. The repo-wide rules are in the [root AGENTS.md](../AGENTS.md).
     - `leaks <text> [--api path]...` fails when the text is in `ps` (except the lines of `iso leaks` itself), in a `*.log` of the isolated home, or in the `serve` answer of each path.
     - `panes [--expect s] [--start s] [--kill s]` reads and kills the panes of the isolated tmux server by their start command.
     - `file {home}/<path> [--expect s]` checks a file in the isolated home. `api <METHOD> <path> [--body json] [--status n] [--expect s] [--absent s]` calls `serve` with the token of the paired device. In all helpers, `{home}` is the isolated `CREW_HOME`.
+    - `--second` starts a second isolated crew: its own `CREW_HOME`, tmux socket, daemon and `crew serve`, with `CREW_MACHINE_NAME=devbox`. It pairs a device there and writes `machines.json` in the app data dir of the first `HOME` (This Mac and the `url` machine `devbox` with its token). Thus `app shot` and `app drive` show two machines. The result has `second_home` and `second_serve_url`. `down` stops both. The recipes of two machines are in [features/environments.md](../features/environments.md).
     - `--session` makes the repo `TEST-live` and runs `crew new` in it. The fake `claude` runs `$CREW_HOME/chat.sh` through its `run` step. The script echoes each typed line as `TEST echo: <line>`, writes a Claude transcript and fires `UserPromptSubmit` and `Stop`. Each hook sends the same `session_id` on each start in the worktree, thus the session can resume. The result has `session`, `pane` and `worktree`.
   - `web shot <route> [--viewport mobile|desktop|both]` and `web drive <route> --steps '<json>'`: `web/scripts/verify-drive.ts` with the Playwright of `web/`.
     - Steps: `goto`, `click`, `fill` (with `value`), `press`, `wait`, `expect` (`absent`), `shot`, `aria`, `eval`.

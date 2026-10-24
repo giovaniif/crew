@@ -222,6 +222,9 @@ func tmuxSocket(ctx context.Context) (string, error) {
 }
 
 func machineName() string {
+	if name := os.Getenv("CREW_MACHINE_NAME"); name != "" {
+		return name
+	}
 	if name, err := os.Hostname(); err == nil && name != "" {
 		return name
 	}
