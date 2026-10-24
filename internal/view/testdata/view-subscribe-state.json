@@ -203,6 +203,7 @@
       {
         "name": "helper",
         "state": "connected",
+        "conversation": "",
         "work": [
           "s1"
         ],
@@ -224,6 +225,7 @@
       {
         "name": "webby",
         "state": "paused",
+        "conversation": "",
         "work": [],
         "threads": [],
         "conversations": []
