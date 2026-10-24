@@ -123,7 +123,7 @@ func Run(ctx context.Context, home string) (err error) {
 		WithEnvironments(envstore.Store{Home: home}),
 		WithLocalProbe(envstore.NewProbe()),
 		WithSlack(func(bot, appToken string) app.SlackMate { return slack.New(bot, appToken) }, mateSyncEvery),
-		WithHeadlessBrowser(chromium.FromEnv(), filepath.Join(home, "browser", "profiles", "default", "cookies.json"), DefaultHeadlessReap),
+		WithHeadlessBrowser(chromium.LazyFromEnv(), filepath.Join(home, "browser", "profiles", "default", "cookies.json"), DefaultHeadlessReap),
 	}
 	awayAfter, err := LoadAwayAfter(filepath.Join(home, "config.toml"))
 	if err != nil {

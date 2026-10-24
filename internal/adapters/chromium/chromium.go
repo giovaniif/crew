@@ -43,9 +43,17 @@ func InstallHint() string {
 type Browsers struct {
 	Binary string
 	Flags  []string
+	find   func() (string, bool)
+}
+
+func Lazy(env func(string) string, look func(string) (string, error)) Browsers {
+	return Browsers{Flags: strings.Fields(env("CREW_CHROMIUM_FLAGS")), find: func() (string, bool) { return Find(env, look) }}
 }
 
 func (b Browsers) Open(ctx context.Context, session string) (app.HeadlessTab, error) {
+	if b.Binary == "" && b.find != nil {
+		b.Binary, _ = b.find()
+	}
 	if b.Binary == "" {
 		return nil, errors.New("no Chromium found: " + InstallHint())
 	}
@@ -591,4 +599,8 @@ func (t *Tab) device(ctx context.Context, name string) (json.RawMessage, error) 
 func FromEnv() Browsers {
 	bin, _ := Find(os.Getenv, exec.LookPath)
 	return Browsers{Binary: bin, Flags: strings.Fields(os.Getenv("CREW_CHROMIUM_FLAGS"))}
+}
+
+func LazyFromEnv() Browsers {
+	return Lazy(os.Getenv, exec.LookPath)
 }

@@ -159,6 +159,15 @@ go run ./scripts/verify iso api POST /api/v1/mates --body '{"mate":{"name":"test
 go run ./scripts/verify app drive /#/envs --steps '[{"expect":{"text":"devbox"},"timeout":30000},{"click":{"text":"devbox","exact":false}},{"click":{"role":"button","name":"+ Separate identity"}},{"fill":{"label":"Name"},"value":"test-work"},{"click":{"role":"button","name":"Create"}},{"wait":3000},{"goto":"/#/envs"},{"wait":3000},{"shot":"two-machines.png"}]'
 ```
 
+### a new mate on another machine opens that machine, also after a restart (#912)
+
+Run this on a fresh `iso up --second`, before the other recipes make mates. This Mac has no mates, so the home shows the first run. New mate makes `test-nova` on devbox. The window must open devbox at the mate page, not show "There is no mate". The second `app drive` starts the app again. It must open devbox, with `test-nova` on the home and no first run.
+
+```sh
+go run ./scripts/verify app drive /#/mates/new --steps '[{"fill":{"label":"Name"},"value":"test-nova","timeout":60000},{"fill":{"label":"Role"},"value":"TEST role"},{"click":{"role":"button","name":"Environment","exact":false}},{"click":{"text":"devbox","exact":false}},{"click":{"role":"button","name":"Create mate"}},{"expect":{"text":"TEST role"},"timeout":30000},{"shot":"remote-mate-page.png"},{"goto":"/#/"},{"expect":{"text":"test-nova","exact":false},"timeout":15000},{"shot":"remote-mate-home.png"}]'
+go run ./scripts/verify app drive / --steps '[{"expect":{"text":"test-nova","exact":false},"timeout":60000},{"shot":"remote-mate-restart.png"}]'
+```
+
 ### copy an identity to a different machine (11g, 11h)
 
 ```sh

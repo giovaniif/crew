@@ -161,7 +161,12 @@ export function FirstMate({ api, storage, wide, desktop }: { api: Authed; storag
         { name: mate, prompt: prompt.trim() || fallbackPrompt, agent, ...look, enabled: true },
         { machine_id: place.machine.machine.id, identity_id: identity },
       );
-      window.location.hash = "#/mates/" + encodeURIComponent(mate);
+      const route = "#/mates/" + encodeURIComponent(mate);
+      if (servers) {
+        await servers.show(place.link.key, route);
+      } else {
+        window.location.hash = route;
+      }
     } catch (err) {
       setError(message(err));
     } finally {
@@ -203,7 +208,7 @@ export function FirstMate({ api, storage, wide, desktop }: { api: Authed; storag
     return (
       <main className="fm fm-phone">
         <h1>Make your first mate</h1>
-        <p className="lead">A mate is an agent that stays: a name, a role and its own threads.</p>
+        <p className="lead">A mate is an agent that stays: a name, a role and one conversation.</p>
         <input className="ui input" aria-label="Name" placeholder="Name" autoCapitalize="off" spellCheck={false} value={name} onChange={(e) => setName(e.target.value)} />
         <Select label="Harness" value={agent} options={harnesses} onChange={setAgent} className="fm-select" />
         {place ? <Select label="Environment" value={identity} options={envOptions} onChange={setIdentity} className="fm-select" /> : null}
@@ -314,7 +319,7 @@ export function FirstMate({ api, storage, wide, desktop }: { api: Authed; storag
     <main className="fm">
       <Progress at={3} />
       <h1>Make your first mate</h1>
-      <p className="lead">A mate is an agent that stays: a name, a role and its own threads.</p>
+      <p className="lead">A mate is an agent that stays: a name, a role and one conversation.</p>
       <form
         className="fm-composer"
         onSubmit={(e) => {

@@ -2,6 +2,8 @@ import { type FormEvent, type KeyboardEvent, type ReactNode, useCallback, useEff
 import { CopyMate } from "./CopyMate";
 import { defaultPick, EnvChip, EnvRail, type EnvPick } from "./EnvPicker";
 import { authedOf, useHub } from "../hub";
+import type { DesktopBridge } from "../desktopBridge";
+import { Servers } from "../servers";
 import { isYours } from "../envmenu";
 import type { MateEnvironment } from "../api";
 import { InterruptButton, StartFreshButton, ThreadChat } from "./Session";
@@ -990,7 +992,7 @@ function ChipMenu({ label, text, items, onPick }: { label: string; text: ReactNo
   );
 }
 
-export function NewMate({ api, repos: known }: { api: Authed; repos: string[] }) {
+export function NewMate({ api, repos: known, desktop }: { api: Authed; repos: string[]; desktop?: DesktopBridge }) {
   const { defs } = useMateDefs(api);
   const hub = useHub(api);
   const [pick, setPick] = useState<EnvPick | null>(null);
@@ -1018,7 +1020,12 @@ export function NewMate({ api, repos: known }: { api: Authed; repos: string[] })
         avatar: faceOf(mate.name, mate.avatar).id,
         enabled: true,
       }, where && where.machineId ? { machine_id: where.machineId, identity_id: where.id } : undefined);
-      window.location.hash = "#/mates/" + encodeURIComponent(out.name) + (slack ? "/~slack" : "");
+      const route = "#/mates/" + encodeURIComponent(out.name) + (slack ? "/~slack" : "");
+      if (desktop && link) {
+        await new Servers(desktop).show(link.key, route);
+      } else {
+        window.location.hash = route;
+      }
     } catch (err) {
       setNote(message(err));
     } finally {
