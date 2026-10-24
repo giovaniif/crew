@@ -577,3 +577,25 @@ button.chip.env-chip .chev {
   background: oklch(0.985 0.012 25);
   border-color: oklch(0.85 0.08 25);
 }
+
+.copy-mate .fld {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.copy-mate .fld label {
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+  font-weight: 500;
+}
+
+.copy-mate .fld .ui.select,
+.copy-mate .fld .ui-anchor {
+  width: 100%;
+}
+
+.copy-mate .fld-note {
+  font-size: 12px;
+}
