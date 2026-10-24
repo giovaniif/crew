@@ -41,7 +41,29 @@ const accounts: Omit<AccountRow, "set" | "setKeys">[] = [
 ];
 
 export function isLocal(e: EnvInfo): boolean {
-  return e.kind === "local" && e.name === "local";
+  return e.kind === "local" && (e.name === "local" || e.name === "yours");
+}
+
+export function identitySub(e: EnvInfo): string {
+  if (e.kind === "local") {
+    return e.used_by.length === 0 ? "not used" : e.used_by.join(", ");
+  }
+  if (e.used_by.length === 0) {
+    return "Separate identity";
+  }
+  return "Separate identity · " + (e.used_by.length === 1 ? e.used_by[0] : usedLabel(e.used_by.length));
+}
+
+export function machineTitle(local: boolean, name: string): string {
+  return local ? "This Mac" : name;
+}
+
+export function machineWhere(local: boolean, name: string): string {
+  return local ? "this Mac" : name;
+}
+
+export function machineAddress(key: string): string {
+  return key.startsWith("ssh:") ? key.slice(4) : key.startsWith("url:") ? key.slice(4) : "";
 }
 
 export function envOrder(envs: EnvInfo[]): EnvInfo[] {
