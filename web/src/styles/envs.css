@@ -787,6 +787,23 @@ button.chip.env-chip .chev {
   font-size: 12px;
 }
 
+.steplist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: var(--fs-sm);
+  background: var(--bg-sunken);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 4px 0 10px;
+}
+
+.steplist div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .connect-server .fld {
   display: flex;
   flex-direction: column;
