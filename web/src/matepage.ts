@@ -65,6 +65,16 @@ export function mateLine(env: string, agent: string, status: string): string {
 
 const handle = /^[a-z0-9][a-z0-9_-]*$/;
 
+export function mateSlug(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^[-_]+|[-_]+$/g, "");
+}
+
 export function nameCheck(name: string, defs: Mate[]): { ok: boolean; text: string } {
   if (name === "") {
     return { ok: false, text: "" };

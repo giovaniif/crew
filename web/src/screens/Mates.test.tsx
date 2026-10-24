@@ -378,8 +378,32 @@ describe("New mate", () => {
     expect(await screen.findByText("A mate named helper exists.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Create mate" })).toBeDisabled();
     await user.clear(name);
-    await user.type(name, "Bad Name");
+    await user.type(name, "!!!");
     expect(screen.getByText("Use up to 32 letters, digits, - and _.")).toBeInTheDocument();
+  });
+
+  it("saves a name with spaces and capitals as its slug and shows the slug", async () => {
+    const { server } = setup("#/mates/new");
+    const user = userEvent.setup();
+    await user.type(await screen.findByRole("textbox", { name: "Name" }), "UX Patrol");
+    expect(screen.getByText("Saved as ux-patrol")).toBeInTheDocument();
+    await user.type(screen.getByRole("textbox", { name: "Role" }), "Patrol the UX.");
+    await user.click(screen.getByRole("button", { name: "Create mate" }));
+    await waitFor(() => expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/mates")?.body).toMatchObject({ mate: { name: "ux-patrol" } }));
+  });
+
+  it("picks the face and the color from a click on the face", async () => {
+    const { server } = setup("#/mates/new");
+    const user = userEvent.setup();
+    await user.type(await screen.findByRole("textbox", { name: "Name" }), "scout");
+    await user.type(screen.getByRole("textbox", { name: "Role" }), "Scout.");
+    await user.click(screen.getByRole("button", { name: "Change face" }));
+    const picker = await screen.findByRole("dialog", { name: "Face and color" });
+    await user.click(within(picker).getByRole("button", { name: "Owl" }));
+    await user.click(within(picker).getByRole("button", { name: "Color #40a02b" }));
+    await user.click(within(picker).getByRole("button", { name: "Done" }));
+    await user.click(screen.getByRole("button", { name: "Create mate" }));
+    await waitFor(() => expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/mates")?.body).toMatchObject({ mate: { name: "scout", avatar: "owl", color: "#40a02b" } }));
   });
 
   it("fills the role from a suggestion chip", async () => {
