@@ -154,7 +154,6 @@ func (d *Daemon) startSessionWith(p rpc.NewSessionParams, prompt string, extra s
 	started.Session.StartEffort = started.Session.Effort
 	started.Session.StartWorkspace = in.ws.Root
 	started.Session.Mate = extra.seat
-	queued := false
 	ok = d.query(func(s *state) {
 		if in.isNew {
 			if task, named := domain.NameFromPrompt(in.task, p.Prompt); named {
@@ -167,9 +166,9 @@ func (d *Daemon) startSessionWith(p rpc.NewSessionParams, prompt string, extra s
 			s.emit(WorktreeChanged{Worktree: *started.Worktree})
 		}
 		s.emit(SessionChanged{Session: started.Session})
+		s.booting[started.Session.ID] = true
 		if domain.SendableText(p.Prompt) {
 			s.queueFirstPrompt(started.Session, p.Prompt, extra.input)
-			queued = true
 		}
 		s.replayEarlyHooks(started.Session.Pane, d.ws.now())
 		if ws, found := s.workspaces[in.ws.Root]; found {
@@ -177,9 +176,7 @@ func (d *Daemon) startSessionWith(p rpc.NewSessionParams, prompt string, extra s
 			s.emit(WorkspaceChanged{Workspace: ws})
 		}
 	})
-	if queued {
-		d.releaseFirstPromptAfterGrace(started.Session.ID)
-	}
+	d.releaseFirstPromptAfterGrace(started.Session.ID)
 	return started.Session, nil, ok
 }
 

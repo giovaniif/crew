@@ -10,6 +10,7 @@ pub const SERVER_COMMANDS: &[&str] = &[
     "allow-crew-server-crew",
     "allow-crew-server-install",
     "allow-crew-server-workspace",
+    "allow-crew-server-complete",
     "allow-crew-machine-request",
     "allow-crew-machine-stream",
     "allow-crew-machine-stream-close",
@@ -44,7 +45,7 @@ pub fn server_capability(url: &Url) -> Option<String> {
 }
 
 pub fn tunnel_capability(url: &Url) -> Option<String> {
-    capability("tunnel", url, &["allow-fix-daemon"])
+    capability("tunnel", url, &["allow-fix-daemon", "allow-crew-check-update"])
 }
 
 pub fn serve_capability(url: &Url) -> Option<String> {

@@ -206,7 +206,7 @@ export function FirstMate({ api, storage, wide, desktop }: { api: Authed; storag
     return (
       <main className="fm fm-phone">
         <h1>Make your first mate</h1>
-        <p className="lead">A mate is an agent that stays: a name, a role and its own threads.</p>
+        <p className="lead">A mate is an agent that stays: a name, a role and one conversation.</p>
         <input className="ui input" aria-label="Name" placeholder="Name" autoCapitalize="off" spellCheck={false} value={name} onChange={(e) => setName(e.target.value)} />
         <Select label="Harness" value={agent} options={harnesses} onChange={setAgent} className="fm-select" />
         {place ? <Select label="Environment" value={identity} options={envOptions} onChange={setIdentity} className="fm-select" /> : null}
@@ -237,15 +237,19 @@ export function FirstMate({ api, storage, wide, desktop }: { api: Authed; storag
           ]}
         />
         {pick === "ssh" ? (
-          <input
-            className="ui input mono fm-address"
-            aria-label="SSH address"
-            placeholder="giovani@devbox.tail.ts.net"
-            autoComplete="off"
-            spellCheck={false}
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-          />
+          <>
+            <input
+              className="ui input mono fm-address"
+              aria-label="SSH host"
+              placeholder="user@host or server"
+              autoComplete="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+            />
+            <p className="fm-hint muted">Type the host as for ssh: user@host or a Host alias of ~/.ssh/config. Do not type the ssh command.</p>
+          </>
         ) : null}
         <div className="fm-buttons">
           <Button variant="primary" disabled={busy || (pick === "ssh" && address.trim() === "")} onClick={() => void connect()}>
@@ -312,7 +316,7 @@ export function FirstMate({ api, storage, wide, desktop }: { api: Authed; storag
     <main className="fm">
       <Progress at={3} />
       <h1>Make your first mate</h1>
-      <p className="lead">A mate is an agent that stays: a name, a role and its own threads.</p>
+      <p className="lead">A mate is an agent that stays: a name, a role and one conversation.</p>
       <form
         className="fm-composer"
         onSubmit={(e) => {

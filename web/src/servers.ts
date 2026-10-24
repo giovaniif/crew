@@ -7,7 +7,7 @@ export type ServerListing = { servers: ServerRow[]; selected: string; first_run:
 
 export type Where = ServerKind;
 export function sshTarget(text: string): string | null {
-  const target = text.trim();
+  const target = text.trim().replace(/^ssh\s+/, "");
   if (target === "" || target.startsWith("-") || /[\s'"]/.test(target)) {
     return null;
   }

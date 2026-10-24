@@ -278,6 +278,34 @@
   border-radius: 8px;
   background: transparent;
   cursor: pointer;
+  align-items: center;
+  justify-content: center;
+}
+
+.face-pick .face {
+  display: block;
+}
+
+.mt-faces button .face {
+  display: block;
+}
+
+.face-picker .swatches {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  justify-items: center;
+}
+
+.face-picker .swatches .swatch {
+  padding: 10px;
+  background-clip: content-box;
+}
+
+.face-picker .swatches .swatch.on {
+  box-shadow: none;
+  outline: 2px solid var(--ink);
+  outline-offset: -8px;
 }
 
 .face-pick:focus-visible {
@@ -364,4 +392,11 @@
 
 .fm .fm-note {
   margin-top: 12px;
+}
+
+.fm .fm-hint {
+  width: 560px;
+  max-width: 100%;
+  margin: 6px 0 0;
+  font-size: var(--fs-sm);
 }

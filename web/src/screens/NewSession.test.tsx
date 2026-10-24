@@ -145,6 +145,19 @@ describe("starting a session from the phone", () => {
     expect(screen.getByRole("button", { name: "Start session" })).toBeEnabled();
   });
 
+  it("says a folder with no git runs in place and promises no worktree", async () => {
+    const { server } = setup();
+    server.on("GET", resolveURL("/home/me/api", "What can you do?"), {
+      status: 200,
+      body: { source: "text", title: "What can you do?", worktree: "", workspace: "/home/me/api", dir: "/home/me/api", git: false },
+    });
+    await userEvent.type(await screen.findByRole("textbox", { name: "Task" }), "What can you do?");
+    const line = await screen.findByTestId("resolution-line");
+    await waitFor(() => expect(line).toHaveTextContent("What can you do? → runs in ~/api (not a git repo, no worktree)"));
+    expect(line).not.toHaveTextContent("new worktree");
+    expect(screen.getByRole("button", { name: "Start session" })).toBeEnabled();
+  });
+
   it("reports a bad work item and does not allow the launch", async () => {
     const { server } = setup();
     const url = "https://example.com/x";

@@ -17,6 +17,7 @@ func freshRig(t *testing.T) (mateRig, string, domain.Session) {
 	if err := r.c.Call(context.Background(), rpc.MethodMateNew, rpc.MateNewParams{Name: "helper"}, &old); err != nil {
 		t.Fatal(err)
 	}
+	hookMatePane(t, r.c, "SessionStart", `{}`)
 	return r, memory, old
 }
 

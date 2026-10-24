@@ -50,7 +50,7 @@ describe("the first run of mates on a server", () => {
     live();
     await toMate();
     expect(screen.getByRole("heading", { name: "Make your first mate" })).toBeInTheDocument();
-    expect(screen.getByText("A mate is an agent that stays: a name, a role and its own threads.")).toBeInTheDocument();
+    expect(screen.getByText("A mate is an agent that stays: a name, a role and one conversation.")).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Environment" })).toHaveTextContent("devbox · your accounts");
     fireEvent.change(screen.getByRole("textbox", { name: "Name" }), { target: { value: "test-ada" } });
     fireEvent.change(screen.getByRole("textbox", { name: "Role" }), { target: { value: "Review PRs." } });
@@ -196,7 +196,7 @@ describe("the first run of mates in the desktop app", () => {
     const { live } = desktop("#/mates", true, undefined, { desktop: app }, routes);
     live();
     fireEvent.click(await screen.findByRole("radio", { name: /A server over SSH/ }));
-    fireEvent.change(screen.getByRole("textbox", { name: "SSH address" }), { target: { value: "devbox" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "SSH host" }), { target: { value: "devbox" } });
     fireEvent.click(screen.getByRole("button", { name: "Connect" }));
     expect(await screen.findByRole("heading", { name: "devbox is ready" })).toBeInTheDocument();
     expect(app.of("crew_server_add")).toEqual([{ kind: "ssh", target: "devbox", code: "" }]);
@@ -210,7 +210,7 @@ describe("the first run of mates in the desktop app", () => {
     const { live } = desktop("#/mates", true, undefined, { desktop: app }, routes);
     live();
     fireEvent.click(await screen.findByRole("radio", { name: /A server over SSH/ }));
-    fireEvent.change(screen.getByRole("textbox", { name: "SSH address" }), { target: { value: "devbox" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "SSH host" }), { target: { value: "devbox" } });
     fireEvent.click(screen.getByRole("button", { name: "Connect" }));
     await toMate();
     fireEvent.change(screen.getByRole("textbox", { name: "Name" }), { target: { value: "test-ada" } });
@@ -230,5 +230,36 @@ describe("the first run of mates in the desktop app", () => {
     fireEvent.click(screen.getByRole("button", { name: "Create test-ada" }));
     await waitFor(() => expect(window.location.hash).toBe("#/mates/test-ada"));
     expect(app.of("crew_server_open")).toEqual([]);
+  });
+
+  it("fills the window with no sidebar until the first run is skipped", async () => {
+    const app = answers(new FakeDesktop());
+    const { live } = desktop("#/mates", true, undefined, { desktop: app }, routes);
+    live();
+    await screen.findByRole("heading", { name: "Where does crew run your mates?" });
+    expect(screen.queryByRole("navigation", { name: "Sidebar" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("link", { name: "Start a session" }));
+    expect(await screen.findByRole("navigation", { name: "Sidebar" })).toBeInTheDocument();
+  });
+
+  it("asks for an SSH host, not a command", async () => {
+    const app = answers(new FakeDesktop());
+    const { live } = desktop("#/mates", true, undefined, { desktop: app }, routes);
+    live();
+    fireEvent.click(await screen.findByRole("radio", { name: /A server over SSH/ }));
+    const field = screen.getByRole("textbox", { name: "SSH host" });
+    expect(field).toHaveAttribute("placeholder", "user@host or server");
+    expect(screen.getByText("Type the host as for ssh: user@host or a Host alias of ~/.ssh/config. Do not type the ssh command.")).toBeInTheDocument();
+  });
+
+  it("removes a leading ssh from a pasted command", async () => {
+    const app = answers(new FakeDesktop());
+    const { live } = desktop("#/mates", true, undefined, { desktop: app }, routes);
+    live();
+    fireEvent.click(await screen.findByRole("radio", { name: /A server over SSH/ }));
+    fireEvent.change(screen.getByRole("textbox", { name: "SSH host" }), { target: { value: "ssh devbox" } });
+    fireEvent.click(screen.getByRole("button", { name: "Connect" }));
+    expect(await screen.findByRole("heading", { name: "devbox is ready" })).toBeInTheDocument();
+    expect(app.of("crew_server_add")).toEqual([{ kind: "ssh", target: "devbox", code: "" }]);
   });
 });
