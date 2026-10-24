@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html><head><meta charset="utf-8" /><link rel="stylesheet" href="../redesign/crew.css" /><link rel="stylesheet" href="../redesign/canvas.css" /><link rel="stylesheet" href="./mates.css" /></head>
-<body><section class="dv-turn" id="t8"><div class="dv-thd"><a class="dv-tid" href="#t8">8</a><span class="dv-tname">Mate page and New mate</span></div><p class="dv-notes"><b>Mate page</b> (changed 2026-10-23, ADR 0063): two columns. The one conversation of the mate fills the middle, with the normal composer. Each message has a source tag (App, #channel, DM or Automation). There is no threads column; the threads column below is out of date. The settings rail is at right. The ⋯ menu of the header has Start fresh (with a confirm) and the history. The rail holds the <b>Environment picker</b> (a styled Select), harness (segmented Claude / Codex / Pi, then model and effort), role, Slack, automations and memory. The rail says that changes apply at the next conversation. <b>New mate</b> is one composer: name on top, the role prompt as the text, and chips for harness, environment, repos and Slack. The environment chip opens a Menu with search and <b>+ New environment…</b>. No wizard steps; role presets are suggestion chips.</p><div class="dv-opts"><div class="dv-opt" id="8a"><div class="dv-olabel"><a class="dv-oid" href="#8a">8a</a>Mate page: threads, conversation, settings rail</div><div class="dv-card"><div class="win" data-screen-label="Mate page" style="width:1280px;height:800px"><div class="titlebar"><span class="tl"></span><span class="tl"></span><span class="tl"></span></div><div class="app"><aside class="side nav"><div class="side-head"><span class="brand">crew</span><button class="icon-btn">⌕</button></div>
+<body><section class="dv-turn" id="t8"><div class="dv-thd"><a class="dv-tid" href="#t8">8</a><span class="dv-tname">Mate page and New mate</span></div><p class="dv-notes"><b>Mate page</b> (changed 2026-10-23, ADR 0064): two columns. The one conversation of the mate fills the middle, with the normal composer. Each message has a source tag (App, #channel, DM or Automation). The settings rail is at right. The ⋯ menu of the header has Start fresh (with a confirm) and the history. The rail holds the <b>Environment picker</b> (a styled Select), harness (segmented Claude / Codex / Pi, then model and effort), role, Slack, automations and memory. The rail says that changes apply at the next conversation. <b>New mate</b> is one composer: name on top, the role prompt as the text, and chips for harness, environment, repos and Slack. The environment chip opens a Menu with search and <b>+ New environment…</b>. No wizard steps; role presets are suggestion chips.</p><div class="dv-opts"><div class="dv-opt" id="8a"><div class="dv-olabel"><a class="dv-oid" href="#8a">8a</a>Mate page: the one conversation and the settings rail</div><div class="dv-card"><div class="win" data-screen-label="Mate page" style="width:1280px;height:800px"><div class="titlebar"><span class="tl"></span><span class="tl"></span><span class="tl"></span></div><div class="app"><aside class="side nav"><div class="side-head"><span class="brand">crew</span><button class="icon-btn">⌕</button></div>
 <button class="btn newbtn">+ New mate</button>
 <div class="side-sec"><div class="row on"><span class="ico">◉</span><span class="nm">Mates</span><span class="meta">4</span></div><div class="row"><span class="ico">▤</span><span class="nm">Sessions</span><span class="meta">2</span></div><div class="row"><span class="ico">✓</span><span class="nm">Approvals</span><span class="pill bad">1</span></div><div class="row"><span class="ico">↻</span><span class="nm">Automations</span></div><div class="row"><span class="ico">⌂</span><span class="nm">Environments</span></div><div class="row"><span class="ico">▥</span><span class="nm">Disk</span></div></div>
 <div class="side-scroll"><div class="side-label"><span>Needs you</span><span>1</span></div>
@@ -11,23 +11,22 @@
 <div class="row"><span class="face f4" style="width:18px;height:18px;font-size:9px">J</span><span class="nm">june</span><span class="dot"></span></div></div>
 <div class="side-foot"><div class="row"><span class="ico">⚙</span><span class="nm">Settings</span><span class="meta">⌘,</span></div></div></aside><div class="main">
 <div class="bar"><span class="face f1" style="width:22px;height:22px;font-size:10px">A</span><span class="title">ada</span><span class="sub">Careful reviewer</span><span class="pill blue">working</span><span class="spacer"></span><button class="btn" style="height:26px;font-size:12px">Pause</button><button class="icon-btn">⋯</button></div>
-<div class="split">
-<div class="threads"><div style="padding:8px 8px 4px;display:flex;gap:6px"><input class="input" placeholder="Search threads" style="height:26px;font-size:12px" /><button class="btn" style="height:26px;font-size:12px">New</button></div>
-<div class="side-scroll">
-<div class="row on"><span class="dot run" style="margin-top:6px"></span><div class="nm" style="white-space:normal"><div>Review #42 checkout flake</div><div class="s">Slack #api · @kim · now</div></div></div>
-<div class="row"><span class="dot ok" style="margin-top:6px"></span><div class="nm" style="white-space:normal"><div>Explain the rate limiter</div><div class="s">App · yesterday</div></div></div>
-<div class="row"><span class="dot ok" style="margin-top:6px"></span><div class="nm" style="white-space:normal"><div>Weekly dependency check</div><div class="s">Automation · Mon</div></div></div>
-<div class="row"><span class="dot" style="margin-top:6px"></span><div class="nm" style="white-space:normal"><div>Why is CI slow?</div><div class="s">Slack DM · @sam · Oct 18</div></div></div>
-</div></div>
+<div class="split" style="grid-template-columns:minmax(0,1fr) 300px">
 <div class="conv"><div class="chat"><div class="thread">
-<div class="src"><span>Slack #api</span><span>·</span><span>thread with @kim</span><span class="spacer"></span><a href="#">Open in Slack</a></div>
+<div class="src"><span class="chip ghost">Automation weekly-deps</span><span>·</span><span>Mon</span></div>
+<div class="msg-user">Check the dependencies for updates.</div>
+<div class="msg-agent"><p>Two minor updates. I opened #41.</p></div>
+<div class="src"><span class="chip ghost">App</span><span>·</span><span>yesterday</span></div>
+<div class="msg-user">Explain the rate limiter.</div>
+<div class="msg-agent"><p>It is a token bucket for each client, refilled each second.</p></div>
+<div class="src"><span class="chip ghost">#api</span><span>·</span><span>@kim · now</span><span class="spacer"></span><a href="#">Open in Slack</a></div>
 <div class="msg-user"><b>@kim</b> can you look at why checkout_test flakes on main? #42</div>
 <div class="msg-agent"><p>I will read the test and the last 10 CI runs first.</p>
 <div class="tool"><span class="ok">✓</span> Read <code>api/checkout/checkout_test.go</code></div>
 <div class="tool"><span class="ok">✓</span> Ran <code>gh run list -w ci -L 10</code></div>
 <div class="tool"><span class="dot run"></span> Running <code>go test -count=20 ./checkout</code></div></div>
 </div></div>
-<div class="dock"><div class="composer"><textarea placeholder="Reply in this thread. It also posts to Slack." rows="1"></textarea><div class="composer-foot"><span class="chip ghost">@ Attach</span><span class="spacer"></span><button class="send">↑</button></div></div></div></div>
+<div class="dock"><div class="composer"><textarea placeholder="Message ada" rows="1"></textarea><div class="composer-foot"><span class="chip ghost">@ Attach</span><span class="spacer"></span><button class="send">↑</button></div></div></div></div>
 <aside class="ms">
 <div class="kv"><h4>ENVIRONMENT</h4>
 <button class="select" style="width:100%"><span style="display:flex;align-items:center;gap:8px"><span class="eicon" style="width:20px;height:20px;font-size:10px">L</span>Local (this Mac)</span><span class="chev">▾</span></button>
@@ -51,7 +50,7 @@
 <div class="side-sec"><div class="row on"><span class="ico">◉</span><span class="nm">Mates</span><span class="meta">4</span></div><div class="row"><span class="ico">▤</span><span class="nm">Sessions</span><span class="meta">2</span></div><div class="row"><span class="ico">✓</span><span class="nm">Approvals</span><span class="pill bad">1</span></div><div class="row"><span class="ico">↻</span><span class="nm">Automations</span></div><div class="row"><span class="ico">⌂</span><span class="nm">Environments</span></div><div class="row"><span class="ico">▥</span><span class="nm">Disk</span></div></div>
 <div class="side-scroll"></div>
 <div class="side-foot"><div class="row"><span class="ico">⚙</span><span class="nm">Settings</span><span class="meta">⌘,</span></div></div></aside><div class="main" style="position:relative">
-<div class="create"><h1>New mate</h1><p class="lead">A mate is a long-lived agent with a name, a role and its own threads.</p>
+<div class="create"><h1>New mate</h1><p class="lead">A mate is a long-lived agent with a name, a role and one conversation.</p>
 <div class="composer" style="width:100%;max-width:640px">
 <div class="namel"><span class="face f1">N</span><input value="nova" /><span class="pill ok">name is free</span></div>
 <textarea rows="3" style="font-size:var(--fs-md)">You are a careful reviewer for the api and web repos. Read first, run the tests, and ask before you change a migration.</textarea>
@@ -68,7 +67,7 @@
 <div class="item hi"><span class="ck">✓</span><span class="eicon" style="width:18px;height:18px;font-size:9px">L</span>Local (this Mac)<span class="k">your logins</span></div>
 <div class="item"><span class="ck"></span><span class="eicon c" style="width:18px;height:18px;font-size:9px">W</span>work<span class="k">2 mates</span></div>
 <div class="item"><span class="ck"></span><span class="eicon c" style="width:18px;height:18px;font-size:9px">O</span>oncall<span class="k">1 mate</span></div>
-<div class="menu-sep"></div><div class="item">+ New environment…</div></div></div></div></div></div></div><div class="dv-opt" id="8c"><div class="dv-olabel"><a class="dv-oid" href="#8c">8c</a>Mate conversation, phone (no thread chips since ADR 0063; ⓘ opens the settings as a sheet)</div><div class="dv-card"><div class="phone" data-screen-label="Mate phone"><div class="status"></div><div class="ptop"><span class="muted" style="font-size:20px">‹</span><span class="face f1">A</span><div style="flex:1;min-width:0"><div style="font-weight:600">ada</div><div class="muted" style="font-size:11px">Local · Claude · working</div></div><button class="icon-btn">ⓘ</button></div>
+<div class="menu-sep"></div><div class="item">+ New environment…</div></div></div></div></div></div></div><div class="dv-opt" id="8c"><div class="dv-olabel"><a class="dv-oid" href="#8c">8c</a>Mate conversation, phone (no thread chips since ADR 0064; ⓘ opens the settings as a sheet)</div><div class="dv-card"><div class="phone" data-screen-label="Mate phone"><div class="status"></div><div class="ptop"><span class="muted" style="font-size:20px">‹</span><span class="face f1">A</span><div style="flex:1;min-width:0"><div style="font-weight:600">ada</div><div class="muted" style="font-size:11px">Local · Claude · working</div></div><button class="icon-btn">ⓘ</button></div>
 <div class="pbody" style="padding:0"><div style="display:flex;gap:6px;padding:8px 16px;overflow:hidden;border-bottom:1px solid var(--line)"><span class="chip" style="background:var(--bg-active);color:var(--ink)">#42 checkout flake</span><span class="chip">Rate limiter</span><span class="chip">Deps check</span></div>
 <div class="thread" style="padding:14px 16px">
 <div class="msg-user"><b>@kim</b> can you look at why checkout_test flakes on main? #42</div>

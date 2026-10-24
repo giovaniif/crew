@@ -25,9 +25,10 @@ type recordedCall struct {
 }
 
 type fakeMateCaller struct {
-	calls    []recordedCall
-	existing bool
-	failSet  error
+	calls        []recordedCall
+	existing     bool
+	failSet      error
+	mateNewAdded bool
 }
 
 func (f *fakeMateCaller) Call(_ context.Context, method string, params, out any) error {
@@ -45,7 +46,7 @@ func (f *fakeMateCaller) Call(_ context.Context, method string, params, out any)
 		data, _ := json.Marshal(rpc.MateTokenStatus{Name: params.(rpc.MateSetTokensParams).Name, HasBotToken: true, HasAppToken: true})
 		return json.Unmarshal(data, out)
 	case rpc.MethodMateNew:
-		data, _ := json.Marshal(domain.Session{ID: "s-1", Mate: &domain.MateSeat{Name: params.(rpc.MateNewParams).Name, Local: true}})
+		data, _ := json.Marshal(rpc.MateNewResult{Session: domain.Session{ID: "s-1", Mate: &domain.MateSeat{Name: params.(rpc.MateNewParams).Name, Local: true}}, Added: f.mateNewAdded})
 		return json.Unmarshal(data, out)
 	case rpc.MethodMateClaim:
 		data, _ := json.Marshal(rpc.MateClaim{Name: params.(rpc.MateClaimParams).Name, Code: "ABCD2345", ExpiresAt: time.Date(2026, 10, 14, 9, 10, 0, 0, time.UTC)})
@@ -326,6 +327,17 @@ func TestParseMateNewTakesARepoAndTheRestAsText(t *testing.T) {
 		if (err == nil) != tc.ok || (tc.ok && got != tc.want) {
 			t.Errorf("%v: got %+v %v", tc.args, got, err)
 		}
+	}
+}
+
+func TestMateNewSaysWhenItAddsToTheConversation(t *testing.T) {
+	c := &fakeMateCaller{mateNewAdded: true}
+	var out bytes.Buffer
+	if err := mateNew(context.Background(), c, &out, rpc.MateNewParams{Name: "demo", Prompt: "hi"}); err != nil {
+		t.Fatal(err)
+	}
+	if got := out.String(); got != "added to the conversation with demo: session s-1\n" {
+		t.Errorf("output %q", got)
 	}
 }
 

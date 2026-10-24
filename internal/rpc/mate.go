@@ -103,6 +103,11 @@ const (
 	MethodMateSetMemory = "mate.set_memory"
 )
 
+type MateNewResult struct {
+	domain.Session
+	Added bool `json:"added,omitempty"`
+}
+
 type MateNewParams struct {
 	Name   string `json:"name"`
 	Repo   string `json:"repo,omitempty"`
