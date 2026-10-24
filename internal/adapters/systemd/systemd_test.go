@@ -270,7 +270,7 @@ func TestShowReadsTheRestartLoopOfTheUnit(t *testing.T) {
 	if got != want {
 		t.Fatalf("state %+v, want %+v", got, want)
 	}
-	if !reflect.DeepEqual(asked, []string{"systemctl", "--user", "show", "crew-serve.service", "-p", "ActiveState,SubState,NRestarts,ExecMainStatus"}) {
+	if !reflect.DeepEqual(asked, []string{"systemctl", "--user", "show", "crew-serve.service", "-p", "ActiveState,SubState,NRestarts,ExecMainStatus,Result"}) {
 		t.Fatalf("asked %q", asked)
 	}
 }
@@ -279,5 +279,43 @@ func TestShowFailsWhenSystemctlFails(t *testing.T) {
 	query := func(context.Context, string, ...string) ([]byte, error) { return nil, errors.New("no bus") }
 	if _, err := systemd.Show(context.Background(), unit(t.TempDir()), query); err == nil {
 		t.Fatal("no error")
+	}
+}
+
+func TestSystemdUnitThatRestartsOnlyOnFailureKeepsACleanExitStopped(t *testing.T) {
+	dir := t.TempDir()
+	u := unit(dir)
+	u.RestartOnFailure = true
+	if _, err := systemd.Install(context.Background(), u, (&systemctl{}).run); err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := os.ReadFile(filepath.Join(dir, "crew-serve.service"))
+	if !strings.Contains(string(raw), "Restart=on-failure\n") || strings.Contains(string(raw), "Restart=always") {
+		t.Fatalf("unit\n%s", raw)
+	}
+}
+
+func TestSystemdInspectReadsTheBinaryHomeAndRestartOfAUnit(t *testing.T) {
+	dir := t.TempDir()
+	u := unit(dir)
+	if _, err := systemd.Install(context.Background(), u, (&systemctl{}).run); err != nil {
+		t.Fatal(err)
+	}
+	spec, err := systemd.Inspect(u)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if spec.Program != "/usr/local/bin/crew" || spec.Env["CREW_HOME"] != "/home/me/.crew" || spec.Restart != "always" {
+		t.Fatalf("spec %+v", spec)
+	}
+}
+
+func TestShowReadsTheResultOfAUnitThatSystemdGaveUpOn(t *testing.T) {
+	query := func(context.Context, string, ...string) ([]byte, error) {
+		return []byte("ActiveState=failed\nResult=start-limit-hit\n"), nil
+	}
+	got, err := systemd.Show(context.Background(), unit(t.TempDir()), query)
+	if err != nil || got.Result != "start-limit-hit" {
+		t.Fatalf("state %+v err %v", got, err)
 	}
 }
