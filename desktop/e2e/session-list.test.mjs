@@ -53,7 +53,7 @@ test("the app window shows the session list of the server", async () => {
   await waitFor(() => run("return document.readyState === 'complete' && location.protocol.startsWith('http')"), "the served page");
   await run("localStorage.setItem('crew.auth', arguments[0]); location.hash = '#/sessions'; location.reload(); return true", [auth]);
   await waitFor(
-    () => run("return !!document.querySelector('nav[aria-label=Sidebar] .side-scroll') || [...document.querySelectorAll('h1')].some((h) => h.textContent === 'Sessions' || h.textContent === 'Mates')"),
+    () => run("return !!document.querySelector('nav[aria-label=Sidebar] .side-scroll') || [...document.querySelectorAll('h1')].some((h) => h.textContent === 'Sessions' || h.textContent === 'Mates' || h.textContent === 'Where does crew run your mates?')"),
     "the Sessions heading",
   );
   await waitFor(() => run("return document.body.innerText.includes('fix the login redirect')"), "a session row from the stream");
