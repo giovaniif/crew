@@ -48,6 +48,7 @@ import {
 import { Button, Dialog, Menu, Select } from "../ui";
 import { MateFace } from "./Mates";
 import { HooksBanner } from "./HooksBanner";
+import { CopyIdentity } from "./CopyIdentity";
 
 type Props = { api: Authed; route: string; wide: boolean; desktop?: DesktopBridge };
 
@@ -1120,7 +1121,7 @@ function UsedBy({ env }: { env: EnvInfo }) {
   );
 }
 
-function MoreMenu({ onDelete }: { onDelete: () => void }) {
+function MoreMenu({ onDelete, onCopy }: { onDelete: () => void; onCopy: () => void }) {
   const [open, setOpen] = useState(false);
   return (
     <span className="ui-anchor">
@@ -1137,10 +1138,14 @@ function MoreMenu({ onDelete }: { onDelete: () => void }) {
         <Menu
           label="Environment"
           className="menu-right"
-          items={[{ value: "delete", label: "Delete…" }]}
-          onPick={() => {
+          items={[{ value: "copy", label: "Copy to another machine…" }, { kind: "sep" as const }, { value: "delete", label: "Delete…" }]}
+          onPick={(v) => {
             setOpen(false);
-            onDelete();
+            if (v === "copy") {
+              onCopy();
+            } else {
+              onDelete();
+            }
           }}
           onClose={() => setOpen(false)}
         />
@@ -1213,6 +1218,7 @@ function Editor({
   const [claudeKey, setClaudeKey] = useState("");
   const [codexKey, setCodexKey] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [copying, setCopying] = useState(false);
   const [note, setNote] = useState("");
   const [loads, setLoads] = useState(0);
   useEffect(() => {
@@ -1345,6 +1351,7 @@ function Editor({
           }}
         />
       ) : null}
+      {copying ? <CopyIdentity api={api} env={env} source={place.title} sourceKey={place.key} onClose={() => setCopying(false)} /> : null}
       {deleting ? (
         <DeleteDialog
           api={api}
@@ -1393,7 +1400,7 @@ function Editor({
         <span className="muted small">{"on " + place.where}</span>
         <span className="spacer" />
         <UsedBy env={env} />
-        <MoreMenu onDelete={() => setDeleting(true)} />
+        <MoreMenu onDelete={() => setDeleting(true)} onCopy={() => setCopying(true)} />
       </div>
     </>
   );
