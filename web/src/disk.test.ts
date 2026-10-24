@@ -100,16 +100,18 @@ describe("diskRows", () => {
     const v = view(
       [
         { WorktreeID: "gone", Size: -2, Action: "prune", Reason: "folder is gone" },
-        { WorktreeID: "moved", Size: 1, Action: "keep", Reason: "repo moved or missing" },
+        { WorktreeID: "moved", Size: 1, Action: "orphan", Reason: "repo moved or missing" },
+        { WorktreeID: "lost", Size: -2, Action: "forget", Reason: "repo and folder are gone" },
         { WorktreeID: "busy", Size: 1, Action: "keep", Reason: "in use by claude (pid 1337717)" },
         { WorktreeID: "odd", Size: 1, Action: "keep", Reason: long },
       ],
       { next_cleanup: undefined },
     );
-    const rows = diskRows(v, { worktrees: [wt("gone"), wt("moved"), wt("busy"), wt("odd")], sessions: [] }, "UTC");
+    const rows = diskRows(v, { worktrees: [wt("gone"), wt("moved"), wt("lost"), wt("busy"), wt("odd")], sessions: [] }, "UTC");
     expect(rows.map((r) => [r.status, r.plan, r.detail])).toEqual([
       ["Folder gone", "prunes in the next cleanup", "folder is gone"],
-      ["No PR", "kept: repo moved or missing", "repo moved or missing"],
+      ["Repo gone", "kept: repo moved or missing", "repo moved or missing"],
+      ["Nothing on disk", "forgets in the next cleanup", "repo and folder are gone"],
       ["No PR", "kept: in use by claude (pid 1337717)", "in use by claude (pid 1337717)"],
       ["No PR", "kept: git check failed", long],
     ]);
@@ -128,6 +130,25 @@ describe("diskActions", () => {
     const acts = diskActions({ ...base, sessionID: "", action: "prune" });
     expect(acts.map((a) => a.title)).toEqual(["Prune…"]);
     expect(acts[0].confirm).toBe("Prune api-feat? Its folder is gone. crew runs git worktree prune; the branch stays.");
+    expect(acts[0].cleanup).toEqual({ path: "/w/api-feat", backup: false });
+  });
+
+  it("offers Copy path and Back up and delete for a folder whose repo is gone, with a confirmation that names the path", () => {
+    const acts = diskActions({ ...base, sessionID: "", action: "orphan" });
+    expect(acts.map((a) => [a.kind, a.title])).toEqual([
+      ["copy", "Copy path"],
+      ["backup", "Back up and delete…"],
+    ]);
+    expect(acts[0].confirm).toBeNull();
+    expect(acts[0].path).toBe("/w/api-feat");
+    expect(acts[1].confirm).toBe("Back up /w/api-feat and delete it? Its repo is gone. The whole folder goes to the crew backups folder first, then to the crew trash.");
+    expect(acts[1].cleanup).toEqual({ path: "/w/api-feat", backup: true });
+  });
+
+  it("offers Forget for a row with nothing on disk, with a confirmation", () => {
+    const acts = diskActions({ ...base, sessionID: "", action: "forget" });
+    expect(acts.map((a) => a.title)).toEqual(["Forget…"]);
+    expect(acts[0].confirm).toBe("Forget api-feat? Its repo and its folder are gone, so nothing on disk changes.");
     expect(acts[0].cleanup).toEqual({ path: "/w/api-feat", backup: false });
   });
 

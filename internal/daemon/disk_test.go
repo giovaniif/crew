@@ -280,3 +280,57 @@ func TestDiskViewListsNumberedWorktreesInNumberOrder(t *testing.T) {
 		t.Errorf("rows = %v, want %v", got, want)
 	}
 }
+
+func TestCleanupWorktreeForgetsAStoredRowWhoseRepoAndFolderAreGone(t *testing.T) {
+	env := startDisk(t, mergedWT("a", 1), mergedWT("b", 2))
+	env.world.gone = map[string]app.WorktreeGitFacts{"/solo-a": {RepoMissing: true, PathMissing: true}}
+	c := dial(t, env.path)
+	item, err := c.CleanupWorktree(context.Background(), "/solo-a", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if item.Outcome != "forgotten" || item.Action != domain.CleanupForget {
+		t.Errorf("item = %+v", item)
+	}
+	if moved := env.world.movedPaths(); len(moved) != 0 {
+		t.Errorf("moved = %v, want nothing", moved)
+	}
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		view, err := c.DiskView(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		var ids []string
+		for _, r := range view.Rows {
+			ids = append(ids, r.WorktreeID)
+		}
+		if slices.Equal(ids, []string{"/solo-b"}) {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("rows = %v, want only /solo-b", ids)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
+func TestCleanupWorktreeKeepsAnOrphanFolderUntilBackupIsAsked(t *testing.T) {
+	env := startDisk(t, mergedWT("a", 1))
+	env.world.gone = map[string]app.WorktreeGitFacts{"/solo-a": {RepoMissing: true, Fingerprint: "f"}}
+	c := dial(t, env.path)
+	item, err := c.CleanupWorktree(context.Background(), "/solo-a", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if item.Action != domain.CleanupOrphan || len(env.world.movedPaths()) != 0 {
+		t.Errorf("item = %+v, moved = %v", item, env.world.movedPaths())
+	}
+	item, err = c.CleanupWorktree(context.Background(), "/solo-a", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(env.world.backedUpPaths(), []string{"/solo-a"}) || !slices.Equal(env.world.movedPaths(), []string{"/solo-a"}) {
+		t.Errorf("item = %+v, backed up = %v, moved = %v", item, env.world.backedUpPaths(), env.world.movedPaths())
+	}
+}

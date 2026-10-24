@@ -15,6 +15,8 @@ const (
 	CleanupBackupThenAsk CleanupAction = "backup_then_ask"
 	CleanupKeep          CleanupAction = "keep"
 	CleanupPrune         CleanupAction = "prune"
+	CleanupForget        CleanupAction = "forget"
+	CleanupOrphan        CleanupAction = "orphan"
 )
 
 type CleanupFacts struct {
@@ -45,7 +47,11 @@ func PlanCleanup(w Worktree, f CleanupFacts, now time.Time) CleanupDecision {
 		d.Reason = "the main checkout"
 	case f.Project != "":
 		d.Reason = "held by project " + f.Project
+	case f.RepoMissing && f.PathMissing:
+		d.Action = CleanupForget
+		d.Reason = "repo and folder are gone"
 	case f.RepoMissing:
+		d.Action = CleanupOrphan
 		d.Reason = "repo moved or missing"
 	case f.PathMissing:
 		d.Action = CleanupPrune
