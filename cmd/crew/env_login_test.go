@@ -61,7 +61,7 @@ func TestEnvLoginCodexWritesAuthOnlyIntoTheCodexHomeOfTheEnvironment(t *testing.
 	if err := cmd.Run(); err != nil {
 		t.Fatalf("%v: %s", err, stderr.String())
 	}
-	envCodex := filepath.Join(home, "envs", "test-bot", "codex")
+	envCodex := filepath.Join(home, "identities", "test-bot", "codex")
 	if b, err := os.ReadFile(filepath.Join(envCodex, "auth.json")); err != nil || !strings.Contains(string(b), "TEST-env") {
 		t.Errorf("env auth.json %q, %v", b, err)
 	}

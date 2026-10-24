@@ -28,6 +28,14 @@ func (d *Daemon) envAdapter(adapter app.HarnessAdapter, env string) app.HarnessA
 	if env == "" {
 		return adapter
 	}
+	if env == domain.IdentityYours || env == string(domain.EnvLocal) {
+		if d.envs == nil {
+			return adapter
+		}
+		if yours, err := d.envs.Get(domain.IdentityYours); err == nil && len(yours.Extra) == 0 {
+			return adapter
+		}
+	}
 	crew := d.envLauncher
 	if crew == "" {
 		crew = "crew"
@@ -40,13 +48,19 @@ func parseEnvNames(text string) []domain.Environment {
 		Env []struct {
 			Name string `toml:"name"`
 		} `toml:"env"`
+		Identity []struct {
+			ID string `toml:"id"`
+		} `toml:"identity"`
 	}
 	if _, err := toml.Decode(text, &doc); err != nil {
 		return nil
 	}
-	out := make([]domain.Environment, len(doc.Env))
-	for i, e := range doc.Env {
-		out[i] = domain.Environment{Name: e.Name}
+	out := make([]domain.Environment, 0, len(doc.Env)+len(doc.Identity))
+	for _, e := range doc.Env {
+		out = append(out, domain.Environment{Name: e.Name})
+	}
+	for _, e := range doc.Identity {
+		out = append(out, domain.Environment{Name: e.ID})
 	}
 	return out
 }

@@ -67,3 +67,48 @@ func envSSHKey(r *http.Request, d Daemon) (any, error) {
 	p.Name = r.PathValue("name")
 	return envCall(r, d, rpc.MethodEnvSSHKey, p)
 }
+
+func listEnvironments(r *http.Request, d Daemon) (any, error) {
+	var out rpc.EnvironmentList
+	if err := d.Call(r.Context(), rpc.MethodEnvironmentList, struct{}{}, &out); err != nil {
+		return nil, err
+	}
+	if out.Identities == nil {
+		out.Identities = []rpc.EnvInfo{}
+	}
+	return out, nil
+}
+
+func identityCall(method string) func(r *http.Request, d Daemon) (any, error) {
+	return func(r *http.Request, d Daemon) (any, error) {
+		name := r.PathValue("name")
+		var params any
+		switch method {
+		case rpc.MethodIdentitySet:
+			p := rpc.EnvCreateParams{}
+			if err := decodeBody(r, &p); err != nil {
+				return nil, err
+			}
+			p.Name = name
+			params = p
+		case rpc.MethodIdentitySetSecret:
+			p := rpc.EnvSetParams{}
+			if err := decodeBody(r, &p); err != nil {
+				return nil, err
+			}
+			params = rpc.EnvSetParams{Name: name, Secret: p.Secret, Value: p.Value}
+		case rpc.MethodIdentitySSHKey:
+			p := rpc.EnvSSHKeyParams{}
+			if r.Method == http.MethodPost {
+				if err := decodeBody(r, &p); err != nil {
+					return nil, err
+				}
+			}
+			p.Name = name
+			params = p
+		default:
+			params = rpc.EnvNameParams{Name: name}
+		}
+		return envCall(r, d, method, params)
+	}
+}

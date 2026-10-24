@@ -31,6 +31,7 @@ var partDirs = map[domain.EnvPart]string{
 }
 
 type envDoc struct {
+	ID    string   `toml:"id"`
 	Name  string   `toml:"name"`
 	Kind  string   `toml:"kind"`
 	Parts []string `toml:"parts"`
@@ -38,18 +39,41 @@ type envDoc struct {
 }
 
 type configDoc struct {
-	Env  []envDoc `toml:"env"`
-	Mate []struct {
-		Name string `toml:"name"`
-		Env  string `toml:"env"`
+	Env      []envDoc `toml:"env"`
+	Identity []envDoc `toml:"identity"`
+	Mate     []struct {
+		Name        string `toml:"name"`
+		Env         string `toml:"env"`
+		Environment struct {
+			IdentityID string `toml:"identity_id"`
+		} `toml:"environment"`
 	} `toml:"mate"`
+}
+
+func (s Store) legacy(name string) bool {
+	_, doc, err := s.read()
+	if err != nil {
+		return false
+	}
+	return slices.ContainsFunc(doc.Env, func(d envDoc) bool { return d.Name == name }) &&
+		!slices.ContainsFunc(doc.Identity, func(d envDoc) bool { return d.ID == name })
 }
 
 func (s Store) configPath() string { return filepath.Join(s.Home, "config.toml") }
 
-func (s Store) envHome(name string) string { return filepath.Join(s.Home, "envs", name) }
+func (s Store) envHome(name string) string {
+	if s.legacy(name) {
+		return filepath.Join(s.Home, "envs", name)
+	}
+	return filepath.Join(s.Home, "identities", name)
+}
 
-func (s Store) secretDir(name string) string { return filepath.Join(s.Home, "secrets", "env", name) }
+func (s Store) secretDir(name string) string {
+	if s.legacy(name) {
+		return filepath.Join(s.Home, "secrets", "env", name)
+	}
+	return filepath.Join(s.Home, "secrets", "identity", name)
+}
 
 func (s Store) keyPath(name string) string {
 	return filepath.Join(s.secretDir(name), "ssh", domain.EnvSSHKeyFile)
@@ -71,7 +95,12 @@ func (s Store) read() (string, configDoc, error) {
 }
 
 func (s Store) fill(d envDoc) domain.Environment {
-	env := domain.Environment{Name: d.Name, Kind: domain.EnvKind(d.Kind), Extra: d.Extra, Home: s.envHome(d.Name), Secrets: s.secretDir(d.Name)}
+	env := domain.Environment{Name: d.Name, Kind: domain.EnvKind(d.Kind), Extra: d.Extra,
+		Home: filepath.Join(s.Home, "envs", d.Name), Secrets: filepath.Join(s.Home, "secrets", "env", d.Name)}
+	if d.ID != "" {
+		env = domain.Environment{Name: d.ID, Label: d.Name, Kind: domain.EnvKindOfIdentity(d.Kind), Extra: d.Extra,
+			Home: filepath.Join(s.Home, "identities", d.ID), Secrets: filepath.Join(s.Home, "secrets", "identity", d.ID)}
+	}
 	for _, p := range d.Parts {
 		env.Parts = append(env.Parts, domain.EnvPart(p))
 	}
@@ -83,9 +112,17 @@ func (s Store) List() ([]domain.Environment, error) {
 	if err != nil {
 		return nil, err
 	}
-	out := make([]domain.Environment, 0, len(doc.Env))
+	out := make([]domain.Environment, 0, len(doc.Identity)+len(doc.Env))
+	for _, d := range doc.Identity {
+		if d.ID != "" {
+			out = append(out, s.fill(d))
+		}
+	}
 	for _, d := range doc.Env {
-		out = append(out, s.fill(d))
+		if !slices.ContainsFunc(out, func(e domain.Environment) bool { return e.Name == d.Name }) {
+			d.ID = ""
+			out = append(out, s.fill(d))
+		}
 	}
 	return out, nil
 }
@@ -100,8 +137,13 @@ func (s Store) Get(name string) (domain.Environment, error) {
 			return env, nil
 		}
 	}
-	if name == "" || name == string(domain.EnvLocal) {
-		return domain.Environment{Name: string(domain.EnvLocal), Kind: domain.EnvLocal}, nil
+	if name == "" || name == string(domain.EnvLocal) || name == domain.IdentityYours {
+		for _, env := range list {
+			if env.Name == domain.IdentityYours {
+				return env, nil
+			}
+		}
+		return domain.Environment{Name: domain.IdentityYours, Label: domain.IdentityYoursLabel, Kind: domain.EnvLocal}, nil
 	}
 	return domain.Environment{}, fmt.Errorf("no environment %q", name)
 }
@@ -117,7 +159,11 @@ func (s Store) Save(env domain.Environment) error {
 	if old, err := s.Get(env.Name); err == nil && old.Home != "" && old.Kind != env.Kind {
 		return fmt.Errorf("environment %s: the kind is fixed at %s", env.Name, old.Kind)
 	}
-	if err := s.writeConfig(src, domain.SetEnvBlock(src, env)); err != nil {
+	next := domain.SetIdentityBlock(src, env)
+	if s.legacy(env.Name) {
+		next = domain.SetEnvBlock(src, env)
+	}
+	if err := s.writeConfig(src, next); err != nil {
 		return err
 	}
 	dirs := []string{s.envHome(env.Name), s.secretDir(env.Name)}
@@ -139,25 +185,31 @@ func (s Store) Delete(name string) error {
 	if err != nil {
 		return err
 	}
-	if _, err := s.Get(name); err != nil || !slices.ContainsFunc(doc.Env, func(d envDoc) bool { return d.Name == name }) {
+	legacy := s.legacy(name)
+	if _, err := s.Get(name); err != nil || (!legacy && !slices.ContainsFunc(doc.Identity, func(d envDoc) bool { return d.ID == name })) {
 		return fmt.Errorf("no environment %q", name)
 	}
 	var users []string
 	for _, m := range doc.Mate {
-		if m.Env == name {
+		if m.Env == name || m.Environment.IdentityID == name {
 			users = append(users, m.Name)
 		}
 	}
 	if len(users) > 0 {
 		return fmt.Errorf("environment %s is used by mate %s", name, strings.Join(users, ", "))
 	}
-	if err := s.writeConfig(src, domain.RemoveEnvBlock(src, name)); err != nil {
+	secrets, home := s.secretDir(name), s.envHome(name)
+	next := domain.RemoveIdentityBlock(src, name)
+	if legacy {
+		next = domain.RemoveEnvBlock(src, name)
+	}
+	if err := s.writeConfig(src, next); err != nil {
 		return err
 	}
-	if err := os.RemoveAll(s.secretDir(name)); err != nil {
+	if err := os.RemoveAll(secrets); err != nil {
 		return err
 	}
-	return os.RemoveAll(s.envHome(name))
+	return os.RemoveAll(home)
 }
 
 func (s Store) SetSecret(name, key, value string) error {

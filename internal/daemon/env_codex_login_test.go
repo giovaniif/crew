@@ -18,7 +18,7 @@ func TestEnvShowReportsACodexChatGPTLoginInTheEnvironment(t *testing.T) {
 	if err != nil || got.CodexLogin {
 		t.Fatalf("before login %+v, %v", got, err)
 	}
-	if err := os.WriteFile(filepath.Join(home, "envs", "bot", "codex", "auth.json"), []byte(`{"auth_mode":"chatgpt"}`), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(home, "identities", "bot", "codex", "auth.json"), []byte(`{"auth_mode":"chatgpt"}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	got, err = envCall(c, rpc.MethodEnvShow, rpc.EnvNameParams{Name: "bot"})

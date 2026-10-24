@@ -19,7 +19,7 @@ func TestEnvShowReportsAPiLoginInTheEnvironment(t *testing.T) {
 	if err != nil || got.PiLogin {
 		t.Fatalf("before login %+v, %v", got, err)
 	}
-	db, err := sql.Open("sqlite", filepath.Join(home, "envs", "bot", "omp", "agent.db"))
+	db, err := sql.Open("sqlite", filepath.Join(home, "identities", "bot", "omp", "agent.db"))
 	if err != nil {
 		t.Fatal(err)
 	}

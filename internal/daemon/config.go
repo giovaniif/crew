@@ -80,13 +80,27 @@ func (d *Daemon) writeConfig(key, value, literal string) error {
 }
 
 func (d *Daemon) replaceConfig(src, next string) error {
+	if err := d.backupConfig(src); err != nil {
+		return err
+	}
+	return d.writeConfigFile(next)
+}
+
+func (d *Daemon) backupConfig(src string) error {
+	if _, err := os.Stat(d.cfg.path); err != nil {
+		return nil
+	}
+	backup := d.cfg.path + ".crew-" + time.Now().UTC().Format("20060102T150405.000000000Z") + ".bak"
+	if err := os.WriteFile(backup, []byte(src), 0o600); err != nil {
+		return fmt.Errorf("back up %s: %w", d.cfg.path, err)
+	}
+	return nil
+}
+
+func (d *Daemon) writeConfigFile(next string) error {
 	mode := fs.FileMode(0o600)
 	if info, err := os.Stat(d.cfg.path); err == nil {
 		mode = info.Mode().Perm()
-		backup := d.cfg.path + ".crew-" + time.Now().UTC().Format("20060102T150405.000000000Z") + ".bak"
-		if err := os.WriteFile(backup, []byte(src), 0o600); err != nil {
-			return fmt.Errorf("back up %s: %w", d.cfg.path, err)
-		}
 	}
 	tmp, err := os.CreateTemp(filepath.Dir(d.cfg.path), ".config.toml-*")
 	if err != nil {

@@ -489,6 +489,9 @@ func TestRunGivesTheChannelsOfTheBotWhenItConnects(t *testing.T) {
 	rec.mu.Lock()
 	defer rec.mu.Unlock()
 	for _, s := range rec.states {
+		if s.State == domain.MateConnected && s.ChannelNames["C0CHAN002"] != "api" {
+			t.Errorf("channel names %v", s.ChannelNames)
+		}
 		if s.State == domain.MateConnected && strings.Join(s.Channels, ",") != "api,web" {
 			t.Errorf("channels %v", s.Channels)
 		}
