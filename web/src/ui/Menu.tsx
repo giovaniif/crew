@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 
-export type MenuItem = { kind?: "item"; value: string; label: string; hint?: ReactNode; checked?: boolean; disabled?: boolean };
+export type MenuItem = { kind?: "item"; value: string; label: string; hint?: ReactNode; icon?: ReactNode; checked?: boolean; disabled?: boolean };
 export type MenuEntry = MenuItem | { kind: "label"; label: string } | { kind: "sep" };
 
 export type MenuProps = {
@@ -149,6 +149,7 @@ export function Menu({ label, items, onPick, onClose, search, role = "menu", id,
             <span className="ck" aria-hidden="true">
               {e.checked ? <CheckIcon /> : null}
             </span>
+            {e.icon}
             <span>{e.label}</span>
             {e.hint !== undefined ? <span className="k">{e.hint}</span> : null}
           </div>

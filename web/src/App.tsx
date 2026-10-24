@@ -1,5 +1,7 @@
 import { machineName } from "./envs";
 import { MachineContext } from "./screens/Machine";
+import { HubContext } from "./hub";
+import { desktopMachines, type Machines } from "./machines";
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { sessionPane, tokenRefused, unpairDevice, type Fetch } from "./api";
 import { clearAuth, loadAuth, saveAuth, type Auth, type KeyValue } from "./auth";
@@ -298,10 +300,23 @@ function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, g
 const refusedNotice =
   "This device was removed from crew, or the server rejected its login. Pair it again with a new code from crew remote pair.";
 
+const hubCache = new WeakMap<DesktopBridge, Machines>();
+
+function hubMachines(desktop: DesktopBridge | undefined): Machines | null {
+  if (!desktop) {
+    return null;
+  }
+  const known = hubCache.get(desktop) ?? desktopMachines(desktop);
+  hubCache.set(desktop, known);
+  return known;
+}
+
 export function App({ env }: { env: AppEnv }) {
   return (
     <MachineContext.Provider value={machineName(null, env.host)}>
-      <Paired env={env} />
+      <HubContext.Provider value={hubMachines(env.desktop)}>
+        <Paired env={env} />
+      </HubContext.Provider>
     </MachineContext.Provider>
   );
 }

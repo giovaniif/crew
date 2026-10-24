@@ -1,6 +1,8 @@
 import { type FormEvent, type KeyboardEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
-import { useEnvs } from "./Environments";
-import { EnvChip, EnvRail } from "./EnvPicker";
+import { defaultPick, EnvChip, EnvRail, type EnvPick } from "./EnvPicker";
+import { authedOf, useHub } from "../hub";
+import { isYours } from "../envmenu";
+import type { MateEnvironment } from "../api";
 import { ThreadChat } from "./Session";
 import {
   type Authed,
@@ -26,8 +28,6 @@ import {
   stopAllMates,
 } from "../api";
 import { ACCENTS, FACES, type FaceState, faceColor, faceOf, faceState, faceSvg, mateCard, type ToneAxis, toneOf } from "../faces";
-import { envTitle } from "../envs";
-import { mateEnvName } from "../mateshome";
 import { type MateAutomation, answersIn, harnessLabel, mateAutomations, mateHistory, mateLine, mateRoute, mateSlug, nameCheck, replyHint, roleLine, shownConversation, toneSteps } from "../matepage";
 import type { Mates as MateBoard, StreamClient, StreamSnapshot } from "../stream";
 import { Button, Dialog, Menu, Segmented, Select, Slider } from "../ui";
@@ -632,7 +632,6 @@ function MateSettings({
   sheet: boolean;
   onSaved: () => void;
 }) {
-  const { envs } = useEnvs(api);
   const options = useHarnessOptions(api);
   const [mate, setMate] = useState<Mate>(def);
   const [role, setRole] = useState<string | null>(null);
@@ -643,12 +642,12 @@ function MateSettings({
   const harness = options.find((h) => h.harness === mate.agent);
   const automations = useMateAutomations(api, name);
 
-  async function save(patch: Partial<Mate>): Promise<boolean> {
+  async function save(patch: Partial<Mate>, environment?: MateEnvironment): Promise<boolean> {
     const next = { ...mate, ...patch };
     setMate(next);
     setNote("");
     try {
-      await saveMate(api, next);
+      await saveMate(api, next, environment);
       onSaved();
       return true;
     } catch (err) {
@@ -670,7 +669,7 @@ function MateSettings({
 
   return (
     <>
-      <EnvRail envs={envs} value={mate.env} onChange={(env) => void save({ env })} />
+      <EnvRail api={api} mate={mate} onPick={(machineId, id) => void save({ env: id }, { machine_id: machineId, identity_id: id })} />
       <div className="kv">
         <h4>HARNESS</h4>
         <Segmented label="Harness" value={mate.agent} options={harnesses} onChange={(agent) => void save({ agent, model: undefined, effort: undefined })} className="mp-seg" />
@@ -791,7 +790,6 @@ export function MatePage({
 }) {
   const { name, thread, connect } = mateRoute(hash);
   const { defs, tones, problems, error, reload } = useMateDefs(api);
-  const { envs } = useEnvs(api);
   const asking = useAskingMates(api);
   const mem = useMemory(api, name);
   const [busy, setBusy] = useState(false);
@@ -814,8 +812,7 @@ export function MatePage({
   const paused = row.state === "paused";
   const connected = row.state === "connected";
   const canConnect = row.state === "ready" || row.state === "no_tokens";
-  const env = envs.find((e) => e.name === mateEnvName(def?.env));
-  const envLabel = env ? (env.kind === "local" ? "Local" : envTitle(env)) : mateEnvName(def?.env) === "local" ? "Local" : mateEnvName(def?.env);
+  const envLabel = isYours(def?.env) ? "Your accounts" : (def?.env as string);
   const face = (px: number) => <MateFace name={name} avatar={row.avatar || def?.avatar} color={row.color || def?.color} state={state} px={px} />;
 
   async function pause() {
@@ -976,7 +973,9 @@ function ChipMenu({ label, text, items, onPick }: { label: string; text: ReactNo
 
 export function NewMate({ api, repos: known }: { api: Authed; repos: string[] }) {
   const { defs } = useMateDefs(api);
-  const { envs } = useEnvs(api);
+  const hub = useHub(api);
+  const [pick, setPick] = useState<EnvPick | null>(null);
+  const where = pick ?? defaultPick(hub);
   const options = useHarnessOptions(api);
   const [text, setText] = useState("");
   const [mate, setMate] = useState<Mate>({ name: "", prompt: "", agent: "claude", enabled: true });
@@ -992,13 +991,14 @@ export function NewMate({ api, repos: known }: { api: Authed; repos: string[] })
     setBusy(true);
     setNote("");
     try {
-      const out = await saveMate(api, {
+      const link = hub.links.find((l) => l.key === where?.key);
+      const out = await saveMate(link ? authedOf(link) : api, {
         ...mate,
         prompt: mate.prompt.trim(),
         repos: repos.length > 0 ? repos : undefined,
         avatar: faceOf(mate.name, mate.avatar).id,
         enabled: true,
-      });
+      }, where && where.machineId ? { machine_id: where.machineId, identity_id: where.id } : undefined);
       window.location.hash = "#/mates/" + encodeURIComponent(out.name) + (slack ? "/~slack" : "");
     } catch (err) {
       setNote(message(err));
@@ -1011,7 +1011,7 @@ export function NewMate({ api, repos: known }: { api: Authed; repos: string[] })
     <main className="mp-new">
       <form className="create" aria-label="New mate" onSubmit={(e) => void create(e)}>
         <h1>New mate</h1>
-        <p className="lead">A mate is a long-lived agent with a name, a role and its own threads.</p>
+        <p className="lead">Whose accounts does it use, and where does it run? Pick one environment.</p>
         <div className="composer mp-composer">
           <div className="namel">
             <FaceButton name={mate.name || "nova"} avatar={mate.avatar} color={mate.color} onPick={(patch) => setMate({ ...mate, ...patch })} />
@@ -1047,7 +1047,7 @@ export function NewMate({ api, repos: known }: { api: Authed; repos: string[] })
                 }
               }}
             />
-            <EnvChip envs={envs} value={mate.env} onChange={(env) => setMate({ ...mate, env })} />
+            <EnvChip state={hub} value={where} onChange={setPick} />
             <ChipMenu
               label={"Repos: " + (repos.length > 0 ? repos.join(", ") : "any")}
               text={"Repos: " + (repos.length > 0 ? repos.join(", ") : "any")}
