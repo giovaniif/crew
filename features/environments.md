@@ -158,6 +158,7 @@ go run ./scripts/verify iso down
 
 - A mate in a custom environment gets only the account part of its harness: `claude` gets the `claude` part, `codex` gets the `codex` part, `omp` gets the `pi` part. The shared parts (`git`, `ssh`, `github`) and the extra variables go to each mate. Thus a `claude` mate on `test-bot` does not get `CODEX_HOME` or `OPENAI_API_KEY`. `crew env exec` with no `--harness` applies all parts.
 - The Environments page shows a set or not-set state for each part (GitHub token, Claude, Codex, Pi), not the variable names. `crew env show` and `GET /api/v1/envs/{name}` show the variable names.
+- An `omp` mate in a custom environment still writes its `cache` and `run` files into the real `~/.omp`. These files contain no login. omp has no variable that moves only these two dirs (#820). The request to omp is https://github.com/can1357/oh-my-pi/issues/16914.
 - Use only TEST values. Never put a real token in the isolated crew.
 - Environment names allow only lower case letters, digits, `-` and `_`. Use the `test-` prefix.
 - `crew env exec` replaces itself with the agent (`syscall.Exec`). Thus `ps` shows the agent, and the tmux pane start command shows `crew env exec <env> --`. `iso panes` reads the pane start commands.
