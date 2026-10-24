@@ -408,7 +408,7 @@ function Chat({ id, client, api, status, persona, freshFrom, onBrowser, children
   };
 
   return (
-    <div className="chat-log" role="log" aria-label="Messages" ref={logRef} onScroll={onScroll}>
+    <div className={"chat-log" + (persona ? " mate-log" : "")} style={persona ? ({ "--mate": mateTint(persona) } as CSSProperties) : undefined} role="log" aria-label="Messages" ref={logRef} onScroll={onScroll}>
       <OlderRow t={t} loading={older === "loading"} failed={older === "failed"} onLoad={loadOlder} />
       {loadError ? (
         <div className="error chat-error">

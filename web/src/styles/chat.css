@@ -74,14 +74,6 @@
   background: var(--green);
 }
 
-.interrupt {
-  min-height: 44px;
-  padding: 8px 14px;
-  font-size: 14px;
-  background: var(--red);
-  color: var(--on-accent);
-}
-
 .chat-top + .connection {
   margin: 8px 16px 0;
 }
@@ -646,46 +638,61 @@ button.danger {
   border: 0;
   border-radius: var(--r-sm);
   font-family: var(--font-sans);
-  font-size: var(--fs-sm);
-  color: var(--ink-2);
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: #8a8a90;
 }
 
 .tool summary {
+  min-height: 0;
   gap: 8px;
-  padding: 2px 0;
+  padding: 1px 0;
+}
+
+.tool summary::before {
+  content: "›";
+  width: 10px;
+  font-size: 11px;
+  color: #aaa;
+  text-align: center;
+  flex: none;
+}
+
+.tool[open] summary::before {
+  content: "⌄";
 }
 
 .tool-dot {
-  width: 7px;
-  height: 7px;
-  background: var(--ok);
+  display: none;
 }
 
-.tool-running .tool-dot {
-  background: var(--accent);
+.tool-running summary::before {
+  content: "●";
+  font-size: 9px;
+  color: var(--accent);
 }
 
 .tool-failed {
   border-left: 0;
 }
 
-.tool-failed .tool-dot {
-  background: var(--danger);
+.tool-failed summary::before {
+  color: var(--danger);
 }
 
 .tool-name {
   font-weight: 400;
-  color: var(--ink-2);
+  color: inherit;
 }
 
 .tool-detail {
   flex: 0 1 auto;
   font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  background: var(--bg-sunken);
-  padding: 1px 6px;
-  border-radius: 4px;
-  color: var(--ink);
+  font-size: 12px;
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  color: #77777d;
 }
 
 .tool-detail:empty {
@@ -696,7 +703,8 @@ button.danger {
 .failed,
 .tool-result {
   font-size: var(--fs-xs);
-  font-weight: 500;
+  font-weight: 400;
+  padding: 0;
 }
 
 .live {
@@ -710,17 +718,23 @@ button.danger {
 }
 
 .tool-result {
-  color: var(--ink-2);
-  background: var(--bg-sunken);
+  color: inherit;
+  background: none;
+}
+
+.tool-result::before {
+  content: "· ";
 }
 
 .tool-output {
   font-family: var(--font-mono);
-  font-size: var(--fs-sm);
+  font-size: 12px;
+  color: var(--ink-2);
   background: var(--bg-sunken);
   border-top: 0;
-  border-radius: var(--r-md);
-  margin-top: 4px;
+  border-radius: 8px;
+  margin: 4px 0 0 18px;
+  padding: 8px 10px;
 }
 
 .composer {
