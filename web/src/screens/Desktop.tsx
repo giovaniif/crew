@@ -1,3 +1,5 @@
+import { machineName } from "../envs";
+import { MachineContext, useMachine } from "./Machine";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { listApprovals, resumeSession, type Authed } from "../api";
 import type { AppEnv } from "../App";
@@ -374,6 +376,7 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
   const browsers = useRef<BrowserStore>(new Map());
   const [menu, setMenu] = useState<(MenuPoint & { id: string }) | null>(null);
   const [listing] = useServerListing(servers);
+  const outerMachine = useMachine();
   const [firstRun, setFirstRun] = useState(false);
   useEffect(() => {
     if (listing?.first_run) {
@@ -515,43 +518,45 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
   const menuSession = menu ? sessions.find((s) => s.ID === menu.id) : undefined;
 
   return (
-    <div className="desktop">
-      <Sidebar
-        env={env}
-        snapshot={snapshot}
-        now={now}
-        onRetry={onRetry}
-        hash={hash}
-        keys={keys}
-        approvals={approvals}
-        chip={servers ? <ServerChip servers={servers} listing={listing} go={go} /> : null}
-      />
-      {menu && menuSession ? <SessionCommands key={"menu-" + menu.id} api={api} session={menuSession} storage={env.storage} openAt={menu} /> : null}
-      <main className="main-column">{main}</main>
-      {servers && (firstRun || hash === "#/servers/add") ? (
-        <Sheet
-          label="Add a server"
-          onClose={() => {
-            setFirstRun(false);
-            if (hash === "#/servers/add") {
-              go("#/servers");
-            }
-          }}
-        >
-          <FirstRun
-            servers={servers}
-            welcome={firstRun}
-            storage={env.storage}
-            mac={/Macintosh/.test(env.userAgent)}
+    <MachineContext.Provider value={listing ? machineName(listing, env.host) : outerMachine}>
+      <div className="desktop">
+        <Sidebar
+          env={env}
+          snapshot={snapshot}
+          now={now}
+          onRetry={onRetry}
+          hash={hash}
+          keys={keys}
+          approvals={approvals}
+          chip={servers ? <ServerChip servers={servers} listing={listing} go={go} /> : null}
+        />
+        {menu && menuSession ? <SessionCommands key={"menu-" + menu.id} api={api} session={menuSession} storage={env.storage} openAt={menu} /> : null}
+        <main className="main-column">{main}</main>
+        {servers && (firstRun || hash === "#/servers/add") ? (
+          <Sheet
+            label="Add a server"
             onClose={() => {
               setFirstRun(false);
               if (hash === "#/servers/add") {
                 go("#/servers");
               }
             }}
-          />
-        </Sheet>
-      ) : null}
-    </div>
+          >
+            <FirstRun
+              servers={servers}
+              welcome={firstRun}
+              storage={env.storage}
+              mac={/Macintosh/.test(env.userAgent)}
+              onClose={() => {
+                setFirstRun(false);
+                if (hash === "#/servers/add") {
+                  go("#/servers");
+                }
+              }}
+            />
+          </Sheet>
+        ) : null}
+      </div>
+    </MachineContext.Provider>
   );
 }
