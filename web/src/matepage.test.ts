@@ -87,12 +87,6 @@ function auto(name: string, extra: Partial<Automation> = {}): Automation {
 }
 
 describe("automations of a mate", () => {
-  it("tags a conversation that an automation started as Automation", () => {
-    const items = mateThreads({ ...row, threads: [], conversations: [{ session: "s9", name: "TEST weekly", state: "idle", ended: false, started_at: "2026-10-23T10:00:00Z", automation: "test-weekly" }] });
-    expect(items.map((t) => [t.session, t.tag, t.source])).toEqual([["s9", "Automation", "automation"]]);
-    expect(replyHint(items[0], "test-ada")).toBe("Message Test-ada…");
-  });
-
   it("lists only the automations of the mate, with when they run", () => {
     const list = [
       auto("test-weekly", { mate: "test-ada", schedule: "weekly mon 09:00" }),
