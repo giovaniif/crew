@@ -134,6 +134,7 @@ func (p Probe) claudeSetup() domain.HarnessSetup {
 	ok, err := claude.Installed(p.ClaudeSettings, p.Bin)
 	s.Installed = ok
 	s.SetUp = exists(claude.BackupPath(p.ClaudeSettings))
+	s.Used = exists(filepath.Dir(p.ClaudeSettings)) || p.onPath("claude")
 	if err != nil {
 		s.Err = err.Error()
 	}
@@ -253,4 +254,12 @@ func exists(path string) bool {
 func isDir(path string) bool {
 	fi, err := os.Stat(path)
 	return err == nil && fi.IsDir()
+}
+
+func (p Probe) onPath(name string) bool {
+	if p.LookPath == nil {
+		return false
+	}
+	_, err := p.LookPath(name)
+	return err == nil
 }
