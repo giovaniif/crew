@@ -425,8 +425,12 @@ export function claimMate(a: Authed, name: string): Promise<MateClaim> {
 
 export type MateMemory = { name: string; path: string; text: string; limit: number };
 
-export function newMateConversation(a: Authed, name: string): Promise<{ ID: string }> {
-  return authedRequest<{ ID: string }>(a, matePath(name, "new"), "POST", {});
+export function newMateConversation(a: Authed, name: string, prompt = ""): Promise<{ ID: string }> {
+  return authedRequest<{ ID: string }>(a, matePath(name, "new"), "POST", prompt ? { prompt } : {});
+}
+
+export function resetMate(a: Authed, name: string): Promise<unknown> {
+  return authedRequest<unknown>(a, matePath(name, "reset"), "POST");
 }
 
 export function mateMemory(a: Authed, name: string): Promise<MateMemory> {
