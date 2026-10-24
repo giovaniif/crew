@@ -23,6 +23,7 @@ var settingsEndpoints = []authedEndpoint{
 	{"GET", "/api/v1/devices", ""},
 	{"POST", "/api/v1/devices/t4bl3t00/revoke", ""},
 	{"POST", "/api/v1/pair/code", `{"name":"tablet"}`},
+	{"GET", "/api/v1/fs/complete?path=~%2Fw", ""},
 }
 
 func TestServeSettingsRoutesCallTheirDaemonMethods(t *testing.T) {
@@ -53,6 +54,8 @@ func TestServeSettingsRoutesCallTheirDaemonMethods(t *testing.T) {
 		{settingsEndpoints[8], rpc.MethodDeviceList, `{}`, rpc.DeviceList{Devices: []rpc.Device{phone, tablet}}, "devices.json"},
 		{settingsEndpoints[9], rpc.MethodDeviceRevoke, `{"id":"t4bl3t00"}`, nil, ""},
 		{settingsEndpoints[10], rpc.MethodPairCode, `{"name":"tablet"}`, rpc.PairCode{Code: "482913", ExpiresAt: expires}, "pair-code.json"},
+		{settingsEndpoints[11], rpc.MethodFSComplete, `{"path":"~/w"}`,
+			rpc.FSComplete{Dir: "/home/me", Dirs: []domain.Child{{Name: "web", Path: "/home/me/web", Git: domain.GitDir}}}, "fs-complete.json"},
 	}
 	for _, c := range cases {
 		t.Run(c.ep.method+" "+c.ep.path, func(t *testing.T) {
