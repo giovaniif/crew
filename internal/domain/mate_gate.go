@@ -43,6 +43,7 @@ type MateSeat struct {
 	Local      bool         `json:",omitempty"`
 	FreshFrom  string       `json:",omitempty"`
 	Automation string       `json:",omitempty"`
+	History    bool         `json:",omitempty"`
 }
 
 type ActionScope struct {
