@@ -14,11 +14,22 @@ type fakeCleanupWorld struct {
 	dirty     map[string]int
 	backedUp  []string
 	holdersOf map[string][]string
+	gone      map[string]app.WorktreeGitFacts
+}
+
+func (f *fakeCleanupWorld) BackupFolder(_ context.Context, w domain.Worktree, _ string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.backedUp = append(f.backedUp, w.Path)
+	return nil
 }
 
 func (f *fakeCleanupWorld) CleanupFacts(_ context.Context, w domain.Worktree) (app.WorktreeGitFacts, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if g, ok := f.gone[w.Path]; ok {
+		return g, nil
+	}
 	return app.WorktreeGitFacts{Fingerprint: "f", Uncommitted: f.dirty[w.Path]}, nil
 }
 
