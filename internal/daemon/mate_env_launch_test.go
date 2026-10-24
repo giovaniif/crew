@@ -45,7 +45,7 @@ agent = "claude"
 repos = ["api"]
 `
 
-var envPrefix = []string{"/opt/crew", "env", "exec", "test-bot", "--harness"}
+var envPrefix = []string{"/opt/crew", "identity", "exec", "test-bot", "--harness"}
 
 func envWrapped(cmd []string, harness string) bool {
 	n := len(envPrefix)
@@ -107,6 +107,15 @@ func TestPiMateGetsTheMateSystemPromptOnStartAndResume(t *testing.T) {
 		if i < 0 || i+1 >= len(cmd) || !strings.Contains(cmd[i+1], "You help.") {
 			t.Errorf("%s: command %q", what, cmd)
 		}
+	}
+}
+
+func TestMateOnYoursWithNoExtraVariablesKeepsTodaysCommand(t *testing.T) {
+	config := envLaunchMates + "\n[[mate]]\nname = \"mine\"\nprompt = \"You help.\"\nagent = \"claude\"\nrepos = [\"api\"]\nenvironment = { machine_id = \"m-test\", identity_id = \"yours\" }\n"
+	r := startMateRigWith(t, &memStore{}, config, daemon.WithEnvLauncher("/opt/crew"))
+	start, resume := startAndResumeMate(t, r, "mine", "claude")
+	if start[0] != "claude" || resume[0] != "claude" {
+		t.Fatalf("start %q resume %q", start, resume)
 	}
 }
 

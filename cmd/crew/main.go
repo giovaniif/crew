@@ -69,7 +69,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return runAutomation(args[1:], stdout, stderr)
 	case cmd == "mate":
 		return runMate(args[1:], stdout, stderr)
-	case cmd == "env":
+	case cmd == "env" || cmd == "identity":
 		return runEnv(args[1:], stdout, stderr)
 	case cmd == "approval":
 		return runApproval(args[1:], stdout, stderr)

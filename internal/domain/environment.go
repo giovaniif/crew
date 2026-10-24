@@ -30,6 +30,7 @@ const EnvSSHKeyFile = "id_ed25519"
 
 type Environment struct {
 	Name    string    `json:"name"`
+	Label   string    `json:"label,omitempty"`
 	Kind    EnvKind   `json:"kind"`
 	Parts   []EnvPart `json:"parts,omitempty"`
 	Extra   []string  `json:"extra,omitempty"`

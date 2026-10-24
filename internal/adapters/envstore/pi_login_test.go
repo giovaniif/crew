@@ -18,11 +18,11 @@ func TestPiLoginIsAnEnabledCredentialInTheAgentDBOfTheEnvironment(t *testing.T) 
 	if s.PiLogin("bot") {
 		t.Fatal("login before agent.db")
 	}
-	piDB(t, filepath.Join(s.Home, "envs", "old", "omp"), "'expired'")
+	piDB(t, filepath.Join(s.Home, "identities", "old", "omp"), "'expired'")
 	if s.PiLogin("old") {
 		t.Error("login with only a disabled credential")
 	}
-	piDB(t, filepath.Join(s.Home, "envs", "bot", "omp"), "NULL")
+	piDB(t, filepath.Join(s.Home, "identities", "bot", "omp"), "NULL")
 	if !s.PiLogin("bot") {
 		t.Error("no login with an enabled credential")
 	}
