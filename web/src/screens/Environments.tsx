@@ -32,6 +32,7 @@ import {
 import { Button, Dialog, Menu, Select } from "../ui";
 import { useEnvTitle, useMachine } from "./Machine";
 import { MateFace } from "./Mates";
+import { HooksBanner } from "./HooksBanner";
 
 type Props = { api: Authed; name: string; wide: boolean };
 
@@ -708,6 +709,7 @@ function Editor({
   const [codexKey, setCodexKey] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [note, setNote] = useState("");
+  const [loads, setLoads] = useState(0);
   useEffect(() => {
     let on = true;
     setEnvInfo(null);
@@ -720,7 +722,7 @@ function Editor({
     return () => {
       on = false;
     };
-  }, [api, name]);
+  }, [api, name, loads]);
   if (error) {
     return (
       <div className="eedit">
@@ -760,6 +762,16 @@ function Editor({
   const codexPick =
     codexKey ||
     (!env.codex_login && secretSet(env, "OPENAI_API_KEY") ? "api" : "chatgpt");
+  const hooks = (
+    <HooksBanner
+      api={api}
+      missing={env.hooks_missing}
+      onFixed={() => {
+        setLoads((n) => n + 1);
+        onChanged();
+      }}
+    />
+  );
   const notice = changed ? (
     <div className="notice" role="status">
       <span className="dot wait" />
@@ -874,6 +886,7 @@ function Editor({
           Mates in this environment act as you. They use what is already set up
           on this machine. crew reads these values and does not change them.
         </p>
+        {hooks}
         {notice}
         <div className="gtitle">{"FOUND ON " + machine.toUpperCase()}</div>
         <div className="group">
@@ -910,6 +923,7 @@ function Editor({
   return (
     <div className="eedit">
       {head}
+      {hooks}
       {notice}
       {env.parts.includes("git") ? (
         <GitIdentity
