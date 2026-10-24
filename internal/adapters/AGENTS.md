@@ -30,6 +30,7 @@ Implementations of the `app` ports. All exec, disk and network calls are here. g
 
     Thus the scan does not recognise old scrollback and unknown dialogs.
   - Fixtures are in the `testdata/prompt/` of each adapter. They are not real captures: they are built from the dialog strings in the installed binaries (Claude 2.1.288, Codex 0.93). When a dialog changes, capture them again with `tmux capture-pane -p`. Codex 0.93 has no web-fetch approval dialog.
+- The hooks check (`onboard.Probe.Hooks`) reports a harness when crew set it up before and its hooks are gone, and also when Claude is in use (its config dir exists or `claude` is on PATH) and crew never set it up (`New`). Set up runs the same merge as `crew setup claude`.
 - `claude.Installed` and `codex.Installed` run the merge of Setup in memory. They report if the merge changes nothing. Thus the walkthrough and the CLI agree.
 
 ## Others
