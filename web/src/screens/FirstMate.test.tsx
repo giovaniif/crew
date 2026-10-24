@@ -50,7 +50,7 @@ describe("the first run of mates on a server", () => {
     live();
     await toMate();
     expect(screen.getByRole("heading", { name: "Make your first mate" })).toBeInTheDocument();
-    expect(screen.getByText("A mate is an agent that stays: a name, a role and its own threads.")).toBeInTheDocument();
+    expect(screen.getByText("A mate is an agent that stays: a name, a role and one conversation.")).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Environment" })).toHaveTextContent("devbox · your accounts");
     fireEvent.change(screen.getByRole("textbox", { name: "Name" }), { target: { value: "test-ada" } });
     fireEvent.change(screen.getByRole("textbox", { name: "Role" }), { target: { value: "Review PRs." } });
