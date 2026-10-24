@@ -295,3 +295,39 @@ func TestCleanupOnlyExecutePurgesTheTrash(t *testing.T) {
 		t.Errorf("purges after Execute = %d, want 1", w.trash.purges)
 	}
 }
+
+func TestCleanupExecPrunesAMissingFolderAndMovesNothing(t *testing.T) {
+	w := newCleanupWorld(map[string]app.WorktreeGitFacts{"/w/gone": {PathMissing: true}})
+	got := outcomes(w.c.Execute(context.Background(), []domain.Worktree{merged("/w/gone", "g", 1)}, idle))
+	if got["/w/gone"] != "pruned" {
+		t.Errorf("outcomes = %v, want pruned", got)
+	}
+	if len(w.trash.moved) != 0 {
+		t.Errorf("moved = %v, want nothing", w.trash.moved)
+	}
+	if !reflect.DeepEqual(w.git.ops, []string{"prune /w/api"}) {
+		t.Errorf("git ops = %v, want one prune", w.git.ops)
+	}
+	if len(w.audit.records) != 1 || w.audit.records[0].Outcome != "pruned" {
+		t.Errorf("audit = %+v", w.audit.records)
+	}
+}
+
+func TestCleanupExecNeverTouchesAFolderWhoseRepoIsGone(t *testing.T) {
+	w := newCleanupWorld(map[string]app.WorktreeGitFacts{"/w/orphan": {RepoMissing: true, Uncommitted: 2}})
+	res := w.c.Execute(context.Background(), []domain.Worktree{merged("/w/orphan", "o", 1)}, idle)
+	if res[0].Decision.Action != domain.CleanupKeep || res[0].Decision.Reason != "repo moved or missing" {
+		t.Errorf("decision = %+v, want keep, repo moved or missing", res[0].Decision)
+	}
+	if len(w.trash.moved) != 0 || len(w.git.ops) != 0 {
+		t.Errorf("moved = %v, ops = %v, want nothing", w.trash.moved, w.git.ops)
+	}
+}
+
+func TestCleanupRemoveWorktreePrunesAMissingFolder(t *testing.T) {
+	w := newCleanupWorld(map[string]app.WorktreeGitFacts{"/w/gone": {PathMissing: true}})
+	res := w.c.RemoveWorktree(context.Background(), merged("/w/gone", "g", 1), idle, false)
+	if res.Outcome != "pruned" || len(w.trash.moved) != 0 {
+		t.Errorf("result = %+v, moved = %v, want pruned and nothing moved", res, w.trash.moved)
+	}
+}

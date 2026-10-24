@@ -126,7 +126,9 @@ The phone app: a PWA that `crew serve` embeds and serves at `/` (ADR [0046](../d
 - `#/disk` (`screens/Disk.tsx`) is the worktrees and disk window of the Mac app (issue #520). The sidebar of the desktop layout links to it. The phone layout shows it too.
   - `src/disk.ts` holds the pure rules, the same as `Disk.swift`: `diskTiles`, `diskRows` (the state Open, Merged · clean, Merged · dirty, Detached or No PR, and what cleanup does), `diskActions`, `diskPorts`, `diskRecent` and `pollDelay`.
   - It loads `GET /api/v1/disk` every 2 s while a size is pending, else every 10 s.
-  - Each destructive action (Remove…, Back up and remove…, Kill…) asks first. A `keep` row offers no removal. A `backup_then_ask` row offers only Back up and remove. The daemon applies the cleanup rules again.
+  - Each destructive action (Remove…, Back up and remove…, Prune…, Kill…) asks first. A `prune` row (the folder is gone) shows Folder gone and offers Prune….
+  - The tables have a fixed layout. A long cell shows one line with an ellipsis, and its tooltip shows the full text. The Cleanup cell shows a short label, and its tooltip shows the full reason. The page never scrolls sideways. At phone width, the tables hide some columns.
+  - A `keep` row offers no removal. A `backup_then_ask` row offers only Back up and remove. The daemon applies the cleanup rules again.
   - The redesign (frame 4b, issue #727): a head with Clean up now (asks first, then posts `/api/v1/cleanup/run`), five stat cards (`diskCards`: Volume with a usage bar, Worktrees, Reclaimable, Shared deps store, Auto-cleanup), the sub-tabs Worktrees N, Dev servers N and Recently cleaned, and tables with state pills. Each confirm is a kit `Dialog`. A dev server row has Stop….
   - Go to session opens `#/sessions/<id>`. Open shell posts `…/shell` with the worktree, then opens `#/sessions/<id>/shell`, which selects the Shell tab.
   - Tests: `npm test -- Disk`.
