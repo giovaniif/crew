@@ -1,4 +1,5 @@
 import type { DesktopBridge } from "./desktopBridge";
+import type { Completion } from "./pathSuggest";
 
 export type ServerKind = "local" | "url" | "ssh";
 export type ServerRow = { id: string; name: string; kind: ServerKind; detail: string };
@@ -107,6 +108,10 @@ export class Servers {
 
   async pickFolder(near?: string): Promise<string | null> {
     return (await call<string | null>(this.desktop, "crew_pick_folder", { near: near ?? null })) ?? null;
+  }
+
+  complete(id: string, path: string): Promise<Completion> {
+    return call(this.desktop, "crew_server_complete", { id, path });
   }
 
   async workspace(id: string, path: string): Promise<void> {

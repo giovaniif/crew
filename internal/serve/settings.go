@@ -81,6 +81,10 @@ func dirsParams(r *http.Request) (any, error) {
 	return rpc.WorkspaceDirsParams{Path: path}, nil
 }
 
+func completeParams(r *http.Request) (any, error) {
+	return rpc.FSCompleteParams{Path: r.URL.Query().Get("path")}, nil
+}
+
 func revokeParams(r *http.Request) (any, error) {
 	return rpc.DeviceRevokeParams{ID: r.PathValue("id")}, nil
 }
@@ -109,6 +113,7 @@ func settingsRoutes() []route {
 		owner("POST /api/v1/onboarding/nvim", rpc.MethodOnboardingNvim, noParams),
 		owner("POST /api/v1/onboarding/finish", rpc.MethodOnboardingFinish, noParams),
 		owner("GET /api/v1/workspaces/dirs", rpc.MethodWorkspaceDirs, dirsParams),
+		owner("GET /api/v1/fs/complete", rpc.MethodFSComplete, completeParams),
 		owner("GET /api/v1/devices", rpc.MethodDeviceList, noParams),
 		owner("POST /api/v1/devices/{id}/revoke", rpc.MethodDeviceRevoke, revokeParams),
 		owner("POST /api/v1/pair/code", rpc.MethodPairCode, pairCodeParams),

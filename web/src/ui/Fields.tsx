@@ -79,7 +79,7 @@ export function Suggest({ label, value, onChange, suggestions, className, onKeyD
 
   function choose(s: string) {
     onChange(s);
-    setOpen(false);
+    setOpen(s.endsWith("/"));
   }
 
   function onKeyDown(e: KeyboardEvent<HTMLInputElement>) {
@@ -90,6 +90,9 @@ export function Suggest({ label, value, onChange, suggestions, className, onKeyD
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setHi((h) => Math.max(h - 1, 0));
+    } else if (e.key === "Tab" && !e.shiftKey && visible) {
+      e.preventDefault();
+      choose(shown[Math.max(hi, 0)]);
     } else if (e.key === "Enter" && visible && hi >= 0) {
       e.preventDefault();
       choose(shown[hi]);

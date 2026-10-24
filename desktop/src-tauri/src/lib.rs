@@ -610,6 +610,22 @@ async fn crew_server_workspace(
     .await
 }
 
+#[tauri::command]
+async fn crew_server_complete(
+    app: AppHandle,
+    webview: Webview,
+    id: String,
+    path: String,
+) -> Result<serde_json::Value, String> {
+    guard(&app, &webview)?;
+    blocking(move || {
+        let (url, auth) = connect(&app, &id)?;
+        let token = hub::token_of(&auth).ok_or("this server is not paired")?;
+        hub::complete_path(&url, &token, &path)
+    })
+    .await
+}
+
 fn reopen(app: &AppHandle) {
     let selected = app.state::<Shared>().lock().unwrap().store.selected.clone();
     if hub::is_local(&selected) || configured_url().is_some() {
@@ -772,6 +788,7 @@ pub fn run() {
             crew_server_crew,
             crew_server_install,
             crew_server_workspace,
+            crew_server_complete,
             crew_browser_open,
             crew_pick_folder,
             crew_check_update
