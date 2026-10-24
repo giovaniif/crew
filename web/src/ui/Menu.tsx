@@ -150,8 +150,14 @@ export function Menu({ label, items, onPick, onClose, search, role = "menu", id,
               {e.checked ? <CheckIcon /> : null}
             </span>
             {e.icon}
-            <span>{e.label}</span>
-            {e.hint !== undefined ? <span className="k">{e.hint}</span> : null}
+            <span className="lbl">{e.label}</span>
+            {typeof e.hint === "string" ? (
+              <span className="k k-path" title={e.hint}>
+                <bdi>{e.hint}</bdi>
+              </span>
+            ) : e.hint !== undefined ? (
+              <span className="k">{e.hint}</span>
+            ) : null}
           </div>
         );
       })}

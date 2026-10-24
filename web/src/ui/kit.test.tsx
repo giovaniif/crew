@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
+import { menuPlace } from "./Select.tsx";
 import { Button, Checkbox, Dialog, Menu, RadioGroup, Segmented, Select, Slider, Stepper, Suggest, Switch, Toast } from "./index.ts";
 
 const fruits = [
@@ -350,5 +351,26 @@ describe("Menu check", () => {
     expect(item.querySelector(".ck svg")).not.toBeNull();
     expect(item).not.toHaveTextContent("✓");
     expect(screen.getByRole("menuitemcheckbox", { name: "B" }).querySelector(".ck svg")).toBeNull();
+  });
+});
+
+describe("Select menu width", () => {
+  it("grows to fit long rows within the viewport and never sets a fixed width", () => {
+    const style = menuPlace({ left: 100, top: 50, bottom: 80, width: 140 }, { width: 1200, height: 800 });
+    expect(style.width).toBeUndefined();
+    expect(style.minWidth).toBe("220px");
+    expect(style.maxWidth).toBe("480px");
+  });
+
+  it("caps the max width at the room right of the trigger", () => {
+    const style = menuPlace({ left: 200, top: 50, bottom: 80, width: 140 }, { width: 500, height: 800 });
+    expect(parseFloat(String(style.left)) + parseFloat(String(style.maxWidth))).toBeLessThanOrEqual(492);
+    expect(parseFloat(String(style.maxWidth))).toBeGreaterThanOrEqual(220);
+  });
+
+  it("shows a text hint whole in its tooltip and marks it to truncate from the start", () => {
+    const long = "/Users/someone/code/a-very-long-folder-name/agent-workspace";
+    render(<Menu label="Project" items={[{ value: "a", label: "agent-workspace", hint: long }]} onPick={() => {}} onClose={() => {}} />);
+    expect(screen.getByTitle(long).className).toContain("k-path");
   });
 });
