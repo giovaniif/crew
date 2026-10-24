@@ -104,6 +104,11 @@ func (d *Daemon) runCleanup(ctx context.Context, execute bool) ([]app.CleanupRes
 	}
 	results := d.cl.c.Execute(ctx, wts, activity)
 	for _, r := range results {
+		if r.Outcome == "forgotten" {
+			d.afterRemoval(r.Decision.Worktree)
+		}
+	}
+	for _, r := range results {
 		if r.Outcome == "removed" {
 			d.st.hints.wake()
 			break
