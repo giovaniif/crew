@@ -68,7 +68,9 @@ export function EnvRail({ api, mate, extra, onPick }: { api: Authed; mate: Mate;
   const [open, setOpen] = useState(false);
   const anchor = useAway(open, () => setOpen(false));
   const name = list?.machine.name ?? fallback;
-  const local = !!list && !!hub?.machines.find((m) => m.machine?.id === list.machine.id)?.local;
+  const here = list ? hub?.machines.find((m) => m.machine?.id === list.machine.id) : undefined;
+  const local = !!here?.local;
+  const envHref = (identity: string) => "#/envs/" + encodeURIComponent(here?.key ?? "this") + "/" + encodeURIComponent(identity);
   const label = machineLabel(name, local);
   const id = identityId(mate.env);
   const title = envName(label, id);
@@ -127,7 +129,7 @@ export function EnvRail({ api, mate, extra, onPick }: { api: Authed; mate: Mate;
           <span className="dot wait" aria-hidden="true" />
           <span>
             {id + " has no " + missing + " key, and " + mate.name + " uses " + missing + ". "}
-            <a href={"#/envs/" + encodeURIComponent(id)}>Set key</a>
+            <a href={envHref(id)}>Set key</a>
           </span>
         </div>
       )}
@@ -140,7 +142,7 @@ export function EnvRail({ api, mate, extra, onPick }: { api: Authed; mate: Mate;
           </span>
         </div>
       )}
-      <a className="env-open" href={"#/envs/" + encodeURIComponent(id)}>
+      <a className="env-open" href={envHref(id)}>
         Open environment
       </a>
     </div>
