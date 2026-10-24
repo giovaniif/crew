@@ -18,7 +18,7 @@ const bot = (codex_login: boolean, key: boolean): EnvInfo => ({
 });
 
 function open(env: EnvInfo) {
-  const d = desktop("#/envs/test-bot", true, undefined, {}, (s) =>
+  const d = desktop("#/envs/this/test-bot", true, undefined, {}, (s) =>
     s
       .on("GET", "/api/v1/envs", { status: 200, body: { envs: [env] } })
       .on("GET", "/api/v1/envs/test-bot", { status: 200, body: env }),
