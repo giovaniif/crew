@@ -43,7 +43,12 @@ export function machineServer(m: FakeMachine): FakeServer {
     .on("GET", "/api/v1/envs", { status: 200, body: { envs: m.identities.map((i) => ({ parts: [], secrets: [], used_by: [], ...i })) } })
     .on("GET", "/api/v1/mates", { status: 200, body: { mates: m.mates, limits: { hop_limit: 5, turns_per_hour: 20, daily_turns: 100, daily_tokens: 0, stop: false }, tones: [] } })
     .on("POST", "/api/v1/mates", (call) => ({ status: 200, body: (call.body as { mate: MateDef }).mate }));
+  server.on("POST", "/api/v1/mates/import", (call) => {
+    const body = call.body as { export: { mate: MateDef } };
+    return { status: 200, body: body.export.mate };
+  });
   for (const mate of m.mates) {
+    server.on("GET", "/api/v1/mates/" + mate.name + "/export", { status: 200, body: { mate, memory: "- Tests first." } });
     server.on("GET", "/api/v1/mates/" + mate.name + "/memory", { status: 200, body: { name: mate.name, path: "/m/memory.md", text: "", limit: 8192 } });
   }
   if (m.down) {
