@@ -3,6 +3,10 @@ import type { Authed } from "./api";
 import { loadHub, type Hub, type MachineLink, type Machines } from "./machines";
 import { useMachine } from "./screens/Machine";
 
+function noStream(): never {
+  throw new Error("no stream for this machine");
+}
+
 export const HubContext = createContext<Machines | null>(null);
 
 export type HubState = { hub: Hub | null; links: MachineLink[] };
@@ -13,7 +17,7 @@ export function useHub(api: Authed): HubState {
   const [state, setState] = useState<HubState>({ hub: null, links: [] });
   useEffect(() => {
     let live = true;
-    const fallback: MachineLink[] = [{ key: "this", name, local: false, fetch: api.fetch, token: api.token }];
+    const fallback: MachineLink[] = [{ key: "this", name, local: false, fetch: api.fetch, token: api.token, open: noStream }];
     const pick = machines ? machines.links().catch(() => fallback) : Promise.resolve(fallback);
     void pick
       .then(async (links) => {
