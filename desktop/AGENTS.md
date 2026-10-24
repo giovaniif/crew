@@ -39,7 +39,6 @@ The Tauri 2 app for desktop and mobile ([ADR 0057](../docs/adr/0057-tauri-apps.m
   - A `url` server: Rust pairs with `POST /api/v1/pair` (`ureq`, desktop only).
   - To open a server, the app opens a new window on its page (`open_window`) with its login in `window.__CREW_DESKTOP_AUTH__`.
   - Security: a remote server controls the page that it serves. Thus a page of a `url` server gets no IPC. A page of an SSH tunnel gets only `fix_daemon` (`ipc::tunnel_capability`), which then runs the SSH setup on that host. Only the exact origin of the local `crew serve` gets the server commands (`ipc::server_capability`). Each server command also checks the page origin (`Hub::trusted`). `tests/ipc.rs` tests that a remote page gets no server command.
-  - The tray menu has Open This computer, the way back from a remote server.
   - The commands are `crew_servers`, `crew_ssh_hosts`, `crew_server_add`, `crew_server_open`, `crew_server_remove`, `crew_server_fix`, `crew_server_workspace` and `crew_server_complete`. `crew_server_complete {id, path}` calls `GET /api/v1/fs/complete` on that server, so the workspace fields complete the folders of the server. `crew_server_fix` runs Fix on this computer or `crew setup daemon` over SSH. A `url` server has no Fix, because the app has no SSH access to it.
   - When the app starts, it opens this computer. A server that you select stays selected only until the app quits.
   - The first start (no `servers.json`) sets `first_run`. The web app then shows the Add a server flow (see [web/](../web/AGENTS.md)).
