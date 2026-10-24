@@ -33,7 +33,6 @@ use servers::{Kind, LOCAL_ID};
 const TRAY: &str = "crew";
 
 #[cfg(desktop)]
-const OPEN_LOCAL: &str = "server:local";
 
 pub const DEFAULT_URL: &str = "http://127.0.0.1:7420/";
 
@@ -733,14 +732,6 @@ fn reopen(app: &AppHandle) {
 #[cfg(desktop)]
 fn build_menu<R: Runtime>(app: &AppHandle<R>, model: &attention::Menu) -> tauri::Result<Menu<R>> {
     let menu = Menu::new(app)?;
-    menu.append(&MenuItem::with_id(
-        app,
-        OPEN_LOCAL,
-        "Open This computer",
-        true,
-        None::<&str>,
-    )?)?;
-    menu.append(&PredefinedMenuItem::separator(app)?)?;
     for entry in attention::entries(model) {
         match entry {
             Entry::Separator => menu.append(&PredefinedMenuItem::separator(app)?)?,
@@ -764,15 +755,6 @@ fn main_window<R: Runtime>(app: &AppHandle<R>) -> Option<tauri::WebviewWindow<R>
 
 #[cfg(desktop)]
 fn on_menu(app: &AppHandle, id: &str) {
-    if id == OPEN_LOCAL {
-        let handle = app.clone();
-        std::thread::spawn(move || {
-            if let Err(err) = open_server(&handle, LOCAL_ID) {
-                eprintln!("crew-desktop: cannot open this computer: {err}");
-            }
-        });
-        return;
-    }
     match attention::action(id) {
         Some(Action::Quit) => app.exit(0),
         Some(Action::Show(hash)) => {
