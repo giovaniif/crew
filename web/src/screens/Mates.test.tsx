@@ -32,7 +32,8 @@ const board: Mates = {
           ended: false,
         },
       ],
-      conversations: [],
+      conversation: "s1",
+      conversations: [{ session: "s1", name: "add login", state: "running", ended: false, started_at: "2026-10-03T11:00:00Z", history: false }],
       channels: ["api", "web"],
     },
     {
@@ -40,9 +41,10 @@ const board: Mates = {
       state: "paused",
       work: [],
       threads: [],
+      conversation: "s2",
       conversations: [
-        { session: "s2", name: "fix the docs", state: "waiting", ended: false, started_at: "2026-10-03T11:00:00Z" },
-        { session: "s7", name: "weekly deps", state: "idle", ended: false, started_at: "2026-10-03T10:00:00Z", automation: "test-weekly" },
+        { session: "s2", name: "fix the docs", state: "waiting", ended: false, started_at: "2026-10-03T11:00:00Z", history: false },
+        { session: "s7", name: "weekly deps", state: "idle", ended: true, started_at: "2026-10-03T10:00:00Z", automation: "test-weekly", history: true },
       ],
     },
     { name: "fresh", state: "ready", work: [], threads: [], conversations: [] },
@@ -66,6 +68,8 @@ const defs = {
 const chat = [
   { id: "u1", cursor: 1, turn: "p1", role: "user", text: "Fix the docs", at: "2026-10-03T11:00:00Z" },
   { id: "a1", cursor: 2, turn: "p1", role: "assistant", text: "I fixed the docs.", at: "2026-10-03T11:01:00Z" },
+  { id: "u2", cursor: 3, turn: "p2", role: "user", text: "Source: #C0CHAN1\n\nAna: check the cache", at: "2026-10-03T11:02:00Z" },
+  { id: "u3", cursor: 4, turn: "p3", role: "user", text: "Source: Automation test-weekly\n\nTEST weekly deps", at: "2026-10-03T11:03:00Z" },
 ];
 
 function setup(hash = "#/mates/helper", mates: Mates = board, approvals: unknown[] = [], visibility?: PageVisibility, wide = false) {
@@ -95,6 +99,8 @@ function setup(hash = "#/mates/helper", mates: Mates = board, approvals: unknown
       },
     })
     .on("POST", "/api/v1/mates/stop", { status: 200, body: defs.limits })
+    .on("POST", "/api/v1/mates/webby/reset", { status: 200, body: {} })
+    .on("GET", "/api/v1/sessions/s7/messages?limit=50", { status: 200, body: { messages: chat, before: 0 } })
     .on("POST", "/api/v1/mates/helper/pause", { status: 200, body: defs.mates[0] })
     .on("POST", "/api/v1/mates/webby/resume", { status: 200, body: defs.mates[1] })
     .on("POST", "/api/v1/mates", { status: 200, body: { name: "scout", prompt: "Scout.", agent: "codex", enabled: true } })
@@ -126,6 +132,7 @@ function setup(hash = "#/mates/helper", mates: Mates = board, approvals: unknown
   sockets.last.open();
   const st = goldenState();
   st.sessions = st.sessions.map((x) => (x.ID === "s2" ? { ...x, Mate: { Name: "webby", Local: true } } : x));
+  st.sessions.push({ ...st.sessions[1], ID: "s7", Pane: "", Ended: true, Mate: { Name: "webby", Local: true } });
   sockets.last.push({ state: { ...st, mates } });
   return { server, sockets };
 }
@@ -138,18 +145,14 @@ describe("Mate page", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("All mates are stopped");
   });
 
-  it("has three columns on the desktop: threads, the conversation and the settings rail", async () => {
+  it("has two columns on the desktop: the one conversation and the settings rail", async () => {
     setup("#/mates/helper", board, [], undefined, true);
     expect(await screen.findByRole("heading", { name: "helper" })).toBeInTheDocument();
-    const threads = screen.getByRole("navigation", { name: "Threads of helper" });
-    const row = within(threads).getByRole("link", { name: /add login/ });
-    expect(row).toHaveAttribute("href", "#/mates/helper/s1");
-    expect(row).toHaveAttribute("aria-current", "page");
-    expect(row).toHaveTextContent("Slack channel");
+    expect(screen.queryByRole("navigation", { name: "Threads of helper" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "New thread" })).toBeNull();
     expect(screen.getByRole("region", { name: "Conversation" })).toBeInTheDocument();
     expect(await screen.findByText("I fixed the docs.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open in Slack" })).toHaveAttribute("href", "https://app.slack.com/client/T1/C1/thread/C1-1700.0001");
-    expect(screen.getByRole("textbox", { name: "Message" })).toHaveAttribute("placeholder", "Reply in this thread. It also posts to Slack.");
+    expect(screen.getByRole("textbox", { name: "Message" })).toHaveAttribute("placeholder", "Message Helper…");
     const rail = screen.getByRole("complementary", { name: "Settings of helper" });
     expect(within(rail).getByText("Changes apply when the next conversation starts.")).toBeInTheDocument();
     expect(within(rail).getByRole("radio", { name: "Claude" })).toHaveAttribute("aria-checked", "true");
@@ -158,34 +161,43 @@ describe("Mate page", () => {
     expect(within(rail).getByRole("link", { name: "+ Add automation" })).toHaveAttribute("href", "#/automations/new?mate=helper");
   });
 
-  it("gives a mate without Slack its app threads, with the normal composer", async () => {
+  it("tags each message of the mate with where it came from", async () => {
     setup("#/mates/webby", board, [], undefined, true);
-    const threads = await screen.findByRole("navigation", { name: "Threads of webby" });
-    expect(within(threads).getByRole("link", { name: /fix the docs/ })).toHaveTextContent("App");
-    expect(await screen.findByRole("textbox", { name: "Message" })).toHaveAttribute("placeholder", "Message Webby…");
-    expect(screen.queryByRole("link", { name: "Open in Slack" })).toBeNull();
+    const conv = await screen.findByRole("region", { name: "Conversation" });
+    expect(await within(conv).findByText("Ana: check the cache")).toBeInTheDocument();
+    expect(within(conv).getByText("#C0CHAN1")).toBeInTheDocument();
+    expect(within(conv).getByText("Automation")).toBeInTheDocument();
+    expect(within(conv).getByText("App")).toBeInTheDocument();
+    expect(within(conv).queryByText(/^Source:/)).toBeNull();
   });
 
-  it("starts an app thread with New and opens it on the mate page", async () => {
-    const { server } = setup("#/mates/helper", board, [], undefined, true);
-    await userEvent.setup().click(await screen.findByRole("button", { name: "New thread" }));
-    await waitFor(() => expect(window.location.hash).toBe("#/mates/helper/s9"));
-    expect(calls(server)).toContain("POST /api/v1/mates/helper/new");
+  it("starts the first conversation from the composer of the empty mate page", async () => {
+    const { server } = setup("#/mates/fresh", board, [], undefined, true);
+    const user = userEvent.setup();
+    await user.type(await screen.findByRole("textbox", { name: "Message fresh" }), "TEST hello");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    await waitFor(() => expect(server.calls.find((c) => c.path === "/api/v1/mates/fresh/new")?.body).toEqual({ prompt: "TEST hello" }));
   });
 
-  it("shows a failed New next to the threads", async () => {
-    const { server } = setup("#/mates/helper", board, [], undefined, true);
-    server.on("POST", "/api/v1/mates/helper/new", { status: 400, body: { error: { code: "bad_request", message: "no workspace to start in" } } });
-    await userEvent.setup().click(await screen.findByRole("button", { name: "New thread" }));
-    expect(await within(screen.getByRole("navigation", { name: "Threads of helper" })).findByRole("alert")).toHaveTextContent("no workspace to start in");
+  it("starts fresh from the ⋯ menu only after a confirm", async () => {
+    const { server } = setup("#/mates/webby", board, [], undefined, true);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "More for webby" }));
+    await user.click(screen.getByRole("menuitem", { name: "Start fresh…" }));
+    const ask = screen.getByRole("dialog", { name: "Start fresh?" });
+    expect(calls(server)).not.toContain("POST /api/v1/mates/webby/reset");
+    await user.click(within(ask).getByRole("button", { name: "Start fresh" }));
+    await waitFor(() => expect(calls(server)).toContain("POST /api/v1/mates/webby/reset"));
   });
 
-  it("searches the threads", async () => {
-    setup("#/mates/helper", { ...board, mates: [{ ...board.mates[0], conversations: board.mates[1].conversations }] }, [], undefined, true);
-    const threads = await screen.findByRole("navigation", { name: "Threads of helper" });
-    await userEvent.setup().type(within(threads).getByRole("searchbox", { name: "Search threads" }), "docs");
-    expect(within(threads).getByRole("link", { name: /fix the docs/ })).toBeInTheDocument();
-    expect(within(threads).queryByRole("link", { name: /add login/ })).toBeNull();
+  it("opens an old conversation from the ⋯ menu as history with no composer", async () => {
+    setup("#/mates/webby/s7", board, [], undefined, true);
+    const conv = await screen.findByRole("region", { name: "Conversation" });
+    expect(await within(conv).findByText("I fixed the docs.")).toBeInTheDocument();
+    expect(within(conv).getByRole("status")).toHaveTextContent("History. This conversation does not continue.");
+    expect(within(conv).queryByRole("textbox", { name: "Message" })).toBeNull();
+    await userEvent.setup().click(screen.getByRole("button", { name: "More for webby" }));
+    expect(screen.getByRole("menuitem", { name: "History: weekly deps" })).toBeInTheDocument();
   });
 
   it("pauses a mate", async () => {
@@ -250,12 +262,6 @@ describe("Mate page", () => {
     expect(within(rail).getByRole("link", { name: "+ Add automation" })).toHaveAttribute("href", "#/automations/new?mate=helper");
   });
 
-  it("tags a thread that an automation started as Automation", async () => {
-    setup("#/mates/webby", board, [], undefined, true);
-    const list = await screen.findByRole("navigation", { name: "Threads of webby" });
-    expect(await within(list).findByText("Automation · idle")).toBeInTheDocument();
-  });
-
   it("says where the mate answers in Slack", async () => {
     setup("#/mates/helper", board, [], undefined, true);
     const rail = await screen.findByRole("complementary", { name: "Settings of helper" });
@@ -300,12 +306,12 @@ describe("Mate page", () => {
 });
 
 describe("Mate page on the phone", () => {
-  it("shows the header line, the thread chips and the chat", async () => {
+  it("shows the header line and the chat, with no thread chips", async () => {
     setup("#/mates/helper");
     expect(await screen.findByRole("heading", { name: "helper" })).toBeInTheDocument();
     expect(screen.getByText("Local · Claude · working")).toBeInTheDocument();
-    const chips = screen.getByRole("navigation", { name: "Threads of helper" });
-    expect(within(chips).getByRole("link", { name: /add login/ })).toHaveAttribute("aria-current", "page");
+    expect(screen.queryByRole("navigation", { name: "Threads of helper" })).toBeNull();
+    expect(screen.getByRole("button", { name: "More for helper" })).toBeInTheDocument();
     expect(await screen.findByText("I fixed the docs.")).toBeInTheDocument();
     expect(screen.queryByRole("complementary", { name: "Settings of helper" })).toBeNull();
   });
