@@ -35,12 +35,11 @@ func runDaemon(args []string, stdout, stderr io.Writer) int {
 	}
 	switch sub {
 	case "":
-		err = foreground(home)
-		if errors.Is(err, daemon.ErrAlreadyRunning) {
-			if pid, ok := sameBuildRunning(home); ok {
-				fmt.Fprintf(stderr, "crew daemon: a daemon of this build already runs (pid %d), so this one exits\n", pid)
-				return 0
-			}
+		err = foregroundOrTakeOver(home, runtime.GOOS, os.Getenv, func() error { return foreground(home) }, sameBuildRunning)
+		var same errSameBuildRuns
+		if errors.As(err, &same) {
+			fmt.Fprintf(stderr, "crew daemon: a daemon of this build already runs (pid %d), so this one exits\n", same.pid)
+			return 0
 		}
 	case "start":
 		err = start(home, stdout)
@@ -253,4 +252,73 @@ func stop(home string, stdout io.Writer) error {
 func selfOrEmpty() string {
 	self, _ := os.Executable()
 	return self
+}
+
+type errSameBuildRuns struct{ pid int }
+
+func (e errSameBuildRuns) Error() string {
+	return fmt.Sprintf("a daemon of this build already runs (pid %d)", e.pid)
+}
+
+const takeOverAttempts = 3
+
+func foregroundOrTakeOver(home, goos string, env func(string) string, run func() error, sameBuild func(string) (int, bool)) error {
+	under := domain.UnderService(goos, env, daemonAgentLabel)
+	if under {
+		_ = os.Unsetenv("INVOCATION_ID")
+		_ = os.Unsetenv("XPC_SERVICE_NAME")
+	}
+	for attempt := 0; ; attempt++ {
+		err := run()
+		if !errors.Is(err, daemon.ErrAlreadyRunning) {
+			return err
+		}
+		pid, same := sameBuild(home)
+		switch domain.OnHeldLock(under, same) {
+		case domain.HeldLockExit:
+			return errSameBuildRuns{pid: pid}
+		case domain.HeldLockFail:
+			return err
+		}
+		if attempt == takeOverAttempts {
+			return err
+		}
+		stopped, terr := takeOverDaemon(home)
+		if terr != nil {
+			return fmt.Errorf("%w; the service could not take over: %v", err, terr)
+		}
+		log.Printf("the service took over from a daemon outside it (pid %d)", stopped)
+	}
+}
+
+func takeOverDaemon(home string) (int, error) {
+	pid, ok := daemon.ReadPID(home)
+	if !ok {
+		return 0, errors.New("no pid file for the daemon that holds the lock")
+	}
+	if err := syscall.Kill(pid, syscall.SIGTERM); err != nil && !errors.Is(err, syscall.ESRCH) {
+		return pid, err
+	}
+	if lockFreeWithin(home, rpc.StartTimeout) {
+		return pid, nil
+	}
+	_ = syscall.Kill(pid, syscall.SIGKILL)
+	if lockFreeWithin(home, rpc.StartTimeout) {
+		return pid, nil
+	}
+	return pid, fmt.Errorf("pid %d still holds the lock", pid)
+}
+
+func lockFreeWithin(home string, d time.Duration) bool {
+	deadline := time.Now().Add(d)
+	for {
+		if lock, err := daemon.Acquire(home); err == nil {
+			_ = lock.Release()
+			return true
+		}
+		if time.Now().After(deadline) {
+			return false
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
 }
