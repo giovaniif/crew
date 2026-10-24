@@ -68,8 +68,8 @@ const defs = {
 const chat = [
   { id: "u1", cursor: 1, turn: "p1", role: "user", text: "Fix the docs", at: "2026-10-03T11:00:00Z" },
   { id: "a1", cursor: 2, turn: "p1", role: "assistant", text: "I fixed the docs.", at: "2026-10-03T11:01:00Z" },
-  { id: "u2", cursor: 3, turn: "p2", role: "user", text: "Source: #C0CHAN1\n\nAna: check the cache", at: "2026-10-03T11:02:00Z" },
-  { id: "u3", cursor: 4, turn: "p3", role: "user", text: "Source: Automation test-weekly\n\nTEST weekly deps", at: "2026-10-03T11:03:00Z" },
+  { id: "u2", cursor: 3, turn: "p2", role: "user", text: "[Source: #C0CHAN1] Ana: check the cache", at: "2026-10-03T11:02:00Z" },
+  { id: "u3", cursor: 4, turn: "p3", role: "user", text: "[Source: Automation test-weekly] TEST weekly deps", at: "2026-10-03T11:03:00Z" },
 ];
 
 function setup(hash = "#/mates/helper", mates: Mates = board, approvals: unknown[] = [], visibility?: PageVisibility, wide = false) {
@@ -168,7 +168,7 @@ describe("Mate page", () => {
     expect(within(conv).getByText("#C0CHAN1")).toBeInTheDocument();
     expect(within(conv).getByText("Automation")).toBeInTheDocument();
     expect(within(conv).getByText("App")).toBeInTheDocument();
-    expect(within(conv).queryByText(/^Source:/)).toBeNull();
+    expect(within(conv).queryByText(/^\[Source:/)).toBeNull();
   });
 
   it("starts the first conversation from the composer of the empty mate page", async () => {

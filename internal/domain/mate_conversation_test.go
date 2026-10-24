@@ -76,9 +76,9 @@ func TestMateSourcePromptMarksWhereTheMessageCameFrom(t *testing.T) {
 		want string
 	}{
 		{"app", MateSource{}, "hi"},
-		{"channel", MateSource{Channel: "C123"}, "Source: #C123\n\nhi"},
-		{"dm", MateSource{Channel: "D123"}, "Source: DM\n\nhi"},
-		{"automation", MateSource{Automation: "weekly"}, "Source: Automation weekly\n\nhi"},
+		{"channel", MateSource{Channel: "C123"}, "[Source: #C123] hi"},
+		{"dm", MateSource{Channel: "D123"}, "[Source: DM] hi"},
+		{"automation", MateSource{Automation: "weekly"}, "[Source: Automation weekly] hi"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

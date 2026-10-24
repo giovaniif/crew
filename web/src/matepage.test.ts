@@ -36,11 +36,11 @@ describe("shownConversation", () => {
 
 describe("messageSource", () => {
   it("reads the source line on top of an input and keeps the rest", () => {
-    expect(messageSource("Source: #C0CHAN1\n\nlook at it")).toEqual({ tag: "#C0CHAN1", text: "look at it" });
-    expect(messageSource("Source: DM\n\nhi")).toEqual({ tag: "DM", text: "hi" });
-    expect(messageSource("Source: Automation weekly\n\nTEST check")).toEqual({ tag: "Automation", text: "TEST check" });
+    expect(messageSource("[Source: #C0CHAN1] look at it")).toEqual({ tag: "#C0CHAN1", text: "look at it" });
+    expect(messageSource("[Source: DM] hi")).toEqual({ tag: "DM", text: "hi" });
+    expect(messageSource("[Source: Automation weekly] TEST check")).toEqual({ tag: "Automation", text: "TEST check" });
     expect(messageSource("fix the bug")).toEqual({ tag: "App", text: "fix the bug" });
-    expect(messageSource("Source: nothing after")).toEqual({ tag: "App", text: "Source: nothing after" });
+    expect(messageSource("[Source: nothing after")).toEqual({ tag: "App", text: "[Source: nothing after" });
   });
 });
 
