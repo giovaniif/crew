@@ -45,6 +45,13 @@ func TestCleanupPlan(t *testing.T) {
 		{"dirty and held by a project", onBranch(merged), CleanupFacts{Project: "shop", Uncommitted: 2, LastActivity: idle}, CleanupKeep, "held by project shop", ""},
 		{"detached and held by a project", detached, CleanupFacts{Project: "shop", LastActivity: idle}, CleanupKeep, "held by project shop", ""},
 		{"facts unknown", onBranch(merged), CleanupFacts{Unknown: "git status failed", LastActivity: idle}, CleanupKeep, "facts unavailable: git status failed", ""},
+		{"folder gone", onBranch(open), CleanupFacts{PathMissing: true, LastActivity: idle}, CleanupPrune, "folder is gone", ""},
+		{"folder gone beats unknown facts", onBranch(nil), CleanupFacts{PathMissing: true, Unknown: "git status failed", LastActivity: idle}, CleanupPrune, "folder is gone", ""},
+		{"folder gone beats a live session", onBranch(nil), CleanupFacts{PathMissing: true, SessionLive: true, LastActivity: now}, CleanupPrune, "folder is gone", ""},
+		{"folder gone but held by a project", onBranch(nil), CleanupFacts{PathMissing: true, Project: "shop", LastActivity: idle}, CleanupKeep, "held by project shop", ""},
+		{"repo gone keeps the folder", onBranch(merged), CleanupFacts{RepoMissing: true, Unknown: "git status failed", LastActivity: idle}, CleanupKeep, "repo moved or missing", ""},
+		{"repo and folder gone", onBranch(merged), CleanupFacts{RepoMissing: true, PathMissing: true, LastActivity: idle}, CleanupKeep, "repo moved or missing", ""},
+		{"repo gone and dirty", detached, CleanupFacts{RepoMissing: true, Uncommitted: 3, LastActivity: idle}, CleanupKeep, "repo moved or missing", ""},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

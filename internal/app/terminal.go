@@ -11,6 +11,8 @@ type PaneSpec struct {
 	Dir     string
 	Command []string
 	Env     map[string]string
+
+	Transcript string
 }
 
 type PaneInfo struct {

@@ -32,19 +32,21 @@ type Daemon interface {
 }
 
 type Config struct {
-	Build       string
-	URL         string
-	Dial        func(ctx context.Context) (Daemon, error)
-	AuthTimeout time.Duration
-	Log         io.Writer
-	Now         func() time.Time
-	Control     func(ctx context.Context, argv []string) (io.ReadWriteCloser, error)
-	Machine     rpc.Machine
+	Build          string
+	URL            string
+	AllowedOrigins []string
+	Dial           func(ctx context.Context) (Daemon, error)
+	AuthTimeout    time.Duration
+	Log            io.Writer
+	Now            func() time.Time
+	Control        func(ctx context.Context, argv []string) (io.ReadWriteCloser, error)
+	Machine        rpc.Machine
 }
 
 type Server struct {
 	cfg     Config
 	origin  string
+	allowed map[string]bool
 	base    context.Context
 	streams *registry
 	log     *limitedLog
@@ -77,6 +79,11 @@ func New(cfg Config) (*Server, error) {
 		}
 		s.origin = origin
 	}
+	allowed, err := allowedOrigins(cfg.AllowedOrigins)
+	if err != nil {
+		return nil, err
+	}
+	s.allowed = allowed
 	return s, nil
 }
 
@@ -164,7 +171,10 @@ func (s *Server) Handler(fallback http.Handler) http.Handler {
 	if fallback != nil {
 		mux.Handle("/", fallback)
 	}
-	return mux
+	if len(s.allowed) == 0 {
+		return mux
+	}
+	return s.cors(mux)
 }
 
 func (s *Server) hello(w http.ResponseWriter, _ *http.Request) {
