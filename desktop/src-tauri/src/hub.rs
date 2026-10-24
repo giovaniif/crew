@@ -254,3 +254,61 @@ pub fn ssh_config_hosts(home: Option<&Path>) -> Vec<String> {
 pub fn is_local(id: &str) -> bool {
     id == LOCAL_ID
 }
+
+#[cfg(desktop)]
+pub fn stream(base: &Url, token: &str, stop: &std::sync::atomic::AtomicBool, mut frame: impl FnMut(String)) -> String {
+    use std::sync::atomic::Ordering;
+    use tungstenite::client::IntoClientRequest;
+    use tungstenite::Message;
+    if base.scheme() != "http" {
+        return format!("the app cannot stream from {}", base.origin().ascii_serialization());
+    }
+    let Some(host) = base.host_str() else {
+        return "the machine has no host".into();
+    };
+    let port = base.port_or_known_default().unwrap_or(80);
+    let target = format!("ws://{host}:{port}/api/v1/stream");
+    let mut request = match target.as_str().into_client_request() {
+        Ok(request) => request,
+        Err(err) => return err.to_string(),
+    };
+    if let Ok(origin) = base.origin().ascii_serialization().parse() {
+        request.headers_mut().insert("Origin", origin);
+    }
+    let tcp = match std::net::TcpStream::connect((host, port)) {
+        Ok(tcp) => tcp,
+        Err(err) => return format!("cannot reach {target}: {err}"),
+    };
+    let (mut socket, _) = match tungstenite::client(request, tcp) {
+        Ok(pair) => pair,
+        Err(err) => return format!("the stream of {target} refused: {err}"),
+    };
+    let hello = serde_json::json!({ "token": token }).to_string();
+    if let Err(err) = socket.send(Message::text(hello)) {
+        return err.to_string();
+    }
+    let _ = socket.get_ref().set_read_timeout(Some(Duration::from_millis(500)));
+    loop {
+        if stop.load(Ordering::SeqCst) {
+            let _ = socket.close(None);
+            return "closed".into();
+        }
+        match socket.read() {
+            Ok(Message::Text(text)) => frame(text.to_string()),
+            Ok(Message::Close(close)) => {
+                return close
+                    .map(|c| format!("{} {}", u16::from(c.code), c.reason))
+                    .unwrap_or_else(|| "closed".into())
+            }
+            Ok(_) => {}
+            Err(tungstenite::Error::Io(err))
+                if matches!(err.kind(), std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut) => {}
+            Err(err) => return err.to_string(),
+        }
+    }
+}
+
+#[cfg(not(desktop))]
+pub fn stream(_: &Url, _: &str, _: &std::sync::atomic::AtomicBool, _: impl FnMut(String)) -> String {
+    "the machine list is only in the desktop app".into()
+}
