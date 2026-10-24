@@ -94,6 +94,39 @@ func TestNewSessionPromptIsPastedWhenTheSessionStartHookArrivesBeforeTheSessionI
 	}
 }
 
+func sendFirst(t *testing.T, r sessionRig, session, text string) {
+	t.Helper()
+	if _, err := r.c.SessionSend(context.Background(), session, text); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSessionSendRightAfterANewSessionWaitsForTheHarnessToBoot(t *testing.T) {
+	r := startPromptRig(t, time.Hour)
+	s, err := newWithPrompt(t, r, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sendFirst(t, r, s.ID, "What is this project")
+	assertTypedStays(t, sendEnv{host: r.host}, nil)
+	startHook(t, r, "SessionStart")
+	if typed := r.host.waitTyped(t, 2); !reflect.DeepEqual(typed, pastedOn7("What is this project")) {
+		t.Fatalf("typed %q", typed)
+	}
+}
+
+func TestSessionSendRightAfterANewSessionIsPastedAfterTheGraceWhenNoHookArrives(t *testing.T) {
+	r := startPromptRig(t, 30*time.Millisecond)
+	s, err := newWithPrompt(t, r, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sendFirst(t, r, s.ID, "What is this project")
+	if typed := r.host.waitTyped(t, 2); !reflect.DeepEqual(typed, pastedOn7("What is this project")) {
+		t.Fatalf("typed %q", typed)
+	}
+}
+
 func TestNewSessionPromptBlankOrAbsentQueuesNothing(t *testing.T) {
 	r := startPromptRig(t, 20*time.Millisecond)
 	if _, err := newWithPrompt(t, r, "   "); err != nil {
