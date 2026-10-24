@@ -1,7 +1,101 @@
 import { describe, expect, it } from "vitest";
-import { desktopMachines, loadHub, pairedMachines, type MachineLink } from "./machines";
+import { desktopMachines, loadHub, MachineStreams, pairedMachines, withSessions, type MachineLink } from "./machines";
 import { FakeServer } from "./test/fake-server";
 import { FakeDesktop } from "./test/fake-desktop";
+import { FakeSockets } from "./test/fake-socket";
+
+const server0 = new FakeServer();
+
+function state(sessions: { ID: string; name: string }[]) {
+  return { seq: 1, workspaces: [], tasks: [], worktrees: [], sessions, limits: [], sends: [] };
+}
+
+function live(sessions: { ID: string; name: string }[]) {
+  return { status: "live" as const, state: state(sessions) as never, retryAt: null, reason: "", code: null };
+}
+
+function tick() {
+  return new Promise((r) => setTimeout(r, 0));
+}
+
+describe("machine streams", () => {
+  it("opens one desktop stream for each machine and passes its frames on", async () => {
+    const desktop = new FakeDesktop();
+    desktop.handlers.crew_machine_stream = () => 3;
+    const [first] = await desktopMachines(desktop).links();
+    const socket = first.open();
+    const got: string[] = [];
+    let opened = false;
+    let closed: { code: number; reason: string } | null = null;
+    socket.onopen = () => (opened = true);
+    socket.onmessage = (ev) => got.push(String(ev.data));
+    socket.onclose = (ev) => (closed = { code: ev.code, reason: ev.reason });
+    await tick();
+    expect(desktop.of("crew_machine_stream")).toEqual([{ machineId: "local" }]);
+    expect(opened).toBe(true);
+    desktop.emit("crew-machine-stream", { stream: 2, machine_id: "x", frame: "other" });
+    desktop.emit("crew-machine-stream", { stream: 3, machine_id: "local", frame: '{"state":{}}' });
+    expect(got).toEqual(['{"state":{}}']);
+    socket.send(JSON.stringify({ token: "" }));
+    desktop.emit("crew-machine-stream", { stream: 3, machine_id: "local", closed: "daemon went away" });
+    expect(closed).toEqual({ code: 1006, reason: "daemon went away" });
+    expect(desktop.listening("crew-machine-stream")).toBe(0);
+  });
+
+  it("closes the desktop stream through crew_machine_stream_close", async () => {
+    const desktop = new FakeDesktop();
+    desktop.handlers.crew_machine_stream = () => 5;
+    const [first] = await desktopMachines(desktop).links();
+    const socket = first.open();
+    await tick();
+    socket.close(1000, "closed by the app");
+    await tick();
+    expect(desktop.of("crew_machine_stream_close")).toEqual([{ stream: 5 }]);
+    expect(desktop.listening("crew-machine-stream")).toBe(0);
+  });
+
+  it("opens the WebSocket stream of each paired machine", async () => {
+    const urls: string[] = [];
+    const sockets = new FakeSockets();
+    const links = await pairedMachines([{ key: "box", name: "box", url: "https://box.example/", token: "tok-box", local: false }], server0.fetch, (url) => {
+      urls.push(url);
+      return sockets.open();
+    }).links();
+    links[0].open();
+    expect(urls).toEqual(["wss://box.example/api/v1/stream"]);
+  });
+
+  it("tags the sessions of each machine in the hub with the daemon machine", async () => {
+    const hub = await loadHub([link("local", machine("m-mac", "mac", ["ada"]), true), link("ssh:box", machine("m-box", "box", ["bob"]))]);
+    const merged = withSessions(hub, {
+      local: live([{ ID: "s1", name: "fix login" }]),
+      "ssh:box": live([{ ID: "s2", name: "ship api" }]),
+      gone: live([{ ID: "s3", name: "old" }]),
+    });
+    expect(merged.sessions.map((s) => [s.key, s.machine.id, s.item.ID])).toEqual([
+      ["local", "m-mac", "s1"],
+      ["ssh:box", "m-box", "s2"],
+    ]);
+  });
+
+  it("keeps one stream client for each machine", () => {
+    const sockets = new FakeSockets();
+    const links: MachineLink[] = [
+      { key: "a", name: "a", local: true, fetch: server0.fetch, token: "ta", open: sockets.open },
+      { key: "b", name: "b", local: false, fetch: server0.fetch, token: "tb", open: sockets.open },
+    ];
+    const streams = new MachineStreams(links);
+    streams.start();
+    expect(sockets.opened).toHaveLength(2);
+    sockets.opened[0].open();
+    expect(sockets.opened[0].sent[0]).toEqual({ token: "ta" });
+    sockets.opened[1].push({ state: state([{ ID: "s9", name: "nine" }]) });
+    expect(streams.snapshots().b.state?.sessions.map((s) => s.ID)).toEqual(["s9"]);
+    expect(streams.snapshots().a.status).toBe("connecting");
+    streams.stop();
+    expect(sockets.opened[0].closed).not.toBeNull();
+  });
+});
 
 function env(name: string) {
   return { name, kind: "custom", parts: [], secrets: [], used_by: [] };
@@ -15,7 +109,7 @@ function machine(id: string, name: string, mates: string[], envs = ["work"]): Fa
 }
 
 function link(key: string, server: FakeServer, local = false): MachineLink {
-  return { key, name: key, local, fetch: server.fetch, token: "t-" + key };
+  return { key, name: key, local, fetch: server.fetch, token: "t-" + key, open: new FakeSockets().open };
 }
 
 describe("machines hub", () => {
