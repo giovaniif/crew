@@ -43,7 +43,7 @@ var (
 		rpc.MethodApprovalList, rpc.MethodApprovalDecide,
 		rpc.MethodClientNative, rpc.MethodShellFocus, rpc.MethodNvimToggle,
 		rpc.MethodConfigGet, rpc.MethodConfigSet, rpc.MethodOnboarding, rpc.MethodOnboardingInstall,
-		rpc.MethodOnboardingRemove, rpc.MethodOnboardingNvim, rpc.MethodOnboardingFinish, rpc.MethodHooks, rpc.MethodHooksFix, rpc.MethodWorkspaceDirs, rpc.MethodFSComplete,
+		rpc.MethodOnboardingRemove, rpc.MethodOnboardingNvim, rpc.MethodOnboardingFinish, rpc.MethodHooks, rpc.MethodHooksFix, rpc.MethodClaudeTrustStatus, rpc.MethodClaudeTrust, rpc.MethodWorkspaceDirs, rpc.MethodFSComplete,
 		rpc.MethodDeviceList, rpc.MethodPairCode,
 		rpc.MethodReviewOpen, rpc.MethodReviewViewed, rpc.MethodReviewComment, rpc.MethodReviewSend, rpc.MethodReviewHunk,
 		rpc.MethodSwitch, rpc.MethodPortsKill, rpc.MethodAutomationSave, rpc.MethodDiskView, rpc.MethodCleanupWorktree, rpc.MethodCleanupRun,
