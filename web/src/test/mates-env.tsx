@@ -47,6 +47,9 @@ export function machineServer(m: FakeMachine): FakeServer {
     const body = call.body as { export: { mate: MateDef } };
     return { status: 200, body: body.export.mate };
   });
+  for (const i of m.identities) {
+    server.on("GET", "/api/v1/envs/" + i.name, { status: 200, body: { parts: [], secrets: [], used_by: [], ...i } });
+  }
   for (const mate of m.mates) {
     server.on("GET", "/api/v1/mates/" + mate.name + "/export", { status: 200, body: { mate, memory: "- Tests first." } });
     server.on("GET", "/api/v1/mates/" + mate.name + "/memory", { status: 200, body: { name: mate.name, path: "/m/memory.md", text: "", limit: 8192 } });
