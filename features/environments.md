@@ -10,7 +10,7 @@ The recipes run in order. The first recipe makes the environment `test-bot` that
 
 ```sh
 go run ./scripts/verify iso down
-go run ./scripts/verify iso up --session --env-fakes
+go run ./scripts/verify iso up --session --env-fakes --second
 go run ./scripts/verify iso homesum --save before
 ```
 
@@ -148,6 +148,28 @@ go run ./scripts/verify web drive /#/envs/test-bot --viewport both --out-dir /tm
 go run ./scripts/verify iso crew -- mate set test-pick --agent claude --prompt "TEST pick prompt"
 go run ./scripts/verify web drive /#/mates/test-pick --viewport desktop --out-dir /tmp/crew-verify-map/environments --steps '[{"click":{"role":"combobox","name":"Environment"}},{"click":{"role":"option","name":"test-bot"}},{"expect":{"text":"Isolated: its own git identity","exact":false}},{"shot":"mate-env-picker.png"}]'
 go run ./scripts/verify iso crew --expect "env:     test-bot" -- mate show test-pick
+```
+
+### two machines show in one merged list (11a)
+
+`iso up --second` starts a second isolated crew with the machine name `devbox` and adds it to the `machines.json` of the desktop app. Thus the app shows This Mac and devbox. The PWA shows only the machine of its page.
+
+```sh
+go run ./scripts/verify iso api POST /api/v1/mates --body '{"mate":{"name":"test-ada","prompt":"TEST review prompt","agent":"claude","enabled":true}}'
+go run ./scripts/verify app drive /#/envs --steps '[{"expect":{"text":"devbox"},"timeout":30000},{"click":{"text":"devbox","exact":false}},{"click":{"role":"button","name":"+ Separate identity"}},{"fill":{"label":"Name"},"value":"test-work"},{"click":{"role":"button","name":"Create"}},{"wait":3000},{"goto":"/#/envs"},{"wait":3000},{"shot":"two-machines.png"}]'
+```
+
+### copy an identity to a different machine (11g, 11h)
+
+```sh
+go run ./scripts/verify app drive /#/envs --steps '[{"click":{"text":"test-work","exact":false},"timeout":30000},{"click":{"role":"button","name":"More actions"}},{"click":{"role":"menuitem","name":"Copy to another machine…"}},{"shot":"copy-identity.png"},{"click":{"role":"button","name":"Copy"}},{"expect":{"text":"copied from devbox","exact":false},"timeout":15000},{"shot":"copied-identity.png"}]'
+go run ./scripts/verify iso crew --expect test-work -- env list
+```
+
+### copy a mate to a different machine (12g)
+
+```sh
+go run ./scripts/verify app drive /#/mates/test-ada --steps '[{"click":{"role":"button","name":"More for test-ada"},"timeout":30000},{"click":{"text":"Copy to another machine…"}},{"shot":"copy-mate.png"},{"click":{"role":"button","name":"Copy test-ada"}},{"wait":4000},{"goto":"/#/envs"},{"expect":{"text":"devbox"},"timeout":15000},{"shot":"copied-mate.png"}]'
 ```
 
 ## Cleanup
