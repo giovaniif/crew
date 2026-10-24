@@ -107,7 +107,7 @@ describe("FirstRun", () => {
     expect(desktop.of("crew_server_complete")).toContainEqual({ id: "ssh:gpu", path: "~/w" });
     await userEvent.keyboard("{Tab}");
     expect(field).toHaveValue("~/www/");
-    await within(screen.getByRole("listbox", { name: "First workspace" })).findByText("~/www/bolao-app/");
+    expect(await screen.findByRole("option", { name: "~/www/bolao-app/" })).toBeInTheDocument();
     await userEvent.keyboard("{Tab}");
     expect(field).toHaveValue("~/www/bolao-app/");
   });
