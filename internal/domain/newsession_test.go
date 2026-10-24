@@ -143,6 +143,29 @@ func TestPlanSessionStart(t *testing.T) {
 	}
 }
 
+func TestPreviewSessionStart(t *testing.T) {
+	single := Workspace{Root: "/src/api", Kind: WorkspaceSingle, Repos: []Repo{{Name: "api", Path: "/src/api"}}}
+	repos := Workspace{Root: "/src/shop", Kind: WorkspaceOrchestration, Repos: []Repo{{Name: "web", Path: "/src/shop/web"}}}
+	plain := Workspace{Root: "/home/me", Kind: WorkspaceOrchestration}
+	cases := []struct {
+		name string
+		ws   Workspace
+		want StartPreview
+	}{
+		{"a single repo names its new worktree", single, StartPreview{Worktree: "eng-1", Dir: "/h/worktrees/api/eng-1", Git: true}},
+		{"a folder of repos runs at the root with no worktree", repos, StartPreview{Dir: "/src/shop", Git: true}},
+		{"a folder with no git runs in place with no worktree", plain, StartPreview{Dir: "/home/me"}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := PreviewSessionStart(c.ws, PlanSessionStart(c.ws, "eng-1", "/h/worktrees", nil))
+			if got != c.want {
+				t.Errorf("got %+v, want %+v", got, c.want)
+			}
+		})
+	}
+}
+
 func TestSessionEndIdlesAndLetsGoOfThePane(t *testing.T) {
 	s := Session{ID: "a", Pane: "%3", State: StatePermission, Focused: true, Unread: true, WorktreeIDs: []string{"w"}}
 	got := s.End()

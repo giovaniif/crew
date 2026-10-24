@@ -217,6 +217,8 @@ export type WorkItemResolved = {
   title?: string;
   worktree: string;
   workspace: string;
+  dir?: string;
+  git?: boolean;
 };
 
 export type HarnessOptions = {

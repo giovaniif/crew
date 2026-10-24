@@ -266,6 +266,10 @@
   color: var(--ink);
 }
 
+.desktop.desktop-full {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .sidebar {
   display: flex;
   flex-direction: column;

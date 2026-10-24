@@ -168,6 +168,7 @@ function Connected({ env, auth, onUnauthorized, onSignOut }: ConnectedProps) {
         api={api}
         terminals={terminals}
         other={other?.screen ?? null}
+        full={other?.full ?? false}
       />
     );
   }
@@ -221,7 +222,7 @@ type OtherInputs = {
   client: StreamClient;
 };
 
-function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, go, servers, wide, client }: OtherInputs): { screen: ReactNode; tab: Tab } | null {
+function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, go, servers, wide, client }: OtherInputs): { screen: ReactNode; tab: Tab; full?: boolean } | null {
   if (hash === "#/disk") {
     return { screen: <Disk api={api} state={snapshot.state} now={now} go={go} />, tab: "more" };
   }
@@ -284,7 +285,7 @@ function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, g
   if (parseRoute(hash).screen === "home") {
     const board = snapshot.state?.mates;
     if (board && board.mates.length === 0 && !firstMateSkipped(env.storage)) {
-      return { screen: <FirstMate api={api} storage={env.storage} wide={wide} desktop={env.desktop} />, tab: "mates" };
+      return { screen: <FirstMate api={api} storage={env.storage} wide={wide} desktop={env.desktop} />, tab: "mates", full: true };
     }
     return { screen: <MatesHome api={api} now={now} board={board} wide={wide} />, tab: "mates" };
   }

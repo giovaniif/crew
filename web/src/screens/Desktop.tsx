@@ -347,10 +347,11 @@ export type DesktopProps = {
   api: Authed;
   terminals?: TerminalStore | null;
   other: ReactNode;
+  full?: boolean;
   servers?: Servers;
 };
 
-export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, api, terminals = null, other, servers }: DesktopProps) {
+export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, api, terminals = null, other, full = false, servers }: DesktopProps) {
   const [tab, setTab] = useState<MainTab>("chat");
   const browsers = useRef<BrowserStore>(new Map());
   const [menu, setMenu] = useState<(MenuPoint & { id: string }) | null>(null);
@@ -492,8 +493,8 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
 
   return (
     <MachineContext.Provider value={listing ? machineName(listing, env.host) : outerMachine}>
-      <div className="desktop">
-        <Sidebar
+      <div className={full ? "desktop desktop-full" : "desktop"}>
+        {full ? null : <Sidebar
           env={env}
           snapshot={snapshot}
           now={now}
@@ -502,7 +503,7 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
           keys={keys}
           approvals={approvals}
           chip={null}
-        />
+        />}
         {menu && menuSession ? <SessionCommands key={"menu-" + menu.id} api={api} session={menuSession} storage={env.storage} openAt={menu} /> : null}
         <main className="main-column">{main}</main>
       </div>
