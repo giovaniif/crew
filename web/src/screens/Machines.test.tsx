@@ -149,12 +149,14 @@ describe("machines in the desktop app", () => {
     expect(screen.queryByRole("button", { name: /Disconnect/ })).not.toBeInTheDocument();
   });
 
-  it("shows the first run flow on the first start of the desktop app", async () => {
+  it("shows no Add a server sheet on the first start of the desktop app", async () => {
     const desktop = new FakeDesktop();
     desktop.firstRun = true;
     app("", { desktop });
-    const dialog = await screen.findByRole("dialog", { name: "Add a server" });
-    expect(within(dialog).getByRole("button", { name: "Get started" })).toBeInTheDocument();
+    await waitFor(() => expect(desktop.of("crew_servers").length).toBeGreaterThan(0));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByRole("dialog", { name: "Add a server" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Get started" })).not.toBeInTheDocument();
   });
 
   it("has no + Machine outside the desktop app", async () => {
