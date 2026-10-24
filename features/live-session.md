@@ -109,6 +109,15 @@ go run ./scripts/verify app drive / --out-dir /tmp/crew-verify-map/live-session 
 
 Expect: nvim runs, also with the GUI `PATH` of the app, and `:pwd` prints the path of the `TEST-live` worktree.
 
+### a message sent right after a new real Claude session reaches the agent (manual: needs the real claude binary and a fresh CLAUDE_CONFIG_DIR)
+
+```sh
+go run ./scripts/verify iso crew -- new --workspace "$TEST_REPO" --harness claude "TEST fresh install"
+go run ./scripts/verify iso crew -- send <session> "TEST what is this project"
+```
+
+Expect: the daemon holds the send until the `SessionStart` hook (or 15 s with no hooks), and then the agent pane shows the message as a submitted prompt, not as text in the input box. Do this for each release with a `CLAUDE_CONFIG_DIR` that has no crew hooks and a repo that Claude trusts (#917).
+
 ## Cleanup
 
 ```sh
@@ -119,4 +128,5 @@ go run ./scripts/verify iso down
 
 - The text of a terminal is in the DOM rows of xterm.js. Check it with `eval` on the `.xterm-rows` of its region (`Agent screen`, `Shell` or `Editor`), not with `expect` on text: the sidebar also shows `TEST-live`.
 - The desktop layout has no Terminal or nvim tab. The agent screen is the route `#/sessions/<id>/agent` and the editor is `#/sessions/<id>/editor`. The Shell button in the session bar opens the Shell drawer.
+- A real Claude in a worktree of a repo that it never trusted opens the folder trust dialog. Its default is "No, exit", so a pasted Enter exits Claude. The chat does not show the dialog (#917).
 - The `app:` recipes need the desktop tools and build the app the first time (see `verify app` in the skill).
