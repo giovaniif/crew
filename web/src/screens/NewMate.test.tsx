@@ -18,6 +18,7 @@ describe("NewMate environment menu (frame 12d)", () => {
   it("groups the environments by machine and marks a machine that is not reachable", async () => {
     mount({ hash: "#/mates/new", desktop: true, machines: [mac, devbox, ci] });
     const user = await fill();
+    expect(screen.getByText("Whose accounts does it use, and where does it run? Pick one environment.")).toBeInTheDocument();
     const chip = await screen.findByRole("button", { name: /^Environment:/ });
     await waitFor(() => expect(chip).toHaveTextContent("This Mac · your accounts"));
     await user.click(chip);
