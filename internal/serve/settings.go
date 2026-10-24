@@ -84,6 +84,25 @@ func hooksFixParams(r *http.Request) (any, error) {
 	return p, nil
 }
 
+func trustQueryParams(r *http.Request) (any, error) {
+	path := r.URL.Query().Get("path")
+	if strings.TrimSpace(path) == "" {
+		return nil, &rpc.Error{Code: rpc.CodeBadRequest, Message: "path is empty"}
+	}
+	return rpc.ClaudeTrustParams{Path: path}, nil
+}
+
+func trustBodyParams(r *http.Request) (any, error) {
+	var p rpc.ClaudeTrustParams
+	if err := decodeOne(r, &p, "path"); err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(p.Path) == "" {
+		return nil, &rpc.Error{Code: rpc.CodeBadRequest, Message: "path is empty"}
+	}
+	return p, nil
+}
+
 func dirsParams(r *http.Request) (any, error) {
 	path := r.URL.Query().Get("path")
 	if strings.TrimSpace(path) == "" {
@@ -125,6 +144,8 @@ func settingsRoutes() []route {
 		owner("POST /api/v1/onboarding/finish", rpc.MethodOnboardingFinish, noParams),
 		owner("GET /api/v1/hooks", rpc.MethodHooks, noParams),
 		owner("POST /api/v1/hooks/fix", rpc.MethodHooksFix, hooksFixParams),
+		owner("GET /api/v1/claude/trust", rpc.MethodClaudeTrustStatus, trustQueryParams),
+		owner("POST /api/v1/claude/trust", rpc.MethodClaudeTrust, trustBodyParams),
 		owner("GET /api/v1/workspaces/dirs", rpc.MethodWorkspaceDirs, dirsParams),
 		owner("GET /api/v1/fs/complete", rpc.MethodFSComplete, completeParams),
 		owner("GET /api/v1/devices", rpc.MethodDeviceList, noParams),
