@@ -5,7 +5,8 @@ import { customParts, envParts } from "../envs";
 import { useEnvs } from "./Environments";
 import { useMachine } from "./Machine";
 import { Button, RadioGroup, Select } from "../ui";
-import { MateFace } from "./Mates";
+import { mateSlug, nameCheck } from "../matepage";
+import { FaceButton } from "./Mates";
 
 const skipKey = "crew.firstmate";
 
@@ -41,7 +42,7 @@ const roles: { label: string; prompt: string }[] = [
 
 const fallbackPrompt = "Help the team with the tasks that it gives you.";
 
-const handle = /^[a-z0-9][a-z0-9-]*$/;
+const handle = /^[a-z0-9][a-z0-9_-]{0,31}$/;
 
 function message(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
@@ -63,7 +64,8 @@ export function FirstMate({ api, storage, wide }: { api: Authed; storage: KeyVal
   ];
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const mate = name.trim().toLowerCase();
+  const [look, setLook] = useState<{ avatar?: string; color?: string }>({});
+  const mate = mateSlug(name);
   const valid = handle.test(mate);
 
   async function create() {
@@ -71,18 +73,18 @@ export function FirstMate({ api, storage, wide }: { api: Authed; storage: KeyVal
     setError("");
     try {
       if (where.startsWith("env:")) {
-        await saveMate(api, { name: mate, prompt: prompt.trim() || fallbackPrompt, agent, env: where.slice(4), enabled: true });
+        await saveMate(api, { name: mate, prompt: prompt.trim() || fallbackPrompt, agent, env: where.slice(4), ...look, enabled: true });
         window.location.hash = "#/mates/" + encodeURIComponent(mate);
         return;
       }
       if (where === "new") {
         const env = await createEnv(api, { name: mate, kind: "custom", parts: customParts });
         await envSSHKey(api, env.name, "make");
-        await saveMate(api, { name: mate, prompt: prompt.trim() || fallbackPrompt, agent, env: env.name, enabled: true });
+        await saveMate(api, { name: mate, prompt: prompt.trim() || fallbackPrompt, agent, env: env.name, ...look, enabled: true });
         window.location.hash = "#/envs/" + encodeURIComponent(env.name);
         return;
       }
-      await saveMate(api, { name: mate, prompt: prompt.trim() || fallbackPrompt, agent, enabled: true });
+      await saveMate(api, { name: mate, prompt: prompt.trim() || fallbackPrompt, agent, ...look, enabled: true });
       window.location.hash = "#/mates/" + encodeURIComponent(mate);
     } catch (err) {
       setError(message(err));
@@ -157,8 +159,14 @@ export function FirstMate({ api, storage, wide }: { api: Authed; storage: KeyVal
             }}
           >
             <div className="fm-name">
-              {valid ? <MateFace name={mate} state="idle" px={28} /> : <span className="fm-q" aria-hidden="true">?</span>}
+              {valid ? (
+                <FaceButton name={mate} avatar={look.avatar} color={look.color} onPick={(patch) => setLook({ ...look, ...patch })} />
+              ) : (
+                <span className="fm-q" aria-hidden="true">?</span>
+              )}
               <input aria-label="Name" placeholder="Name, for example ada" autoCapitalize="off" spellCheck={false} value={name} onChange={(e) => setName(e.target.value)} />
+              {valid && mate !== name && <span className="fm-slug muted">{"Saved as " + mate}</span>}
+              {!valid && name.trim() !== "" && <span className="fm-slug bad">{nameCheck(mate || name.trim(), []).text}</span>}
             </div>
             <textarea aria-label="Role" rows={2} placeholder="What should it do? For example: review PRs in api and web." value={prompt} onChange={(e) => setPrompt(e.target.value)} />
             <div className="fm-foot">
