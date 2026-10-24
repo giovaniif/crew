@@ -114,6 +114,8 @@ describe("starting a session from the phone", () => {
     setup();
     await waitFor(() => expect(screen.getByRole("combobox", { name: "Project" })).toHaveTextContent("api"));
     expect(screen.queryByRole("alert", { name: /for Claude/ })).not.toBeInTheDocument();
+  });
+
   it("offers to set up the Claude hooks when crew never set them up", async () => {
     let fixed = false;
     const { server } = setup({ routes: (s) => void s
