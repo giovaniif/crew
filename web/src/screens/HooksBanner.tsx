@@ -1,8 +1,12 @@
-import { useState } from "react";
-import { fixHooks, type Authed, type HooksMissing } from "../api";
+import { useCallback, useEffect, useState } from "react";
+import { fixHooks, getHooks, type Authed, type HooksMissing } from "../api";
 import { Button } from "../ui";
 
 const harnessTitles: Record<string, string> = { claude: "Claude", codex: "Codex", omp: "Pi" };
+
+function title(h: string): string {
+  return harnessTitles[h] ?? h;
+}
 
 export function HooksBanner({
   api,
@@ -29,19 +33,16 @@ export function HooksBanner({
   return (
     <>
       {missing.map((m) => (
-        <div
-          key={m.env + "/" + m.harness}
-          className="notice"
-          role="alert"
-          aria-label={(harnessTitles[m.harness] ?? m.harness) + " hooks"}
-        >
+        <div key={m.env + "/" + m.harness} className="notice" role="alert" aria-label={title(m.harness) + " hooks"}>
           <span className="dot wait" />
           <span>
-            {m.reason}. Sessions do not show running or waiting until you fix it.
+            {m.new
+              ? m.reason + ". Without them, crew can not see what " + title(m.harness) + " does."
+              : m.reason + ". Sessions do not show running or waiting until you fix it."}
           </span>
           <span className="spacer" />
           <Button variant="primary" className="sm" disabled={busy === m.harness} onClick={() => fix(m)}>
-            Fix
+            {m.new ? "Set up" : "Fix"}
           </Button>
         </div>
       ))}
@@ -52,4 +53,16 @@ export function HooksBanner({
       ) : null}
     </>
   );
+}
+
+export function LocalHooksBanner({ api }: { api: Authed }) {
+  const [missing, setMissing] = useState<HooksMissing[]>([]);
+  const load = useCallback(() => {
+    getHooks(api).then(
+      (h) => setMissing((h.missing ?? []).filter((m) => m.env === "local")),
+      () => setMissing([]),
+    );
+  }, [api]);
+  useEffect(load, [load]);
+  return <HooksBanner api={api} missing={missing} onFixed={load} />;
 }
