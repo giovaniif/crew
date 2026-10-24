@@ -26,6 +26,8 @@ var settingsEndpoints = []authedEndpoint{
 	{"GET", "/api/v1/fs/complete?path=~%2Fw", ""},
 	{"GET", "/api/v1/hooks", ""},
 	{"POST", "/api/v1/hooks/fix", `{"env":"local","harness":"claude"}`},
+	{"GET", "/api/v1/claude/trust?path=%2Fhome%2Fme%2Fapi", ""},
+	{"POST", "/api/v1/claude/trust", `{"path":"/home/me/api"}`},
 }
 
 func TestServeSettingsRoutesCallTheirDaemonMethods(t *testing.T) {
@@ -60,6 +62,8 @@ func TestServeSettingsRoutesCallTheirDaemonMethods(t *testing.T) {
 			rpc.FSComplete{Dir: "/home/me", Dirs: []domain.Child{{Name: "web", Path: "/home/me/web", Git: domain.GitDir}}}, "fs-complete.json"},
 		{settingsEndpoints[12], rpc.MethodHooks, `{}`, hooksStatus, "hooks.json"},
 		{settingsEndpoints[13], rpc.MethodHooksFix, `{"env":"local","harness":"claude"}`, hooksStatus, "hooks.json"},
+		{settingsEndpoints[14], rpc.MethodClaudeTrustStatus, `{"path":"/home/me/api"}`, rpc.ClaudeTrustStatus{Path: "/home/me/api"}, "claude-trust-status.json"},
+		{settingsEndpoints[15], rpc.MethodClaudeTrust, `{"path":"/home/me/api"}`, rpc.ClaudeTrustStatus{Path: "/home/me/api", Trusted: true}, "claude-trust.json"},
 	}
 	for _, c := range cases {
 		t.Run(c.ep.method+" "+c.ep.path, func(t *testing.T) {

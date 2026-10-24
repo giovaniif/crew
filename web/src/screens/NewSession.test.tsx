@@ -92,6 +92,30 @@ describe("starting a session from the phone", () => {
     expect(screen.getByRole("link", { name: "Sessions" })).toHaveAttribute("href", "#/sessions");
   });
 
+  it("asks to trust the project for Claude before it starts, and trusts it", async () => {
+    let trusted = false;
+    const { server } = setup({
+      routes: (s) =>
+        void s
+          .on("GET", "/api/v1/claude/trust?path=%2Fhome%2Fme%2Fapi", () => ({ status: 200, body: { path: "/home/me/api", trusted } }))
+          .on("POST", "/api/v1/claude/trust", () => ((trusted = true), { status: 200, body: { path: "/home/me/api", trusted: true } })),
+    });
+    const ask = await screen.findByRole("alert", { name: "Trust api for Claude?" });
+    expect(ask).toHaveTextContent("Trust api for Claude? Claude asks one time for each folder. If you do not trust it, Claude stops at the first message.");
+    await userEvent.type(screen.getByRole("textbox", { name: "Task" }), "TEST fix the build");
+    expect(screen.getByRole("button", { name: "Start session" })).toBeDisabled();
+    await userEvent.click(within(ask).getByRole("button", { name: "Trust" }));
+    await waitFor(() => expect(screen.queryByRole("alert", { name: "Trust api for Claude?" })).not.toBeInTheDocument());
+    expect(server.calls.find((c) => c.method === "POST" && c.path === "/api/v1/claude/trust")?.body).toEqual({ path: "/home/me/api" });
+    expect(screen.getByRole("button", { name: "Start session" })).toBeEnabled();
+  });
+
+  it("does not ask for trust when the server can not tell it", async () => {
+    setup();
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "Project" })).toHaveTextContent("api"));
+    expect(screen.queryByRole("alert", { name: /for Claude/ })).not.toBeInTheDocument();
+  });
+
   it("offers to set up the Claude hooks when crew never set them up", async () => {
     let fixed = false;
     const { server } = setup({ routes: (s) => void s

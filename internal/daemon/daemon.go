@@ -186,6 +186,7 @@ type Daemon struct {
 	envs        app.EnvironmentStore
 	localFacts  *localFactsCache
 	hooks       *hooksWatch
+	claudeTrust app.ClaudeTrust
 	envLauncher string
 	slack       slackWorkers
 	presence    presenceCfg
@@ -643,6 +644,8 @@ func (d *Daemon) dispatch(c *conn, line []byte) (*rpc.Response, bool) {
 		return d.mateMethod(req), true
 	case rpc.MethodMateMemory, rpc.MethodMateSetMemory, rpc.MethodMateExport, rpc.MethodMateImport:
 		return d.mateMethod(req), true
+	case rpc.MethodClaudeTrustStatus, rpc.MethodClaudeTrust:
+		return d.claudeTrustMethod(req), true
 	case rpc.MethodHooks, rpc.MethodHooksFix:
 		return d.hooksMethod(req), true
 	case rpc.MethodEnvList, rpc.MethodEnvShow, rpc.MethodEnvCreate, rpc.MethodEnvSet, rpc.MethodEnvUnset, rpc.MethodEnvDelete, rpc.MethodEnvSSHKey,
