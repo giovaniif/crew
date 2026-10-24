@@ -568,6 +568,8 @@ button.chip.env-chip .chev {
 
 .eedit .gtitle .gnote {
   font-weight: 400;
+  font-size: 12px;
+  letter-spacing: 0;
 }
 
 .eedit a.opt {
