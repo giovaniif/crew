@@ -611,6 +611,13 @@ button.danger {
   margin: 0;
 }
 
+.msg-user .msg-src {
+  display: block;
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+  margin-bottom: 2px;
+}
+
 .msg-assistant {
   color: var(--ink);
 }

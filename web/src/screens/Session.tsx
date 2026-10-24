@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEve
 import Markdown from "react-markdown";
 import { ApiError, answerPrompt, getPrompt, interrupt, markRead, messagesPage, sendMessage, startFresh, unsend, type Authed, type Prompt } from "../api";
 import { faceState, stateWords, type FaceState } from "../faces";
+import { messageSource } from "../matepage";
 import { Confirm, MateFace, useMateDefs } from "./Mates";
 import { timeInState } from "../sessions";
 import type { Message, QueuedSend, Session, StreamClient, StreamSnapshot, StreamStatus } from "../stream";
@@ -125,6 +126,15 @@ function MessageLine({ message, persona }: { message: Message; persona?: Persona
     return <ToolLine message={message} />;
   }
   if (message.role === "user") {
+    if (persona) {
+      const src = messageSource(message.text ?? "");
+      return (
+        <div data-message className="msg msg-user">
+          <span className="msg-src">{src.tag}</span>
+          <p>{src.text}</p>
+        </div>
+      );
+    }
     return (
       <div data-message className="msg msg-user">
         <p>{message.text}</p>
@@ -782,10 +792,24 @@ export function SessionScreen({
   );
 }
 
-export function ThreadChat({ id, snapshot, client, api, placeholder }: { id: string; snapshot: StreamSnapshot; client: StreamClient; api: Authed; placeholder: string }) {
+export function ThreadChat({
+  id,
+  snapshot,
+  client,
+  api,
+  placeholder,
+  readOnly = false,
+}: {
+  id: string;
+  snapshot: StreamSnapshot;
+  client: StreamClient;
+  api: Authed;
+  placeholder: string;
+  readOnly?: boolean;
+}) {
   const session = snapshot.state?.sessions.find((s) => s.ID === id);
   if (!session) {
-    return <p className="mt-note">{snapshot.state ? "This thread is gone." : "Loading…"}</p>;
+    return <p className="mt-note">{snapshot.state ? "This conversation is gone." : "Loading…"}</p>;
   }
   const sends = (snapshot.state?.sends ?? []).filter((s) => s.session === id);
   const persona = personaOf(session, snapshot);
@@ -796,7 +820,7 @@ export function ThreadChat({ id, snapshot, client, api, placeholder }: { id: str
           <PermissionCard api={api} session={session} />
         </Chat>
       </main>
-      <Composer session={session} api={api} sends={sends} persona={persona} placeholder={placeholder} />
+      {!readOnly && <Composer session={session} api={api} sends={sends} persona={persona} placeholder={placeholder} />}
     </div>
   );
 }
