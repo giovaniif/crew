@@ -416,6 +416,20 @@ export function mateImport(a: Authed, exported: MateExport, environment: MateEnv
   return authedRequest<Mate>(a, "/api/v1/mates/import", "POST", { export: exported, environment });
 }
 
+export type IdentityCopy = { copy_id: string; public_key: string };
+
+export function identityCopyBegin(a: Authed): Promise<IdentityCopy> {
+  return authedRequest<IdentityCopy>(a, "/api/v1/identities/copy/begin", "POST", {});
+}
+
+export function identityExport(a: Authed, name: string, publicKey: string): Promise<{ bundle: string }> {
+  return authedRequest<{ bundle: string }>(a, "/api/v1/identities/" + encodeURIComponent(name) + "/export", "POST", { public_key: publicKey });
+}
+
+export function identityImport(a: Authed, copyId: string, bundle: string): Promise<EnvInfo> {
+  return authedRequest<EnvInfo>(a, "/api/v1/identities/copy/" + encodeURIComponent(copyId), "POST", { bundle });
+}
+
 export type MachineEnvironments = { machine: { id: string; name: string }; identities: EnvInfo[] | null; found?: EnvLocal };
 
 export function environmentList(a: Authed): Promise<MachineEnvironments> {
