@@ -1,4 +1,4 @@
-import { listApprovals, type Approval, type Authed, type EnvInfo, type Fetch, type Mate } from "./api";
+import { listApprovals, type Approval, type Authed, type EnvInfo, type EnvLocal, type Fetch, type Mate } from "./api";
 import type { DesktopBridge } from "./desktopBridge";
 import type { ServerListing } from "./servers";
 import { StreamClient, type OpenSocket, type Session, type SocketLike, type StreamSnapshot } from "./stream";
@@ -16,6 +16,7 @@ export type MachineState = {
   machine: MachineInfo | null;
   state: "up" | "down";
   error?: string;
+  found?: EnvLocal | null;
 };
 
 export type Tagged<T> = { key: string; machine: MachineInfo; item: T };
@@ -29,7 +30,7 @@ export type Hub = {
   tagged: boolean;
 };
 
-export type EnvironmentList = { machine: MachineInfo; identities: EnvInfo[] | null; found?: unknown };
+export type EnvironmentList = { machine: MachineInfo; identities: EnvInfo[] | null; found?: EnvLocal | null };
 
 export type MachineAnswer = {
   link: MachineLink;
@@ -79,7 +80,7 @@ export function mergeHub(answers: MachineAnswer[]): Hub {
     local: a.link.local,
     machine: a.environments?.machine ?? null,
     state: a.environments ? "up" : "down",
-    ...(a.environments ? {} : { error: notReachable }),
+    ...(a.environments ? { found: a.environments.found ?? null } : { error: notReachable }),
   }));
   const up = visible.filter((a): a is MachineAnswer & { environments: EnvironmentList } => a.environments !== null);
   return {

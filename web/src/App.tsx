@@ -92,14 +92,6 @@ function Tabs({ current }: { current: Tab }) {
   );
 }
 
-function safeDecode(s: string): string {
-  try {
-    return decodeURIComponent(s);
-  } catch {
-    return s;
-  }
-}
-
 function useNow(now: () => number, every: number): number {
   const [value, setValue] = useState(now);
   useEffect(() => {
@@ -249,8 +241,7 @@ function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, g
     return { screen: <Automations key={hash} api={api} now={now} forMate={auto.mate} />, tab: "more" };
   }
   if (hash === "#/envs" || hash.startsWith("#/envs/")) {
-    const name = safeDecode(hash.slice("#/envs/".length));
-    return { screen: <Environments api={api} name={hash === "#/envs" ? "" : name} wide={wide} />, tab: "more" };
+    return { screen: <Environments api={api} route={hash === "#/envs" ? "" : hash.slice("#/envs/".length)} wide={wide} desktop={env.desktop} />, tab: "more" };
   }
   if (hash === "#/more") {
     return { screen: <More />, tab: "more" };
