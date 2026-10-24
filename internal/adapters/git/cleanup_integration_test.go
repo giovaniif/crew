@@ -297,3 +297,30 @@ func TestCleanupFactsTellARepoWhoseGitdirIsGone(t *testing.T) {
 		t.Errorf("facts = %+v, %v; want RepoMissing", f, err)
 	}
 }
+
+func TestCleanupBackupFolderKeepsEveryFileOfAnOrphanFolder(t *testing.T) {
+	tmp, repo := clonedRepo(t)
+	wt := filepath.Join(tmp, "orphan")
+	run(t, repo, "worktree", "add", "-q", "-b", "orphan", wt)
+	write(t, filepath.Join(wt, "notes.txt"), "work\n")
+	if err := os.MkdirAll(filepath.Join(wt, "node_modules"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	write(t, filepath.Join(wt, "node_modules", "x.js"), "x\n")
+	if err := os.Rename(repo, filepath.Join(tmp, "renamed")); err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(tmp, "backups", "orphan")
+	if err := (git.Worktrees{}).BackupFolder(context.Background(), domain.Worktree{Repo: repo, Path: wt}, dir); err != nil {
+		t.Fatal(err)
+	}
+	got := strings.Join(tarNames(t, filepath.Join(dir, "folder.tar")), " ")
+	for _, want := range []string{"orphan/a.txt", "orphan/notes.txt", "orphan/node_modules/x.js", "orphan/.git"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("tar has %q, want %s", got, want)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(wt, "notes.txt")); err != nil {
+		t.Errorf("the folder changed: %v", err)
+	}
+}

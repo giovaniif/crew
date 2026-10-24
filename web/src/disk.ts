@@ -1,6 +1,6 @@
 import type { PullRequest, Session, Worktree } from "./stream";
 
-export type CleanupAction = "remove" | "backup_then_ask" | "prune" | "keep";
+export type CleanupAction = "remove" | "backup_then_ask" | "prune" | "forget" | "orphan" | "keep";
 
 export type DiskRow = { WorktreeID: string; Size: number; Action: CleanupAction; Reason: string };
 
@@ -84,7 +84,7 @@ function storeName(path: string): string {
 export function diskCards(v: DiskView, timeZone?: string): DiskCard[] {
   const t = diskTiles(v);
   const usage = v.total > 0 ? Math.round(((v.total - v.free) / v.total) * 100) : 0;
-  const reclaim = v.rows.filter((r) => r.Action !== "keep").length;
+  const reclaim = v.rows.filter((r) => r.Action === "remove" || r.Action === "backup_then_ask" || r.Action === "prune").length;
   const cards: DiskCard[] = [
     { title: "Volume", value: t.free, sub: usage + "%", usage },
     { title: "Worktrees", value: String(v.rows.length), sub: t.worktrees, usage: null },
@@ -126,6 +126,12 @@ function status(action: CleanupAction, pr: PullRequest | null, detached: boolean
   if (action === "prune") {
     return ["Folder gone", "peach"];
   }
+  if (action === "forget") {
+    return ["Nothing on disk", "grey"];
+  }
+  if (action === "orphan") {
+    return ["Repo gone", "peach"];
+  }
   if (action === "remove") {
     return ["Merged · clean", "green"];
   }
@@ -161,6 +167,9 @@ function plan(row: DiskRow, detached: boolean, removesAt: string | null): string
   }
   if (row.Action === "prune") {
     return removesAt ? "prunes at " + removesAt : "prunes in the next cleanup";
+  }
+  if (row.Action === "forget") {
+    return removesAt ? "forgets at " + removesAt : "forgets in the next cleanup";
   }
   return "kept: " + keptLabel(row.Reason);
 }
@@ -206,7 +215,7 @@ export function diskRows(v: DiskView, state: DiskState | null, timeZone?: string
   });
 }
 
-export type DiskActionKind = "session" | "shell" | "kill" | "remove" | "backup";
+export type DiskActionKind = "session" | "shell" | "kill" | "remove" | "backup" | "copy";
 
 export type DiskAction = {
   kind: DiskActionKind;
@@ -215,6 +224,7 @@ export type DiskAction = {
   verb: string;
   cleanup: { path: string; backup: boolean } | null;
   pgids: number[];
+  path?: string;
 };
 
 export function diskActions(row: DiskTableRow): DiskAction[] {
@@ -244,6 +254,27 @@ export function diskActions(row: DiskTableRow): DiskAction[] {
       confirm: "Prune " + row.worktree + "? Its folder is gone. crew runs git worktree prune; the branch stays.",
       verb: "Prune",
       cleanup: { path: row.path, backup: false },
+      pgids: [],
+    });
+  }
+  if (row.action === "forget") {
+    out.push({
+      kind: "remove",
+      title: "Forget…",
+      confirm: "Forget " + row.worktree + "? Its repo and its folder are gone, so nothing on disk changes.",
+      verb: "Forget",
+      cleanup: { path: row.path, backup: false },
+      pgids: [],
+    });
+  }
+  if (row.action === "orphan") {
+    out.push({ kind: "copy", title: "Copy path", confirm: null, verb: "", cleanup: null, pgids: [], path: row.path });
+    out.push({
+      kind: "backup",
+      title: "Back up and delete…",
+      confirm: "Back up " + row.path + " and delete it? Its repo is gone. The whole folder goes to the crew backups folder first, then to the crew trash.",
+      verb: "Back up and delete",
+      cleanup: { path: row.path, backup: true },
       pgids: [],
     });
   }

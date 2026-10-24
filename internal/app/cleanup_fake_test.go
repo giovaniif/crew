@@ -49,6 +49,14 @@ func (g *fakeCleanupGit) Backup(_ context.Context, w domain.Worktree, dir string
 	return nil
 }
 
+func (g *fakeCleanupGit) BackupFolder(_ context.Context, w domain.Worktree, dir string) error {
+	if g.backupErr != nil {
+		return g.backupErr
+	}
+	g.ops = append(g.ops, "folder "+w.Path+" "+dir)
+	return nil
+}
+
 func (g *fakeCleanupGit) CreateBranch(_ context.Context, w domain.Worktree, name string) (string, error) {
 	got := name
 	for i := 2; g.taken[got]; i++ {

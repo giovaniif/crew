@@ -108,7 +108,7 @@ func (d *Daemon) cleanupWorktree(req rpc.Request) (*rpc.Response, bool) {
 			continue
 		}
 		res := d.cl.c.RemoveWorktree(d.ws.ctx, w, activity, p.Backup)
-		if res.Outcome == "removed" || strings.HasSuffix(res.Outcome, ", removed") {
+		if res.Outcome == "removed" || res.Outcome == "forgotten" || strings.HasSuffix(res.Outcome, ", removed") {
 			d.afterRemoval(w)
 		}
 		dec := res.Decision

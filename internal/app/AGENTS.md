@@ -15,6 +15,9 @@ Use cases and the ports they need. This package depends only on `domain`. Tests 
 3. It checks lsof and the git facts again.
 4. It renames `remove` worktrees into `$CREW_HOME/trash/`.
 5. It runs `git worktree prune` for each repo. A `prune` worktree (the folder is gone) gets only this step. Nothing moves to the trash.
+6. A `forget` worktree (the repo and the folder are gone) gets the outcome `forgotten`, and the daemon drops its row. An `orphan` worktree (only the repo is gone) stays.
+
+`RemoveWorktree` with a backup on an `orphan` puts the whole folder in `folder.tar` in the backup dir (`BackupFolder`). Then it checks lsof and the facts again, and moves the folder to the trash only when it is still an `orphan`.
 
 A background job empties the trash, 4 at a time. Cleanup never deletes branches. A detached HEAD with commits that are not in the default branch first gets `backup/wt-<name>`. `RemoveWorktree` does the `d`/`b` of the disk view. Each change here needs tests for the never-destroy cases in the root rules. See [ADR 0021](../../docs/adr/0021-worktree-cleanup.md).
 
