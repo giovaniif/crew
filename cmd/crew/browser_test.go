@@ -262,9 +262,24 @@ func TestBrowserAttachBridgesCallsToItsOutputAndRepliesFromItsInput(t *testing.T
 			return
 		}
 	}()
-	line, err := lines.ReadBytes('\n')
-	if err != nil {
-		t.Fatal(err)
+	t.Cleanup(func() { _ = inW.Close(); _ = outR.Close() })
+	type read struct {
+		line []byte
+		err  error
+	}
+	first := make(chan read, 1)
+	go func() { l, err := lines.ReadBytes('\n'); first <- read{l, err} }()
+	var line []byte
+	select {
+	case r := <-first:
+		if r.err != nil {
+			t.Fatal(r.err)
+		}
+		line = r.line
+	case g := <-done:
+		t.Fatalf("the command ended before attach wrote its call: %s %v", g.out, g.err)
+	case <-time.After(10 * time.Second):
+		t.Fatal("attach wrote no call")
 	}
 	var call rpc.BrowserCall
 	if err := json.Unmarshal(line, &call); err != nil || call.Session != "s1" || call.Command != "snapshot" || call.Call == 0 {
@@ -274,7 +289,12 @@ func TestBrowserAttachBridgesCallsToItsOutputAndRepliesFromItsInput(t *testing.T
 	if _, err := inW.Write(append(reply, '\n')); err != nil {
 		t.Fatal(err)
 	}
-	g := <-done
+	var g got
+	select {
+	case g = <-done:
+	case <-time.After(10 * time.Second):
+		t.Fatal("the command got no result")
+	}
 	if g.err != nil || !strings.Contains(string(g.out), "@e1") {
 		t.Fatalf("result %s: %v", g.out, g.err)
 	}
