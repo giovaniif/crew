@@ -175,3 +175,32 @@ func TestADaemonThatFindsTheLockHeldWithNoAnswerStillFails(t *testing.T) {
 		t.Fatalf("code %d err %q", code, stderr.String())
 	}
 }
+
+func TestSetupDaemonCheckListsCrewHooksThatAnotherToolRemoved(t *testing.T) {
+	f := newDaemonSetupFixture(t, "darwin", "yes")
+	cfg := t.TempDir()
+	settings := filepath.Join(cfg, "settings.json")
+	if err := os.WriteFile(settings, []byte(`{"theme":"dark"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(settings+".crew-backup", []byte(`{"theme":"dark"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	env := envOf(map[string]string{"CREW_HOME": filepath.Join(f.home, ".crew"), "HOME": f.home, "CLAUDE_CONFIG_DIR": cfg, "CODEX_HOME": filepath.Join(f.home, ".codex"), "PI_CODING_AGENT_DIR": filepath.Join(f.home, ".omp"), "PATH": f.bin, "SHELL": f.shell, "USER": "me"})
+	var stdout, stderr bytes.Buffer
+	if code := runSetupDaemon([]string{"--check"}, &stdout, &stderr, env, "/bin/crew", "darwin"); code != 0 {
+		t.Fatalf("code %d err %q", code, stderr.String())
+	}
+	var got struct {
+		Failing bool `json:"failing"`
+		Hooks   []struct {
+			Env, Harness, File, Reason string
+		} `json:"hooks_missing"`
+	}
+	if err := json.Unmarshal(stdout.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Failing || len(got.Hooks) != 1 || got.Hooks[0].Harness != "claude" || got.Hooks[0].File != settings || !strings.Contains(got.Hooks[0].Reason, "crew hooks are missing in") {
+		t.Fatalf("check %s", stdout.String())
+	}
+}

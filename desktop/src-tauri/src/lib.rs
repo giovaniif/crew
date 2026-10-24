@@ -5,6 +5,7 @@ pub mod browse;
 pub mod hub;
 pub mod ipc;
 pub mod local;
+pub mod machines;
 pub mod servers;
 pub mod update;
 
@@ -626,6 +627,92 @@ async fn crew_server_complete(
     .await
 }
 
+#[derive(serde::Serialize)]
+struct MachineReply {
+    status: u16,
+    body: String,
+}
+
+#[tauri::command]
+async fn crew_machine_request(
+    app: AppHandle,
+    webview: Webview,
+    machine_id: String,
+    method: String,
+    path: String,
+    body: Option<String>,
+) -> Result<MachineReply, String> {
+    guard(&app, &webview)?;
+    let method = method.to_ascii_uppercase();
+    machines::request_target(&method, &path)?;
+    blocking(move || {
+        let (url, auth) = connect(&app, &machine_id)?;
+        let token = hub::token_of(&auth).ok_or("this machine is not paired")?;
+        let (status, reply) = hub::http(&url, &method, &path, Some(&token), body.as_deref())?;
+        Ok(MachineReply {
+            status,
+            body: machines::scrub(&reply, &token)?,
+        })
+    })
+    .await
+}
+
+#[derive(Default)]
+struct Streams {
+    next: AtomicUsize,
+    open: Mutex<std::collections::HashMap<usize, std::sync::Arc<std::sync::atomic::AtomicBool>>>,
+}
+
+#[derive(Clone, serde::Serialize)]
+struct StreamEvent {
+    stream: usize,
+    machine_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    frame: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    closed: Option<String>,
+}
+
+#[tauri::command]
+async fn crew_machine_stream(app: AppHandle, webview: Webview, machine_id: String) -> Result<usize, String> {
+    guard(&app, &webview)?;
+    let label = webview.label().to_string();
+    let (url, auth) = {
+        let app = app.clone();
+        let id = machine_id.clone();
+        blocking(move || connect(&app, &id)).await?
+    };
+    let token = hub::token_of(&auth).ok_or("this machine is not paired")?;
+    let streams = app.state::<Streams>();
+    let stream = streams.next.fetch_add(1, Ordering::SeqCst) + 1;
+    let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    streams.open.lock().unwrap().insert(stream, stop.clone());
+    let handle = app.clone();
+    std::thread::spawn(move || {
+        let send = |frame: Option<String>, closed: Option<String>| {
+            use tauri::Emitter;
+            let event = StreamEvent { stream, machine_id: machine_id.clone(), frame, closed };
+            let _ = handle.emit_to(&label, machines::STREAM_EVENT, event);
+        };
+        let reason = hub::stream(&url, &token, &stop, |frame| match machines::scrub(&frame, &token) {
+            Ok(text) => send(Some(text), None),
+            Err(err) => eprintln!("crew-desktop: dropped a stream frame: {err}"),
+        });
+        handle.state::<Streams>().open.lock().unwrap().remove(&stream);
+        send(None, Some(reason));
+    });
+    Ok(stream)
+}
+
+#[tauri::command]
+fn crew_machine_stream_close(app: AppHandle, webview: Webview, stream: usize) -> Result<(), String> {
+    guard(&app, &webview)?;
+    if let Some(stop) = app.state::<Streams>().open.lock().unwrap().get(&stream) {
+        stop.store(true, Ordering::SeqCst);
+    }
+    Ok(())
+}
+
 fn reopen(app: &AppHandle) {
     let selected = app.state::<Shared>().lock().unwrap().store.selected.clone();
     if hub::is_local(&selected) || configured_url().is_some() {
@@ -789,6 +876,9 @@ pub fn run() {
             crew_server_install,
             crew_server_workspace,
             crew_server_complete,
+            crew_machine_request,
+            crew_machine_stream,
+            crew_machine_stream_close,
             crew_browser_open,
             crew_pick_folder,
             crew_check_update
@@ -803,8 +893,13 @@ pub fn run() {
                     .build()?;
                 return Ok(());
             }
-            let file = app.path().app_data_dir()?.join("servers.json");
-            app.manage(Mutex::new(Hub::open(file)));
+            let data = app.path().app_data_dir()?;
+            std::fs::create_dir_all(&data)?;
+            if let Err(err) = machines::migrate(&data) {
+                eprintln!("crew-desktop: cannot migrate {}: {err}", data.join(machines::SERVERS_FILE).display());
+            }
+            app.manage(Mutex::new(Hub::open(data.join(machines::MACHINES_FILE))));
+            app.manage(Streams::default());
             #[cfg(desktop)]
             app.manage(app_browser::Browsers::default());
             let handle = app.handle().clone();

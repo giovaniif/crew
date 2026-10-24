@@ -195,7 +195,7 @@ func TestOmpIsDetectedAndInstalledThroughItsHookFile(t *testing.T) {
 		t.Errorf("fresh omp = %+v", got)
 	}
 	installed, err := w.probe.Install(ctx, domain.HarnessOmp)
-	if err != nil || installed != (domain.HarnessSetup{Installed: true, File: file}) {
+	if err != nil || installed != (domain.HarnessSetup{Installed: true, File: file, SetUp: true}) {
 		t.Fatalf("install omp = %+v, %v", installed, err)
 	}
 	b, err := os.ReadFile(file)

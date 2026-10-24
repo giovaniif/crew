@@ -115,6 +115,7 @@ func Run(ctx context.Context, home string) (err error) {
 		WithTerminals(home, nvim.Editor{}),
 		WithHunks(gitadapter.Review{}),
 		WithOnboarding(onboard.FromEnv(home, self, os.Getenv)),
+		WithHooksChecker(onboard.FromEnv(home, self, os.Getenv)),
 		WithTranscripts(Transcripts(wsfs.Transcripts{}), wsfs.Transcripts{}),
 		WithPush(webpush.New(filepath.Join(home, "vapid"), nil)),
 		WithMateSecrets(secrets.Files{Dir: filepath.Join(home, "secrets")}),

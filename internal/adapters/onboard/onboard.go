@@ -26,6 +26,7 @@ var mentionsPlugin = regexp.MustCompile(`require\s*\(?\s*['"]crew['"]|crew/nvim|
 
 type Probe struct {
 	Home           string
+	UserHome       string
 	Bin            string
 	ClaudeSettings string
 	CodexHome      string
@@ -49,6 +50,7 @@ func FromEnv(home, bin string, env func(string) string) Probe {
 	data := or(env("XDG_DATA_HOME"), filepath.Join(user, ".local", "share"))
 	return Probe{
 		Home:           home,
+		UserHome:       user,
 		Bin:            bin,
 		ClaudeSettings: filepath.Join(claudeDir, "settings.json"),
 		CodexHome:      or(env("CODEX_HOME"), filepath.Join(user, ".codex")),
@@ -131,6 +133,7 @@ func (p Probe) claudeSetup() domain.HarnessSetup {
 	}
 	ok, err := claude.Installed(p.ClaudeSettings, p.Bin)
 	s.Installed = ok
+	s.SetUp = exists(claude.BackupPath(p.ClaudeSettings))
 	if err != nil {
 		s.Err = err.Error()
 	}
@@ -152,6 +155,7 @@ func (p Probe) codexSetup() domain.HarnessSetup {
 	}
 	ok, err := codex.Installed(p.codexConfig())
 	s.Installed = ok
+	s.SetUp = latestBackup(file+".crew-*.bak") != ""
 	if err != nil {
 		s.Err = err.Error()
 	}
@@ -186,6 +190,7 @@ func (p Probe) ompSetup() domain.HarnessSetup {
 	if err != nil {
 		s.Err = err.Error()
 	}
+	s.SetUp = err == nil && exists(s.File)
 	return s
 }
 

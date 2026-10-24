@@ -59,7 +59,13 @@ func (d *Daemon) sessionSend(req rpc.Request) (*rpc.Response, bool) {
 	if d.hs.host == nil {
 		return errorResponse(req.ID, rpc.CodeUnavailable, "this daemon has no terminal host"), true
 	}
-	q := domain.QueuedSend{ID: newSendID(), Session: p.Session, Text: p.Text, QueuedAt: time.Now()}
+	return d.queueSend(req.ID, p.Session, p.Text, nil)
+}
+
+func (d *Daemon) queueSend(id uint64, sessionID, text string, in *domain.MateInput) (*rpc.Response, bool) {
+	req := rpc.Request{ID: id}
+	p := rpc.SessionSendParams{Session: sessionID, Text: text}
+	q := domain.QueuedSend{ID: newSendID(), Session: p.Session, Text: p.Text, QueuedAt: time.Now(), Mate: in}
 	var resp *rpc.Response
 	ok := d.query(func(s *state) {
 		session, found := s.sessions[p.Session]
@@ -71,6 +77,7 @@ func (d *Daemon) sessionSend(req rpc.Request) (*rpc.Response, bool) {
 			resp = errorResponse(req.ID, rpc.CodeFailed, "session "+p.Session+" has ended")
 			return
 		}
+		s.noteMateAsk(session.ID, in)
 		queue := append(slices.Clone(s.sends), q)
 		next, dispatch := domain.NextSend(session, queue, s.sendBusy(session.ID))
 		if dispatch {
@@ -158,6 +165,9 @@ func (s *state) dispatchSend(session domain.Session) {
 
 func (s *state) startSend(session domain.Session, q domain.QueuedSend) {
 	s.inFlight[session.ID] = sendFlight{send: q}
+	if q.Mate != nil {
+		s.mateTurnStarts(session.ID, *q.Mate)
+	}
 	s.pasteSend(session, q)
 }
 
@@ -209,8 +219,12 @@ func (s *state) sendFailed(q domain.QueuedSend) {
 	}
 }
 
-func (s *state) queueFirstPrompt(session domain.Session, text string) {
-	q := domain.QueuedSend{ID: newSendID(), Session: session.ID, Text: text, QueuedAt: time.Now()}
+func (s *state) queueFirstPrompt(session domain.Session, text string, in *domain.MateInput) {
+	q := domain.QueuedSend{ID: newSendID(), Session: session.ID, Text: text, QueuedAt: time.Now(), Mate: in}
+	if in != nil && in.Reply.Channel != "" {
+		s.mateReply[session.ID] = in.Reply
+	}
+	s.noteMateAsk(session.ID, in)
 	s.booting[session.ID] = true
 	s.emit(SendsChanged{Sends: append(slices.Clone(s.sends), q)})
 }

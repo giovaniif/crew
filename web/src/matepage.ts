@@ -1,54 +1,37 @@
 import type { Automation, Mate } from "./api";
 import type { ToneAxis } from "./faces";
-import type { AgentState, MateRow } from "./stream";
+import type { MateRow } from "./stream";
 
-export type ThreadSource = "slack" | "dm" | "app" | "automation";
+export type HistoryItem = { session: string; title: string; at: string };
 
-export type ThreadItem = {
-  session: string;
-  title: string;
-  tag: string;
-  source: ThreadSource;
-  state: AgentState;
-  ended: boolean;
-  url?: string;
-  at?: string;
-};
-
-const tags: Record<ThreadSource, string> = { slack: "Slack channel", dm: "Slack DM", app: "App", automation: "Automation" };
-
-export function mateThreads(row: MateRow): ThreadItem[] {
-  const slack: ThreadItem[] = row.threads.map((t) => {
-    const source: ThreadSource = t.channel.startsWith("D") ? "dm" : "slack";
-    return { session: t.session_id, title: t.session || t.session_id, tag: tags[source], source, state: t.state, ended: t.ended, url: t.url || undefined };
-  });
-  const app: ThreadItem[] = (row.conversations ?? []).map((c) => ({
-    session: c.session,
-    title: c.name || c.session,
-    tag: c.automation ? tags.automation : tags.app,
-    source: c.automation ? ("automation" as const) : ("app" as const),
-    state: c.state,
-    ended: c.ended,
-    at: c.started_at,
-  }));
-  const all = [...slack, ...app];
-  return [...all.filter((t) => !t.ended), ...all.filter((t) => t.ended)];
+export function mateHistory(row: MateRow): HistoryItem[] {
+  return (row.conversations ?? []).filter((c) => c.history).map((c) => ({ session: c.session, title: c.name || c.session, at: c.started_at }));
 }
 
-export function threadSearch(items: ThreadItem[], query: string): ThreadItem[] {
-  const q = query.trim().toLowerCase();
-  if (q === "") {
-    return items;
+export function shownConversation(row: MateRow, route: string): { session: string; history: boolean } {
+  if (route !== "" && (row.conversations ?? []).some((c) => c.history && c.session === route)) {
+    return { session: route, history: true };
   }
-  return items.filter((t) => t.title.toLowerCase().includes(q) || t.tag.toLowerCase().includes(q));
+  return { session: row.conversation ?? "", history: false };
+}
+
+const sourceLine = /^\[Source: ([^\]\n]+)\] /;
+
+export function messageSource(text: string): { tag: string; text: string } {
+  const m = sourceLine.exec(text);
+  if (!m) {
+    return { tag: "App", text };
+  }
+  const tag = m[1].startsWith("Automation") ? "Automation" : m[1];
+  return { tag, text: text.slice(m[0].length) };
 }
 
 function capital(word: string): string {
   return word.charAt(0).toUpperCase() + word.slice(1);
 }
 
-export function replyHint(item: ThreadItem, mate: string): string {
-  return item.source === "app" || item.source === "automation" ? "Message " + capital(mate) + "…" : "Reply in this thread. It also posts to Slack.";
+export function replyHint(mate: string): string {
+  return "Message " + capital(mate) + "…";
 }
 
 export function agentName(agent: string): string {
@@ -134,10 +117,4 @@ export function roleLine(prompt: string): string {
   const line = prompt.trim().split("\n")[0].trim();
   const end = /^(.+?[.!?])(\s|$)/.exec(line);
   return end ? end[1] : line;
-}
-
-export function latestThread(items: ThreadItem[]): ThreadItem | undefined {
-  const live = items.filter((t) => !t.ended);
-  const pool = live.length > 0 ? live : items;
-  return pool.reduce<ThreadItem | undefined>((best, t) => (best === undefined || (t.at ?? "") > (best.at ?? "") ? t : best), undefined);
 }

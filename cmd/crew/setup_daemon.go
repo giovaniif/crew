@@ -12,8 +12,10 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/giovaniif/crew/internal/adapters/envstore"
 	"github.com/giovaniif/crew/internal/adapters/launchd"
 	"github.com/giovaniif/crew/internal/adapters/loginshell"
+	"github.com/giovaniif/crew/internal/adapters/onboard"
 	"github.com/giovaniif/crew/internal/adapters/systemd"
 	"github.com/giovaniif/crew/internal/domain"
 	"github.com/giovaniif/crew/internal/rpc"
@@ -33,6 +35,8 @@ type daemonCheck struct {
 	ExecOK    bool   `json:"exec_ok"`
 	Failing   bool   `json:"failing"`
 	Reason    string `json:"reason,omitempty"`
+
+	HooksMissing []domain.HooksMissing `json:"hooks_missing"`
 }
 
 func runSetupDaemon(args []string, stdout, stderr io.Writer, env func(string) string, self, goos string) int {
@@ -63,7 +67,7 @@ func runSetupDaemon(args []string, stdout, stderr io.Writer, env func(string) st
 	svc := daemonService(env, self, userHome, os.Getuid(), goos)
 	switch {
 	case *check:
-		return printDaemonCheck(ctx, svc, env, self, stdout, stderr)
+		return printDaemonCheck(ctx, svc, env, self, userHome, stdout, stderr)
 	case *remove:
 		removed, err := removeServe(ctx, svc)
 		switch {
@@ -149,8 +153,9 @@ func daemonService(env func(string) string, self, userHome string, uid int, goos
 	}}
 }
 
-func printDaemonCheck(ctx context.Context, svc serveService, env func(string) string, self string, stdout, stderr io.Writer) int {
+func printDaemonCheck(ctx context.Context, svc serveService, env func(string) string, self, userHome string, stdout, stderr io.Writer) int {
 	var c daemonCheck
+	c.HooksMissing = hooksMissing(ctx, env, self, userHome)
 	switch _, err := os.Stat(svc.path()); {
 	case err == nil:
 		c.Installed = true
@@ -217,4 +222,23 @@ func lingerOn(ctx context.Context, env func(string) string) (bool, error) {
 		return false, fmt.Errorf("loginctl: %w", err)
 	}
 	return bytes.Equal(bytes.TrimSpace(out), []byte("Linger=yes")), nil
+}
+
+func hooksMissing(ctx context.Context, env func(string) string, self, userHome string) []domain.HooksMissing {
+	home := domain.Env(env, "HOME")
+	if home == "" {
+		home = rpc.DefaultHome(userHome)
+	}
+	var custom []domain.Environment
+	list, _ := envstore.Store{Home: home}.List()
+	for _, e := range list {
+		if e.Kind == domain.EnvCustom {
+			custom = append(custom, e)
+		}
+	}
+	out := onboard.FromEnv(home, self, env).Hooks(ctx, custom)
+	if out == nil {
+		out = []domain.HooksMissing{}
+	}
+	return out
 }
