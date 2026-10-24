@@ -303,7 +303,7 @@ func TestIsoUpGivesTheFakeOmpAStepsFileSoItHoldsItsPane(t *testing.T) {
 	}
 }
 
-func TestIsoUpSecondStartsASecondCrewAndAddsItToTheApp(t *testing.T) {
+func TestIsoUpSecondStartsASecondCrewAndAddsItToTheAppWithItsDevice(t *testing.T) {
 	e, fs := testEnv(t)
 	isoReady(fs)
 	got, code := runJSON(t, e, "iso", "up", "--second")
@@ -344,16 +344,16 @@ func TestIsoUpSecondStartsASecondCrewAndAddsItToTheApp(t *testing.T) {
 	}
 	var file struct {
 		Machines []struct {
-			ID   string            `json:"id"`
-			Kind string            `json:"kind"`
-			URL  string            `json:"url"`
-			Auth map[string]string `json:"auth"`
+			ID   string         `json:"id"`
+			Kind string         `json:"kind"`
+			URL  string         `json:"url"`
+			Auth map[string]any `json:"auth"`
 		} `json:"machines"`
 	}
 	if err := json.Unmarshal(b, &file); err != nil {
 		t.Fatal(err)
 	}
-	if len(file.Machines) != 2 || file.Machines[0].Kind != "this" || file.Machines[1].Kind != "url" || file.Machines[1].URL != st.Second.ServeURL+"/" || file.Machines[1].Auth["token"] != st.Second.Token {
+	if len(file.Machines) != 2 || file.Machines[0].Kind != "this" || file.Machines[1].Kind != "url" || file.Machines[1].URL != st.Second.ServeURL+"/" || file.Machines[1].Auth["token"] != st.Second.Token || file.Machines[1].Auth["device"] == nil {
 		t.Errorf("machines.json %s", b)
 	}
 	second := st.Second.Home

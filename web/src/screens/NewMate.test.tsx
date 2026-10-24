@@ -53,4 +53,24 @@ describe("NewMate environment menu (frame 12d)", () => {
     );
     expect(posts(servers.get("local")!, "/api/v1/mates")).toEqual([]);
   });
+
+  it("opens the machine of the new mate at its page when that machine is not in view", async () => {
+    const { desktop } = mount({ hash: "#/mates/new", desktop: true, machines: [mac, devbox] });
+    const user = await fill();
+    const chip = await screen.findByRole("button", { name: /^Environment:/ });
+    await waitFor(() => expect(chip).toHaveTextContent("This Mac"));
+    await user.click(chip);
+    await user.click(within(await screen.findByRole("menu", { name: "Environment" })).getByRole("menuitemcheckbox", { name: /work-bot/ }));
+    await user.click(screen.getByRole("button", { name: "Create mate" }));
+    await waitFor(() => expect(desktop!.of("crew_server_open")).toEqual([{ id: "ssh:devbox", route: "#/mates/nova" }]));
+  });
+
+  it("stays in the window when the new mate is on the machine in view", async () => {
+    const { desktop } = mount({ hash: "#/mates/new", desktop: true, machines: [mac, devbox] });
+    const user = await fill();
+    await waitFor(() => expect(screen.getByRole("button", { name: /^Environment:/ })).toHaveTextContent("This Mac"));
+    await user.click(screen.getByRole("button", { name: "Create mate" }));
+    await waitFor(() => expect(window.location.hash).toBe("#/mates/nova"));
+    expect(desktop!.of("crew_server_open")).toEqual([]);
+  });
 });

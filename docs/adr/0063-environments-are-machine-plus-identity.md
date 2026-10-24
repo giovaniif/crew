@@ -70,7 +70,7 @@ The owner approved frames 11 and 12 on 2026-10-23.
   - `[[env]]` with the kind `custom` becomes a separate identity with the same name.
   - It moves the secret and harness directories. If a move fails, it stops and keeps the old files.
   - A mate with an empty `env` or `env = "local"` gets `{this machine, yours}`. A mate with `env = "X"` gets `{this machine, X}`.
-- The desktop app migrates `servers.json` to `machines.json` one time. "This computer" becomes This Mac. Each `ssh` server becomes an `ssh` machine with the same login. The selected server goes away.
+- The desktop app migrates `servers.json` to `machines.json` one time. "This computer" becomes This Mac. Each `ssh` server becomes an `ssh` machine with the same login. The selected server goes away. Issue #912 changed this: `machines.json` keeps the selected machine, because the window shows only the mates of that machine.
 - The PWA keeps its one paired server as its first machine.
 
 ### Security

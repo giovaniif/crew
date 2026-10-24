@@ -137,8 +137,18 @@ async function served() {
   throw new Error("the app did not open the page of its crew serve (" + last + "): " + text.replace(/\s+/g, " ").slice(0, 300));
 }
 
+async function follow() {
+  const handles = await call("GET", s("/window/handles")).catch(() => []);
+  const current = await call("GET", s("/window")).catch(() => "");
+  if (handles.length > 0 && !handles.includes(current)) {
+    await call("POST", s("/window"), { handle: handles[handles.length - 1] });
+    await served();
+  }
+}
+
 async function step(st) {
   const timeout = st.timeout ?? 5000;
+  await follow();
   if (st.goto !== undefined) {
     await served();
     await run("location.assign(new URL(arguments[0], location.origin).href); return true", [st.goto]);

@@ -248,7 +248,7 @@ function otherScreen(hash: string, { env, auth, api, now, snapshot, onSignOut, g
     return {
       screen:
         name === "new" ? (
-          <NewMate api={api} repos={repos} />
+          <NewMate api={api} repos={repos} desktop={env.desktop} />
         ) : (
           <MatePage key={name.split("/")[0]} api={api} hash={hash} board={snapshot.state?.mates} snapshot={snapshot} client={client} wide={wide} />
         ),

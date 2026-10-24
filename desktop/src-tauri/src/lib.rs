@@ -454,7 +454,12 @@ fn show(
 }
 
 fn open_server(app: &AppHandle, id: &str) -> Result<(), String> {
+    open_server_at(app, id, None)
+}
+
+fn open_server_at(app: &AppHandle, id: &str, route: Option<String>) -> Result<(), String> {
     let (url, auth) = connect(app, id)?;
+    let url = servers::routed(url, route);
     {
         let state = app.state::<Shared>();
         let mut hub = state.lock().unwrap();
@@ -517,9 +522,9 @@ async fn crew_server_add(
 }
 
 #[tauri::command]
-async fn crew_server_open(app: AppHandle, webview: Webview, id: String) -> Result<(), String> {
+async fn crew_server_open(app: AppHandle, webview: Webview, id: String, route: Option<String>) -> Result<(), String> {
     guard(&app, &webview)?;
-    blocking(move || open_server(&app, &id)).await
+    blocking(move || open_server_at(&app, &id, route)).await
 }
 
 #[tauri::command]
