@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::{Mutex, MutexGuard};
 
-use crew_desktop::hub::{ssh_crew, ssh_install, ssh_pair_code};
+use crew_desktop::hub::{ssh_crew, ssh_ensure_crew, ssh_install, ssh_pair_code};
 use crew_desktop::servers::{plan, Plan};
 
 static SERIAL: Mutex<()> = Mutex::new(());
@@ -135,4 +135,51 @@ fn an_unknown_pair_flag_says_that_crew_is_too_old() {
     let (_b, _guard) = server("flag", Some("0.1.0-beta.2"));
     let err = ssh_pair_code("box", APP).unwrap_err();
     assert_eq!(err, "crew on box is too old (v0.1.0-beta.2); the app needs v0.1.0-beta.6");
+}
+
+#[test]
+fn a_reconnect_upgrades_an_older_crew() {
+    let (b, _guard) = server("reconnect-old", Some("0.1.0-beta.2"));
+    ssh_ensure_crew("box", APP).unwrap();
+    let after = fs::read_to_string(b.root.join("home/.local/bin/crew")).unwrap();
+    assert!(after.contains(&format!("crew v{APP}")), "crew was not replaced: {after}");
+    assert!(calls(&b).iter().any(|c| c == "crew daemon stop"), "calls: {:?}", calls(&b));
+}
+
+#[test]
+fn a_reconnect_installs_a_missing_crew() {
+    let (b, _guard) = server("reconnect-missing", None);
+    ssh_ensure_crew("box", APP).unwrap();
+    assert!(b.root.join("home/.local/bin/crew").exists());
+}
+
+#[test]
+fn a_reconnect_leaves_a_current_crew_alone() {
+    let (b, _guard) = server("reconnect-current", Some(APP));
+    ssh_ensure_crew("box", APP).unwrap();
+    assert!(!calls(&b).iter().any(|c| c == "crew daemon stop"), "calls: {:?}", calls(&b));
+}
+
+#[test]
+fn a_reconnect_never_downgrades_a_newer_crew() {
+    let (b, _guard) = server("reconnect-newer", Some("0.2.0"));
+    let err = ssh_ensure_crew("box", APP).unwrap_err();
+    assert!(err.contains("v0.2.0") && err.contains("Update the app"), "{err}");
+    let kept = fs::read_to_string(b.root.join("home/.local/bin/crew")).unwrap();
+    assert!(kept.contains("crew v0.2.0"));
+}
+
+#[test]
+fn a_debug_build_never_installs_on_reconnect() {
+    let (b, _guard) = server("reconnect-debug", Some("0.1.0-beta.2"));
+    ssh_ensure_crew("box", "0.0.0").unwrap();
+    let kept = fs::read_to_string(b.root.join("home/.local/bin/crew")).unwrap();
+    assert!(kept.contains("crew v0.1.0-beta.2"));
+}
+
+#[test]
+fn a_debug_build_never_installs_a_missing_crew_on_reconnect() {
+    let (b, _guard) = server("reconnect-debug-missing", None);
+    ssh_ensure_crew("box", "0.0.0").unwrap();
+    assert!(!b.root.join("home/.local/bin/crew").exists());
 }

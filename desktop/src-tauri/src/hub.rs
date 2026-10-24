@@ -160,6 +160,16 @@ pub fn ssh_crew(host: &str, app: &str) -> Result<servers::Plan, String> {
     }
 }
 
+pub fn ssh_ensure_crew(host: &str, app: &str) -> Result<(), String> {
+    if !crate::update::newer("0.0.0", app) {
+        return Ok(());
+    }
+    match ssh_crew(host, app)? {
+        servers::Plan::Install | servers::Plan::Upgrade(_) => ssh_install(host, app),
+        _ => Ok(()),
+    }
+}
+
 pub fn ssh_install(host: &str, app: &str) -> Result<(), String> {
     let (status, _, err) = run(&servers::install_argv(host, app))?;
     if status != Some(0) {
