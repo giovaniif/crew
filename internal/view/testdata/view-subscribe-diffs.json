@@ -41,6 +41,7 @@
         {
           "name": "helper",
           "state": "connected",
+          "conversation": "",
           "work": [
             "s1"
           ],
@@ -62,6 +63,7 @@
         {
           "name": "webby",
           "state": "paused",
+          "conversation": "",
           "work": [],
           "threads": [],
           "conversations": []
@@ -376,6 +378,7 @@
         {
           "name": "helper",
           "state": "connected",
+          "conversation": "",
           "work": [
             "s2",
             "s1"
@@ -409,6 +412,7 @@
         {
           "name": "webby",
           "state": "paused",
+          "conversation": "",
           "work": [],
           "threads": [],
           "conversations": []
@@ -425,6 +429,7 @@
           "name": "helper",
           "state": "connected",
           "guard": "stopped",
+          "conversation": "",
           "work": [
             "s2",
             "s1"
@@ -459,6 +464,7 @@
           "name": "webby",
           "state": "paused",
           "guard": "stopped",
+          "conversation": "",
           "work": [],
           "threads": [],
           "conversations": []

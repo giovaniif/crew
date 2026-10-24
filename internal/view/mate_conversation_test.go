@@ -47,7 +47,7 @@ func TestViewMatesListTheLocalConversationsNewestFirst(t *testing.T) {
 	if len(iris.Conversations) != 3 {
 		t.Fatalf("conversations %+v", iris.Conversations)
 	}
-	first, second := iris.Conversations[0], iris.Conversations[2]
+	first, second := iris.Conversations[0], iris.Conversations[1]
 	if first.Session != "new" || first.Name != "review login" || first.State != domain.StateRunning || first.Ended || !first.StartedAt.Equal(t0.Add(time.Hour)) {
 		t.Errorf("first %+v", first)
 	}
