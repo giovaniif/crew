@@ -101,6 +101,8 @@ const (
 	MethodMateNew       = "mate.new"
 	MethodMateMemory    = "mate.memory"
 	MethodMateSetMemory = "mate.set_memory"
+	MethodMateExport    = "mate.export"
+	MethodMateImport    = "mate.import"
 )
 
 type MateNewResult struct {
@@ -134,4 +136,14 @@ type MateFreshParams struct {
 	Session      string `json:"session"`
 	SameWorktree bool   `json:"same_worktree,omitempty"`
 	Prompt       string `json:"prompt,omitempty"`
+}
+
+type MateExport struct {
+	Mate   Mate   `json:"mate"`
+	Memory string `json:"memory"`
+}
+
+type MateImportParams struct {
+	Export      MateExport       `json:"export"`
+	Environment *MateEnvironment `json:"environment,omitempty"`
 }
