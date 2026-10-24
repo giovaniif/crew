@@ -1,3 +1,5 @@
+import { machineName } from "./envs";
+import { MachineContext } from "./screens/Machine";
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { sessionPane, tokenRefused, unpairDevice, type Fetch } from "./api";
 import { clearAuth, loadAuth, saveAuth, type Auth, type KeyValue } from "./auth";
@@ -306,7 +308,11 @@ const refusedNotice =
   "This device was removed from crew, or the server rejected its login. Pair it again with a new code from crew remote pair.";
 
 export function App({ env }: { env: AppEnv }) {
-  return <Paired env={env} />;
+  return (
+    <MachineContext.Provider value={machineName(null, env.host)}>
+      <Paired env={env} />
+    </MachineContext.Provider>
+  );
 }
 
 function Paired({ env }: { env: AppEnv }) {
