@@ -51,7 +51,7 @@ function typing(target: EventTarget | null): boolean {
   return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
 }
 
-function InterruptButton({ api, session }: { api: Authed; session: string }) {
+export function InterruptButton({ api, session }: { api: Authed; session: string }) {
   const [stopping, setStopping] = useState(false);
   const [error, setError] = useState("");
   const stop = useCallback(async () => {
