@@ -10,7 +10,7 @@ Claude Design project: <https://claude.ai/design/p/0b297492-6939-4049-b2a2-75e8d
 |---|---|---|
 | [mates.css](mates.css) | | The new classes for these frames. It uses only the tokens of `crew.css`. |
 | [7-mates-home.html](7-mates-home.html), [7.png](7.png) | 7a, 7b | The app shell with the new nav, and the Mates home (desktop and phone) |
-| [8-mate-page-and-create.html](8-mate-page-and-create.html), [8.png](8.png) | 8a, 8b, 8c, 8d | The mate page, New mate, a mate thread on the phone, and the mate settings sheet on the phone |
+| [8-mate-page-and-create.html](8-mate-page-and-create.html), [8.png](8.png) | 8a, 8b, 8c, 8d | The mate page, New mate, the mate conversation on the phone, and the mate settings sheet on the phone |
 | [9-environments.html](9-environments.html), [9.png](9.png) | 9a, 9b, 9c, 9d | The Custom environment editor, the Local environment, the dialog to set a secret, and the confirm step for a new SSH key |
 | [10-sessions-first-run-settings.html](10-sessions-first-run-settings.html), [10.png](10.png) | 10a to 10e | Sessions, first run (two steps and phone), Settings: Notifications |
 
@@ -33,7 +33,9 @@ Each frame also has its own PNG (`7a.png`, `8b.png` and so on). The HTML files o
 - The SSH key panel shows the public key, a Copy button and the steps to add the key on GitHub.
 - "New key…" shows the new public key and a warning. The old key stays active until the user confirms that the new key is on GitHub (9d).
 - Local sessions always use this Mac. The Sessions screen has no environment picker.
-- A mate has threads from Slack, from automations and from the app.
+- A mate has one conversation (ADR [0063](../../adr/0063-one-conversation-per-mate.md)). Slack channel mentions, Slack DMs, automation runs and the app composer all go into it. Each message has a source tag: App, #channel, DM or Automation. The answer to a Slack message also goes back to its Slack thread or DM.
+- Changed on 2026-10-23, after the frames: the mate page has no threads column (8a), and the phone has no thread chips (8c). The conversation fills the middle. The settings rail does not change. The PNG files still show the old threads; this text is correct.
+- "Start fresh" is in the ⋯ menu of the mate header, with a confirm. It clears the context and starts a new conversation. The old conversation stays as history: the ⋯ menu lists it, and it opens with no composer.
 - On the phone, the ⓘ button of a mate opens its settings as a sheet (8d).
 - A change to a mate or to an environment applies when the next conversation starts. The UI tells this.
 - In Settings, only the content scrolls. The nav is full height. A notification row has the label at left, and the banner switch and the sound Select at right.
@@ -44,9 +46,9 @@ Each frame also has its own PNG (`7a.png`, `8b.png` and so on). The HTML files o
 |---|---|---|
 | 7a | Mates home, desktop | `Desktop.tsx` sidebar and nav, `Mates.tsx` list |
 | 7b | Mates home, phone | the phone tab bar and `Mates.tsx` |
-| 8a | Mate page | `Mates.tsx` profile; adds threads and the settings rail |
+| 8a | Mate page | `Mates.tsx` profile; the one conversation and the settings rail (no threads column) |
 | 8b | New mate | the New mate wizard of `Mates.tsx` (frame 3b) |
-| 8c | Mate thread, phone | `Mates.tsx` conversations on the phone |
+| 8c | Mate conversation, phone | `Mates.tsx` conversation on the phone (no thread chips) |
 | 8d | Mate settings sheet, phone | new sheet |
 | 9a | Environment editor, Custom | new screen |
 | 9b | Environment, Local | new screen |

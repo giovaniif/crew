@@ -47,20 +47,21 @@ type EnvSecret struct {
 }
 
 type EnvInfo struct {
-	Name         string           `json:"name"`
-	Label        string           `json:"label,omitempty"`
-	Kind         domain.EnvKind   `json:"kind"`
-	Parts        []domain.EnvPart `json:"parts"`
-	Secrets      []EnvSecret      `json:"secrets"`
-	PublicKey    string           `json:"public_key,omitempty"`
-	NewPublicKey string           `json:"new_public_key,omitempty"`
-	KeyCreated   string           `json:"key_created,omitempty"`
-	GitName      string           `json:"git_name,omitempty"`
-	GitEmail     string           `json:"git_email,omitempty"`
-	CodexLogin   bool             `json:"codex_login,omitempty"`
-	PiLogin      bool             `json:"pi_login,omitempty"`
-	UsedBy       []string         `json:"used_by"`
-	Local        *EnvLocal        `json:"local,omitempty"`
+	Name         string                `json:"name"`
+	Label        string                `json:"label,omitempty"`
+	Kind         domain.EnvKind        `json:"kind"`
+	Parts        []domain.EnvPart      `json:"parts"`
+	Secrets      []EnvSecret           `json:"secrets"`
+	PublicKey    string                `json:"public_key,omitempty"`
+	NewPublicKey string                `json:"new_public_key,omitempty"`
+	KeyCreated   string                `json:"key_created,omitempty"`
+	GitName      string                `json:"git_name,omitempty"`
+	GitEmail     string                `json:"git_email,omitempty"`
+	CodexLogin   bool                  `json:"codex_login,omitempty"`
+	PiLogin      bool                  `json:"pi_login,omitempty"`
+	UsedBy       []string              `json:"used_by"`
+	Local        *EnvLocal             `json:"local,omitempty"`
+	HooksMissing []domain.HooksMissing `json:"hooks_missing,omitempty"`
 }
 
 type EnvLocal struct {

@@ -123,6 +123,8 @@ type MateSetMemoryParams struct {
 
 const MethodMateFresh = "mate.fresh"
 
+const MethodMateReset = "mate.reset"
+
 type MateFreshParams struct {
 	Session      string `json:"session"`
 	SameWorktree bool   `json:"same_worktree,omitempty"`

@@ -111,6 +111,7 @@ Unknown paths under `/api/` answer `not_found`.
 | `POST /api/v1/sessions/{id}/review/comments` | yes | `review.comment` | `{"worktree","path","start_line","end_line","code","body","removed"}` → the `ReviewDraft` |
 | `POST /api/v1/sessions/{id}/review/send` | yes | `review.send` | `{"note"}` (optional, the body can be empty) → the queued `ReviewDraft`; an empty draft is `bad_request` |
 | `POST /api/v1/sessions/{id}/review/hunk` | yes | `review.hunk` | `{"worktree","file","hunk","action"}` (`action` is `stage` or `revert`) → `{}`; when git refuses the patch, it is `failed` with the message of git. The app sends `file` with only the hunk (`hunk` 0), so the body stays below 64 KiB |
+| `POST /api/v1/mates/{name}/reset` | yes | `mate.reset` | no body → `{}`; "Start fresh" in the ⋯ menu of the mate header |
 | `POST /api/v1/sessions/{id}/fresh` | yes | `mate.fresh` | `{"same_worktree","prompt"}` (optional, the body can be empty) → the new session; "Start fresh" on a mate session |
 | `GET /api/v1/disk` | yes | `disk.view`, `subscribe` | → the `DiskView` (tiles, `rows`, `recent`) and `ports` `[{"port","pgid","command","worktree","session"}]`, from the worktrees of one snapshot, because the stream drops `Ports` |
 | `POST /api/v1/cleanup/worktree` | owner | `cleanup.worktree` | `{"path","backup"}` (`path` not blank, no other keys) → the `CleanupItem` with its `outcome`. The daemon applies the cleanup rules again. It never removes a `keep` worktree, and it removes a dirty worktree only with `backup` |
@@ -125,6 +126,8 @@ Unknown paths under `/api/` answer `not_found`.
 | `POST /api/v1/onboarding/remove` | owner | `onboarding.remove` | `{"harness"}` → the same |
 | `POST /api/v1/onboarding/nvim` | owner | `onboarding.nvim` | → the `nvim` object of the status |
 | `POST /api/v1/onboarding/finish` | owner | `onboarding.finish` | → `{}` |
+| `GET /api/v1/hooks` | owner | `hooks.status` | → `{"missing":[{"env","harness","file","reason"}]}`, the crew hooks that another tool removed (local and custom environments) |
+| `POST /api/v1/hooks/fix` | owner | `hooks.fix` | `{"env","harness"}` (`harness` not blank; an empty `env` is `local`) → the same; the setup merge runs again (idempotent, backup first) |
 | `GET /api/v1/workspaces/dirs?path=` | owner | `workspace.dirs` | → `{"dirs":[{"Name","Path","Git"}]}`, the folders in `path` (required, absolute) |
 | `GET /api/v1/fs/complete?path=` | owner | `fs.complete` | → `{"dir","dirs":[{"Name","Path","Git"}]}`, the folders in `dir` whose names start with the last part of `path` (see [internal/rpc/](../rpc/AGENTS.md)) |
 | `GET /api/v1/devices` | owner | `device.list` | → `{"devices":[Device]}`, oldest first |

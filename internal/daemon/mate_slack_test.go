@@ -199,7 +199,7 @@ func TestMateClaimIgnoresAMentionAndAWrongCode(t *testing.T) {
 		t.Errorf("owner %q", owner)
 	}
 	for _, p := range hub.snapshot()[0].posts {
-		if p.channel == "D0DIRECT1" {
+		if p.channel == "D0DIRECT1" && strings.Contains(p.text, "owner of") {
 			t.Errorf("post %+v", p)
 		}
 	}

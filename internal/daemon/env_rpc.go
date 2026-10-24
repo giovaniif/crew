@@ -139,6 +139,7 @@ func (d *Daemon) envInfo(env domain.Environment, mates []domain.Mate) rpc.EnvInf
 	if users != nil {
 		info.UsedBy = users
 	}
+	info.HooksMissing = d.envHooks(env.Name)
 	return info
 }
 

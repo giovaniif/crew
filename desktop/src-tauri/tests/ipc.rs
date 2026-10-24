@@ -119,3 +119,22 @@ fn no_capability_matches_a_browser_window() {
         }
     }
 }
+
+#[test]
+fn only_the_local_serve_origin_gets_the_machine_commands() {
+    let machine = ["allow-crew-machine-request", "allow-crew-machine-stream", "allow-crew-machine-stream-close"];
+    let local = parsed(server_capability(&Url::parse("http://127.0.0.1:53412/").unwrap())).unwrap();
+    let serve = capability("http://127.0.0.1:53412/").unwrap();
+    let tunnel = parsed(tunnel_capability(&Url::parse("http://127.0.0.1:53999/").unwrap())).unwrap();
+    for command in machine {
+        assert!(local["permissions"].as_array().unwrap().contains(&json!(command)), "{command}");
+        assert!(SERVER_COMMANDS.contains(&command), "{command}");
+        for cap in [&serve, &tunnel] {
+            assert!(!cap["permissions"].as_array().unwrap().contains(&json!(command)), "{command}");
+        }
+    }
+    for url in ["https://crew.example.ts.net/", "http://192.168.1.4:7420/"] {
+        assert_eq!(server_capability(&Url::parse(url).unwrap()), None, "{url}");
+        assert_eq!(tunnel_capability(&Url::parse(url).unwrap()), None, "{url}");
+    }
+}

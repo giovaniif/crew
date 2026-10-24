@@ -18,6 +18,7 @@ import {
   newMateConversation,
   sendMessage,
   pauseMate,
+  resetMate,
   saveMate,
   sessionOptions,
   setMateMemory,
@@ -27,7 +28,7 @@ import {
 import { ACCENTS, FACES, type FaceState, faceColor, faceOf, faceState, faceSvg, mateCard, type ToneAxis, toneOf } from "../faces";
 import { envTitle } from "../envs";
 import { mateEnvName } from "../mateshome";
-import { type MateAutomation, type ThreadItem, answersIn, harnessLabel, latestThread, mateAutomations, mateLine, mateRoute, mateSlug, mateThreads, nameCheck, replyHint, roleLine, threadSearch, toneSteps } from "../matepage";
+import { type MateAutomation, answersIn, harnessLabel, mateAutomations, mateHistory, mateLine, mateRoute, mateSlug, nameCheck, replyHint, roleLine, shownConversation, toneSteps } from "../matepage";
 import type { Mates as MateBoard, StreamClient, StreamSnapshot } from "../stream";
 import { Button, Dialog, Menu, Segmented, Select, Slider } from "../ui";
 
@@ -383,9 +384,50 @@ function StopAll({ api, stopped, onClose }: { api: Authed; stopped: boolean; onC
   );
 }
 
-function MoreMenu({ api, name, stopped }: { api: Authed; name: string; stopped: boolean }) {
+function StartFresh({ api, name, onClose }: { api: Authed; name: string; onClose: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState("");
+  async function reset() {
+    setBusy(true);
+    setNote("");
+    try {
+      await resetMate(api, name);
+      window.location.hash = "#/mates/" + encodeURIComponent(name);
+      onClose();
+    } catch (err) {
+      setNote(message(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Dialog title="Start fresh?" onClose={onClose}>
+      <p>{"This clears the context of " + name + ". The current conversation stops and stays as history. You can read it, but it does not continue. The next message starts a new conversation."}</p>
+      {note && (
+        <p className="error" role="alert">
+          {note}
+        </p>
+      )}
+      <div className="dialog-actions">
+        <Button disabled={busy} onClick={onClose}>
+          Cancel
+        </Button>
+        <Button variant="primary" disabled={busy} onClick={() => void reset()}>
+          Start fresh
+        </Button>
+      </div>
+    </Dialog>
+  );
+}
+
+function MoreMenu({ api, name, stopped, history }: { api: Authed; name: string; stopped: boolean; history: { session: string; title: string }[] }) {
   const [open, setOpen] = useState(false);
-  const [asking, setAsking] = useState(false);
+  const [asking, setAsking] = useState("");
+  const items = [
+    { value: "fresh", label: "Start fresh…" },
+    ...history.map((h) => ({ value: "h:" + h.session, label: "History: " + h.title })),
+    { value: "stop", label: stopped ? "Start all mates…" : "Stop all mates…" },
+  ];
   return (
     <span className="ui-anchor">
       <button type="button" className="ui btn quiet mp-more" aria-label={"More for " + name} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
@@ -395,15 +437,20 @@ function MoreMenu({ api, name, stopped }: { api: Authed; name: string; stopped: 
         <Menu
           label={"More for " + name}
           className="mp-more-menu"
-          items={[{ value: "stop", label: stopped ? "Start all mates…" : "Stop all mates…" }]}
-          onPick={() => {
+          items={items}
+          onPick={(v: string) => {
             setOpen(false);
-            setAsking(true);
+            if (v.startsWith("h:")) {
+              window.location.hash = "#/mates/" + encodeURIComponent(name) + "/" + encodeURIComponent(v.slice(2));
+              return;
+            }
+            setAsking(v);
           }}
           onClose={() => setOpen(false)}
         />
       )}
-      {asking && <StopAll api={api} stopped={stopped} onClose={() => setAsking(false)} />}
+      {asking === "stop" && <StopAll api={api} stopped={stopped} onClose={() => setAsking("")} />}
+      {asking === "fresh" && <StartFresh api={api} name={name} onClose={() => setAsking("")} />}
     </span>
   );
 }
@@ -469,7 +516,7 @@ function FirstThread({ api, name, agent }: { api: Authed; name: string; agent: s
           </p>
         ) : null}
         <form className="composer-box" onSubmit={(ev) => void submit(ev)}>
-          <textarea aria-label="Message" rows={1} autoFocus value={draft} placeholder={replyHint({ session: "", title: "", tag: "", source: "app", state: "idle", ended: false }, name)} onChange={(ev) => setDraft(ev.target.value)} onKeyDown={onKey} />
+          <textarea aria-label="Message" rows={1} autoFocus value={draft} placeholder={replyHint(name)} onChange={(ev) => setDraft(ev.target.value)} onKeyDown={onKey} />
           <div className="composer-foot" role="group" aria-label="Composer options">
             {agent ? <span className="composer-chip">{agent}</span> : null}
             <span className="spacer" />
@@ -727,33 +774,6 @@ function MateSettings({
   );
 }
 
-function ThreadRow({ item, href, on }: { item: ThreadItem; href: string; on: boolean }) {
-  return (
-    <li>
-      <a className={"mp-thread" + (on ? " on" : "")} href={href} aria-current={on ? "page" : undefined}>
-        <span className={convDot(item.state, item.ended)} aria-hidden="true" />
-        <span className="mp-tn">
-          <span className="mp-tt">{item.title}</span>
-          <span className="mp-ts">{[item.tag, item.ended ? "ended" : item.state].join(" · ")}</span>
-        </span>
-      </a>
-    </li>
-  );
-}
-
-function convDot(state: string, ended: boolean): string {
-  if (ended) {
-    return "dot";
-  }
-  if (state === "running") {
-    return "dot run";
-  }
-  if (state === "permission" || state === "waiting") {
-    return "dot wait";
-  }
-  return state === "done" ? "dot ok" : "dot";
-}
-
 export function MatePage({
   api,
   hash,
@@ -774,10 +794,8 @@ export function MatePage({
   const { envs } = useEnvs(api);
   const asking = useAskingMates(api);
   const mem = useMemory(api, name);
-  const [search, setSearch] = useState("");
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
-  const [newNote, setNewNote] = useState("");
   const [sheet, setSheet] = useState(false);
   const row = board?.mates.find((m) => m.name === name);
   const def = defs.find((d) => d.name === name);
@@ -791,29 +809,14 @@ export function MatePage({
   }
   const card = mateCard(row, def, asking);
   const state = faceState(row, asking);
-  const items = mateThreads(row);
-  const current = items.find((t) => t.session === thread) ?? latestThread(items);
-  const shown = threadSearch(items, search);
+  const shown = shownConversation(row, thread);
+  const history = mateHistory(row);
   const paused = row.state === "paused";
   const connected = row.state === "connected";
   const canConnect = row.state === "ready" || row.state === "no_tokens";
   const env = envs.find((e) => e.name === mateEnvName(def?.env));
   const envLabel = env ? (env.kind === "local" ? "Local" : envTitle(env)) : mateEnvName(def?.env) === "local" ? "Local" : mateEnvName(def?.env);
-  const href = (t: ThreadItem) => "#/mates/" + encodeURIComponent(name) + "/" + encodeURIComponent(t.session);
   const face = (px: number) => <MateFace name={name} avatar={row.avatar || def?.avatar} color={row.color || def?.color} state={state} px={px} />;
-
-  async function start() {
-    setBusy(true);
-    setNewNote("");
-    try {
-      const s = await newMateConversation(api, name);
-      window.location.hash = "#/mates/" + encodeURIComponent(name) + "/" + encodeURIComponent(s.ID);
-    } catch (err) {
-      setNewNote(message(err));
-    } finally {
-      setBusy(false);
-    }
-  }
 
   async function pause() {
     setBusy(true);
@@ -834,8 +837,18 @@ export function MatePage({
       <p className="mt-note">Loading…</p>
     );
 
-  const conversation = current ? (
-    <ThreadChat key={current.session} id={current.session} snapshot={snapshot} client={client} api={api} placeholder={replyHint(current, name)} />
+  const back = "#/mates/" + encodeURIComponent(name);
+  const conversation = shown.session ? (
+    <>
+      {shown.history && (
+        <div className="src mp-src mp-history" role="status">
+          <span>History. This conversation does not continue.</span>
+          <span className="spacer" />
+          <a href={back}>Back to the conversation</a>
+        </div>
+      )}
+      <ThreadChat key={shown.session} id={shown.session} snapshot={snapshot} client={client} api={api} placeholder={replyHint(name)} readOnly={shown.history} />
+    </>
   ) : (
     <FirstThread api={api} name={name} agent={harnessLabel(def?.agent ?? "", def?.model)} />
   );
@@ -855,24 +868,8 @@ export function MatePage({
           <button type="button" className="ui btn quiet mp-info" aria-label={"Settings of " + name} onClick={() => setSheet(true)}>
             ⓘ
           </button>
+          <MoreMenu api={api} name={name} stopped={board?.stopped ?? false} history={history} />
         </header>
-        <nav className="mp-chips" aria-label={"Threads of " + name}>
-          <ul>
-            {items.map((t) => (
-              <li key={t.session}>
-                <a className={"mp-chip" + (t === current ? " on" : "")} href={href(t)} aria-current={t === current ? "page" : undefined}>
-                  {t.title}
-                </a>
-              </li>
-            ))}
-            <li>
-              <button type="button" className="mp-chip" aria-label="New thread" disabled={busy} onClick={() => void start()}>
-                + New
-              </button>
-            </li>
-          </ul>
-          {newNote && <p role="alert">{newNote}</p>}
-        </nav>
         {note && <p role="alert">{note}</p>}
         <section className="mp-conv" aria-label="Conversation">
           {conversation}
@@ -910,7 +907,7 @@ export function MatePage({
         <Button disabled={busy} onClick={() => void pause()}>
           {paused ? "Resume" : "Pause"}
         </Button>
-        <MoreMenu api={api} name={name} stopped={board?.stopped ?? false} />
+        <MoreMenu api={api} name={name} stopped={board?.stopped ?? false} history={history} />
       </header>
       {note && <p role="alert">{note}</p>}
       {error && <p role="alert">{error}</p>}
@@ -921,35 +918,7 @@ export function MatePage({
       ))}
       {row.error && <p className="mt-error">{row.error}</p>}
       <div className="mp-split">
-        <nav className="mp-threads" aria-label={"Threads of " + name}>
-          <div className="mp-search">
-            <input type="search" className="ui input" aria-label="Search threads" placeholder="Search threads" value={search} onChange={(e) => setSearch(e.target.value)} />
-            <Button variant="icon" className="mp-new" aria-label="New thread" title="New thread" disabled={busy} onClick={() => void start()}>
-              <PlusIcon />
-            </Button>
-          </div>
-          {newNote && <p role="alert">{newNote}</p>}
-          <ul>
-            {shown.map((t) => (
-              <ThreadRow key={t.session} item={t} href={href(t)} on={t === current} />
-            ))}
-          </ul>
-          {items.length > 0 && shown.length === 0 && <p className="mt-note">No thread matches.</p>}
-        </nav>
         <section className="mp-conv" aria-label="Conversation">
-          {current && (
-            <div className="src mp-src">
-              <span>{current.tag}</span>
-              <span>·</span>
-              <span>{current.title}</span>
-              <span className="spacer" />
-              {current.url && (
-                <a href={current.url} target="_blank" rel="noreferrer">
-                  Open in Slack
-                </a>
-              )}
-            </div>
-          )}
           {conversation}
         </section>
         <aside className="ms mp-rail" aria-label={"Settings of " + name}>

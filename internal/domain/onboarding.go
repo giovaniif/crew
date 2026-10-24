@@ -11,6 +11,7 @@ type HarnessSetup struct {
 	File      string `json:"file"`
 	Backup    string `json:"backup,omitempty"`
 	Err       string `json:"err,omitempty"`
+	SetUp     bool   `json:"set_up,omitempty"`
 }
 
 type NvimSetup struct {

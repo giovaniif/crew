@@ -292,4 +292,20 @@ describe("the environments page", () => {
     open("#/more", false);
     expect(screen.getByRole("link", { name: /Environments/ })).toHaveAttribute("href", "#/envs");
   });
+
+  it("warns on the local row when another tool removed the crew hooks, and fixes them", async () => {
+    const user = userEvent.setup();
+    const missing = [{ env: "local", harness: "claude", file: "/home/me/.claude/settings.json", reason: "crew hooks are missing in ~/.claude/settings.json" }];
+    let fixed = false;
+    const { server } = open("#/envs/local", true, (s) =>
+      s
+        .on("GET", "/api/v1/envs/local", () => ({ status: 200, body: fixed ? local : { ...local, hooks_missing: missing } }))
+        .on("POST", "/api/v1/hooks/fix", () => ((fixed = true), { status: 200, body: { missing: [] } })),
+    );
+    const alert = await screen.findByRole("alert", { name: "Claude hooks" });
+    expect(alert).toHaveTextContent("crew hooks are missing in ~/.claude/settings.json");
+    await user.click(within(alert).getByRole("button", { name: "Fix" }));
+    await waitFor(() => expect(screen.queryByRole("alert", { name: "Claude hooks" })).not.toBeInTheDocument());
+    expect(server.calls.find((c) => c.path === "/api/v1/hooks/fix")?.body).toEqual({ env: "local", harness: "claude" });
+  });
 });
