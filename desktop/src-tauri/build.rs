@@ -13,6 +13,7 @@ fn main() {
             "crew_server_crew",
             "crew_server_install",
             "crew_server_workspace",
+            "crew_server_complete",
             "crew_browser_open",
             "crew_pick_folder",
             "crew_check_update",

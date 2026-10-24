@@ -114,6 +114,8 @@
 .mp-rail {
   border-left: 1px solid var(--line);
   overflow-y: auto;
+  overflow-x: hidden;
+  min-width: 0;
   padding: 14px 14px 20px;
   display: flex;
   flex-direction: column;
@@ -323,6 +325,7 @@
   border-radius: 14px 14px 0 0;
   max-height: 92%;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 8px 16px calc(28px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
@@ -492,21 +495,111 @@
   border-bottom: 1px solid var(--line);
 }
 
-.mp-first {
+.mp-first-log {
+  flex: 1;
+}
+
+.mp-search .ui.icon-btn.mp-new {
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  flex: none;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+  background: var(--bg);
+  display: grid;
+  place-items: center;
+}
+
+.mp-look .mp-faces {
+  display: grid;
+  grid-template-columns: repeat(6, 36px);
+  justify-content: space-between;
+  gap: 6px 0;
+}
+
+.mp-look .mp-faces button {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.mp-look .mp-faces button:hover {
+  background: var(--bg-hover);
+}
+
+.mp-look .mp-faces button.on {
+  border: 0;
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.mp-look .mp-faces .face,
+.mp-look .mp-faces svg {
+  display: block;
+  width: 28px;
+  height: 28px;
+}
+
+.mp-look .mp-swatches {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 8px;
-  max-width: 560px;
-  width: 100%;
-  margin: auto;
-  padding: 16px;
+  max-width: 100%;
 }
 
-.mp-first textarea {
-  resize: vertical;
-  min-height: 72px;
+.mp-look .mp-swatches .swatch {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  min-height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
 }
 
-.mp-first .ui.btn {
-  align-self: flex-end;
+.mp-look .mp-swatches .swatch.on {
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 3.5px var(--accent);
+}
+
+@media (pointer: coarse) {
+  .mp-look .mp-faces {
+    grid-template-columns: repeat(6, 44px);
+  }
+
+  .mp-look .mp-faces button {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+  }
+
+  .mp-look .mp-swatches {
+    gap: 0;
+  }
+
+  .mp-look .mp-swatches .swatch {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    box-shadow: none;
+    background-clip: content-box;
+    padding: 12px;
+  }
+
+  .mp-look .mp-swatches .swatch.on {
+    box-shadow:
+      inset 0 0 0 10px var(--bg),
+      inset 0 0 0 12px var(--accent);
+  }
 }

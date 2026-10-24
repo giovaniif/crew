@@ -117,9 +117,6 @@ func TestCleanupFactsMergeStateAndDirt(t *testing.T) {
 	if err != nil || !main.OnDefault {
 		t.Errorf("main checkout facts = %+v, %v, want OnDefault", main, err)
 	}
-	if _, err := g.CleanupFacts(ctx, domain.Worktree{Repo: repo, Path: filepath.Join(tmp, "nope")}); err == nil {
-		t.Error("want an error for a missing worktree")
-	}
 }
 
 func TestCleanupFactsWithoutOriginAreNeverInDefault(t *testing.T) {
@@ -257,4 +254,46 @@ func TestCleanupPruneDropsMovedWorktreeAndKeepsItsBranch(t *testing.T) {
 		t.Errorf("worktree list still has it:\n%s", list)
 	}
 	gitOut(t, repo, "rev-parse", "--verify", "refs/heads/gone")
+}
+
+func TestCleanupFactsTellAMissingFolder(t *testing.T) {
+	tmp, repo := clonedRepo(t)
+	wt := filepath.Join(tmp, "gone")
+	run(t, repo, "worktree", "add", "-q", "-b", "gone", wt)
+	if err := os.RemoveAll(wt); err != nil {
+		t.Fatal(err)
+	}
+	f, err := git.Worktrees{}.CleanupFacts(context.Background(), domain.Worktree{Repo: repo, Path: wt, Branch: "gone"})
+	if err != nil || !f.PathMissing || f.RepoMissing {
+		t.Errorf("facts = %+v, %v; want PathMissing only", f, err)
+	}
+}
+
+func TestCleanupFactsTellAMovedRepo(t *testing.T) {
+	tmp, repo := clonedRepo(t)
+	wt := filepath.Join(tmp, "orphan")
+	run(t, repo, "worktree", "add", "-q", "-b", "orphan", wt)
+	if err := os.Rename(repo, filepath.Join(tmp, "renamed")); err != nil {
+		t.Fatal(err)
+	}
+	f, err := git.Worktrees{}.CleanupFacts(context.Background(), domain.Worktree{Repo: repo, Path: wt, Branch: "orphan"})
+	if err != nil || !f.RepoMissing || f.PathMissing {
+		t.Errorf("facts = %+v, %v; want RepoMissing only", f, err)
+	}
+	if _, err := os.Stat(filepath.Join(wt, "a.txt")); err != nil {
+		t.Errorf("the folder changed: %v", err)
+	}
+}
+
+func TestCleanupFactsTellARepoWhoseGitdirIsGone(t *testing.T) {
+	tmp, repo := clonedRepo(t)
+	wt := filepath.Join(tmp, "stale")
+	run(t, repo, "worktree", "add", "-q", "-b", "stale", wt)
+	if err := os.WriteFile(filepath.Join(wt, ".git"), []byte("gitdir: "+filepath.Join(tmp, "old", ".git", "worktrees", "stale")+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	f, err := git.Worktrees{}.CleanupFacts(context.Background(), domain.Worktree{Repo: repo, Path: wt, Branch: "stale"})
+	if err != nil || !f.RepoMissing {
+		t.Errorf("facts = %+v, %v; want RepoMissing", f, err)
+	}
 }

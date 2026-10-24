@@ -38,6 +38,7 @@ type NewSession struct {
 
 	ProjectSetup string
 	SystemPrompt string
+	AgentID      string
 }
 
 type Started struct {
@@ -69,7 +70,7 @@ func (s Sessions) Start(ctx context.Context, req NewSession) (Started, error) {
 			}
 		}
 	}
-	spec := req.Harness.Launch(LaunchRequest{Name: req.Name, Dir: dir, Model: req.Model, Effort: req.Effort, Prompt: req.Prompt, SystemPrompt: req.SystemPrompt})
+	spec := req.Harness.Launch(LaunchRequest{Name: req.Name, Dir: dir, Model: req.Model, Effort: req.Effort, Prompt: req.Prompt, SystemPrompt: req.SystemPrompt, SessionID: req.AgentID})
 	pane, err := s.Host.Create(ctx, spec)
 	if err != nil {
 		return Started{Worktree: wt}, fmt.Errorf("launch %s: %w", req.Harness.Harness(), err)
@@ -83,6 +84,10 @@ func (s Sessions) Start(ctx context.Context, req NewSession) (Started, error) {
 		Effort:  req.Effort,
 		State:   domain.StateIdle,
 		Dir:     dir,
+	}
+	if spec.Transcript != "" {
+		session.Transcript = spec.Transcript
+		session.ResumeID = req.AgentID
 	}
 	if wt != nil {
 		wt.SessionID = req.ID

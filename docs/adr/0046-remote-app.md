@@ -150,3 +150,7 @@ Limits:
 - An idle attached client left open on a desk counts as away once its window runs out, which is the intent; one that keeps receiving input (a key repeat, a mouse jiggle into the terminal) counts as present.
 - Held pushes are in memory: a daemon restart forgets them; the session list still shows the state.
 - Up to 5 s pass between the window running out and the held push.
+
+## Amended by ADR 0063 (2026-10-23)
+
+- A device can pair with more than one machine. `crew serve` gets `[serve] allowed_origins` for a PWA on a different origin. See [ADR 0063](0063-environments-are-machine-plus-identity.md).

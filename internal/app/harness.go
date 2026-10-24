@@ -10,6 +10,8 @@ type LaunchRequest struct {
 	Prompt string
 	Resume string
 
+	SessionID string
+
 	SystemPrompt string
 }
 

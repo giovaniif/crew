@@ -1,4 +1,4 @@
-import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { type FormEvent, type KeyboardEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { useEnvs } from "./Environments";
 import { EnvChip, EnvRail } from "./EnvPicker";
 import { ThreadChat } from "./Session";
@@ -16,6 +16,7 @@ import {
   mateMemory,
   mateSetup,
   newMateConversation,
+  sendMessage,
   pauseMate,
   resetMate,
   saveMate,
@@ -24,10 +25,10 @@ import {
   setMateTokens,
   stopAllMates,
 } from "../api";
-import { ACCENTS, FACES, type FaceState, faceColor, faceOf, faceState, faceSvg, mateCard, mateTagline, type ToneAxis, toneOf } from "../faces";
+import { ACCENTS, FACES, type FaceState, faceColor, faceOf, faceState, faceSvg, mateCard, type ToneAxis, toneOf } from "../faces";
 import { envTitle } from "../envs";
 import { mateEnvName } from "../mateshome";
-import { type MateAutomation, answersIn, harnessLabel, mateAutomations, mateHistory, mateLine, mateRoute, nameCheck, replyHint, shownConversation, toneSteps } from "../matepage";
+import { type MateAutomation, answersIn, harnessLabel, mateAutomations, mateHistory, mateLine, mateRoute, mateSlug, nameCheck, replyHint, roleLine, shownConversation, toneSteps } from "../matepage";
 import type { Mates as MateBoard, StreamClient, StreamSnapshot } from "../stream";
 import { Button, Dialog, Menu, Segmented, Select, Slider } from "../ui";
 
@@ -468,24 +469,115 @@ function useMateAutomations(api: Authed, name: string): MateAutomation[] {
   return list;
 }
 
-function MateLook({ name, mate, save }: { name: string; mate: Mate; save: (patch: Partial<Mate>) => void }) {
-  const chosen = faceOf(name, mate.avatar);
-  const color = faceColor(chosen, mate.color, false);
+export function PlusIcon() {
   return (
-    <div className="kv mp-look">
-      <h4>LOOK</h4>
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <path d="M7 2.5v9M2.5 7h9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function FirstThread({ api, name, agent }: { api: Authed; name: string; agent: string }) {
+  const [draft, setDraft] = useState("");
+  const [posting, setPosting] = useState(false);
+  const [error, setError] = useState("");
+  const blank = draft.trim() === "";
+
+  async function submit(ev: FormEvent | KeyboardEvent<HTMLTextAreaElement>) {
+    ev.preventDefault();
+    if (blank || posting) {
+      return;
+    }
+    setPosting(true);
+    setError("");
+    try {
+      const s = await newMateConversation(api, name);
+      await sendMessage(api, s.ID, draft);
+      window.location.hash = "#/mates/" + encodeURIComponent(name) + "/" + encodeURIComponent(s.ID);
+    } catch (err) {
+      setError(message(err));
+      setPosting(false);
+    }
+  }
+
+  function onKey(ev: KeyboardEvent<HTMLTextAreaElement>) {
+    if (ev.key === "Enter" && !ev.shiftKey && !ev.nativeEvent.isComposing) {
+      void submit(ev);
+    }
+  }
+
+  return (
+    <div className="chat-screen mp-chat mp-first">
+      <div className="mp-first-log" />
+      <footer className="composer">
+        {error ? (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <form className="composer-box" onSubmit={(ev) => void submit(ev)}>
+          <textarea aria-label="Message" rows={1} autoFocus value={draft} placeholder={replyHint(name)} onChange={(ev) => setDraft(ev.target.value)} onKeyDown={onKey} />
+          <div className="composer-foot" role="group" aria-label="Composer options">
+            {agent ? <span className="composer-chip">{agent}</span> : null}
+            <span className="spacer" />
+            <button type="submit" className="send" aria-label="Send" disabled={blank || posting}>
+              ↑
+            </button>
+          </div>
+        </form>
+      </footer>
+    </div>
+  );
+}
+
+function FaceGrid({ avatar, color, onPick }: { avatar: string; color?: string; onPick: (patch: { avatar?: string; color?: string }) => void }) {
+  const chosen = faceOf(avatar, avatar);
+  const shown = faceColor(chosen, color, false);
+  return (
+    <>
       <div className="mt-faces mp-faces">
         {FACES.map((f) => (
-          <button key={f.id} type="button" aria-label={f.name} aria-pressed={f.id === chosen.id} className={f.id === chosen.id ? "on" : ""} onClick={() => save({ avatar: f.id })}>
-            <MateFace name={f.id} state="idle" color={f.id === chosen.id ? mate.color : undefined} px={24} />
+          <button key={f.id} type="button" aria-label={f.name} aria-pressed={f.id === chosen.id} className={f.id === chosen.id ? "on" : ""} onClick={() => onPick({ avatar: f.id })}>
+            <MateFace name={f.id} state="idle" color={f.id === chosen.id ? color : undefined} px={28} />
           </button>
         ))}
       </div>
-      <div className="swatches">
+      <div className="swatches mp-swatches">
         {ACCENTS.map((c) => (
-          <button key={c} type="button" className={"swatch" + (c === color ? " on" : "")} aria-label={"Color " + c} style={{ background: c }} onClick={() => save({ color: c })} />
+          <button key={c} type="button" className={"swatch" + (c === shown ? " on" : "")} aria-label={"Color " + c} style={{ backgroundColor: c }} onClick={() => onPick({ color: c })} />
         ))}
       </div>
+    </>
+  );
+}
+
+export function FaceButton({ name, avatar, color, onPick }: { name: string; avatar?: string; color?: string; onPick: (patch: { avatar?: string; color?: string }) => void }) {
+  const [open, setOpen] = useState(false);
+  const face = faceOf(name, avatar);
+  return (
+    <>
+      <button type="button" className="face-pick" aria-label="Change face" onClick={() => setOpen(true)}>
+        <MateFace name={name} avatar={avatar} color={color} state="idle" px={28} />
+      </button>
+      {open && (
+        <Dialog title="Face and color" className="face-picker" onClose={() => setOpen(false)}>
+          <FaceGrid avatar={face.id} color={color} onPick={onPick} />
+          <div className="actions">
+            <Button variant="primary" onClick={() => setOpen(false)}>
+              Done
+            </Button>
+          </div>
+        </Dialog>
+      )}
+    </>
+  );
+}
+
+function MateLook({ name, mate, save }: { name: string; mate: Mate; save: (patch: Partial<Mate>) => void }) {
+  return (
+    <div className="kv mp-look">
+      <h4>LOOK</h4>
+      <FaceGrid avatar={faceOf(name, mate.avatar).id} color={mate.color} onPick={save} />
     </div>
   );
 }
@@ -702,10 +794,8 @@ export function MatePage({
   const { envs } = useEnvs(api);
   const asking = useAskingMates(api);
   const mem = useMemory(api, name);
-  const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
-  const [newNote, setNewNote] = useState("");
   const [sheet, setSheet] = useState(false);
   const row = board?.mates.find((m) => m.name === name);
   const def = defs.find((d) => d.name === name);
@@ -727,23 +817,6 @@ export function MatePage({
   const env = envs.find((e) => e.name === mateEnvName(def?.env));
   const envLabel = env ? (env.kind === "local" ? "Local" : envTitle(env)) : mateEnvName(def?.env) === "local" ? "Local" : mateEnvName(def?.env);
   const face = (px: number) => <MateFace name={name} avatar={row.avatar || def?.avatar} color={row.color || def?.color} state={state} px={px} />;
-
-  async function start(e: FormEvent) {
-    e.preventDefault();
-    if (draft.trim() === "") {
-      return;
-    }
-    setBusy(true);
-    setNewNote("");
-    try {
-      await newMateConversation(api, name, draft);
-      setDraft("");
-    } catch (err) {
-      setNewNote(message(err));
-    } finally {
-      setBusy(false);
-    }
-  }
 
   async function pause() {
     setBusy(true);
@@ -777,14 +850,7 @@ export function MatePage({
       <ThreadChat key={shown.session} id={shown.session} snapshot={snapshot} client={client} api={api} placeholder={replyHint(name)} readOnly={shown.history} />
     </>
   ) : (
-    <form className="mp-first" onSubmit={(e) => void start(e)}>
-      <p className="mt-note">{"No conversation yet. Your first message starts one. Slack messages and automation runs also go into it."}</p>
-      <textarea className="ui input" aria-label={"Message " + name} placeholder={replyHint(name)} value={draft} onChange={(e) => setDraft(e.target.value)} rows={3} />
-      <Button type="submit" variant="primary" disabled={busy || draft.trim() === ""}>
-        Send
-      </Button>
-      {newNote && <p role="alert">{newNote}</p>}
-    </form>
+    <FirstThread api={api} name={name} agent={harnessLabel(def?.agent ?? "", def?.model)} />
   );
 
   if (!wide) {
@@ -833,7 +899,9 @@ export function MatePage({
       <header className="mp-head">
         {face(24)}
         <h1>{name}</h1>
-        <span className="muted mp-role-line">{mateTagline(def?.prompt ?? "").split("\n")[0]}</span>
+        <span className="muted mp-role-line" title={def?.prompt}>
+          {roleLine(def?.prompt ?? "")}
+        </span>
         <span className={"pill mp-state " + state}>{state}</span>
         <span className="spacer" />
         <Button disabled={busy} onClick={() => void pause()}>
@@ -910,12 +978,13 @@ export function NewMate({ api, repos: known }: { api: Authed; repos: string[] })
   const { defs } = useMateDefs(api);
   const { envs } = useEnvs(api);
   const options = useHarnessOptions(api);
+  const [text, setText] = useState("");
   const [mate, setMate] = useState<Mate>({ name: "", prompt: "", agent: "claude", enabled: true });
   const [repos, setRepos] = useState<string[]>([]);
   const [slack, setSlack] = useState(false);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
-  const check = nameCheck(mate.name, defs);
+  const check = nameCheck(mate.name || text.trim(), defs);
   const models = options.find((h) => h.harness === mate.agent)?.models ?? [];
 
   async function create(e: FormEvent) {
@@ -927,7 +996,7 @@ export function NewMate({ api, repos: known }: { api: Authed; repos: string[] })
         ...mate,
         prompt: mate.prompt.trim(),
         repos: repos.length > 0 ? repos : undefined,
-        avatar: faceOf(mate.name).id,
+        avatar: faceOf(mate.name, mate.avatar).id,
         enabled: true,
       });
       window.location.hash = "#/mates/" + encodeURIComponent(out.name) + (slack ? "/~slack" : "");
@@ -945,8 +1014,17 @@ export function NewMate({ api, repos: known }: { api: Authed; repos: string[] })
         <p className="lead">A mate is a long-lived agent with a name, a role and its own threads.</p>
         <div className="composer mp-composer">
           <div className="namel">
-            <MateFace name={mate.name || "nova"} state="idle" px={28} />
-            <input aria-label="Name" placeholder="name" value={mate.name} onChange={(e) => setMate({ ...mate, name: e.target.value.trim() })} />
+            <FaceButton name={mate.name || "nova"} avatar={mate.avatar} color={mate.color} onPick={(patch) => setMate({ ...mate, ...patch })} />
+            <input
+              aria-label="Name"
+              placeholder="name"
+              value={text}
+              onChange={(e) => {
+                setText(e.target.value);
+                setMate({ ...mate, name: mateSlug(e.target.value) });
+              }}
+            />
+            {mate.name !== "" && mate.name !== text && <span className="slug muted">{"Saved as " + mate.name}</span>}
             {check.text && <span className={"pill " + (check.ok ? "ok" : "bad")}>{check.text}</span>}
           </div>
           <textarea aria-label="Role" rows={3} placeholder="What is this mate's role? For example: You are a careful reviewer for the api repo." value={mate.prompt} onChange={(e) => setMate({ ...mate, prompt: e.target.value })} />

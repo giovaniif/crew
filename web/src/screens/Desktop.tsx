@@ -1,8 +1,10 @@
+import { machineName } from "../envs";
+import { MachineContext, useMachine } from "./Machine";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { listApprovals, resumeSession, type Authed } from "../api";
 import type { AppEnv } from "../App";
 import { emptyMain, keyAction, mainTabs, modifierKeys, nextNeeding, sessionPlace, sidebarRows, stateDot, type Keys, type MainTab } from "../desktop";
-import { parseRoute } from "../route";
+import { navItem, parseRoute } from "../route";
 import type { PullRequest, Session, StreamClient, StreamSnapshot, Worktree } from "../stream";
 import { timeInState } from "../sessions";
 import { Segmented } from "../ui";
@@ -120,18 +122,17 @@ function NavLink({ item }: { item: NavItem }) {
 }
 
 function Sidebar({ env, snapshot, now, onRetry, hash, keys, chip, approvals }: SidebarProps) {
-  const route = parseRoute(hash);
-  const under = (prefix: string) => hash === prefix || hash.startsWith(prefix + "/");
+  const active = navItem(hash);
   const mates = snapshot.state?.mates?.mates.length ?? 0;
   const live = sidebarRows(snapshot.state?.sessions ?? []).live.length;
   const count = (n: number) => (n > 0 ? <span className="meta">{n}</span> : null);
   const items: NavItem[] = [
-    { href: "#/mates", icon: "◉", label: "Mates", on: route.screen === "home" || under("#/mates"), meta: count(mates) },
-    { href: "#/sessions", icon: "▤", label: "Sessions", on: (route.screen === "list" && !under("#/envs") && !under("#/mates")) || route.screen === "session", meta: count(live) },
-    { href: "#/approvals", icon: "✓", label: "Approvals", on: under("#/approvals"), meta: approvals > 0 ? <span className="pill bad">{approvals}</span> : null },
-    { href: "#/automations", icon: "↻", label: "Automations", on: under("#/automations") },
-    { href: "#/envs", icon: "⌂", label: "Environments", on: under("#/envs") },
-    { href: "#/disk", icon: "▥", label: "Disk", on: under("#/disk") },
+    { href: "#/mates", icon: "◉", label: "Mates", on: active === "mates", meta: count(mates) },
+    { href: "#/sessions", icon: "▤", label: "Sessions", on: active === "sessions", meta: count(live) },
+    { href: "#/approvals", icon: "✓", label: "Approvals", on: active === "approvals", meta: approvals > 0 ? <span className="pill bad">{approvals}</span> : null },
+    { href: "#/automations", icon: "↻", label: "Automations", on: active === "automations" },
+    { href: "#/envs", icon: "⌂", label: "Environments", on: active === "envs" },
+    { href: "#/disk", icon: "▥", label: "Disk", on: active === "disk" },
   ];
   return (
     <nav className="sidebar nav" aria-label="Sidebar">
@@ -161,7 +162,7 @@ function Sidebar({ env, snapshot, now, onRetry, hash, keys, chip, approvals }: S
           </p>
         ) : null}
         <ul className="side-sec">
-          <NavLink item={{ href: "#/settings", icon: "⚙", label: "Settings", on: under("#/settings") || under("#/servers") }} />
+          <NavLink item={{ href: "#/settings", icon: "⚙", label: "Settings", on: active === "settings" }} />
         </ul>
         <Limits snapshot={snapshot} now={now} />
       </div>
@@ -374,6 +375,7 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
   const browsers = useRef<BrowserStore>(new Map());
   const [menu, setMenu] = useState<(MenuPoint & { id: string }) | null>(null);
   const [listing] = useServerListing(servers);
+  const outerMachine = useMachine();
   const [firstRun, setFirstRun] = useState(false);
   useEffect(() => {
     if (listing?.first_run) {
@@ -515,43 +517,45 @@ export function Desktop({ env, token, hash, go, snapshot, now, onRetry, client, 
   const menuSession = menu ? sessions.find((s) => s.ID === menu.id) : undefined;
 
   return (
-    <div className="desktop">
-      <Sidebar
-        env={env}
-        snapshot={snapshot}
-        now={now}
-        onRetry={onRetry}
-        hash={hash}
-        keys={keys}
-        approvals={approvals}
-        chip={servers ? <ServerChip servers={servers} listing={listing} go={go} /> : null}
-      />
-      {menu && menuSession ? <SessionCommands key={"menu-" + menu.id} api={api} session={menuSession} storage={env.storage} openAt={menu} /> : null}
-      <main className="main-column">{main}</main>
-      {servers && (firstRun || hash === "#/servers/add") ? (
-        <Sheet
-          label="Add a server"
-          onClose={() => {
-            setFirstRun(false);
-            if (hash === "#/servers/add") {
-              go("#/servers");
-            }
-          }}
-        >
-          <FirstRun
-            servers={servers}
-            welcome={firstRun}
-            storage={env.storage}
-            mac={/Macintosh/.test(env.userAgent)}
+    <MachineContext.Provider value={listing ? machineName(listing, env.host) : outerMachine}>
+      <div className="desktop">
+        <Sidebar
+          env={env}
+          snapshot={snapshot}
+          now={now}
+          onRetry={onRetry}
+          hash={hash}
+          keys={keys}
+          approvals={approvals}
+          chip={servers ? <ServerChip servers={servers} listing={listing} go={go} /> : null}
+        />
+        {menu && menuSession ? <SessionCommands key={"menu-" + menu.id} api={api} session={menuSession} storage={env.storage} openAt={menu} /> : null}
+        <main className="main-column">{main}</main>
+        {servers && (firstRun || hash === "#/servers/add") ? (
+          <Sheet
+            label="Add a server"
             onClose={() => {
               setFirstRun(false);
               if (hash === "#/servers/add") {
                 go("#/servers");
               }
             }}
-          />
-        </Sheet>
-      ) : null}
-    </div>
+          >
+            <FirstRun
+              servers={servers}
+              welcome={firstRun}
+              storage={env.storage}
+              mac={/Macintosh/.test(env.userAgent)}
+              onClose={() => {
+                setFirstRun(false);
+                if (hash === "#/servers/add") {
+                  go("#/servers");
+                }
+              }}
+            />
+          </Sheet>
+        ) : null}
+      </div>
+    </MachineContext.Provider>
   );
 }

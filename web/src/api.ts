@@ -1,3 +1,4 @@
+import type { Completion } from "./pathSuggest";
 import type { ToneAxis } from "./faces";
 import type { CleanupItem, DiskView } from "./disk";
 import type { Message } from "./stream";
@@ -507,6 +508,10 @@ export function setHooks(a: Authed, harness: string, install: boolean): Promise<
 
 export function setUpNvim(a: Authed): Promise<NvimSetup> {
   return authedRequest<NvimSetup>(a, "/api/v1/onboarding/nvim", "POST");
+}
+
+export function fsComplete(a: Authed, path: string): Promise<Completion> {
+  return authedRequest<Completion>(a, "/api/v1/fs/complete?path=" + encodeURIComponent(path));
 }
 
 export function workspaceDirs(a: Authed, path: string): Promise<{ dirs: DirChild[] | null }> {
