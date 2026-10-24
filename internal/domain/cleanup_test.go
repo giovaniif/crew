@@ -49,9 +49,12 @@ func TestCleanupPlan(t *testing.T) {
 		{"folder gone beats unknown facts", onBranch(nil), CleanupFacts{PathMissing: true, Unknown: "git status failed", LastActivity: idle}, CleanupPrune, "folder is gone", ""},
 		{"folder gone beats a live session", onBranch(nil), CleanupFacts{PathMissing: true, SessionLive: true, LastActivity: now}, CleanupPrune, "folder is gone", ""},
 		{"folder gone but held by a project", onBranch(nil), CleanupFacts{PathMissing: true, Project: "shop", LastActivity: idle}, CleanupKeep, "held by project shop", ""},
-		{"repo gone keeps the folder", onBranch(merged), CleanupFacts{RepoMissing: true, Unknown: "git status failed", LastActivity: idle}, CleanupKeep, "repo moved or missing", ""},
-		{"repo and folder gone", onBranch(merged), CleanupFacts{RepoMissing: true, PathMissing: true, LastActivity: idle}, CleanupKeep, "repo moved or missing", ""},
-		{"repo gone and dirty", detached, CleanupFacts{RepoMissing: true, Uncommitted: 3, LastActivity: idle}, CleanupKeep, "repo moved or missing", ""},
+		{"repo gone keeps the folder", onBranch(merged), CleanupFacts{RepoMissing: true, Unknown: "git status failed", LastActivity: idle}, CleanupOrphan, "repo moved or missing", ""},
+		{"repo and folder gone", onBranch(merged), CleanupFacts{RepoMissing: true, PathMissing: true, LastActivity: idle}, CleanupForget, "repo and folder are gone", ""},
+		{"repo and folder gone with a live session", onBranch(nil), CleanupFacts{RepoMissing: true, PathMissing: true, SessionLive: true, LastActivity: now}, CleanupForget, "repo and folder are gone", ""},
+		{"repo and folder gone but held by a project", onBranch(nil), CleanupFacts{RepoMissing: true, PathMissing: true, Project: "shop", LastActivity: idle}, CleanupKeep, "held by project shop", ""},
+		{"repo gone and dirty", detached, CleanupFacts{RepoMissing: true, Uncommitted: 3, LastActivity: idle}, CleanupOrphan, "repo moved or missing", ""},
+		{"repo gone with a live session", onBranch(nil), CleanupFacts{RepoMissing: true, SessionLive: true, LastActivity: now}, CleanupOrphan, "repo moved or missing", ""},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

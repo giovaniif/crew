@@ -139,6 +139,8 @@ func (s *Server) routes() []route {
 		{"POST /api/v1/mates/{name}/new", newMateConversation},
 		{"POST /api/v1/sessions/{id}/fresh", freshMateConversation},
 		{"GET /api/v1/mates/{name}/memory", mateMemory},
+		{"GET /api/v1/mates/{name}/export", exportMate},
+		{"POST /api/v1/mates/import", importMate},
 		{"GET /api/v1/environments", listEnvironments},
 		{"POST /api/v1/identities/{name}", identityCall(rpc.MethodIdentitySet)},
 		{"DELETE /api/v1/identities/{name}", identityCall(rpc.MethodIdentityRemove)},

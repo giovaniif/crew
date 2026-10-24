@@ -86,6 +86,8 @@ Unknown paths under `/api/` answer `not_found`.
 | `POST /api/v1/mates/{name}/claim` | yes | `mate.claim` | → `{"name","code","expires_at"}`, the one-time owner code |
 | `POST /api/v1/mates/{name}/new` | yes | `mate.new` | `{"repo","prompt"}` (both optional, the body can be empty) → the new session |
 | `GET /api/v1/mates/{name}/memory` | yes | `mate.memory` | → `{"name","path","text","limit"}` |
+| `GET /api/v1/mates/{name}/export` | yes | `mate.export` | → `{"mate","memory"}`: the role, the look, the harness and the memory text (ADR 0063). No token, no owner, no environment and no conversation |
+| `POST /api/v1/mates/import` | yes | `mate.import` | `{"export","environment":{"machine_id","identity_id"}}` → the new mate; a used name gets the next free number (`ada-2`); a different `machine_id` gets `wrong_machine` (409) |
 | `POST /api/v1/mates/{name}/memory` | yes | `mate.set_memory` | `{"text"}` → the same; an empty text clears the memory |
 | `GET /api/v1/environments` | yes | `environment.list` | → `{"machine":{"id","name"},"identities":[EnvInfo],"found"}` (ADR 0063); no secret value |
 | `POST /api/v1/identities/{name}` | yes | `identity.set` | `{"kind","parts","git_name","git_email"}` → the `EnvInfo`; it makes the identity or changes it |

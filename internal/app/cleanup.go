@@ -24,6 +24,7 @@ type WorktreeGitFacts struct {
 type CleanupGit interface {
 	CleanupFacts(ctx context.Context, w domain.Worktree) (WorktreeGitFacts, error)
 	Backup(ctx context.Context, w domain.Worktree, dir string) error
+	BackupFolder(ctx context.Context, w domain.Worktree, dir string) error
 	CreateBranch(ctx context.Context, w domain.Worktree, name string) (string, error)
 	Prune(ctx context.Context, repo string) error
 }
@@ -196,6 +197,8 @@ func (c *Cleanup) Execute(ctx context.Context, wts []domain.Worktree, activity f
 			results[i].Outcome = c.backup(ctx, p)
 		case domain.CleanupRemove:
 			removals = append(removals, p.decision.Worktree.Path)
+		case domain.CleanupForget:
+			results[i].Outcome = "forgotten"
 		}
 	}
 	var holders map[string][]string
@@ -264,8 +267,13 @@ func (c *Cleanup) Execute(ctx context.Context, wts []domain.Worktree, activity f
 func (c *Cleanup) RemoveWorktree(ctx context.Context, w domain.Worktree, activity func(domain.Worktree) SessionActivity, withBackup bool) CleanupResult {
 	p := c.plan(ctx, []domain.Worktree{w}, activity)[0]
 	switch p.decision.Action {
-	case domain.CleanupRemove, domain.CleanupPrune:
+	case domain.CleanupRemove, domain.CleanupPrune, domain.CleanupForget:
 		return c.Execute(ctx, []domain.Worktree{w}, activity)[0]
+	case domain.CleanupOrphan:
+		if withBackup {
+			return c.orphanThenRemove(ctx, p, activity)
+		}
+		return CleanupResult{Decision: p.decision, Outcome: "kept: " + p.decision.Reason + ", back it up first"}
 	case domain.CleanupBackupThenAsk:
 		if withBackup {
 			return c.backupThenRemove(ctx, p, activity)
@@ -289,6 +297,42 @@ func (c *Cleanup) backupThenRemove(ctx context.Context, p plannedWorktree, activ
 	}
 	c.record(res)
 	return res
+}
+
+func (c *Cleanup) orphanThenRemove(ctx context.Context, p plannedWorktree, activity func(domain.Worktree) SessionActivity) CleanupResult {
+	w := p.decision.Worktree
+	dir := c.claimBackupDir(w)
+	res := CleanupResult{Decision: p.decision}
+	if err := c.git.BackupFolder(ctx, w, dir); err != nil {
+		res.Outcome = "failed: " + err.Error()
+		c.record(res)
+		return res
+	}
+	res.Outcome = "backed up to " + dir + c.removeOrphan(ctx, p, activity)
+	c.record(res)
+	return res
+}
+
+func (c *Cleanup) removeOrphan(ctx context.Context, p plannedWorktree, activity func(domain.Worktree) SessionActivity) string {
+	w := p.decision.Worktree
+	holders, err := c.procs.Holders(ctx, []string{w.Path})
+	switch {
+	case err != nil:
+		return ", kept: process check failed: " + err.Error()
+	case len(holders[w.Path]) > 0:
+		return ", kept: in use by " + holders[w.Path][0]
+	}
+	g, err := c.git.CleanupFacts(ctx, w)
+	if err != nil {
+		return ", kept: " + err.Error()
+	}
+	if fresh := c.decide(w, g, nil, nil, nil, activity(w)); fresh.decision.Action != domain.CleanupOrphan {
+		return ", kept: " + fresh.decision.Reason
+	}
+	if err := c.trash.Move(w.Path); err != nil {
+		return ", failed: " + err.Error()
+	}
+	return ", removed"
 }
 
 func (c *Cleanup) removeAfterBackup(ctx context.Context, p plannedWorktree, activity func(domain.Worktree) SessionActivity) string {

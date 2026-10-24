@@ -108,6 +108,20 @@ func (Worktrees) Backup(ctx context.Context, w domain.Worktree, dir string) erro
 	return os.WriteFile(filepath.Join(dir, "status.txt"), append([]byte(head), status...), 0o600)
 }
 
+func (Worktrees) BackupFolder(ctx context.Context, w domain.Worktree, dir string) error {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return err
+	}
+	path := filepath.Clean(w.Path)
+	tar := exec.CommandContext(ctx, "tar", "-cf", filepath.Join(dir, "folder.tar"), "-C", filepath.Dir(path), filepath.Base(path))
+	tar.Env = append(os.Environ(), "COPYFILE_DISABLE=1")
+	if out, err := tar.CombinedOutput(); err != nil {
+		return fmt.Errorf("tar %s: %w: %s", path, err, out)
+	}
+	head := fmt.Sprintf("worktree %s\nrepo %s\nbranch %s\nthe repo was gone, so folder.tar holds the whole folder\n", w.Path, w.Repo, w.Branch)
+	return os.WriteFile(filepath.Join(dir, "status.txt"), []byte(head), 0o600)
+}
+
 func (Worktrees) CreateBranch(ctx context.Context, w domain.Worktree, name string) (string, error) {
 	for i := 1; i <= 100; i++ {
 		try := name
