@@ -502,6 +502,8 @@ type Status struct {
 	StartedAt time.Time `json:"started_at"`
 	Sessions  int       `json:"sessions"`
 	Worktrees int       `json:"worktrees"`
+
+	HooksMissing []domain.HooksMissing `json:"hooks_missing,omitempty"`
 }
 
 type State struct {
