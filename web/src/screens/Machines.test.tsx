@@ -189,5 +189,9 @@ describe("an SSH target", () => {
     expect(sshTarget("box rm")).toBeNull();
     expect(sshTarget("box'")).toBeNull();
     expect(sshTarget("")).toBeNull();
+    expect(sshTarget("ssh me@box")).toBe("me@box");
+    expect(sshTarget("  ssh   server ")).toBe("server");
+    expect(sshTarget("ssh")).toBe("ssh");
+    expect(sshTarget("ssh -p 22 box")).toBeNull();
   });
 });
