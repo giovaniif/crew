@@ -130,6 +130,8 @@ func daemonService(env func(string) string, self, userHome string, uid int, goos
 			Env:     svcEnv,
 			Log:     log,
 			UID:     uid,
+
+			KeepAliveOnFailure: true,
 		}}
 	}
 	config := env("XDG_CONFIG_HOME")
@@ -142,6 +144,8 @@ func daemonService(env func(string) string, self, userHome string, uid int, goos
 		Program: program,
 		Env:     svcEnv,
 		Log:     log,
+
+		RestartOnFailure: true,
 	}}
 }
 
@@ -172,6 +176,9 @@ func printDaemonCheck(ctx context.Context, svc serveService, env func(string) st
 	}
 	if svc.launchd {
 		c.ExecOK = c.Installed
+		if spec, err := launchd.Inspect(svc.agent); err == nil && spec.KeepAliveAlways {
+			c.Failing, c.Reason = true, domain.CleanExitRestartReason
+		}
 	}
 	if err := json.NewEncoder(stdout).Encode(c); err != nil {
 		fmt.Fprintf(stderr, "crew setup daemon: %v\n", err)
@@ -181,17 +188,18 @@ func printDaemonCheck(ctx context.Context, svc serveService, env func(string) st
 }
 
 func unitHealth(ctx context.Context, u systemd.Unit, self string) (bool, string) {
-	program, err := systemd.Program(u)
+	spec, err := systemd.Inspect(u)
 	if err != nil {
 		return false, err.Error()
 	}
-	facts := domain.DaemonUnit{ExecPath: resolved(program), Self: resolved(self)}
+	program := spec.Program
+	facts := domain.DaemonUnit{ExecPath: resolved(program), Self: resolved(self), RestartsCleanExit: spec.Restart == "always"}
 	if program != "" {
 		info, err := os.Stat(program)
 		facts.ExecExists = err == nil && !info.IsDir()
 	}
 	if state, err := systemd.Show(ctx, u, systemd.Output); err == nil {
-		facts.Active, facts.Sub, facts.Restarts, facts.MainStatus = state.Active, state.Sub, state.Restarts, state.MainStatus
+		facts.Active, facts.Sub, facts.Restarts, facts.MainStatus, facts.Result = state.Active, state.Sub, state.Restarts, state.MainStatus, state.Result
 	}
 	return domain.DaemonUnitHealth(facts)
 }

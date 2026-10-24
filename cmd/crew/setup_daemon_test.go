@@ -245,7 +245,7 @@ func (f *daemonSetupFixture) writeUnit(t *testing.T, execStart string) {
 	if err := os.MkdirAll(filepath.Dir(f.path), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(f.path, []byte("[Service]\nExecStart="+execStart+"\nRestart=always\n"), 0o644); err != nil {
+	if err := os.WriteFile(f.path, []byte("[Service]\nExecStart="+execStart+"\nRestart=on-failure\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 }

@@ -7,6 +7,8 @@ pub const SERVER_COMMANDS: &[&str] = &[
     "allow-crew-server-open",
     "allow-crew-server-remove",
     "allow-crew-server-fix",
+    "allow-crew-server-crew",
+    "allow-crew-server-install",
     "allow-crew-server-workspace",
 ];
 
