@@ -2,7 +2,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use crew_desktop::servers::{
-    check_failure, connect_url, pair_argv, server_url, setup_argv, ssh_hosts, ssh_target, tunnel_argv, Kind,
+    check_failure, connect_url, routed, pair_argv, server_url, setup_argv, ssh_hosts, ssh_target, tunnel_argv, Kind,
     Store, LOCAL_ID,
 };
 
@@ -157,7 +157,7 @@ fn this_computer_cannot_be_removed_and_removing_the_selected_server_selects_it()
 }
 
 #[test]
-fn the_saved_file_is_private_and_loads_back_with_the_logins() {
+fn the_saved_file_is_private_and_loads_back_with_the_logins_and_the_selected_machine() {
     let file = temp_file("save");
     let mut store = Store::load(&file).0;
     let id = store.add(Kind::Ssh { host: "box".into() }, Some(serde_json::json!({"token": "secret"})));
@@ -170,7 +170,7 @@ fn the_saved_file_is_private_and_loads_back_with_the_logins() {
     }
     let (loaded, first) = Store::load(&file);
     assert!(!first);
-    assert_eq!(loaded.selected, LOCAL_ID);
+    assert_eq!(loaded.selected, id);
     assert_eq!(loaded.get(&id).unwrap().auth.as_ref().unwrap()["token"], "secret");
 }
 
@@ -190,4 +190,12 @@ fn the_rows_for_the_page_have_no_logins() {
     assert!(!rows.contains("secret"));
     assert!(rows.contains(r#""name":"box""#));
     assert!(rows.contains(r#""name":"This computer""#));
+}
+
+#[test]
+fn a_machine_opens_at_the_route_that_the_page_asked_for() {
+    let url = url::Url::parse("http://127.0.0.1:7421/?k=1").unwrap();
+    assert_eq!(routed(url.clone(), Some("#/mates/test-ada".into())).as_str(), "http://127.0.0.1:7421/?k=1#/mates/test-ada");
+    assert_eq!(routed(url.clone(), None).as_str(), "http://127.0.0.1:7421/?k=1");
+    assert_eq!(routed(url, Some("/elsewhere".into())).as_str(), "http://127.0.0.1:7421/?k=1");
 }

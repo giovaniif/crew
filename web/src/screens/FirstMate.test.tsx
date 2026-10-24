@@ -204,4 +204,31 @@ describe("the first run of mates in the desktop app", () => {
     fireEvent.click(screen.getByRole("button", { name: "Back" }));
     expect(screen.getByRole("heading", { name: "Where does crew run your mates?" })).toBeInTheDocument();
   });
+
+  it("opens the server it made the mate on, at the mate page, so the app keeps that server", async () => {
+    const app = answers(new FakeDesktop());
+    const { live } = desktop("#/mates", true, undefined, { desktop: app }, routes);
+    live();
+    fireEvent.click(await screen.findByRole("radio", { name: /A server over SSH/ }));
+    fireEvent.change(screen.getByRole("textbox", { name: "SSH address" }), { target: { value: "devbox" } });
+    fireEvent.click(screen.getByRole("button", { name: "Connect" }));
+    await toMate();
+    fireEvent.change(screen.getByRole("textbox", { name: "Name" }), { target: { value: "test-ada" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create test-ada" }));
+    await waitFor(() => expect(app.of("crew_server_open")).toEqual([{ id: "ssh:devbox", route: "#/mates/test-ada" }]));
+    expect(app.selected).toBe("ssh:devbox");
+  });
+
+  it("does not open the window again when the mate is on the server in view", async () => {
+    const app = answers(new FakeDesktop());
+    const { live } = desktop("#/mates", true, undefined, { desktop: app }, routes);
+    live();
+    fireEvent.click(await screen.findByRole("radio", { name: /This Mac/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Connect" }));
+    await toMate();
+    fireEvent.change(screen.getByRole("textbox", { name: "Name" }), { target: { value: "test-ada" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create test-ada" }));
+    await waitFor(() => expect(window.location.hash).toBe("#/mates/test-ada"));
+    expect(app.of("crew_server_open")).toEqual([]);
+  });
 });
