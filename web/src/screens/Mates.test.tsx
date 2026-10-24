@@ -200,6 +200,17 @@ describe("Mate page", () => {
     await waitFor(() => expect(calls(server)).toContain("POST /api/v1/mates/webby/reset"));
   });
 
+  it("has a quiet Start fresh in the header that asks inline before it resets the mate", async () => {
+    const { server } = setup("#/mates/webby", board, [], undefined, true);
+    const user = userEvent.setup();
+    const head = await screen.findByRole("banner");
+    await user.click(await within(head).findByRole("button", { name: "Start fresh" }));
+    expect(within(head).getByText("Clear this conversation?")).toBeInTheDocument();
+    expect(calls(server)).not.toContain("POST /api/v1/mates/webby/reset");
+    await user.click(within(head).getByRole("button", { name: "Start fresh" }));
+    await waitFor(() => expect(calls(server)).toContain("POST /api/v1/mates/webby/reset"));
+  });
+
   it("opens an old conversation from the ⋯ menu as history with no composer", async () => {
     setup("#/mates/webby/s7", board, [], undefined, true);
     const conv = await screen.findByRole("region", { name: "Conversation" });
