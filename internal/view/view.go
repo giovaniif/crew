@@ -41,10 +41,12 @@ type MateConversation struct {
 	Ended      bool              `json:"ended"`
 	StartedAt  time.Time         `json:"started_at"`
 	Automation string            `json:"automation,omitempty"`
+	History    bool              `json:"history"`
 }
 
 type Mate struct {
 	domain.MateStatus
+	Conversation  string             `json:"conversation"`
 	Work          []string           `json:"work"`
 	Threads       []MateThread       `json:"threads"`
 	Conversations []MateConversation `json:"conversations"`
@@ -535,7 +537,10 @@ func (v *View) deriveMates() Mates {
 	for _, st := range v.board.Mates {
 		m := Mate{MateStatus: st, Work: []string{}, Threads: []MateThread{}, Conversations: v.mateConversations(st.Name)}
 		for _, c := range m.Conversations {
-			if !c.Ended && domain.MateWorking(c.State) {
+			if !c.History {
+				m.Conversation = c.Session
+			}
+			if !c.History && !c.Ended && domain.MateWorking(c.State) {
 				m.Work = append(m.Work, c.Session)
 			}
 		}
@@ -546,7 +551,7 @@ func (v *View) deriveMates() Mates {
 			s, ok := v.sessions[l.SessionID]
 			t := MateThread{MateLink: l, Session: v.shown[l.SessionID].name, State: s.State, Ended: !ok || s.Ended}
 			m.Threads = append(m.Threads, t)
-			if !t.Ended && domain.MateWorking(s.State) {
+			if !t.Ended && domain.MateWorking(s.State) && !slices.Contains(m.Work, l.SessionID) {
 				m.Work = append(m.Work, l.SessionID)
 			}
 		}
@@ -557,11 +562,17 @@ func (v *View) deriveMates() Mates {
 
 func (v *View) mateConversations(name string) []MateConversation {
 	out := []MateConversation{}
+	all := []domain.Session{}
 	for id, s := range v.sessions {
-		if s.Mate == nil || !s.Mate.Local || s.Mate.Name != name {
+		if s.Mate == nil || s.Mate.Name != name {
 			continue
 		}
+		all = append(all, s)
 		out = append(out, MateConversation{Session: id, Name: v.shown[id].name, State: s.State, Ended: s.Ended, StartedAt: s.StartedAt, Automation: s.Mate.Automation})
+	}
+	conv, _ := domain.MateConversation(all, name)
+	for i := range out {
+		out[i].History = out[i].Session != conv.ID
 	}
 	sort.Slice(out, func(i, j int) bool {
 		if !out[i].StartedAt.Equal(out[j].StartedAt) {
