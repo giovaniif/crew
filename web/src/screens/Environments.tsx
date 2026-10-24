@@ -1583,6 +1583,12 @@ export function Environments({ api, route, wide, desktop }: Props) {
   const slash = route.indexOf("/");
   const key = safe(slash < 0 ? route : route.slice(0, slash));
   const name = slash < 0 ? "" : safe(route.slice(slash + 1));
+  const known = state ? state.hub.environments.some((e) => e.key === key && (e.item.name === name || (isLocal(e.item) && (name === "local" || name === "yours")))) : true;
+  useEffect(() => {
+    if (name && !known) {
+      reload();
+    }
+  }, [key, name, known, reload]);
   const alert = error ? (
     <p className="error" role="alert">
       {error}

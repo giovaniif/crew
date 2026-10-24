@@ -312,6 +312,21 @@ describe("the environments page", () => {
     expect(server.calls.find((c) => c.path === "/api/v1/envs/test-new/ssh-key")?.body).toEqual({ action: "make" });
   });
 
+  it("loads the list again when it opens an identity that another screen made", async () => {
+    const made: EnvInfo = { ...sandbox, name: "test-new", used_by: [] };
+    let identities: EnvInfo[] = [local, work, sandbox];
+    open("#/envs/this", true, (s) =>
+      s
+        .on("GET", "/api/v1/environments", () => ({ status: 200, body: { machine: { id: "m-devbox", name: "devbox" }, identities, found } }))
+        .on("GET", "/api/v1/envs/test-new", { status: 200, body: made }),
+    );
+    const list = await screen.findByRole("list", { name: "Environments" });
+    await within(list).findByRole("link", { name: /test-work/ });
+    identities = [...identities, made];
+    window.location.hash = "#/envs/this/test-new";
+    expect(await within(list).findByRole("link", { name: /test-new/ })).toHaveAttribute("aria-current", "page");
+  });
+
   it("shows why a delete is refused while mates use the environment", async () => {
     const user = userEvent.setup();
     open("#/envs/this/test-work", true, (s) =>
