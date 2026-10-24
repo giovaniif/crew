@@ -47,7 +47,7 @@ Unknown paths under `/api/` answer `not_found`.
 | `GET /api/v1/hello` | no | none | → `{"api":"v1","build"}` (serve's build, which is the daemon's) |
 | `POST /api/v1/pair` | no | `pair.redeem` | `{"code","name"}` → `{"device":{"id","name","created_at","last_seen"},"token"}` |
 | `GET /api/v1/workspaces` | yes | `workspace.list` | → `{"workspaces":[Workspace],"last_used"}` |
-| `POST /api/v1/workspaces` | yes | `workspace.add` | `{"path"}` (absolute, not blank, no other keys) → the `Workspace` |
+| `POST /api/v1/workspaces` | yes | `workspace.add` | `{"path"}` (absolute, or it starts with `~`, which the daemon changes to its HOME; not blank, no other keys) → the `Workspace` |
 | `POST /api/v1/workspaces/remove` | yes | `workspace.remove` | `{"root"}` (not blank, no other keys) → `{}`; no files, worktrees or branches change |
 | `GET /api/v1/session-options` | yes | `session.options` | → `{"harnesses":[{"harness","name","tag","models","efforts","model","effort","default_model","default_effort"}],"home"}`; the new-session form shows `default (<value>)` |
 | `GET /api/v1/automations` | yes | `automation.list` | → `{"automations":[Automation],"problems"}` |
