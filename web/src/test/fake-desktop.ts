@@ -53,6 +53,26 @@ export class FakeDesktop implements DesktopBridge {
     }
   };
 
+  private listeners: { event: string; handler: (payload: unknown) => void }[] = [];
+
+  listen = async (event: string, handler: (payload: unknown) => void) => {
+    const entry = { event, handler };
+    this.listeners.push(entry);
+    return () => {
+      this.listeners = this.listeners.filter((l) => l !== entry);
+    };
+  };
+
+  emit(event: string, payload: unknown) {
+    for (const l of this.listeners.filter((x) => x.event === event)) {
+      l.handler(payload);
+    }
+  }
+
+  listening(event: string) {
+    return this.listeners.filter((l) => l.event === event).length;
+  }
+
   focused = () => true;
   onFocusChange = () => () => undefined;
 

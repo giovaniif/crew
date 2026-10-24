@@ -5,12 +5,14 @@ import type { StreamClient, StreamSnapshot } from "./stream";
 
 export type DesktopBridge = {
   invoke: (cmd: string, args?: Record<string, unknown>) => Promise<unknown>;
+  listen?: (event: string, handler: (payload: unknown) => void) => Promise<() => void>;
   focused: () => boolean;
   onFocusChange: (listener: () => void) => () => void;
 };
 
 type TauriInternals = {
   invoke: (cmd: string, args?: Record<string, unknown>) => Promise<unknown>;
+  transformCallback: (cb: (event: { payload: unknown }) => void) => number;
 };
 
 export function tauriBridge(win: Window): DesktopBridge | undefined {
@@ -20,6 +22,13 @@ export function tauriBridge(win: Window): DesktopBridge | undefined {
   }
   return {
     invoke: (cmd, args) => internals.invoke(cmd, args),
+    listen: async (event, handler) => {
+      const id = internals.transformCallback((e) => handler(e.payload));
+      const eventId = await internals.invoke("plugin:event|listen", { event, target: { kind: "Any" }, handler: id });
+      return () => {
+        void internals.invoke("plugin:event|unlisten", { event, eventId }).catch(() => undefined);
+      };
+    },
     focused: () => win.document.hasFocus(),
     onFocusChange: (listener) => {
       win.addEventListener("focus", listener);

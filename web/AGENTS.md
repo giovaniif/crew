@@ -178,7 +178,9 @@ The phone app: a PWA that `crew serve` embeds and serves at `/` (ADR [0046](../d
   - `pairedMachines(list, fetch)`: the PWA calls each paired machine directly at its URL with its own token. The machine must list the origin of the page in `[serve] allowed_origins`.
   - `loadHub(links)` gets `GET /api/v1/environments`, `/mates` and `/approvals` from each machine. `mergeHub` is the pure merge. Each item is `Tagged` with the app key and the daemon machine `{id, name}` of `environment.list`. Use the daemon id, not the app key, in mates and identities.
   - A machine that does not answer `environment.list` is `down` with "machine not reachable" and gives no items. This Mac is hidden when there are two or more machines and no mate is on it. `tagged` is true only when two or more machines show. Then the UI shows a machine tag. With one machine, the UI shows no tag.
-  - Tests: `npm test -- machines`.
+  - Each `MachineLink` also has `open`, the live stream of the machine. In the desktop app, `desktopSocket` calls `crew_machine_stream {machineId}`, then gets the frames of the `crew-machine-stream` Tauri event (`DesktopBridge.listen`) for its stream id. Rust sends the token. `close` calls `crew_machine_stream_close {stream}`. In the PWA, `open` is the WebSocket `/api/v1/stream` of the paired machine.
+  - `MachineStreams` keeps one `StreamClient` for each machine. `withSessions(hub, snapshots)` adds the sessions of each machine that shows, `Tagged` as the other items.
+  - Tests: `npm test -- machines desktopBridge`.
 - `src/screens/`: one component for each screen. `src/theme.css`: the Latte palette as CSS variables, and Mocha under `prefers-color-scheme: dark`, and IBM Plex Sans and JetBrains Mono from `@fontsource`.
 - `src/test/`: test helpers (`FakeServer`, `MemoryStorage`, the Vitest setup). tdd-check treats them as port fakes.
 
