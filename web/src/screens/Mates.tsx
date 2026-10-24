@@ -1,4 +1,5 @@
 import { type FormEvent, type KeyboardEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { CopyMate } from "./CopyMate";
 import { defaultPick, EnvChip, EnvRail, type EnvPick } from "./EnvPicker";
 import { authedOf, useHub } from "../hub";
 import { isYours } from "../envmenu";
@@ -425,6 +426,7 @@ function MoreMenu({ api, name, stopped, history }: { api: Authed; name: string; 
   const [asking, setAsking] = useState("");
   const items = [
     { value: "fresh", label: "Start fresh…" },
+    { value: "copy", label: "Copy to another machine…" },
     ...history.map((h) => ({ value: "h:" + h.session, label: "History: " + h.title })),
     { value: "stop", label: stopped ? "Start all mates…" : "Stop all mates…" },
   ];
@@ -451,6 +453,7 @@ function MoreMenu({ api, name, stopped, history }: { api: Authed; name: string; 
       )}
       {asking === "stop" && <StopAll api={api} stopped={stopped} onClose={() => setAsking("")} />}
       {asking === "fresh" && <StartFresh api={api} name={name} onClose={() => setAsking("")} />}
+      {asking === "copy" && <CopyMate api={api} name={name} onClose={() => setAsking("")} />}
     </span>
   );
 }
@@ -637,6 +640,7 @@ function MateSettings({
   const [role, setRole] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(connect);
   const [memOpen, setMemOpen] = useState(false);
+  const [copying, setCopying] = useState(false);
   const [note, setNote] = useState("");
   useEffect(() => setMate(def), [def]);
   const harness = options.find((h) => h.harness === mate.agent);
@@ -669,7 +673,8 @@ function MateSettings({
 
   return (
     <>
-      <EnvRail api={api} mate={mate} onPick={(machineId, id) => void save({ env: id }, { machine_id: machineId, identity_id: id })} />
+      {copying && <CopyMate api={api} name={name} onClose={() => setCopying(false)} />}
+      <EnvRail api={api} mate={mate} extra={[{ value: "+copy", label: "Copy " + name + " to another machine…", run: () => setCopying(true) }]} onPick={(machineId, id) => void save({ env: id }, { machine_id: machineId, identity_id: id })} />
       <div className="kv">
         <h4>HARNESS</h4>
         <Segmented label="Harness" value={mate.agent} options={harnesses} onChange={(agent) => void save({ agent, model: undefined, effort: undefined })} className="mp-seg" />
