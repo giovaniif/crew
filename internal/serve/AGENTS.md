@@ -123,6 +123,8 @@ Unknown paths under `/api/` answer `not_found`.
 | `POST /api/v1/onboarding/remove` | owner | `onboarding.remove` | `{"harness"}` → the same |
 | `POST /api/v1/onboarding/nvim` | owner | `onboarding.nvim` | → the `nvim` object of the status |
 | `POST /api/v1/onboarding/finish` | owner | `onboarding.finish` | → `{}` |
+| `GET /api/v1/hooks` | owner | `hooks.status` | → `{"missing":[{"env","harness","file","reason"}]}`, the crew hooks that another tool removed (local and custom environments) |
+| `POST /api/v1/hooks/fix` | owner | `hooks.fix` | `{"env","harness"}` (`harness` not blank; an empty `env` is `local`) → the same; the setup merge runs again (idempotent, backup first) |
 | `GET /api/v1/workspaces/dirs?path=` | owner | `workspace.dirs` | → `{"dirs":[{"Name","Path","Git"}]}`, the folders in `path` (required, absolute) |
 | `GET /api/v1/fs/complete?path=` | owner | `fs.complete` | → `{"dir","dirs":[{"Name","Path","Git"}]}`, the folders in `dir` whose names start with the last part of `path` (see [internal/rpc/](../rpc/AGENTS.md)) |
 | `GET /api/v1/devices` | owner | `device.list` | → `{"devices":[Device]}`, oldest first |

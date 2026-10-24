@@ -47,5 +47,5 @@ func MateSourcePrompt(src MateSource, text string) string {
 	default:
 		return text
 	}
-	return "Source: " + tag + "\n\n" + text
+	return "[Source: " + tag + "] " + text
 }

@@ -426,8 +426,12 @@ export function claimMate(a: Authed, name: string): Promise<MateClaim> {
 
 export type MateMemory = { name: string; path: string; text: string; limit: number };
 
-export function newMateConversation(a: Authed, name: string): Promise<{ ID: string }> {
-  return authedRequest<{ ID: string }>(a, matePath(name, "new"), "POST", {});
+export function newMateConversation(a: Authed, name: string, prompt = ""): Promise<{ ID: string }> {
+  return authedRequest<{ ID: string }>(a, matePath(name, "new"), "POST", prompt ? { prompt } : {});
+}
+
+export function resetMate(a: Authed, name: string): Promise<unknown> {
+  return authedRequest<unknown>(a, matePath(name, "reset"), "POST");
 }
 
 export function mateMemory(a: Authed, name: string): Promise<MateMemory> {
@@ -500,6 +504,14 @@ export function getOnboarding(a: Authed): Promise<Onboarding> {
 
 export function setHooks(a: Authed, harness: string, install: boolean): Promise<HarnessSetup> {
   return authedRequest<HarnessSetup>(a, "/api/v1/onboarding/" + (install ? "install" : "remove"), "POST", { harness });
+}
+
+export function getHooks(a: Authed): Promise<{ missing: HooksMissing[] }> {
+  return authedRequest<{ missing: HooksMissing[] }>(a, "/api/v1/hooks");
+}
+
+export function fixHooks(a: Authed, env: string, harness: string): Promise<{ missing: HooksMissing[] }> {
+  return authedRequest<{ missing: HooksMissing[] }>(a, "/api/v1/hooks/fix", "POST", { env, harness });
 }
 
 export function setUpNvim(a: Authed): Promise<NvimSetup> {
@@ -611,7 +623,10 @@ export type EnvInfo = {
   pi_login?: boolean;
   used_by: string[];
   local?: EnvLocal;
+  hooks_missing?: HooksMissing[];
 };
+
+export type HooksMissing = { env: string; harness: string; file: string; reason: string };
 
 export type EnvLocal = {
   git_name: string;

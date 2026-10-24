@@ -185,6 +185,7 @@ type Daemon struct {
 	mateSecrets app.MateSecrets
 	envs        app.EnvironmentStore
 	localFacts  *localFactsCache
+	hooks       *hooksWatch
 	envLauncher string
 	slack       slackWorkers
 	presence    presenceCfg
@@ -328,6 +329,9 @@ func (d *Daemon) Serve(ctx context.Context, ln net.Listener) error {
 		d.tx.ctx = ctx
 	}
 	go d.refreshWorkspacesEvery(ctx)
+	if d.hooks != nil {
+		go d.watchHooks(ctx)
+	}
 	if d.st.attn != nil {
 		go d.st.attn.run(ctx)
 	}
@@ -567,6 +571,7 @@ func (d *Daemon) dispatch(c *conn, line []byte) (*rpc.Response, bool) {
 		ok := d.query(func(s *state) {
 			st = rpc.Status{PID: d.pid, StartedAt: d.started, Sessions: len(s.sessions), Worktrees: len(s.worktrees)}
 		})
+		st.HooksMissing = d.missingHooks()
 		if d.machine.ID != "" {
 			m := d.machine
 			st.Machine = &m
@@ -630,6 +635,8 @@ func (d *Daemon) dispatch(c *conn, line []byte) (*rpc.Response, bool) {
 		return d.mateMethod(req), true
 	case rpc.MethodMateMemory, rpc.MethodMateSetMemory:
 		return d.mateMethod(req), true
+	case rpc.MethodHooks, rpc.MethodHooksFix:
+		return d.hooksMethod(req), true
 	case rpc.MethodEnvList, rpc.MethodEnvShow, rpc.MethodEnvCreate, rpc.MethodEnvSet, rpc.MethodEnvUnset, rpc.MethodEnvDelete, rpc.MethodEnvSSHKey,
 		rpc.MethodEnvironmentList, rpc.MethodIdentitySet, rpc.MethodIdentityRemove, rpc.MethodIdentitySetSecret, rpc.MethodIdentitySSHKey:
 		return d.envMethod(req), true
