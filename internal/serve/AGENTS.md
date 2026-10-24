@@ -117,6 +117,7 @@ Unknown paths under `/api/` answer `not_found`.
 | `POST /api/v1/onboarding/nvim` | owner | `onboarding.nvim` | → the `nvim` object of the status |
 | `POST /api/v1/onboarding/finish` | owner | `onboarding.finish` | → `{}` |
 | `GET /api/v1/workspaces/dirs?path=` | owner | `workspace.dirs` | → `{"dirs":[{"Name","Path","Git"}]}`, the folders in `path` (required, absolute) |
+| `GET /api/v1/fs/complete?path=` | owner | `fs.complete` | → `{"dir","dirs":[{"Name","Path","Git"}]}`, the folders in `dir` whose names start with the last part of `path` (see [internal/rpc/](../rpc/AGENTS.md)) |
 | `GET /api/v1/devices` | owner | `device.list` | → `{"devices":[Device]}`, oldest first |
 | `POST /api/v1/devices/{id}/revoke` | owner | `device.revoke` | → `{}`; the streams of that device close with 4401 |
 | `POST /api/v1/pair/code` | owner | `pair.code` | `{"name"}` (optional, the body can be empty) → `{"code","expires_at"}`, a one-time code for `POST /api/v1/pair` |
