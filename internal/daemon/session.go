@@ -140,7 +140,7 @@ func (d *Daemon) startSessionWith(p rpc.NewSessionParams, prompt string, extra s
 	started, err := d.sessions().Start(d.ws.ctx, app.NewSession{
 		ID: newID(), Task: in.task, Plan: plan, Harness: adapter,
 		Name: name, Model: p.Model, Effort: p.Effort, Prompt: prompt,
-		ProjectSetup: in.projectSetup, SystemPrompt: extra.system,
+		ProjectSetup: in.projectSetup, SystemPrompt: extra.system, AgentID: newUUID(),
 	})
 	if err != nil {
 		if started.Worktree != nil && !d.query(func(s *state) { s.putWorktree(*started.Worktree) }) {
