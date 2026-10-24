@@ -170,7 +170,7 @@ fn the_saved_file_is_private_and_loads_back_with_the_logins() {
     }
     let (loaded, first) = Store::load(&file);
     assert!(!first);
-    assert_eq!(loaded.selected, id);
+    assert_eq!(loaded.selected, LOCAL_ID);
     assert_eq!(loaded.get(&id).unwrap().auth.as_ref().unwrap()["token"], "secret");
 }
 
