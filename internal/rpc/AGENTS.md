@@ -62,7 +62,7 @@ Each RPC request and response contains the build (`version.String()`). The daemo
   - If the session is not in `permission`, it answers `stale` and sends nothing.
   - A choice that the dialog does not have is `bad_request`.
   - `session.prompt` and `session.answer` need `WithHarnesses`.
-- `session.resolve` (`{"workspace","work_item"}` → `{"source","ref","title","worktree","workspace"}`) tells what `session.new` would start, but does not start it.
+- `session.resolve` (`{"workspace","work_item"}` → `{"source","ref","title","worktree","workspace","dir","git"}`) tells what `session.new` would start, but does not start it (`domain.PreviewSessionStart`). `worktree` is empty when the session runs in place. `dir` is the dir of the session. `git` is false when the workspace has no repo.
   - It checks the item with `domain.CheckWorkItem` (`bad_request`).
   - It finds a PR title through the title resolvers, off the event loop. If that fails, it returns `not_found`.
   - It names the worktree as `session.new` does. It registers nothing.

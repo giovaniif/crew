@@ -225,7 +225,6 @@ func (s *state) queueFirstPrompt(session domain.Session, text string, in *domain
 		s.mateReply[session.ID] = in.Reply
 	}
 	s.noteMateAsk(session.ID, in)
-	s.booting[session.ID] = true
 	s.emit(SendsChanged{Sends: append(slices.Clone(s.sends), q)})
 }
 
