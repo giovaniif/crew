@@ -1086,7 +1086,16 @@ function Editor({
                     }
                     onRemove={() => a.setKeys.forEach(unset)}
                   />
-                  {a.set ? null : (
+                  {a.part === "pi" && env.pi_login ? (
+                    <span className="secret">
+                      <span className="set-y">logged in</span>
+                    </span>
+                  ) : a.part === "pi" && !a.set ? (
+                    <span className="secret">
+                      <span className="set-n">not logged in</span>
+                    </span>
+                  ) : null}
+                  {a.set || (a.part === "pi" && env.pi_login) ? null : (
                     <HowTo>
                       {a.part === "pi" ? (
                         <>

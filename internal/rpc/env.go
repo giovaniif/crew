@@ -37,6 +37,7 @@ type EnvInfo struct {
 	GitName      string           `json:"git_name,omitempty"`
 	GitEmail     string           `json:"git_email,omitempty"`
 	CodexLogin   bool             `json:"codex_login,omitempty"`
+	PiLogin      bool             `json:"pi_login,omitempty"`
 	UsedBy       []string         `json:"used_by"`
 	Local        *EnvLocal        `json:"local,omitempty"`
 }

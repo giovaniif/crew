@@ -114,6 +114,7 @@ func (d *Daemon) envInfo(env domain.Environment, mates []domain.Mate) rpc.EnvInf
 	if env.Kind != domain.EnvLocal {
 		info.GitName, info.GitEmail = d.envs.GitIdentity(env.Name)
 		info.CodexLogin = slices.Contains(env.Parts, domain.EnvCodex) && d.envs.CodexLogin(env.Name)
+		info.PiLogin = slices.Contains(env.Parts, domain.EnvPi) && d.envs.PiLogin(env.Name)
 	} else if d.localFacts != nil {
 		f := d.localFacts.get()
 		info.Local = &rpc.EnvLocal{GitName: f.GitName, GitEmail: f.GitEmail, SSHAgent: f.SSHAgent, SSHKeys: f.SSHKeys, GitHub: f.GitHub, GitHubUser: f.GitHubUser, Claude: f.Claude, Codex: f.Codex, Pi: f.Pi}

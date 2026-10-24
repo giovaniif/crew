@@ -603,6 +603,7 @@ export type EnvInfo = {
   git_name?: string;
   git_email?: string;
   codex_login?: boolean;
+  pi_login?: boolean;
   used_by: string[];
   local?: EnvLocal;
 };

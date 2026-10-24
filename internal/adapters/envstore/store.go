@@ -305,6 +305,13 @@ func (s Store) CodexLogin(name string) bool {
 	return err == nil
 }
 
+func (s Store) PiLogin(name string) bool {
+	if !domain.ValidEnvName(name) {
+		return false
+	}
+	return piLogin(filepath.Join(s.envHome(name), partDirs[domain.EnvPi], "agent.db"))
+}
+
 func (s Store) GitIdentity(name string) (string, string) {
 	if !domain.ValidEnvName(name) {
 		return "", ""
