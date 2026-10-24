@@ -41,7 +41,7 @@ func holdDaemonLock(t *testing.T, home string) *exec.Cmd {
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = cmd.Process.Kill(); _ = cmd.Wait() })
+	t.Cleanup(func() { _ = cmd.Process.Kill() })
 	line, _ := bufio.NewReader(out).ReadString('\n')
 	if strings.TrimSpace(line) != "held" {
 		t.Fatalf("helper said %q", line)
@@ -52,8 +52,8 @@ func holdDaemonLock(t *testing.T, home string) *exec.Cmd {
 func TestTakeOverStopsTheDaemonThatHoldsTheLockAndFreesIt(t *testing.T) {
 	home := shortHome(t)
 	holder := holdDaemonLock(t, home)
-	done := make(chan error, 1)
-	go func() { done <- holder.Wait() }()
+	done := make(chan struct{})
+	go func() { _ = holder.Wait(); close(done) }()
 	pid, err := takeOverDaemon(home)
 	if err != nil {
 		t.Fatal(err)
