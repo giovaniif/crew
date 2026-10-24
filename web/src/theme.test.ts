@@ -127,13 +127,13 @@ describe("the automations table", () => {
 });
 
 describe("the settings styles", () => {
-  it.each([".settings-layout", ".settings-nav", ".settings-pane", ".settings-list", ".server-list", ".server-row-text", ".server-row-buttons", ".alert-row", ".agent-settings", ".shortcut-actions", ".shortcuts", ".theme-colors", ".detail-tabs"])("keeps no rule for the removed %s", (selector) => {
+  it.each([".settings-layout", ".settings-nav", ".settings-pane", ".settings-list", ".server-list", ".server-row-text", ".server-row-buttons", ".alert-row", ".agent-settings", ".shortcut-actions", ".shortcuts", ".theme-colors", ".detail-tabs", ".interrupt"])("keeps no rule for the removed %s", (selector) => {
     expect(() => rule(selector)).toThrow("no rule for " + selector);
   });
 });
 
 describe("touch targets", () => {
-  it.each([".session-card", ".back", ".retry", ".new-session", ".choice", ".interrupt", ".queued-action", ".permission-choice", ".load-older", ".tool summary", ".automations .chip", ".automations .subtabs button", ".automations .run-list .link", ".run-actions button", ".approval-actions button", ".open-session", ".term-retry", ".phone-views button", ".opt", ".folders li", ".disk-actions button", ".disk-tabs button", ".disk-kill", ".where-choice", ".first-run-buttons button", ".first-run-body .fields button", ".change-server", ".swatches .swatch", ".tabs a", ".mrow", ".more-row"])("%s is at least 44px tall", (selector) => {
+  it.each([".session-card", ".back", ".retry", ".new-session", ".choice", ".queued-action", ".permission-choice", ".load-older", ".tool summary", ".automations .chip", ".automations .subtabs button", ".automations .run-list .link", ".run-actions button", ".approval-actions button", ".open-session", ".term-retry", ".phone-views button", ".opt", ".folders li", ".disk-actions button", ".disk-tabs button", ".disk-kill", ".where-choice", ".first-run-buttons button", ".first-run-body .fields button", ".change-server", ".swatches .swatch", ".tabs a", ".mrow", ".more-row"])("%s is at least 44px tall", (selector) => {
     expect(parseInt(rule(selector)["min-height"] ?? "0", 10)).toBeGreaterThanOrEqual(44);
   });
 });
