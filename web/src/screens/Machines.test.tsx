@@ -6,6 +6,7 @@ import { FakeServer, MemoryStorage } from "../test/fake-server";
 import { FakeDesktop } from "../test/fake-desktop";
 import { FakeSockets } from "../test/fake-socket";
 import { FakeWidth } from "../test/fake-width";
+import { sshTarget } from "../servers";
 
 const device = { id: "k3m9p2qx", name: "Laptop", created_at: "2026-10-03T10:00:00Z", last_seen: "2026-10-03T10:00:00Z" };
 
@@ -178,5 +179,15 @@ describe("machines in the desktop app", () => {
   it("shows no Change server link in a browser", () => {
     app("#/settings");
     expect(screen.queryByRole("link", { name: "Change server" })).not.toBeInTheDocument();
+  });
+});
+
+describe("an SSH target", () => {
+  it("refuses an SSH target with options, spaces or quotes", () => {
+    expect(sshTarget(" me@box ")).toBe("me@box");
+    expect(sshTarget("-oProxyCommand=sh")).toBeNull();
+    expect(sshTarget("box rm")).toBeNull();
+    expect(sshTarget("box'")).toBeNull();
+    expect(sshTarget("")).toBeNull();
   });
 });
