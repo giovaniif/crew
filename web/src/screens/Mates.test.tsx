@@ -313,7 +313,7 @@ describe("Mate page on the phone", () => {
   it("shows the header line and the chat, with no thread chips", async () => {
     setup("#/mates/helper");
     expect(await screen.findByRole("heading", { name: "helper" })).toBeInTheDocument();
-    expect(screen.getByText("Local · Claude · working")).toBeInTheDocument();
+    expect(screen.getByText("Your accounts · Claude · working")).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "Threads of helper" })).toBeNull();
     expect(screen.getByRole("button", { name: "More for helper" })).toBeInTheDocument();
     expect(await screen.findByText("I fixed the docs.")).toBeInTheDocument();
@@ -325,7 +325,7 @@ describe("Mate page on the phone", () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Settings of helper" }));
     const sheet = screen.getByRole("dialog", { name: "Settings of helper" });
-    expect(within(sheet).getByRole("combobox", { name: "Environment" })).toBeInTheDocument();
+    expect(within(sheet).getByRole("button", { name: /^Environment:/ })).toBeInTheDocument();
     expect(within(sheet).getByText("Changes apply when the next conversation starts.")).toBeInTheDocument();
     await user.click(within(sheet).getByRole("button", { name: "Done" }));
     expect(screen.queryByRole("dialog")).toBeNull();
