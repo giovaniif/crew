@@ -540,6 +540,16 @@ export function setHooks(a: Authed, harness: string, install: boolean): Promise<
   return authedRequest<HarnessSetup>(a, "/api/v1/onboarding/" + (install ? "install" : "remove"), "POST", { harness });
 }
 
+export type ClaudeTrust = { path: string; trusted: boolean };
+
+export function claudeTrust(a: Authed, path: string): Promise<ClaudeTrust> {
+  return authedRequest<ClaudeTrust>(a, "/api/v1/claude/trust?" + new URLSearchParams({ path }).toString());
+}
+
+export function trustClaude(a: Authed, path: string): Promise<ClaudeTrust> {
+  return authedRequest<ClaudeTrust>(a, "/api/v1/claude/trust", "POST", { path });
+}
+
 export function getHooks(a: Authed): Promise<{ missing: HooksMissing[] }> {
   return authedRequest<{ missing: HooksMissing[] }>(a, "/api/v1/hooks");
 }

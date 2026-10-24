@@ -1,8 +1,8 @@
 import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react";
-import { addWorkspace, expandPath, listWorkspaces, removeWorkspace, resolveWorkItem, sessionOptions, startSession, type HarnessOptions, type WorkItemResolved, type WorkspaceList } from "../api";
+import { addWorkspace, claudeTrust, trustClaude, expandPath, listWorkspaces, removeWorkspace, resolveWorkItem, sessionOptions, startSession, type HarnessOptions, type WorkItemResolved, type WorkspaceList } from "../api";
 import type { AppEnv } from "../App";
 import { agentChoices, agentValue, defaultLabel, effortChoices, loadChoices, placeLine, rememberedRoot, saveChoices, splitAgent, taskFields } from "../newsession";
-import { Select } from "../ui";
+import { Button, Select } from "../ui";
 
 type Resolution = { state: "idle" } | { state: "checking" } | { state: "ok"; item: WorkItemResolved } | { state: "bad"; message: string };
 
@@ -39,6 +39,32 @@ export function NewSession({ env, token, home: atHome }: { env: AppEnv; token: s
   const [removing, setRemoving] = useState(false);
   const [removeError, setRemoveError] = useState("");
   const [select, setSelect] = useState("");
+  const [untrusted, setUntrusted] = useState("");
+  const [trustError, setTrustError] = useState("");
+
+  useEffect(() => {
+    setUntrusted("");
+    setTrustError("");
+    if (harness !== "claude" || !workspace) {
+      return;
+    }
+    let live = true;
+    claudeTrust({ fetch: env.fetch, token }, workspace).then(
+      (t) => live && !t.trusted && setUntrusted(workspace),
+      () => undefined,
+    );
+    return () => {
+      live = false;
+    };
+  }, [env.fetch, token, harness, workspace]);
+
+  function trust() {
+    setTrustError("");
+    trustClaude({ fetch: env.fetch, token }, untrusted).then(
+      (t) => t.trusted && setUntrusted(""),
+      (err: unknown) => setTrustError(message(err)),
+    );
+  }
 
   useEffect(() => {
     let live = true;
@@ -162,7 +188,7 @@ export function NewSession({ env, token, home: atHome }: { env: AppEnv; token: s
   const harnessDefault = defaults.find((h) => h.harness === harness);
   const defaultModels = Object.fromEntries(defaults.map((h) => [h.harness, h.default_model ?? ""]));
   const roots = workspaces.state === "ready" ? workspaces.list.workspaces : [];
-  const canStart = !busy && !!workspace && resolution.state !== "bad";
+  const canStart = !busy && !!workspace && resolution.state !== "bad" && !untrusted;
 
   const Root = atHome ? "div" : "main";
   const onKey = (ev: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -193,6 +219,21 @@ export function NewSession({ env, token, home: atHome }: { env: AppEnv; token: s
         </div>
       ) : null}
       {workspaces.state === "ready" && roots.length === 0 ? <p className="muted">No workspaces on this server yet. Add a folder of the server.</p> : null}
+      {untrusted ? (
+        <div className="notice" role="alert" aria-label={"Trust " + baseName(untrusted) + " for Claude?"}>
+          <span className="dot wait" />
+          <span>{"Trust " + baseName(untrusted) + " for Claude? Claude asks one time for each folder. If you do not trust it, Claude stops at the first message."}</span>
+          <span className="spacer" />
+          <Button variant="primary" className="sm" onClick={trust}>
+            Trust
+          </Button>
+        </div>
+      ) : null}
+      {trustError ? (
+        <p className="error" role="status">
+          {trustError}
+        </p>
+      ) : null}
       <form className="composer-box new-composer" onSubmit={(e) => void submit(e)}>
         <textarea aria-label="Task" rows={2} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={onKey} placeholder="Describe the task, or paste a PR or issue URL" autoCapitalize="none" autoCorrect="off" spellCheck={false} aria-describedby="resolution" />
         <div id="resolution" className="resolution">
