@@ -68,7 +68,6 @@ const allGroups: { id: GroupId; title: string }[] = [
   { id: "sessions", title: "Sessions" },
   { id: "shortcuts", title: "Shortcuts" },
   { id: "devices", title: "Devices" },
-  { id: "servers", title: "Servers" },
   { id: "about", title: "About" },
 ];
 

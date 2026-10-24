@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import type { DesktopBridge } from "../desktopBridge";
+import { Servers, sshTarget } from "../servers";
 import {
   desktopMachines,
   loadHub,
@@ -148,16 +149,18 @@ function EnvList({
 }: {
   hub: Hub;
   selected: { key: string; name: string };
-  onMachine: () => void;
+  onMachine?: () => void;
 }) {
   return (
     <div className="elist">
       <div className="elist-head">
         <span className="elist-title">Environments</span>
         <span className="spacer" />
-        <Button className="sm" onClick={onMachine}>
-          + Machine
-        </Button>
+        {onMachine ? (
+          <Button className="sm" onClick={onMachine}>
+            + Machine
+          </Button>
+        ) : null}
       </div>
       <ul className="side-scroll elist-rows" aria-label="Environments">
         {hub.machines.flatMap((m) => {
@@ -197,15 +200,17 @@ function EnvList({
   );
 }
 
-function PhoneList({ hub, onNew }: { hub: Hub; onNew: () => void }) {
+function PhoneList({ hub, onNew }: { hub: Hub; onNew?: () => void }) {
   return (
     <div className="pbody">
       <div className="page-head envs-phone-head">
         <h2>Environments</h2>
         <span className="spacer" />
-        <Button variant="icon" aria-label="+ Machine" onClick={onNew}>
-          +
-        </Button>
+        {onNew ? (
+          <Button variant="icon" aria-label="+ Machine" onClick={onNew}>
+            +
+          </Button>
+        ) : null}
       </div>
       {hub.machines.map((m) => (
         <div key={m.key} className="pgrp" role="group" aria-label={machineTitle(m.local, m.name)}>
@@ -260,20 +265,208 @@ function useContact(link: MachineLink | undefined, up: boolean, tick: number): C
   return contact;
 }
 
+function hostName(target: string): string {
+  return target.replace(/^.*@/, "").split(".")[0];
+}
+
+function ConnectDialog({ servers, onClose, onDone }: { servers: Servers; onClose: () => void; onDone: (id: string) => void }) {
+  const [address, setAddress] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [steps, setSteps] = useState<string[]>([]);
+  const [looking, setLooking] = useState("");
+  const connect = async () => {
+    const target = sshTarget(address);
+    setError("");
+    setSteps([]);
+    setLooking("");
+    if (!target) {
+      setError("Type a host name, not ssh options.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const remote = await servers.crew(target);
+      setSteps(["Connected over SSH"]);
+      if (remote.action !== "current") {
+        await servers.install(target);
+      }
+      const version = remote.action === "current" ? (remote.server ?? remote.app) : remote.app;
+      setSteps(["Connected over SSH", "crew " + version + " installed and running"]);
+      setLooking("Looking for your logins on " + hostName(target) + "…");
+      const id = await servers.add("ssh", target);
+      onDone(id);
+    } catch (err) {
+      setError(message(err));
+      setLooking("");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Dialog title="Connect a server" onClose={onClose} className="connect-server">
+      <p>crew connects over SSH and installs its own crew there. The server becomes a machine in Environments, with your accounts on it.</p>
+      <div className="fld">
+        <label htmlFor="connect-ssh">SSH address</label>
+        <input
+          id="connect-ssh"
+          className="ui input mono"
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+          placeholder="giovani@devbox.tail.ts.net"
+          autoComplete="off"
+          spellCheck={false}
+        />
+      </div>
+      {steps.length > 0 || looking ? (
+        <div className="steplist">
+          {steps.map((t) => (
+            <div key={t}>
+              <span className="set-y">{t}</span>
+            </div>
+          ))}
+          {looking ? (
+            <div>
+              <span className="dot run" /> {looking}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+      {error ? (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <div className="dialog-actions">
+        <Button variant="quiet" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button variant="primary" disabled={busy || address.trim() === ""} onClick={() => void connect()}>
+          Connect
+        </Button>
+      </div>
+    </Dialog>
+  );
+}
+
+function DisconnectDialog({ title, onClose, onConfirm }: { title: string; onClose: () => void; onConfirm: () => Promise<void> }) {
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const go = () => {
+    setBusy(true);
+    onConfirm()
+      .catch((err) => setError(message(err)))
+      .finally(() => setBusy(false));
+  };
+  return (
+    <Dialog title={"Disconnect " + title + "?"} onClose={onClose}>
+      <p>
+        crew forgets this machine and its login on this Mac. crew on {title} keeps running, and its mates and identities stay there.
+      </p>
+      {error ? (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <div className="dialog-actions">
+        <Button variant="quiet" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button variant="danger" disabled={busy} onClick={go}>
+          Disconnect
+        </Button>
+      </div>
+    </Dialog>
+  );
+}
+
+function MachineMenu({ fix, onFix, onDisconnect }: { fix: boolean; onFix: () => void; onDisconnect: () => void }) {
+  const [open, setOpen] = useState(false);
+  const items = [...(fix ? [{ value: "fix", label: "Fix" }] : []), { value: "disconnect", label: "Disconnect…" }];
+  return (
+    <span className="ui-anchor">
+      <Button variant="icon" aria-label="More actions" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        ⋯
+      </Button>
+      {open ? (
+        <Menu
+          label="Machine"
+          className="menu-right"
+          items={items}
+          onPick={(v) => {
+            setOpen(false);
+            if (v === "fix") {
+              onFix();
+            } else {
+              onDisconnect();
+            }
+          }}
+          onClose={() => setOpen(false)}
+        />
+      ) : null}
+    </span>
+  );
+}
+
 function MachineDetail({
   m,
   link,
   hub,
   wide,
   onNew,
+  servers,
+  onGone,
 }: {
   m: MachineState;
   link: MachineLink | undefined;
   hub: Hub;
   wide: boolean;
   onNew: () => void;
+  servers?: Servers;
+  onGone: () => void;
 }) {
   const [tick, setTick] = useState(0);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [fixNote, setFixNote] = useState("");
+  const managed = servers && !m.local ? servers : undefined;
+  const fix = () => {
+    if (!managed) {
+      return;
+    }
+    setFixNote("");
+    managed
+      .fix(m.key)
+      .then(() => {
+        setFixNote("Fixed");
+        setTick((n) => n + 1);
+      })
+      .catch((err) => setFixNote(message(err)));
+  };
+  const disconnect = managed ? (
+    <>
+      <div className="eactions">
+        <Button variant="quiet" className="danger" onClick={() => setDisconnecting(true)}>
+          {"Disconnect " + machineTitle(m.local, m.name) + "…"}
+        </Button>
+      </div>
+      {fixNote ? (
+        <p className={fixNote === "Fixed" ? "muted small" : "error"} role={fixNote === "Fixed" ? "status" : "alert"}>
+          {fixNote}
+        </p>
+      ) : null}
+      {disconnecting ? (
+        <DisconnectDialog
+          title={machineTitle(m.local, m.name)}
+          onClose={() => setDisconnecting(false)}
+          onConfirm={async () => {
+            await managed.remove(m.key);
+            setDisconnecting(false);
+            onGone();
+          }}
+        />
+      ) : null}
+    </>
+  ) : null;
   const contact = useContact(link, m.state === "up", tick);
   const title = machineTitle(m.local, m.name);
   const where = machineWhere(m.local, m.name);
@@ -339,6 +532,7 @@ function MachineDetail({
             </Button>
           ) : null}
         </div>
+        {disconnect}
       </div>
     );
   }
@@ -356,6 +550,7 @@ function MachineDetail({
             + Separate identity
           </Button>
         ) : null}
+        {managed ? <MachineMenu fix={m.key.startsWith("ssh:")} onFix={fix} onDisconnect={() => setDisconnecting(true)} /> : null}
       </div>
       <p className="dim lead">
         {m.local
@@ -417,6 +612,7 @@ function MachineDetail({
           </div>
         </>
       ) : null}
+      {disconnect}
     </div>
   );
 }
@@ -1567,6 +1763,8 @@ export function Environments({ api, route, wide, desktop }: Props) {
   const reload = useCallback(() => setTick((n) => n + 1), []);
   const { state, error } = useHub(api, desktop, tick);
   const [making, setMaking] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+  const servers = useMemo(() => (desktop ? new Servers(desktop) : undefined), [desktop]);
   const apis = useRef(new Map<string, Authed>());
   const remember = (link: MachineLink) => {
     const made = authedOf(link);
@@ -1601,14 +1799,36 @@ export function Environments({ api, route, wide, desktop }: Props) {
         }}
       />
     ) : null;
-  const machineAdd = () => {
-    window.location.hash = "#/servers/add";
-  };
+  const machineAdd = servers ? () => setConnecting(true) : undefined;
+  const connect =
+    connecting && servers ? (
+      <ConnectDialog
+        servers={servers}
+        onClose={() => setConnecting(false)}
+        onDone={(id) => {
+          setConnecting(false);
+          reload();
+          window.location.hash = machineHref(id);
+        }}
+      />
+    ) : null;
   const right =
     m && name ? (
       <Editor key={m.key + "/" + name} api={linkApi} name={name} onChanged={reload} onNew={() => setMaking(true)} back={!wide} />
     ) : m ? (
-      <MachineDetail m={m} link={link} hub={hub} wide={wide} onNew={() => setMaking(true)} />
+      <MachineDetail
+        key={m.key}
+        m={m}
+        link={link}
+        hub={hub}
+        wide={wide}
+        onNew={() => setMaking(true)}
+        servers={servers}
+        onGone={() => {
+          reload();
+          window.location.hash = "#/envs";
+        }}
+      />
     ) : null;
   if (!wide) {
     return (
@@ -1617,6 +1837,7 @@ export function Environments({ api, route, wide, desktop }: Props) {
           {alert}
           {right ?? <PhoneList hub={hub} onNew={machineAdd} />}
           {dialog}
+          {connect}
         </main>
       </PlaceContext.Provider>
     );
@@ -1627,6 +1848,7 @@ export function Environments({ api, route, wide, desktop }: Props) {
         <EnvList hub={hub} selected={{ key: m?.key ?? "", name }} onMachine={machineAdd} />
         {right ?? <div className="eedit">{alert}</div>}
         {dialog}
+        {connect}
       </div>
     </PlaceContext.Provider>
   );
