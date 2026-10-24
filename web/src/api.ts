@@ -400,8 +400,26 @@ export function listMates(a: Authed): Promise<MateList> {
   return authedRequest<MateList>(a, "/api/v1/mates");
 }
 
-export function saveMate(a: Authed, mate: Mate): Promise<Mate> {
-  return authedRequest<Mate>(a, "/api/v1/mates", "POST", { mate });
+export type MateEnvironment = { machine_id: string; identity_id: string };
+
+export function saveMate(a: Authed, mate: Mate, environment?: MateEnvironment): Promise<Mate> {
+  return authedRequest<Mate>(a, "/api/v1/mates", "POST", environment ? { mate, environment } : { mate });
+}
+
+export type MateExport = { mate: Mate; memory: string };
+
+export function mateExport(a: Authed, name: string): Promise<MateExport> {
+  return authedRequest<MateExport>(a, matePath(name, "export"));
+}
+
+export function mateImport(a: Authed, exported: MateExport, environment: MateEnvironment): Promise<Mate> {
+  return authedRequest<Mate>(a, "/api/v1/mates/import", "POST", { export: exported, environment });
+}
+
+export type MachineEnvironments = { machine: { id: string; name: string }; identities: EnvInfo[] | null; found?: EnvLocal };
+
+export function environmentList(a: Authed): Promise<MachineEnvironments> {
+  return authedRequest<MachineEnvironments>(a, "/api/v1/environments");
 }
 
 export function pauseMate(a: Authed, name: string, pause: boolean): Promise<Mate> {

@@ -102,10 +102,15 @@ func (d *Daemon) identityImport(req rpc.Request, mates []domain.Mate) *rpc.Respo
 	if err != nil {
 		return errorResponse(req.ID, rpc.CodeBadRequest, domain.ErrCopyBundle.Error())
 	}
-	if isYours(b.Identity.Name) || d.envExists(b.Identity.Name) {
-		return errorResponse(req.ID, rpc.CodeInUse, "this machine has an identity "+b.Identity.Name+" already")
+	used := []string{domain.IdentityYours, string(domain.EnvLocal)}
+	list, err := d.envs.List()
+	if err != nil {
+		return errorResponse(req.ID, rpc.CodeFailed, err.Error())
 	}
-	env := domain.Environment{Name: b.Identity.Name, Label: b.Identity.Label, Kind: domain.EnvCustom, Parts: b.Identity.Parts, Extra: b.Identity.Extra}
+	for _, e := range list {
+		used = append(used, e.Name)
+	}
+	env := domain.Environment{Name: domain.MateImportName(b.Identity.Name, used), Label: b.Identity.Label, Kind: domain.EnvCustom, Parts: b.Identity.Parts, Extra: b.Identity.Extra}
 	if err := domain.ValidateEnvironment(env); err != nil {
 		return errorResponse(req.ID, rpc.CodeBadRequest, err.Error())
 	}
