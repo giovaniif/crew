@@ -1,5 +1,6 @@
 .screen.disk {
   max-width: none;
+  overflow-x: hidden;
   margin: 0;
   gap: 0;
   display: block;
@@ -120,7 +121,88 @@
 }
 
 .disk-pane {
-  overflow-x: auto;
+  overflow-x: hidden;
+  min-width: 0;
+}
+
+.disk .disk-table {
+  table-layout: fixed;
+}
+
+.disk .disk-table td.clip {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.disk .disk-wt th:nth-child(1) {
+  width: 18%;
+}
+
+.disk .disk-wt th:nth-child(2) {
+  width: 14%;
+}
+
+.disk .disk-wt th:nth-child(3) {
+  width: 56px;
+}
+
+.disk .disk-wt th:nth-child(4) {
+  width: 120px;
+}
+
+.disk .disk-wt th:nth-child(5),
+.disk .disk-wt th:nth-child(6),
+.disk .disk-ports th:nth-child(1) {
+  width: 72px;
+}
+
+.disk .disk-wt th:nth-child(8) {
+  width: 200px;
+}
+
+.disk .disk-ports th:nth-child(5),
+.disk .disk-recent th:nth-child(3) {
+  width: 90px;
+}
+
+.disk .disk-table .disk-actions {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+  .screen.disk {
+    padding: 16px;
+  }
+
+  .disk .disk-wt th:nth-child(2),
+  .disk .disk-wt td:nth-child(2),
+  .disk .disk-wt th:nth-child(3),
+  .disk .disk-wt td:nth-child(3),
+  .disk .disk-wt th:nth-child(6),
+  .disk .disk-wt td:nth-child(6),
+  .disk .disk-ports th:nth-child(4),
+  .disk .disk-ports td:nth-child(4),
+  .disk .disk-recent th:nth-child(2),
+  .disk .disk-recent td:nth-child(2) {
+    display: none;
+  }
+
+  .disk .disk-wt th:nth-child(1) {
+    width: 30%;
+  }
+
+  .disk .disk-wt th:nth-child(4) {
+    width: 96px;
+  }
+
+  .disk .disk-wt th:nth-child(5) {
+    width: 56px;
+  }
+
+  .disk .disk-wt th:nth-child(8) {
+    width: 96px;
+  }
 }
 
 .disk .table {
