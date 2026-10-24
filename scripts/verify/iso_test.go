@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -299,5 +300,65 @@ func TestIsoUpGivesTheFakeOmpAStepsFileSoItHoldsItsPane(t *testing.T) {
 	out, err := c.CombinedOutput()
 	if ctx.Err() == nil {
 		t.Errorf("the fake omp exited before the timeout: %v: %s", err, out)
+	}
+}
+
+func TestIsoUpSecondStartsASecondCrewAndAddsItToTheApp(t *testing.T) {
+	e, fs := testEnv(t)
+	isoReady(fs)
+	got, code := runJSON(t, e, "iso", "up", "--second")
+	if code != 0 {
+		t.Fatalf("exit %d: %s", code, problemText(got))
+	}
+	st, err := loadIso(e)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Second == nil {
+		t.Fatal("no second crew in the state")
+	}
+	if st.Second.Home == st.Home || !strings.HasPrefix(st.Second.Home, "/tmp/crew-iso-") {
+		t.Errorf("second home %q", st.Second.Home)
+	}
+	if st.Second.ServeURL == "" || st.Second.ServeURL == st.ServeURL || st.Second.Token == "" {
+		t.Errorf("second serve %q token set %v", st.Second.ServeURL, st.Second.Token != "")
+	}
+	if got["second_serve_url"] != st.Second.ServeURL {
+		t.Errorf("result second_serve_url = %v", got["second_serve_url"])
+	}
+	if got["second_token"] != nil {
+		t.Error("the second token is printed")
+	}
+	var names []string
+	for _, c := range fs.calls {
+		if strings.HasSuffix(c.cmd.name, "/crew") && len(c.cmd.args) > 1 && c.cmd.args[0] == "daemon" && c.cmd.args[1] == "start" {
+			names = append(names, envOf(c.cmd)["CREW_HOME"]+"="+envOf(c.cmd)["CREW_MACHINE_NAME"])
+		}
+	}
+	if len(names) != 2 || names[1] != st.Second.Home+"=devbox" {
+		t.Errorf("daemon starts %v", names)
+	}
+	b, err := os.ReadFile(filepath.Join(st.Home, "home", ".local", "share", "sh.giovani.crew", "machines.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var file struct {
+		Machines []struct {
+			ID   string            `json:"id"`
+			Kind string            `json:"kind"`
+			URL  string            `json:"url"`
+			Auth map[string]string `json:"auth"`
+		} `json:"machines"`
+	}
+	if err := json.Unmarshal(b, &file); err != nil {
+		t.Fatal(err)
+	}
+	if len(file.Machines) != 2 || file.Machines[0].Kind != "this" || file.Machines[1].Kind != "url" || file.Machines[1].URL != st.Second.ServeURL+"/" || file.Machines[1].Auth["token"] != st.Second.Token {
+		t.Errorf("machines.json %s", b)
+	}
+	second := st.Second.Home
+	runJSON(t, e, "iso", "down")
+	if _, err := os.Stat(second); !os.IsNotExist(err) {
+		t.Errorf("second home %s still exists", second)
 	}
 }
