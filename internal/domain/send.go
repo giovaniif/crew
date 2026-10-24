@@ -7,10 +7,11 @@ import (
 )
 
 type QueuedSend struct {
-	ID       string    `json:"id"`
-	Session  string    `json:"session"`
-	Text     string    `json:"text"`
-	QueuedAt time.Time `json:"queued_at"`
+	ID       string     `json:"id"`
+	Session  string     `json:"session"`
+	Text     string     `json:"text"`
+	QueuedAt time.Time  `json:"queued_at"`
+	Mate     *MateInput `json:"-"`
 }
 
 func SendableText(text string) bool { return strings.TrimSpace(text) != "" }

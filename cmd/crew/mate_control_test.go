@@ -18,6 +18,7 @@ func TestMateControlCallsTheDaemon(t *testing.T) {
 	}{
 		{[]string{"pause", "helper"}, rpc.MethodMatePause, rpc.MateNameParams{Name: "helper"}, "paused helper"},
 		{[]string{"resume", "helper"}, rpc.MethodMateResume, rpc.MateNameParams{Name: "helper"}, "resumed helper"},
+		{[]string{"reset", "helper"}, rpc.MethodMateReset, rpc.MateNameParams{Name: "helper"}, "helper starts a fresh conversation"},
 		{[]string{"stop"}, rpc.MethodMateStopAll, rpc.MateStopAllParams{Stop: true}, "stopped all mates"},
 		{[]string{"stop", "--off"}, rpc.MethodMateStopAll, rpc.MateStopAllParams{Stop: false}, "start turns again"},
 	} {
@@ -40,7 +41,7 @@ func TestMateControlArguments(t *testing.T) {
 		args []string
 		ok   bool
 	}{
-		{[]string{"pause", "a"}, true}, {[]string{"resume", "a"}, true}, {[]string{"stop"}, true}, {[]string{"stop", "--off"}, true},
+		{[]string{"pause", "a"}, true}, {[]string{"reset", "a"}, true}, {[]string{"reset"}, false}, {[]string{"resume", "a"}, true}, {[]string{"stop"}, true}, {[]string{"stop", "--off"}, true},
 		{[]string{"pause"}, false}, {[]string{"resume", "a", "b"}, false}, {[]string{"stop", "now"}, false},
 	} {
 		if got := mateArgsOK(c.args); got != c.ok {
