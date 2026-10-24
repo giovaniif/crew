@@ -30,6 +30,7 @@ func (d *Daemon) projectAdd(req rpc.Request) (*rpc.Response, bool) {
 	if err := json.Unmarshal(req.Params, &p); err != nil {
 		return errorResponse(req.ID, rpc.CodeBadRequest, "params must be {\"path\": string, \"name\": string, \"setup\": string}"), true
 	}
+	p.Path = expandHome(p.Path)
 	if !filepath.IsAbs(p.Path) {
 		return errorResponse(req.ID, rpc.CodeBadRequest, "path must be absolute: "+p.Path), true
 	}

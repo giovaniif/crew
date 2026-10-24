@@ -286,6 +286,29 @@ func TestWorkspaceDirsListsSubfoldersWithoutAddingTheFolder(t *testing.T) {
 	}
 }
 
+func TestWorkspacePathsExpandALeadingTildeToTheDaemonsHome(t *testing.T) {
+	t.Setenv("HOME", "/srv/me")
+	fs := fakeFS{
+		markers:  map[string]domain.GitMarker{"/srv/me/x": domain.GitDir, "/srv/me/p": domain.GitDir},
+		children: map[string][]domain.Child{"/srv/me": {{Name: "x", Path: "/srv/me/x", Git: domain.GitDir}}},
+	}
+	_, path := start(t, &memStore{}, daemon.WithWorkspaces(fs, fakeGit{}))
+	c := dial(t, path)
+	ctx := context.Background()
+	ws, err := c.WorkspaceAdd(ctx, "~/x")
+	if err != nil || ws.Root != "/srv/me/x" {
+		t.Fatalf("add ~/x = %+v, %v", ws, err)
+	}
+	dirs, err := c.WorkspaceDirs(ctx, "~")
+	if err != nil || len(dirs.Dirs) != 1 || dirs.Dirs[0].Path != "/srv/me/x" {
+		t.Errorf("dirs ~ = %+v, %v", dirs, err)
+	}
+	p, err := c.ProjectAdd(ctx, rpc.ProjectAddParams{Path: "~/p"})
+	if err != nil || p.Root != "/srv/me/p" {
+		t.Errorf("project ~/p = %+v, %v", p, err)
+	}
+}
+
 func TestWorkspaceDirsErrorNamesTheFolder(t *testing.T) {
 	c, _ := startWorkspaces(t, &memStore{})
 	_, err := c.WorkspaceDirs(context.Background(), "/gone/")
