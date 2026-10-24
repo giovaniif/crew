@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 
 export type MenuItem = { kind?: "item"; value: string; label: string; hint?: ReactNode; checked?: boolean; disabled?: boolean };
 export type MenuEntry = MenuItem | { kind: "label"; label: string } | { kind: "sep" };
@@ -12,6 +12,7 @@ export type MenuProps = {
   role?: "menu" | "listbox";
   id?: string;
   className?: string;
+  style?: CSSProperties;
 };
 
 export function CheckIcon() {
@@ -26,7 +27,7 @@ function isItem(e: MenuEntry): e is MenuItem {
   return e.kind === undefined || e.kind === "item";
 }
 
-export function Menu({ label, items, onPick, onClose, search, role = "menu", id, className }: MenuProps) {
+export function Menu({ label, items, onPick, onClose, search, role = "menu", id, className, style }: MenuProps) {
   const [query, setQuery] = useState("");
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -100,6 +101,7 @@ export function Menu({ label, items, onPick, onClose, search, role = "menu", id,
       ref={box}
       id={id}
       className={"ui menu" + (className ? " " + className : "")}
+      style={style}
       role={role}
       aria-label={label}
       tabIndex={-1}

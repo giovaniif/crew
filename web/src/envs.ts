@@ -1,4 +1,5 @@
 import type { EnvInfo, EnvSecret } from "./api";
+import type { ServerListing } from "./servers";
 
 export const customParts = ["git", "ssh", "github", "claude", "codex", "pi"];
 
@@ -47,8 +48,34 @@ export function envOrder(envs: EnvInfo[]): EnvInfo[] {
   return [...envs.filter(isLocal), ...envs.filter((e) => !isLocal(e))];
 }
 
-export function envTitle(e: EnvInfo): string {
-  return isLocal(e) ? "Local (this Mac)" : e.name;
+export function envTitle(e: EnvInfo, machine = "this Mac"): string {
+  return isLocal(e) ? "Local (" + machine + ")" : e.name;
+}
+
+export function machineName(listing: ServerListing | null, pageHost: string): string {
+  const row = listing?.servers.find((s) => s.id === listing.selected);
+  if (row) {
+    return row.kind === "local" ? "this Mac" : row.name;
+  }
+  const host = pageHost.replace(/:\d+$/, "");
+  if (host === "" || host === "localhost" || host === "127.0.0.1" || host === "[::1]" || host.endsWith(".localhost")) {
+    return "this Mac";
+  }
+  return /^\d+(\.\d+){3}$/.test(host) ? host : host.split(".")[0];
+}
+
+const partWords: Record<string, string> = {
+  ssh: "own SSH key",
+  github: "GitHub token",
+  claude: "Claude login",
+  codex: "Codex login",
+  pi: "Pi login",
+};
+
+export function envParts(e: EnvInfo): string {
+  return e.parts
+    .map((p) => (p === "git" ? (e.git_email ? "git as " + e.git_email : "own git name") : (partWords[p] ?? p)))
+    .join(", ");
 }
 
 export function envLetter(e: EnvInfo): string {

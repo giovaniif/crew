@@ -97,6 +97,9 @@ func (s *Server) stream(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) checkOrigin(r *http.Request) error {
+	if origin, err := originOf(r.Header.Get("Origin")); err == nil && s.allowed[origin] {
+		return nil
+	}
 	if s.origin == "" {
 		return &rpc.Error{Code: codeForbidden, Message: "crew serve has no public URL; set [serve] url in config.toml or pass --url"}
 	}
