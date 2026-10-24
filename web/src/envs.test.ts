@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { EnvInfo } from "./api";
-import { accountRows, envLetter, envOrder, envSub, envTitle, extraSecrets, matesText, usedLabel } from "./envs";
+import { accountRows, envLetter, envOrder, envSub, envTitle, envParts, extraSecrets, machineName, matesText, usedLabel } from "./envs";
 
 const local: EnvInfo = { name: "local", kind: "local", parts: [], secrets: [{ name: "LINEAR_API_KEY", set: true }], used_by: ["ada", "june"] };
 const work: EnvInfo = {
@@ -28,6 +28,7 @@ describe("environment order", () => {
 describe("environment rows", () => {
   it("names the local environment for this machine and others by name", () => {
     expect(envTitle(local)).toBe("Local (this Mac)");
+    expect(envTitle(local, "giovani")).toBe("Local (giovani)");
     expect(envTitle(work)).toBe("work");
     expect(envLetter(local)).toBe("L");
     expect(envLetter(work)).toBe("W");
@@ -60,5 +61,34 @@ describe("environment rows", () => {
   it("keeps only the variables that no part manages", () => {
     expect(extraSecrets(work).map((s) => s.name)).toEqual(["SENTRY_TOKEN"]);
     expect(extraSecrets(local).map((s) => s.name)).toEqual(["LINEAR_API_KEY"]);
+  });
+});
+
+describe("machineName", () => {
+  it.each([
+    ["", "this Mac"],
+    ["localhost", "this Mac"],
+    ["127.0.0.1", "this Mac"],
+    ["tauri.localhost", "this Mac"],
+    ["host.tail1.ts.net", "host"],
+    ["100.99.1.2", "100.99.1.2"],
+  ])("names the page host %s as %s", (host, name) => {
+    expect(machineName(null, host)).toBe(name);
+  });
+
+  it("names the selected server of the desktop app", () => {
+    const servers = [
+      { id: "l", name: "This Mac", kind: "local" as const, detail: "" },
+      { id: "s", name: "giovani", kind: "ssh" as const, detail: "giovani@host" },
+    ];
+    expect(machineName({ servers, selected: "s", first_run: false }, "tauri.localhost")).toBe("giovani");
+    expect(machineName({ servers, selected: "l", first_run: false }, "tauri.localhost")).toBe("this Mac");
+  });
+});
+
+describe("envParts", () => {
+  it("tells the parts of a custom environment", () => {
+    expect(envParts({ name: "b", kind: "custom", parts: ["git", "ssh", "github"], git_email: "bot@example.com", secrets: [], used_by: [] })).toBe("git as bot@example.com, own SSH key, GitHub token");
+    expect(envParts({ name: "b", kind: "custom", parts: ["claude"], secrets: [], used_by: [] })).toBe("Claude login");
   });
 });

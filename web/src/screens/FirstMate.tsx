@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { createEnv, envSSHKey, saveMate, type Authed } from "../api";
 import type { KeyValue } from "../auth";
-import { customParts } from "../envs";
+import { customParts, envParts } from "../envs";
+import { useEnvs } from "./Environments";
+import { useMachine } from "./Machine";
 import { Button, RadioGroup, Select } from "../ui";
-import { MateFace } from "./Mates";
+import { mateSlug, nameCheck } from "../matepage";
+import { FaceButton } from "./Mates";
 
 const skipKey = "crew.firstmate";
 
@@ -24,7 +27,6 @@ function skip(storage: KeyValue) {
 }
 
 type Harness = "claude" | "codex" | "omp";
-type Where = "local" | "custom";
 
 const harnesses: { value: Harness; label: string }[] = [
   { value: "claude", label: "Claude" },
@@ -40,7 +42,7 @@ const roles: { label: string; prompt: string }[] = [
 
 const fallbackPrompt = "Help the team with the tasks that it gives you.";
 
-const handle = /^[a-z0-9][a-z0-9-]*$/;
+const handle = /^[a-z0-9][a-z0-9_-]{0,31}$/;
 
 function message(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
@@ -51,24 +53,38 @@ export function FirstMate({ api, storage, wide }: { api: Authed; storage: KeyVal
   const [name, setName] = useState("");
   const [prompt, setPrompt] = useState("");
   const [agent, setAgent] = useState<Harness>("claude");
-  const [where, setWhere] = useState<Where>("local");
+  const [where, setWhere] = useState("local");
+  const machine = useMachine();
+  const { envs } = useEnvs(api);
+  const custom = envs.filter((e) => e.kind === "custom");
+  const places = [
+    { value: "local", label: "Your accounts on " + machine, detail: "Uses the git, SSH, gh and Claude logins that are already on " + machine + ". Good for your own repos." },
+    ...custom.map((e) => ({ value: "env:" + e.name, label: e.name, detail: envParts(e) })),
+    { value: "new", label: "New environment…", detail: "A separate identity: its own git name, SSH key and tokens. Good for a bot or work account." },
+  ];
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const mate = name.trim().toLowerCase();
+  const [look, setLook] = useState<{ avatar?: string; color?: string }>({});
+  const mate = mateSlug(name);
   const valid = handle.test(mate);
 
   async function create() {
     setBusy(true);
     setError("");
     try {
-      if (where === "custom") {
+      if (where.startsWith("env:")) {
+        await saveMate(api, { name: mate, prompt: prompt.trim() || fallbackPrompt, agent, env: where.slice(4), ...look, enabled: true });
+        window.location.hash = "#/mates/" + encodeURIComponent(mate);
+        return;
+      }
+      if (where === "new") {
         const env = await createEnv(api, { name: mate, kind: "custom", parts: customParts });
         await envSSHKey(api, env.name, "make");
-        await saveMate(api, { name: mate, prompt: prompt.trim() || fallbackPrompt, agent, env: env.name, enabled: true });
+        await saveMate(api, { name: mate, prompt: prompt.trim() || fallbackPrompt, agent, env: env.name, ...look, enabled: true });
         window.location.hash = "#/envs/" + encodeURIComponent(env.name);
         return;
       }
-      await saveMate(api, { name: mate, prompt: prompt.trim() || fallbackPrompt, agent, enabled: true });
+      await saveMate(api, { name: mate, prompt: prompt.trim() || fallbackPrompt, agent, ...look, enabled: true });
       window.location.hash = "#/mates/" + encodeURIComponent(mate);
     } catch (err) {
       setError(message(err));
@@ -110,10 +126,7 @@ export function FirstMate({ api, storage, wide }: { api: Authed; storage: KeyVal
         <Select
           label="Environment"
           value={where}
-          options={[
-            { value: "local" as Where, label: "Environment: Local (this Mac)" },
-            { value: "custom" as Where, label: "Environment: New Custom" },
-          ]}
+          options={places.map((o) => ({ value: o.value, label: "Environment: " + o.label }))}
           onChange={setWhere}
           className="fm-select"
         />
@@ -146,8 +159,14 @@ export function FirstMate({ api, storage, wide }: { api: Authed; storage: KeyVal
             }}
           >
             <div className="fm-name">
-              {valid ? <MateFace name={mate} state="idle" px={28} /> : <span className="fm-q" aria-hidden="true">?</span>}
+              {valid ? (
+                <FaceButton name={mate} avatar={look.avatar} color={look.color} onPick={(patch) => setLook({ ...look, ...patch })} />
+              ) : (
+                <span className="fm-q" aria-hidden="true">?</span>
+              )}
               <input aria-label="Name" placeholder="Name, for example ada" autoCapitalize="off" spellCheck={false} value={name} onChange={(e) => setName(e.target.value)} />
+              {valid && mate !== name && <span className="fm-slug muted">{"Saved as " + mate}</span>}
+              {!valid && name.trim() !== "" && <span className="fm-slug bad">{nameCheck(mate || name.trim(), []).text}</span>}
             </div>
             <textarea aria-label="Role" rows={2} placeholder="What should it do? For example: review PRs in api and web." value={prompt} onChange={(e) => setPrompt(e.target.value)} />
             <div className="fm-foot">
@@ -169,26 +188,19 @@ export function FirstMate({ api, storage, wide }: { api: Authed; storage: KeyVal
         </>
       ) : (
         <>
-          <h1>{"Where does " + mate + " work?"}</h1>
-          <p className="lead">{"Pick the environment: the git identity, keys and accounts " + mate + " uses. You can change it later."}</p>
+          <h1>{"Whose accounts does " + mate + " use?"}</h1>
+          <p className="lead">{mate + " runs on " + machine + ". Pick the git identity, SSH key and logins it uses there. You can change it later."}</p>
           <RadioGroup
             label="Environment"
             className="fm-pick"
             itemClassName="preset"
             value={where}
             onChange={setWhere}
-            options={[
-              {
-                value: "local" as Where,
-                label: <span className="t">Local (this Mac)</span>,
-                detail: <span className="s">Act as you. Uses your git, SSH, gh and Claude logins.</span>,
-              },
-              {
-                value: "custom" as Where,
-                label: <span className="t">New Custom environment</span>,
-                detail: <span className="s">Isolated. Own git name, a new SSH key, its own tokens. Best for a bot account.</span>,
-              },
-            ]}
+            options={places.map((o) => ({
+              value: o.value,
+              label: <span className="t">{o.label}</span>,
+              detail: <span className="s">{o.detail}</span>,
+            }))}
           />
           <div className="fm-buttons">
             <Button variant="quiet" onClick={() => setStep(1)}>

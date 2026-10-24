@@ -24,8 +24,10 @@
   text-decoration: none;
 }
 
-.side-nav.on {
+.side-nav.on,
+.side-nav.on:hover {
   background: var(--bg-active);
+  font-weight: 600;
 }
 
 .side-nav .ico {

@@ -33,6 +33,19 @@ describe("Button", () => {
 });
 
 describe("Select", () => {
+  it("opens its menu in a fixed layer that stays inside the window", async () => {
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 400 });
+    render(<Picker />);
+    const button = screen.getByRole("combobox", { name: "Fruit" });
+    button.getBoundingClientRect = () => ({ left: 300, right: 380, top: 100, bottom: 130, width: 80, height: 30, x: 300, y: 100, toJSON: () => ({}) });
+    await userEvent.setup().click(button);
+    const menu = screen.getByRole("listbox", { name: "Fruit" });
+    expect(menu.style.position).toBe("fixed");
+    expect(parseFloat(menu.style.left) + 220).toBeLessThanOrEqual(400);
+    expect(menu.style.top).toBe("134px");
+  });
+
+
   it("is a closed button that shows the chosen label", () => {
     render(<Picker />);
     const button = screen.getByRole("combobox", { name: "Fruit" });
@@ -213,6 +226,24 @@ describe("Suggest", () => {
     expect(within(list).getAllByRole("option").map((o) => o.textContent)).toEqual(["sonnet"]);
     await userEvent.keyboard("{ArrowDown}{Enter}");
     expect(input).toHaveValue("sonnet");
+  });
+
+  it("accepts the first suggestion with Tab and stays open after a folder", async () => {
+    function Host() {
+      const [v, setV] = useState("~/w");
+      const s = v === "~/www/" ? ["~/www/api/", "~/www/web/"] : ["~/www/"];
+      return <Suggest label="Path" value={v} onChange={setV} suggestions={s} />;
+    }
+    render(<Host />);
+    const input = screen.getByRole("combobox", { name: "Path" });
+    await userEvent.click(input);
+    await userEvent.keyboard("{Tab}");
+    expect(input).toHaveValue("~/www/");
+    expect(input).toHaveFocus();
+    const list = screen.getByRole("listbox", { name: "Path" });
+    expect(within(list).getAllByRole("option").map((o) => o.textContent)).toEqual(["~/www/api/", "~/www/web/"]);
+    await userEvent.keyboard("{ArrowDown}{ArrowDown}{Enter}");
+    expect(input).toHaveValue("~/www/web/");
   });
 });
 

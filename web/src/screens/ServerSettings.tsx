@@ -14,7 +14,7 @@ import {
   setConfig,
   setHooks,
   setUpNvim,
-  workspaceDirs,
+  fsComplete,
   type Authed,
   type ConfigValues,
   type Device,
@@ -23,7 +23,8 @@ import {
   type PairCode,
   type WorkspaceInfo,
 } from "../api";
-import { Button, Dialog, Menu, Select, Stepper } from "../ui";
+import { Button, Dialog, Menu, Select, Stepper, Suggest } from "../ui";
+import { usePathSuggestions } from "../pathSuggest";
 import { Group, Opt, ServerTag } from "./SettingsRows";
 import { BrowseButton, type PickFolder } from "./BrowseButton";
 
@@ -100,45 +101,6 @@ function Heading({
       {children}
     </h2>
   );
-}
-
-function dirname(path: string): string {
-  const at = path.lastIndexOf("/");
-  return at <= 0 ? "/" : path.slice(0, at);
-}
-
-function useFolders(api: Authed, text: string, home: string): string[] {
-  const [folders, setFolders] = useState<string[]>([]);
-  useEffect(() => {
-    if (!text.trim()) {
-      setFolders([]);
-      return;
-    }
-    const resolved = expandPath(text, home);
-    const parent = resolved.endsWith("/")
-      ? resolved.replace(/\/+$/, "") || "/"
-      : dirname(resolved);
-    const prefix = resolved.endsWith("/")
-      ? ""
-      : resolved.slice(resolved.lastIndexOf("/") + 1);
-    let live = true;
-    workspaceDirs(api, parent).then(
-      (out) => {
-        if (live) {
-          setFolders(
-            (out.dirs ?? [])
-              .filter((d) => d.Name.startsWith(prefix) && d.Path !== resolved)
-              .map((d) => d.Path),
-          );
-        }
-      },
-      () => live && setFolders([]),
-    );
-    return () => {
-      live = false;
-    };
-  }, [api, text, home]);
-  return folders;
 }
 
 function RowMenu({
@@ -221,15 +183,16 @@ export function WorkspacesGroup({
   const [removing, setRemoving] = useState("");
   const { run, view } = useFeedback();
   const home = loaded.state === "ready" ? loaded.value.home : "";
-  const folders = useFolders(api, text, home);
+  const complete = useCallback((p: string) => fsComplete(api, p), [api]);
+  const folders = usePathSuggestions(complete, text);
   const known = loaded.state === "ready" ? loaded.value.list.workspaces : [];
-  const shown = folders.filter((f) => !known.some((w) => w.Root === f));
+  const shown = folders.filter((f) => !known.some((w) => w.Root === expandPath(f, home).replace(/\/+$/, "")));
   const near =
     (loaded.state === "ready" ? loaded.value.list.last_used : "") ||
     known[known.length - 1]?.Root;
 
   const add = async () => {
-    const path = expandPath(text, home);
+    const path = expandPath(text, home).replace(/(.)\/+$/, "$1");
     if (
       await run(
         async () =>
@@ -269,22 +232,16 @@ export function WorkspacesGroup({
       {loaded.state === "failed" ? <Note text={loaded.note} /> : null}
       {adding ? (
         <div className="path-field">
-          <label htmlFor="workspace-path" className="visually-hidden">
-            Workspace path
-          </label>
-          <input
+          <Suggest
             id="workspace-path"
-            className="ui input"
-            role="combobox"
-            aria-expanded={shown.length > 0}
-            aria-controls="workspace-folders"
-            aria-autocomplete="list"
+            label="Workspace path"
             autoComplete="off"
             autoFocus
             placeholder="~/code/api"
             value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && text.trim() && add()}
+            onChange={setText}
+            suggestions={shown}
+            onKeyDown={(e) => !e.defaultPrevented && e.key === "Enter" && text.trim() && add()}
           />
           {pickFolder ? (
             <BrowseButton pick={pickFolder} near={near} onPick={setText} />
@@ -292,28 +249,6 @@ export function WorkspacesGroup({
           <Button variant="primary" disabled={!text.trim()} onClick={add}>
             Add workspace
           </Button>
-          {shown.length > 0 ? (
-            <ul
-              id="workspace-folders"
-              role="listbox"
-              aria-label="Folders"
-              className="ui menu folders"
-            >
-              {shown.map((f) => (
-                <li
-                  key={f}
-                  className="item"
-                  role="option"
-                  aria-selected={false}
-                  tabIndex={-1}
-                  onClick={() => setText(f)}
-                  onKeyDown={(e) => e.key === "Enter" && setText(f)}
-                >
-                  {f}
-                </li>
-              ))}
-            </ul>
-          ) : null}
         </div>
       ) : null}
       {loaded.state === "ready" && known.length === 0 ? (

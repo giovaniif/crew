@@ -12,7 +12,7 @@ Files in `$CREW_HOME` (default `~/.crew`):
 
 | File | Purpose |
 |---|---|
-| `crew.lock` | `flock` held for the daemon's life; the kernel drops it if the daemon dies. A second daemon exits 1 with `already running (pid N)`. |
+| `crew.lock` | `flock` held for the daemon's life; the kernel drops it if the daemon dies. A second daemon exits 1 with `already running (pid N)`. When a daemon of the same build answers on the socket, the second daemon exits 0 and writes `a daemon of this build already runs`. Thus a service unit does not restart it again and again. |
 | `crew.pid` | written after taking the lock, removed on clean exit |
 | `crew.sock` | the socket, mode 0600; a stale one is removed by the next lock holder |
 | `state.db` | the SQLite store; loaded once on start |
@@ -97,7 +97,7 @@ See [ADR 0015](../../docs/adr/0015-session-lifecycle.md).
   - `Session.Dir` is the dir that the agent started in.
   - `session.resume` (`{"id"}`) starts an ended session again in that dir with `claude --resume <id>`, `codex resume <id>` or `omp --resume <id>`, with the same model and effort. It keeps its ID, task and worktrees.
   - A live session, or a session without one of the two fields, is a bad request. See [ADR 0042](../../docs/adr/0042-resume-ended-sessions.md).
-- **Transcript.** The daemon keeps the `transcript_path` of each hook as `Session.Transcript`. The newest wins: resume and the Claude `/clear` start a new file. It is stored with the session, so it is kept after a restart. The remote app reads it (see [ADR 0046](../../docs/adr/0046-remote-app.md)). Nothing reads it on the loop.
+- **Transcript.** A new Claude session starts with `--session-id <uuid>`. The daemon then sets `Session.Transcript` to the file that Claude writes, `<CLAUDE_CONFIG_DIR>/projects/<dir, each character that is not a letter or a digit changed to `-`>/<uuid>.jsonl`, and `Session.ResumeID` to the uuid. Thus the chat works when the crew hooks are not in `settings.json`. A session in an environment gets no path at start, because its config dir is different. The daemon also keeps the `transcript_path` of each hook as `Session.Transcript`. The newest wins: resume and the Claude `/clear` start a new file. It is stored with the session, so it is kept after a restart. The remote app reads it (see [ADR 0046](../../docs/adr/0046-remote-app.md)). Nothing reads it on the loop.
 - **Title strips.** Each pane has a top border. The border of an agent pane shows `domain.AgentTitle`: state, harness, model, effort, cwd, then a tab for each worktree with its PR.
   - A 250 ms worker sets it through `TerminalHost.SetTitle`.
   - The worker copies state on the loop only when it changed. It formats and runs tmux off the loop, only for changed titles. See [ADR 0038](../../docs/adr/0038-pane-title-strips.md).

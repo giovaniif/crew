@@ -25,6 +25,8 @@ func TestDaemonUnitHealth(t *testing.T) {
 		}, true, []string{"restarts it again and again", "69000 restarts", "exit status 203"}},
 		{"auto-restart before the first count", func(u *DaemonUnit) { u.Active, u.Sub = "activating", "auto-restart" }, true, []string{"restarts it again and again"}},
 		{"restarts with a failed status", func(u *DaemonUnit) { u.Restarts, u.MainStatus = 2, 1 }, true, []string{"restarts it again and again", "2 restarts", "exit status 1"}},
+		{"a unit that restarts after a clean exit", func(u *DaemonUnit) { u.RestartsCleanExit = true }, true, []string{"clean exit", "crew setup daemon"}},
+		{"systemd gave up after quick restarts", func(u *DaemonUnit) { u.Active, u.Result, u.MainStatus = "failed", "start-limit-hit", 1 }, true, []string{"too many", "start-limit-hit"}},
 		{"one failed exit without restarts", func(u *DaemonUnit) { u.Active, u.MainStatus = "failed", 1 }, true, []string{"stopped with exit status 1"}},
 	}
 	for _, c := range cases {

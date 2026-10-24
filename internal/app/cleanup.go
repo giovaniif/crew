@@ -17,6 +17,8 @@ type WorktreeGitFacts struct {
 	Uncommitted int
 	ModifiedAt  time.Time
 	Fingerprint string
+	PathMissing bool
+	RepoMissing bool
 }
 
 type CleanupGit interface {
@@ -126,6 +128,8 @@ func (c *Cleanup) decide(w domain.Worktree, g WorktreeGitFacts, gitErr error, ho
 		SessionLive:  act.Live,
 		LastActivity: latest(g.ModifiedAt, act.LastActivity),
 		Project:      act.Project,
+		PathMissing:  g.PathMissing,
+		RepoMissing:  g.RepoMissing,
 	}
 	switch {
 	case procErr != nil:
@@ -230,6 +234,22 @@ func (c *Cleanup) Execute(ctx context.Context, wts []domain.Worktree, activity f
 			}
 		}
 	}
+	for i, r := range results {
+		if r.Decision.Action != domain.CleanupPrune {
+			continue
+		}
+		repo := r.Decision.Worktree.Repo
+		if pruned[repo] {
+			results[i].Outcome = "pruned"
+			continue
+		}
+		if err := c.git.Prune(ctx, repo); err != nil {
+			results[i].Outcome = "failed: " + err.Error()
+			continue
+		}
+		pruned[repo] = true
+		results[i].Outcome = "pruned"
+	}
 	for _, repo := range repos {
 		_ = c.git.Prune(ctx, repo)
 	}
@@ -244,7 +264,7 @@ func (c *Cleanup) Execute(ctx context.Context, wts []domain.Worktree, activity f
 func (c *Cleanup) RemoveWorktree(ctx context.Context, w domain.Worktree, activity func(domain.Worktree) SessionActivity, withBackup bool) CleanupResult {
 	p := c.plan(ctx, []domain.Worktree{w}, activity)[0]
 	switch p.decision.Action {
-	case domain.CleanupRemove:
+	case domain.CleanupRemove, domain.CleanupPrune:
 		return c.Execute(ctx, []domain.Worktree{w}, activity)[0]
 	case domain.CleanupBackupThenAsk:
 		if withBackup {

@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import { Menu } from "./Menu.tsx";
 
 export type SelectOption<T extends string> = { value: T; label: string; hint?: ReactNode };
@@ -14,8 +14,30 @@ export type SelectProps<T extends string> = {
   className?: string;
 };
 
+const menuWidth = 220;
+const menuHeight = 320;
+const gap = 4;
+const edge = 8;
+
+export function menuPlace(rect: { left: number; top: number; bottom: number; width: number }, view: { width: number; height: number }): CSSProperties {
+  const width = Math.min(Math.max(menuWidth, rect.width), view.width - 2 * edge);
+  const left = Math.max(edge, Math.min(rect.left, view.width - width - edge));
+  const below = view.height - rect.bottom - gap - edge;
+  const up = below < Math.min(menuHeight, 160) && rect.top > below;
+  const room = Math.max(120, Math.min(menuHeight, up ? rect.top - gap - edge : below));
+  return up
+    ? { position: "fixed", left: left + "px", top: "auto", bottom: view.height - rect.top + gap + "px", width: width + "px", maxHeight: room + "px" }
+    : { position: "fixed", left: left + "px", top: rect.bottom + gap + "px", width: width + "px", maxHeight: room + "px" };
+}
+
 export function Select<T extends string>({ label, value, options, onChange, disabled, search, placeholder, className }: SelectProps<T>) {
-  const [open, setOpen] = useState(false);
+  const [place, setPlace] = useState<CSSProperties | null>(null);
+  const open = place !== null;
+  const setOpen = (next: boolean | ((o: boolean) => boolean)) => {
+    const want = typeof next === "function" ? next(open) : next;
+    const rect = button.current?.getBoundingClientRect();
+    setPlace(want && rect ? menuPlace(rect, { width: window.innerWidth, height: window.innerHeight || 800 }) : null);
+  };
   const anchor = useRef<HTMLSpanElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const id = useId();
@@ -73,6 +95,7 @@ export function Select<T extends string>({ label, value, options, onChange, disa
           id={id}
           role="listbox"
           label={label}
+          style={place ?? undefined}
           search={search}
           items={options.map((o) => ({ value: o.value, label: o.label, hint: o.hint, checked: o.value === value }))}
           onPick={(v) => {
