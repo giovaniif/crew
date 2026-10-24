@@ -502,6 +502,12 @@ type Status struct {
 	StartedAt time.Time `json:"started_at"`
 	Sessions  int       `json:"sessions"`
 	Worktrees int       `json:"worktrees"`
+	Machine   *Machine  `json:"machine,omitempty"`
+}
+
+type Machine struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 type State struct {

@@ -101,7 +101,15 @@ func loadServeOrigins(path string) ([]string, error) {
 }
 
 func serveIn(ctx context.Context, home string, f serveFlags, stdout, stderr io.Writer) error {
+	var machine rpc.Machine
+	if c, err := connect(ctx, home); err == nil {
+		if st, err := c.Status(ctx); err == nil && st.Machine != nil {
+			machine = *st.Machine
+		}
+		_ = c.Close()
+	}
 	srv, err := serve.New(serve.Config{
+		Machine:        machine,
 		Build:          version.String(),
 		URL:            f.url,
 		AllowedOrigins: f.origins,

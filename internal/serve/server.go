@@ -40,6 +40,7 @@ type Config struct {
 	Log            io.Writer
 	Now            func() time.Time
 	Control        func(ctx context.Context, argv []string) (io.ReadWriteCloser, error)
+	Machine        rpc.Machine
 }
 
 type Server struct {
@@ -52,8 +53,9 @@ type Server struct {
 }
 
 type Hello struct {
-	API   string `json:"api"`
-	Build string `json:"build"`
+	API     string       `json:"api"`
+	Build   string       `json:"build"`
+	Machine *rpc.Machine `json:"machine,omitempty"`
 }
 
 type ErrorBody struct {
@@ -177,7 +179,12 @@ func (s *Server) Handler(fallback http.Handler) http.Handler {
 }
 
 func (s *Server) hello(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, Hello{API: APIVersion, Build: s.cfg.Build})
+	h := Hello{API: APIVersion, Build: s.cfg.Build}
+	if s.cfg.Machine.ID != "" {
+		m := s.cfg.Machine
+		h.Machine = &m
+	}
+	writeJSON(w, http.StatusOK, h)
 }
 
 func (s *Server) pair(w http.ResponseWriter, r *http.Request) {

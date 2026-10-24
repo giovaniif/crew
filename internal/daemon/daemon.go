@@ -191,6 +191,8 @@ type Daemon struct {
 	auto        automationCfg
 	browser     browserHub
 	headless    headlessPool
+	machine     rpc.Machine
+	machineName string
 }
 
 func New(store app.Store, pid int, opts ...Option) (*Daemon, error) {
@@ -295,6 +297,9 @@ func New(store app.Store, pid int, opts ...Option) (*Daemon, error) {
 		o(d)
 	}
 	d.loadBrowserConfig()
+	if err := d.loadMachine(); err != nil {
+		return nil, err
+	}
 	return d, nil
 }
 
@@ -561,6 +566,10 @@ func (d *Daemon) dispatch(c *conn, line []byte) (*rpc.Response, bool) {
 		ok := d.query(func(s *state) {
 			st = rpc.Status{PID: d.pid, StartedAt: d.started, Sessions: len(s.sessions), Worktrees: len(s.worktrees)}
 		})
+		if d.machine.ID != "" {
+			m := d.machine
+			st.Machine = &m
+		}
 		return result(req.ID, st), ok
 	case rpc.MethodSubscribe:
 		ok := d.query(func(s *state) {

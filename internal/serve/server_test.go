@@ -173,7 +173,7 @@ func errorCode(t *testing.T, body []byte) string {
 
 func TestServeHelloAnswersWithoutATokenAndWithoutTheDaemon(t *testing.T) {
 	f := newFakeDaemon()
-	_, ts := startServer(t, f, serve.Config{URL: publicURL})
+	_, ts := startServer(t, f, serve.Config{URL: publicURL, Machine: rpc.Machine{ID: "m-test-1", Name: "devbox"}})
 	before := len(f.methods())
 	status, body := do(t, ts, "GET", "/api/v1/hello", "", "")
 	if status != http.StatusOK {

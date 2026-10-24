@@ -44,7 +44,7 @@ Unknown paths under `/api/` answer `not_found`.
 
 | Endpoint | Auth | Daemon method | Body → response |
 |---|---|---|---|
-| `GET /api/v1/hello` | no | none | → `{"api":"v1","build"}` (serve's build, which is the daemon's) |
+| `GET /api/v1/hello` | no | none | → `{"api":"v1","build","machine":{"id","name"}}` (serve's build, which is the daemon's; `machine` comes from the `status` of the daemon when serve starts, ADR 0063) |
 | `POST /api/v1/pair` | no | `pair.redeem` | `{"code","name"}` → `{"device":{"id","name","created_at","last_seen"},"token"}` |
 | `GET /api/v1/workspaces` | yes | `workspace.list` | → `{"workspaces":[Workspace],"last_used"}` |
 | `POST /api/v1/workspaces` | yes | `workspace.add` | `{"path"}` (absolute, or it starts with `~`, which the daemon changes to its HOME; not blank, no other keys) → the `Workspace` |
