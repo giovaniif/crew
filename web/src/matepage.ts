@@ -119,3 +119,15 @@ export function automationRoute(hash: string): { creating: boolean; mate: string
   }
   return { creating: true, mate: new URLSearchParams(query).get("mate") ?? "" };
 }
+
+export function roleLine(prompt: string): string {
+  const line = prompt.trim().split("\n")[0].trim();
+  const end = /^(.+?[.!?])(\s|$)/.exec(line);
+  return end ? end[1] : line;
+}
+
+export function latestThread(items: ThreadItem[]): ThreadItem | undefined {
+  const live = items.filter((t) => !t.ended);
+  const pool = live.length > 0 ? live : items;
+  return pool.reduce<ThreadItem | undefined>((best, t) => (best === undefined || (t.at ?? "") > (best.at ?? "") ? t : best), undefined);
+}

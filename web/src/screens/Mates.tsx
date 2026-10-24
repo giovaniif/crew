@@ -1,4 +1,4 @@
-import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { type FormEvent, type KeyboardEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { useEnvs } from "./Environments";
 import { EnvChip, EnvRail } from "./EnvPicker";
 import { ThreadChat } from "./Session";
@@ -16,6 +16,7 @@ import {
   mateMemory,
   mateSetup,
   newMateConversation,
+  sendMessage,
   pauseMate,
   saveMate,
   sessionOptions,
@@ -23,10 +24,10 @@ import {
   setMateTokens,
   stopAllMates,
 } from "../api";
-import { ACCENTS, FACES, type FaceState, faceColor, faceOf, faceState, faceSvg, mateCard, mateTagline, type ToneAxis, toneOf } from "../faces";
+import { ACCENTS, FACES, type FaceState, faceColor, faceOf, faceState, faceSvg, mateCard, type ToneAxis, toneOf } from "../faces";
 import { envTitle } from "../envs";
 import { mateEnvName } from "../mateshome";
-import { type MateAutomation, type ThreadItem, answersIn, harnessLabel, mateAutomations, mateLine, mateRoute, mateThreads, nameCheck, replyHint, threadSearch, toneSteps } from "../matepage";
+import { type MateAutomation, type ThreadItem, answersIn, harnessLabel, latestThread, mateAutomations, mateLine, mateRoute, mateThreads, nameCheck, replyHint, roleLine, threadSearch, toneSteps } from "../matepage";
 import type { Mates as MateBoard, StreamClient, StreamSnapshot } from "../stream";
 import { Button, Dialog, Menu, Segmented, Select, Slider } from "../ui";
 
@@ -421,6 +422,67 @@ function useMateAutomations(api: Authed, name: string): MateAutomation[] {
   return list;
 }
 
+export function PlusIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <path d="M7 2.5v9M2.5 7h9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function FirstThread({ api, name, agent }: { api: Authed; name: string; agent: string }) {
+  const [draft, setDraft] = useState("");
+  const [posting, setPosting] = useState(false);
+  const [error, setError] = useState("");
+  const blank = draft.trim() === "";
+
+  async function submit(ev: FormEvent | KeyboardEvent<HTMLTextAreaElement>) {
+    ev.preventDefault();
+    if (blank || posting) {
+      return;
+    }
+    setPosting(true);
+    setError("");
+    try {
+      const s = await newMateConversation(api, name);
+      await sendMessage(api, s.ID, draft);
+      window.location.hash = "#/mates/" + encodeURIComponent(name) + "/" + encodeURIComponent(s.ID);
+    } catch (err) {
+      setError(message(err));
+      setPosting(false);
+    }
+  }
+
+  function onKey(ev: KeyboardEvent<HTMLTextAreaElement>) {
+    if (ev.key === "Enter" && !ev.shiftKey && !ev.nativeEvent.isComposing) {
+      void submit(ev);
+    }
+  }
+
+  return (
+    <div className="chat-screen mp-chat mp-first">
+      <div className="mp-first-log" />
+      <footer className="composer">
+        {error ? (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <form className="composer-box" onSubmit={(ev) => void submit(ev)}>
+          <textarea aria-label="Message" rows={1} autoFocus value={draft} placeholder={replyHint({ session: "", title: "", tag: "", source: "app", state: "idle", ended: false }, name)} onChange={(ev) => setDraft(ev.target.value)} onKeyDown={onKey} />
+          <div className="composer-foot" role="group" aria-label="Composer options">
+            {agent ? <span className="composer-chip">{agent}</span> : null}
+            <span className="spacer" />
+            <button type="submit" className="send" aria-label="Send" disabled={blank || posting}>
+              ↑
+            </button>
+          </div>
+        </form>
+      </footer>
+    </div>
+  );
+}
+
 function MateLook({ name, mate, save }: { name: string; mate: Mate; save: (patch: Partial<Mate>) => void }) {
   const chosen = faceOf(name, mate.avatar);
   const color = faceColor(chosen, mate.color, false);
@@ -430,13 +492,13 @@ function MateLook({ name, mate, save }: { name: string; mate: Mate; save: (patch
       <div className="mt-faces mp-faces">
         {FACES.map((f) => (
           <button key={f.id} type="button" aria-label={f.name} aria-pressed={f.id === chosen.id} className={f.id === chosen.id ? "on" : ""} onClick={() => save({ avatar: f.id })}>
-            <MateFace name={f.id} state="idle" color={f.id === chosen.id ? mate.color : undefined} px={24} />
+            <MateFace name={f.id} state="idle" color={f.id === chosen.id ? mate.color : undefined} px={28} />
           </button>
         ))}
       </div>
-      <div className="swatches">
+      <div className="swatches mp-swatches">
         {ACCENTS.map((c) => (
-          <button key={c} type="button" className={"swatch" + (c === color ? " on" : "")} aria-label={"Color " + c} style={{ background: c }} onClick={() => save({ color: c })} />
+          <button key={c} type="button" className={"swatch" + (c === color ? " on" : "")} aria-label={"Color " + c} style={{ backgroundColor: c }} onClick={() => save({ color: c })} />
         ))}
       </div>
     </div>
@@ -700,7 +762,7 @@ export function MatePage({
   const card = mateCard(row, def, asking);
   const state = faceState(row, asking);
   const items = mateThreads(row);
-  const current = items.find((t) => t.session === thread) ?? items[0];
+  const current = items.find((t) => t.session === thread) ?? latestThread(items);
   const shown = threadSearch(items, search);
   const paused = row.state === "paused";
   const connected = row.state === "connected";
@@ -745,7 +807,7 @@ export function MatePage({
   const conversation = current ? (
     <ThreadChat key={current.session} id={current.session} snapshot={snapshot} client={client} api={api} placeholder={replyHint(current, name)} />
   ) : (
-    <p className="mt-note mp-empty">No threads yet. New starts a thread in the app.</p>
+    <FirstThread api={api} name={name} agent={harnessLabel(def?.agent ?? "", def?.model)} />
   );
 
   if (!wide) {
@@ -810,7 +872,9 @@ export function MatePage({
       <header className="mp-head">
         {face(24)}
         <h1>{name}</h1>
-        <span className="muted mp-role-line">{mateTagline(def?.prompt ?? "").split("\n")[0]}</span>
+        <span className="muted mp-role-line" title={def?.prompt}>
+          {roleLine(def?.prompt ?? "")}
+        </span>
         <span className={"pill mp-state " + state}>{state}</span>
         <span className="spacer" />
         <Button disabled={busy} onClick={() => void pause()}>
@@ -830,8 +894,8 @@ export function MatePage({
         <nav className="mp-threads" aria-label={"Threads of " + name}>
           <div className="mp-search">
             <input type="search" className="ui input" aria-label="Search threads" placeholder="Search threads" value={search} onChange={(e) => setSearch(e.target.value)} />
-            <Button aria-label="New thread" disabled={busy} onClick={() => void start()}>
-              New
+            <Button variant="icon" className="mp-new" aria-label="New thread" title="New thread" disabled={busy} onClick={() => void start()}>
+              <PlusIcon />
             </Button>
           </div>
           {newNote && <p role="alert">{newNote}</p>}
