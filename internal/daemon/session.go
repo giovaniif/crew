@@ -89,6 +89,7 @@ type sessionExtras struct {
 	seat   *domain.MateSeat
 	dir    string
 	env    string
+	input  *domain.MateInput
 }
 
 func (d *Daemon) startSessionWith(p rpc.NewSessionParams, prompt string, extra sessionExtras) (domain.Session, *rpc.Error, bool) {
@@ -167,7 +168,7 @@ func (d *Daemon) startSessionWith(p rpc.NewSessionParams, prompt string, extra s
 		}
 		s.emit(SessionChanged{Session: started.Session})
 		if domain.SendableText(p.Prompt) {
-			s.queueFirstPrompt(started.Session, p.Prompt)
+			s.queueFirstPrompt(started.Session, p.Prompt, extra.input)
 			queued = true
 		}
 		s.replayEarlyHooks(started.Session.Pane, d.ws.now())

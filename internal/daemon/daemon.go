@@ -151,6 +151,8 @@ type state struct {
 	orphanPanes     []app.PaneID
 	transcriptMoved func(sessionID, path string, gone bool)
 	mateThreads     map[string]domain.MateThread
+	mateReply       map[string]domain.MateThread
+	mateAsked       map[string]domain.MateSeat
 	mateUsage       map[string]domain.MateUsage
 	mateBoard       domain.MateBoard
 	matePost        func(link domain.MateThread, ev domain.SessionEvent)
@@ -218,6 +220,8 @@ func New(store app.Store, pid int, opts ...Option) (*Daemon, error) {
 		booting:         map[string]bool{},
 		earlyHooks:      map[string][]earlyHook{},
 		mateThreads:     map[string]domain.MateThread{},
+		mateReply:       map[string]domain.MateThread{},
+		mateAsked:       map[string]domain.MateSeat{},
 		mateUsage:       map[string]domain.MateUsage{},
 		devices:         map[string]domain.Device{},
 		projects:        map[string]domain.Project{},
@@ -631,6 +635,8 @@ func (d *Daemon) dispatch(c *conn, line []byte) (*rpc.Response, bool) {
 		return d.envMethod(req), true
 	case rpc.MethodMateNew:
 		return d.mateNew(req)
+	case rpc.MethodMateReset:
+		return d.mateReset(req)
 	case rpc.MethodMateFresh:
 		return d.mateFresh(req)
 	case rpc.MethodAutomationList, rpc.MethodAutomationShow:

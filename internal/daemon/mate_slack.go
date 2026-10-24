@@ -271,6 +271,9 @@ func (d *Daemon) slackEvent(ctx context.Context, name string, client app.SlackMa
 	c, ok := d.slack.claims[name]
 	if !ok || !c.Accepts(e.User, e.Text, d.ws.now()) {
 		d.slack.mu.Unlock()
+		if d.firstSight(name, e) {
+			go d.mateThreadEvent(ctx, name, client, e)
+		}
 		return
 	}
 	delete(d.slack.claims, name)

@@ -131,6 +131,7 @@ func (s *Server) routes() []route {
 		{"POST /api/v1/mates", setMate},
 		{"POST /api/v1/mates/stop", stopMates},
 		{"POST /api/v1/mates/{name}/pause", mateByName(rpc.MethodMatePause)},
+		{"POST /api/v1/mates/{name}/reset", mateByName(rpc.MethodMateReset)},
 		{"POST /api/v1/mates/{name}/resume", mateByName(rpc.MethodMateResume)},
 		{"GET /api/v1/mates/{name}/setup", mateSetup},
 		{"POST /api/v1/mates/{name}/tokens", setMateTokens},
