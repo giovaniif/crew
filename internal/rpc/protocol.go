@@ -279,6 +279,8 @@ type WorkItemResolved struct {
 	Title     string `json:"title,omitempty"`
 	Worktree  string `json:"worktree"`
 	Workspace string `json:"workspace"`
+	Dir       string `json:"dir"`
+	Git       bool   `json:"git"`
 }
 
 type HarnessOptions struct {

@@ -111,6 +111,20 @@ func PlanSessionStart(ws Workspace, slug, worktreeHome string, taken []string) S
 	return SessionPlan{Dir: wt.Path, Worktree: wt}
 }
 
+type StartPreview struct {
+	Worktree string
+	Dir      string
+	Git      bool
+}
+
+func PreviewSessionStart(ws Workspace, plan SessionPlan) StartPreview {
+	p := StartPreview{Dir: plan.Dir, Git: len(ws.Repos) > 0}
+	if plan.Worktree != nil {
+		p.Worktree = plan.Worktree.Branch
+	}
+	return p
+}
+
 func (s Session) End() Session {
 	s.State = StateIdle
 	s.Ended = true

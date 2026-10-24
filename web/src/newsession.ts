@@ -105,3 +105,22 @@ export function taskFields(text: string): { work_item: string; prompt: string } 
   const first = trimmed.split("\n")[0]?.trim() ?? "";
   return { work_item: first, prompt: trimmed.includes("\n") ? trimmed : "" };
 }
+
+function shortPath(dir: string, home: string): string {
+  const base = home.replace(/\/$/, "");
+  if (base && dir === base) {
+    return "~/";
+  }
+  if (base && dir.startsWith(base + "/")) {
+    return "~" + dir.slice(base.length);
+  }
+  return dir;
+}
+
+export function placeLine(at: { worktree: string; dir?: string; git?: boolean }, home: string): string {
+  if (at.worktree) {
+    return "→ new worktree " + at.worktree;
+  }
+  const where = "→ runs in " + shortPath(at.dir ?? "", home);
+  return at.git ? where + " (no worktree)" : where + " (not a git repo, no worktree)";
+}

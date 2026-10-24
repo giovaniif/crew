@@ -39,13 +39,10 @@ func (d *Daemon) resolveWorkItem(req rpc.Request) (*rpc.Response, bool) {
 	if rerr != nil {
 		return errorResponse(req.ID, rerr.Code, rerr.Message), true
 	}
-	slug := domain.TaskSlug(in.task)
-	name := slug
-	if plan := domain.PlanSessionStart(in.ws, slug, d.sess.worktreeHome, in.taken); plan.Worktree != nil {
-		name = plan.Worktree.Branch
-	}
+	plan := domain.PlanSessionStart(in.ws, domain.TaskSlug(in.task), d.sess.worktreeHome, in.taken)
+	at := domain.PreviewSessionStart(in.ws, plan)
 	return result(req.ID, rpc.WorkItemResolved{
-		Source: string(in.task.Source), Ref: in.task.Ref, Title: title, Worktree: name, Workspace: in.ws.Root,
+		Source: string(in.task.Source), Ref: in.task.Ref, Title: title, Worktree: at.Worktree, Workspace: in.ws.Root, Dir: at.Dir, Git: at.Git,
 	}), true
 }
 
