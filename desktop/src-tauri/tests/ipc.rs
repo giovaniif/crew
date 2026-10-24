@@ -85,8 +85,32 @@ fn a_page_of_a_remote_server_gets_no_server_command() {
             assert!(!cap["permissions"].as_array().unwrap().contains(&json!(command)), "{command}");
         }
     }
-    assert_eq!(tunnel["permissions"], json!(["allow-fix-daemon"]));
+    assert_eq!(tunnel["permissions"], json!(["allow-fix-daemon", "allow-crew-check-update"]));
     assert_eq!(tunnel_capability(&Url::parse("https://crew.example.ts.net/").unwrap()), None);
+}
+
+fn manifest_commands() -> Vec<String> {
+    let build = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/build.rs")).unwrap();
+    let list = build.split(".commands(&[").nth(1).unwrap().split("])").next().unwrap();
+    list.split('"')
+        .skip(1)
+        .step_by(2)
+        .map(|name| format!("allow-{}", name.replace('_', "-")))
+        .collect()
+}
+
+#[test]
+fn the_local_serve_page_gets_every_command_of_the_manifest() {
+    let local = Url::parse("http://127.0.0.1:53412/").unwrap();
+    let mut granted = Vec::new();
+    for cap in [parsed(serve_capability(&local)).unwrap(), parsed(server_capability(&local)).unwrap()] {
+        granted.extend(cap["permissions"].as_array().unwrap().clone());
+    }
+    let commands = manifest_commands();
+    assert!(commands.len() > 10);
+    for command in commands {
+        assert!(granted.contains(&json!(command)), "{command}");
+    }
 }
 
 fn window_matches(pattern: &str, label: &str) -> bool {
