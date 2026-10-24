@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Automation } from "./api";
-import { answersIn, automationRoute, harnessLabel, mateAutomations, mateLine, mateRoute, mateThreads, nameCheck, replyHint, threadSearch, toneSteps } from "./matepage";
+import { answersIn, automationRoute, harnessLabel, mateAutomations, mateLine, mateRoute, mateSlug, mateThreads, nameCheck, replyHint, threadSearch, toneSteps } from "./matepage";
 import type { MateRow } from "./stream";
 
 const row: MateRow = {
@@ -137,5 +137,19 @@ describe("toneSteps", () => {
     expect(toneSteps(tones, { terse: 1, formal: 5 })).toEqual([0, 4]);
     expect(toneSteps(tones, undefined)).toEqual([2, 2]);
     expect(toneSteps(tones, { terse: 9 })).toEqual([2, 2]);
+  });
+});
+
+describe("mateSlug", () => {
+  it.each([
+    ["UX Patrol", "ux-patrol"],
+    ["  Ada  ", "ada"],
+    ["Zoë Café 2", "zoe-cafe-2"],
+    ["R2_D2", "r2_d2"],
+    ["--Bot!!", "bot"],
+    ["Ünïcode -- Team.", "unicode-team"],
+    ["!!!", ""],
+  ])("saves %s as %s", (text, slug) => {
+    expect(mateSlug(text)).toBe(slug);
   });
 });

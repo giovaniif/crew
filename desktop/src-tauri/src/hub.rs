@@ -133,9 +133,52 @@ pub fn ssh_tunnel(host: &str) -> Result<LocalServe, String> {
     Ok(tunnel)
 }
 
-pub fn ssh_pair(host: &str, port: u16) -> Result<serde_json::Value, String> {
-    let out = ssh(host, &servers::pair_argv(host))?;
-    local::pair_with(port, &local::pair_code(out.as_bytes())?)
+pub fn ssh_pair(host: &str, port: u16, app: &str) -> Result<serde_json::Value, String> {
+    local::pair_with(port, &ssh_pair_code(host, app)?)
+}
+
+pub fn ssh_pair_code(host: &str, app: &str) -> Result<String, String> {
+    let (status, out, err) = run(&servers::pair_argv(host))?;
+    if status != Some(0) {
+        if err.contains("flag provided but not defined") {
+            let server = ssh(host, &servers::version_argv(host))
+                .ok()
+                .and_then(|o| servers::server_version(&o))
+                .unwrap_or_else(|| "an unknown version".into());
+            return Err(servers::too_old(host, &server, app));
+        }
+        return Err(servers::ssh_failure(host, status, &err));
+    }
+    local::pair_code(out.as_bytes())
+}
+
+pub fn ssh_crew(host: &str, app: &str) -> Result<servers::Plan, String> {
+    let out = ssh(host, &servers::version_argv(host))?;
+    match servers::plan(&out, app) {
+        servers::Plan::Newer(server) => Err(servers::newer_failure(host, &server, app)),
+        plan => Ok(plan),
+    }
+}
+
+pub fn ssh_install(host: &str, app: &str) -> Result<(), String> {
+    let (status, _, err) = run(&servers::install_argv(host, app))?;
+    if status != Some(0) {
+        let code = status.map(|c| c.to_string()).unwrap_or_else(|| "signal".into());
+        return Err(format!(
+            "Could not install crew {} on {host} (exit {code}): {}",
+            servers::tag(app),
+            err.trim()
+        ));
+    }
+    if ssh_crew(host, app)? == servers::Plan::Current {
+        return Ok(());
+    }
+    let out = ssh(host, &servers::version_argv(host)).unwrap_or_default();
+    let found = servers::server_version(&out).unwrap_or_else(|| "no crew".into());
+    Err(format!(
+        "crew {} is installed on {host}, but the crew on its PATH is still {found}. Remove the old crew, then try again.",
+        servers::tag(app)
+    ))
 }
 
 pub fn token_of(auth: &Option<serde_json::Value>) -> Option<String> {
